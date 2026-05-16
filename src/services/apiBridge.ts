@@ -74,7 +74,7 @@ export const webApiBridge = {
     analyticsCCCMetrics: async (ruc: string) => {
         const res = await api.get(`/api/db/analytics/ccc/${ruc}`);
         return res.data.metrics;
-    }
+    },
 
     // --- Buzon API ---
     buzonConsultar: async (args: any) => {
