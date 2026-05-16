@@ -163,6 +163,18 @@ db.exec(`
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS balance_inicial (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT,
+        user_id TEXT,
+        cta TEXT,
+        desc TEXT,
+        debe REAL DEFAULT 0,
+        haber REAL DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_journal_workspace ON journal(workspace_id);
+
     CREATE TABLE IF NOT EXISTS movimientos_data (
         workspace_id TEXT,
         period TEXT,
