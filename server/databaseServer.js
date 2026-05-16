@@ -375,7 +375,38 @@ const dbManager = {
             }
         });
         transaction(records);
+    },
+
+    backup: async () => {
+        try {
+            const backupName = `backup_softcontable_${Date.now()}.db`;
+            const backupPath = path.join(path.dirname(dbPath), backupName);
+            await db.backup(backupPath);
+            return backupPath;
+        } catch (error) {
+            console.error('[BACKUP ERROR]:', error);
+            throw error;
+        }
     }
 };
+
+// --- Carga Inicial de Plan Contable (si está vacío) ---
+const planCount = db.prepare('SELECT COUNT(*) as count FROM plan_global').get().count;
+if (planCount === 0) {
+    console.log('[DB] Inicializando Plan Contable básico...');
+    const basicPlan = [
+        { cta: '101', desc: 'Caja', type: 'Activo' },
+        { cta: '1041', desc: 'Cuentas Corrientes Operativas', type: 'Activo' },
+        { cta: '1212', desc: 'Facturas por Cobrar - Emitidas', type: 'Activo' },
+        { cta: '40111', desc: 'IGV - Cuenta Propia', type: 'Pasivo' },
+        { cta: '4212', desc: 'Facturas por Pagar - Emitidas', type: 'Pasivo' },
+        { cta: '6011', desc: 'Mercaderías manufacturadas', type: 'Gasto' },
+        { cta: '70111', desc: 'Mercaderías manufacturadas - Terceros', type: 'Ingreso' }
+    ];
+    const insertPlan = db.prepare('INSERT INTO plan_global (cta, description, type, reqCenCos) VALUES (?, ?, ?, 0)');
+    db.transaction(() => {
+        basicPlan.forEach(p => insertPlan.run(p.cta, p.desc, p.type));
+    })();
+}
 
 module.exports = dbManager;

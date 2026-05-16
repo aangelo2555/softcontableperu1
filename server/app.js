@@ -56,22 +56,23 @@ app.post('/api/db/workspaces', async (req, res) => {
     }
 });
 
-app.delete('/api/db/workspace/:ruc', async (req, res) => {
-    try {
-        await db.deleteWorkspace(req.params.ruc, req.user.id);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/db/workspaces/:ruc', async (req, res) => {
+app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
     try {
         const data = await db.getWorkspaceData(req.params.ruc, req.user.id);
         res.json({ success: true, data });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
+    try {
+        await db.deleteWorkspace(req.params.ruc, req.user.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[DB ERROR] Error en delete:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
