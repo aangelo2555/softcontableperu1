@@ -565,29 +565,17 @@ export const useStore = create<AppState>()(
       // --- Lifecycle ---
       initApp: async () => {
         try {
-          // El proxy 'electron' manejará la espera si la API no está lista
           const workspaces = await electron.dbGetWorkspaces();
           set({ workspaces: workspaces || [] });
           
           const currentRuc = get().currentCompany?.ruc;
           if (currentRuc) {
-            // Purge GLOSA narrative entries from database on startup to handle legacy data
-            await electron.dbExecute(`DELETE FROM journal WHERE TRIM(UPPER(cta)) = 'GLOSA' AND workspace_id = ?`, [currentRuc]);
-
             const data = await electron.dbGetWorkspaceData(currentRuc);
             if (data) {
-              // Ensure plan is not empty
               if (!data.plan || data.plan.length === 0) {
                 data.plan = INITIAL_PLAN;
               }
               set({ ...data, plan: sortPlan(data.plan) });
-              
-              // Always sync seeds to ensure latest casuistry and base plan are available
-              await get().seedInitialGlosas();
-              await get().seedInitialPlan();
-              
-              // Re-sort after potential seed
-              set({ plan: sortPlan(get().plan) });
             }
           }
         } catch (error) {
