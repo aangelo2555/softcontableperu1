@@ -168,7 +168,7 @@ db.exec(`
         workspace_id TEXT,
         user_id TEXT,
         cta TEXT,
-        desc TEXT,
+        descripcion TEXT,
         debe REAL DEFAULT 0,
         haber REAL DEFAULT 0
     );
@@ -446,29 +446,29 @@ const dbManager = {
     },
 
     saveBalanceInicial: (ruc, userId, item) => {
-        // Asegurar tabla antes de guardar
-        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
-        
-        console.log(`[DB] Guardando en balance_inicial: ID=${item.id}, CTA=${item.cta}, RUC=${ruc}, USER=${userId}`);
-        
+        // Asegurar tabla y columna descripcion
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, descripcion TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
+        try { db.exec(`ALTER TABLE balance_inicial ADD COLUMN descripcion TEXT`); } catch(e) {}
+
         const stmt = db.prepare(`
-            INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, desc, debe, haber)
+            INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
-        return stmt.run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
+        return stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion, item.debe, item.haber);
     },
 
     saveBalanceInicialBulk: (ruc, userId, items) => {
-        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
-        
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, descripcion TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
+        try { db.exec(`ALTER TABLE balance_inicial ADD COLUMN descripcion TEXT`); } catch(e) {}
+
         const stmt = db.prepare(`
-            INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, desc, debe, haber)
+            INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
         const transaction = db.transaction((rows) => {
             for (const item of rows) {
-                stmt.run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
+                stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion, item.debe, item.haber);
             }
         });
         
@@ -476,9 +476,7 @@ const dbManager = {
     },
 
     deleteBalanceInicial: (ruc, userId, id) => {
-        // Asegurar tabla antes de borrar
-        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
-        
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, descripcion TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
         return db.prepare(`
             DELETE FROM balance_inicial WHERE id = ? AND workspace_id = ? AND user_id = ?
         `).run(id, ruc, userId);
