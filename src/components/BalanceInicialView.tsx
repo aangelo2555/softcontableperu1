@@ -227,16 +227,15 @@ const BalanceInicialView: React.FC = () => {
   const handleInitialize = async () => {
     setIsInitializing(true);
     try {
-      for (let i = 0; i < DEFAULT_STRUCTURE.length; i++) {
-        const d = DEFAULT_STRUCTURE[i];
-        await saveBalanceInicialItem({
-          id: `fixed-${i}`,
-          cta: d.cta,
-          desc: d.desc,
-          debe: 0,
-          haber: 0
-        });
-      }
+      const itemsToSave = DEFAULT_STRUCTURE.map((d, i) => ({
+        id: `fixed-${i}`,
+        cta: d.cta,
+        desc: d.desc,
+        debe: 0,
+        haber: 0
+      }));
+      
+      await useStore.getState().saveBalanceInicialBulk(itemsToSave);
       toast.success('Formato inicializado correctamente');
     } catch (error) {
       toast.error('Error al inicializar formato');

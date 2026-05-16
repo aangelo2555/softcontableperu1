@@ -458,6 +458,23 @@ const dbManager = {
         return stmt.run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
     },
 
+    saveBalanceInicialBulk: (ruc, userId, items) => {
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
+        
+        const stmt = db.prepare(`
+            INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, desc, debe, haber)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const transaction = db.transaction((rows) => {
+            for (const item of rows) {
+                stmt.run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
+            }
+        });
+        
+        return transaction(items);
+    },
+
     deleteBalanceInicial: (ruc, userId, id) => {
         // Asegurar tabla antes de borrar
         db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);

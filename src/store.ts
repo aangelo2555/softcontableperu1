@@ -412,6 +412,7 @@ export interface AppState extends WorkspaceState {
   deleteEmployee: (id: string) => Promise<void>;
 
   saveBalanceInicialItem: (item: BalanceInicialItem) => Promise<void>;
+  saveBalanceInicialBulk: (items: BalanceInicialItem[]) => Promise<void>;
   deleteBalanceInicialItem: (id: string) => Promise<void>;
 
   // --- Drafts (Stay in localStorage for UX) ---
@@ -1106,6 +1107,12 @@ export const useStore = create<AppState>()(
         const ruc = get().currentCompany?.ruc || '';
         await electron.dbSaveBalanceInicial(ruc, item);
         set({ balanceInicial: [...get().balanceInicial.filter(x => x.id !== item.id), item] });
+      },
+
+      saveBalanceInicialBulk: async (items) => {
+        const ruc = get().currentCompany?.ruc || '';
+        await electron.dbSaveBalanceInicialBulk(ruc, items);
+        set({ balanceInicial: items });
       },
 
       deleteBalanceInicialItem: async (id) => {

@@ -67,6 +67,10 @@ export const webApiBridge = {
         const res = await api.post(`/api/db/balance-inicial/${ruc}`, item);
         return res.data;
     },
+    dbSaveBalanceInicialBulk: async (ruc: string, items: any[]) => {
+        const res = await api.post(`/api/db/balance-inicial/bulk/${ruc}`, { items });
+        return res.data;
+    },
     dbDeleteBalanceInicial: async (ruc: string, id: string) => {
         const res = await api.delete(`/api/db/balance-inicial/${ruc}/${id}`);
         return res.data;
