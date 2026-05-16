@@ -446,7 +446,7 @@ const dbManager = {
     },
 
     saveBalanceInicial: (ruc, userId, item) => {
-        // Asegurar tabla y columna descripcion
+        // Asegurar tabla y columna descripcion (Migración robusta)
         db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, descripcion TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
         try { db.exec(`ALTER TABLE balance_inicial ADD COLUMN descripcion TEXT`); } catch(e) {}
 
@@ -454,7 +454,7 @@ const dbManager = {
             INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
-        return stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion, item.debe, item.haber);
+        return stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion || '', item.debe || 0, item.haber || 0);
     },
 
     saveBalanceInicialBulk: (ruc, userId, items) => {
@@ -468,7 +468,7 @@ const dbManager = {
         
         const transaction = db.transaction((rows) => {
             for (const item of rows) {
-                stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion, item.debe, item.haber);
+                stmt.run(item.id, ruc, userId, item.cta, item.desc || item.descripcion || '', item.debe || 0, item.haber || 0);
             }
         });
         
