@@ -446,13 +446,22 @@ const dbManager = {
     },
 
     saveBalanceInicial: (ruc, userId, item) => {
-        return db.prepare(`
+        // Asegurar tabla antes de guardar
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
+        
+        console.log(`[DB] Guardando en balance_inicial: ID=${item.id}, CTA=${item.cta}, RUC=${ruc}, USER=${userId}`);
+        
+        const stmt = db.prepare(`
             INSERT OR REPLACE INTO balance_inicial (id, workspace_id, user_id, cta, desc, debe, haber)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
+        `);
+        return stmt.run(item.id, ruc, userId, item.cta, item.desc, item.debe, item.haber);
     },
 
     deleteBalanceInicial: (ruc, userId, id) => {
+        // Asegurar tabla antes de borrar
+        db.exec(`CREATE TABLE IF NOT EXISTS balance_inicial (id TEXT PRIMARY KEY, workspace_id TEXT, user_id TEXT, cta TEXT, desc TEXT, debe REAL DEFAULT 0, haber REAL DEFAULT 0)`);
+        
         return db.prepare(`
             DELETE FROM balance_inicial WHERE id = ? AND workspace_id = ? AND user_id = ?
         `).run(id, ruc, userId);
