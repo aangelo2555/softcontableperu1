@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useStore, BalanceInicialItem, SectionType } from '../store';
+import { useStore, type BalanceInicialItem, type SectionType } from '../store';
 import { 
   Calculator, 
   Printer, 
