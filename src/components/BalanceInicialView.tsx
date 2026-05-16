@@ -145,6 +145,16 @@ const BalanceInicialView: React.FC = () => {
   const [searchAccount, setSearchAccount] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const theme = useStore(state => state.theme);
+
+  // Sincronizar clase dark con el documento
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Combine default structure with saved data
   const items = useMemo(() => {
@@ -369,7 +379,7 @@ const BalanceInicialView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
       {/* Header Toolbar */}
       <div className="h-14 px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-sm z-30">
         <div className="flex items-center gap-4">
