@@ -41,21 +41,13 @@ export default function BalanceInicialView() {
   const { balanceInicial, currentCompany, saveBalanceInicialItem, saveBalanceInicialBulk, deleteBalanceInicialItem, setActiveTab, setDraftAsiento } = useStore();
   const [isInitializing, setIsInitializing] = useState(false);
 
-  // --- Lógica de Fusión y Cálculos ---
+  // --- Lógica de Datos y Cálculos ---
   const items = useMemo(() => {
-    const base = DEFAULT_STRUCTURE.map((d, i) => {
-      const saved = balanceInicial.find(s => s.cta === d.cta && s.id.startsWith('fixed-'));
-      return {
-        id: `fixed-${i}`,
-        ...d,
-        debe: saved?.debe || 0,
-        haber: saved?.haber || 0,
-        isFixed: true
-      };
+    // Ordenar por sección y luego por cuenta
+    return [...balanceInicial].sort((a, b) => {
+      if (a.section !== b.section) return 0; // Mantener orden de secciones del render
+      return a.cta.localeCompare(b.cta);
     });
-
-    const custom = balanceInicial.filter(s => !s.id.startsWith('fixed-'));
-    return [...base, ...custom];
   }, [balanceInicial]);
 
   const totals = useMemo(() => {
@@ -77,7 +69,7 @@ export default function BalanceInicialView() {
     setIsInitializing(true);
     try {
       const payload = DEFAULT_STRUCTURE.map((d, i) => ({
-        id: `fixed-${i}`,
+        id: `fixed-${Date.now()}-${i}`,
         cta: d.cta,
         desc: d.desc,
         section: d.section,
@@ -149,14 +141,12 @@ export default function BalanceInicialView() {
               className="w-full bg-transparent border-none text-right px-3 text-[11px] font-mono font-bold text-app-text outline-none"
               placeholder="0.00"
             />
-            {!(item as any).isFixed && (
-              <button 
-                onClick={() => deleteBalanceInicialItem(item.id)}
-                className="absolute -left-6 opacity-0 group-hover:opacity-100 text-rose-500 p-1 transition-opacity"
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
+            <button 
+              onClick={() => deleteBalanceInicialItem(item.id)}
+              className="absolute -left-6 opacity-0 group-hover:opacity-100 text-rose-500 p-1 transition-opacity"
+            >
+              <Trash2 size={12} />
+            </button>
           </div>
         </div>
       ))}
@@ -189,7 +179,56 @@ export default function BalanceInicialView() {
           <button onClick={() => window.print()} className="h-10 px-4 bg-app-surface text-app-text border border-app-border rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-app-hover transition-colors shadow-sm">
             <Printer size={16} /> Imprimir
           </button>
-          <button className="h-10 px-6 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-blue-600/20 flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95">
+          <button 
+            onClick={() => {
+              const journalLines = items
+                .filter(i => (i.debe || 0) > 0 || (i.haber || 0) > 0)
+                .map((i, index) => {
+                  let d = i.debe || 0;
+                  let h = i.haber || 0;
+                  
+                  // Lógica automática para cuentas de valuación (19, 29, 39)
+                  // En un balance de apertura, si están en el Activo (Debe), 
+                  // deben pasar al Haber para restar.
+                  if (i.cta.startsWith('19') || i.cta.startsWith('29') || i.cta.startsWith('39')) {
+                    if (d > 0) { h = d; d = 0; }
+                  }
+
+                  return {
+                    id: index + 1,
+                    cuenta: i.cta,
+                    detalle: i.desc,
+                    debe: d,
+                    haber: h
+                  };
+                });
+
+              if (journalLines.length === 0) {
+                toast.error('No hay montos para generar el asiento');
+                return;
+              }
+              
+              if (totals.diff > 0.01) {
+                toast.error('El balance debe estar cuadrado');
+                return;
+              }
+
+              setDraftAsiento({
+                header: {
+                  asiento: '000000',
+                  fecEmi: `${currentCompany?.period}-01-01`,
+                  glosa: `ASIENTO DE APERTURA - ${currentCompany?.period}`,
+                  anio: String(currentCompany?.period),
+                  mes: '00'
+                },
+                lines: journalLines,
+                editingId: null
+              } as any);
+              setActiveTab('ASIENTOS');
+              toast.success('Asiento cargado en borradores');
+            }}
+            className="h-10 px-6 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-blue-600/20 flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
+          >
             <CheckCircle2 size={18} /> Generar Asiento
           </button>
         </div>
