@@ -7,9 +7,9 @@ const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?
   <div className={`flex justify-between text-[11px] py-1 border-b border-app-border/50 ${indent ? 'pl-8' : ''} ${isTotal ? 'border-t-2 border-app-border pt-2' : ''} ${isNet ? 'bg-pld-blue/10 p-2 rounded border-none mt-4 ring-1 ring-pld-blue/20' : ''}`}>
     <span className={`${bold || isNet || isTotal ? 'font-black uppercase tracking-widest' : 'text-app-muted font-sans'} ${isNet ? 'text-pld-blue' : ''}`}>{label}</span>
     <div className="flex items-center gap-1">
-      {value < 0 && <span className="text-red-500">({Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2 })})</span>}
-      {value >= 0 && <span className={`font-mono ${isNet ? 'text-lg text-pld-blue font-bold' : ''}`}>
-        {value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+      {value < 0 && <span className="text-red-500 font-semibold font-mono">({Math.abs(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>}
+      {value >= 0 && <span className={`font-mono ${isNet ? 'text-lg text-pld-blue font-bold' : 'text-app-text'}`}>
+        {value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>}
     </div>
   </div>
@@ -38,6 +38,8 @@ const EgypView: React.FC = () => {
   // --- Common ---
   const ingresosFinancieros = -getSum(['77']);
   const gastosFinancieros = getSum(['67', '97']); // Support both nature and function finance costs
+  const impuestoRenta = getSum(['88']);
+  const participacionTrabajadores = getSum(['87']);
 
   // --- Logic: POR FUNCIÓN ---
   const fVentasBrutas = -getSum(['70']);
@@ -48,7 +50,8 @@ const EgypView: React.FC = () => {
   const fGastosAdmin = getSum(['94']);
   const fGastosVentas = getSum(['95']);
   const fUtilidadOperativa = fUtilidadBruta - fGastosAdmin - fGastosVentas + fOtrosIngresos;
-  const fUtilidadNeta = fUtilidadOperativa + ingresosFinancieros - gastosFinancieros;
+  const fResultAntesDePartIR = fUtilidadOperativa + ingresosFinancieros - gastosFinancieros;
+  const fUtilidadNeta = fResultAntesDePartIR - participacionTrabajadores - impuestoRenta;
 
   // --- Logic: POR NATURALEZA ---
   const nVentasBrutas = -getSum(['70']);
@@ -70,9 +73,11 @@ const EgypView: React.FC = () => {
   const nOtrosGastosGest = getSum(['65']);
   const nValuacionDeterioro = getSum(['68']);
   const nUtilidadOperativa = nExcedenteBruto - nOtrosGastosGest - nValuacionDeterioro + nOtrosIngresos;
-  const nUtilidadNeta = nUtilidadOperativa + ingresosFinancieros - gastosFinancieros;
+  const nResultAntesDePartIR = nUtilidadOperativa + ingresosFinancieros - gastosFinancieros;
+  const nUtilidadNeta = nResultAntesDePartIR - participacionTrabajadores - impuestoRenta;
 
   const currentUtilidadNeta = viewMode === 'FUNCION' ? fUtilidadNeta : nUtilidadNeta;
+  const currentResultAntes = viewMode === 'FUNCION' ? fResultAntesDePartIR : nResultAntesDePartIR;
 
   const handleExport = () => {
     const title = `ESTADO DE RESULTADOS INTEGRALES (POR ${viewMode === 'FUNCION' ? 'FUNCIÓN' : 'NATURALEZA'})`;
@@ -108,12 +113,15 @@ const EgypView: React.FC = () => {
       [title],
       ['EMPRESA:', currentCompany.name],
       ['RUC:', currentCompany.ruc],
+      ['PERIODO:', currentCompany.period || '2025'],
       [],
       ...data,
       [],
       ['INGRESOS FINANCIEROS', ingresosFinancieros.toFixed(2)],
       ['GASTOS FINANCIEROS', gastosFinancieros.toFixed(2)],
-      ['RESULTADO ANTES DEL IMPTO RENTA', currentUtilidadNeta.toFixed(2)],
+      ['RESULTADO ANTES DE PART. E IR', currentResultAntes.toFixed(2)],
+      ['(-) PARTICIPACION DE TRABAJADORES (CTA 87)', participacionTrabajadores.toFixed(2)],
+      ['(-) IMPUESTO A LA RENTA (CTA 88)', impuestoRenta.toFixed(2)],
       [],
       ['UTILIDAD (PERDIDA) NETA DEL EJERCICIO', currentUtilidadNeta.toFixed(2)]
     ]);
@@ -129,7 +137,7 @@ const EgypView: React.FC = () => {
             <TrendingUp size={16} className="text-pld-blue" />
           </div>
           <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Estado de Resultados (Por {viewMode === 'FUNCION' ? 'Función' : 'Naturaleza'})</h2>
+            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Estado de Resultados Integrales</h2>
             <div className="flex gap-3 text-[9px] items-center text-app-muted">
                <span>AL 31 DE DICIEMBRE DEL {currentCompany.period || '2025'}</span>
                <span>(Nuevos Soles)</span>
@@ -166,7 +174,7 @@ const EgypView: React.FC = () => {
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-8 custom-scrollbar bg-app-bg/50">
-        <div className="max-w-3xl mx-auto bg-app-surface border border-app-border shadow-2xl p-10 rounded-sm print:shadow-none print:border-none">
+        <div className="max-w-3xl mx-auto bg-app-surface border border-app-border shadow-2xl p-10 rounded-lg print:shadow-none print:border-none">
           
           <div className="text-center mb-10 space-y-1">
              <h3 className="text-sm font-black uppercase tracking-[0.4em]">{currentCompany.name}</h3>
@@ -227,12 +235,12 @@ const EgypView: React.FC = () => {
 
              <EgypLine label="INGRESOS FINANCIEROS" value={ingresosFinancieros} />
              <EgypLine label="GASTOS FINANCIEROS" value={gastosFinancieros} />
-             <EgypLine label="RESULTADO ANTES DEL IMPTO RENTA" value={currentUtilidadNeta} isTotal bold />
+             <EgypLine label="RESULTADO ANTES DE PART. E IR" value={currentResultAntes} isTotal bold />
 
              <div className="h-6" />
 
-             <EgypLine label="PARTICIPACION DE TRABAJADORES" value={0} />
-             <EgypLine label="IMPUESTO A LA RENTA" value={0} />
+             <EgypLine label="PARTICIPACIÓN DE TRABAJADORES (CTA 87)" value={participacionTrabajadores} />
+             <EgypLine label="IMPUESTO A LA RENTA (CTA 88)" value={impuestoRenta} />
              <EgypLine label="UTILIDAD (PERDIDA) NETA DEL EJERCICIO" value={currentUtilidadNeta} isNet bold />
           </div>
 
