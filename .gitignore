@@ -16,6 +16,7 @@ dist-ssr
 database/*.db
 database/*.db-journal
 database/*.db-wal
+database/*.db-shm
 SIRE SUNAT
 descargas_buzon
 salida_instalador*
