@@ -249,86 +249,98 @@ const FinanceSecondaryView: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-auto p-4 custom-scrollbar">
-        <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
+        <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-lg overflow-hidden bg-app-surface">
 
           {reportType === '3.18' && cashFlowData && (
             <div className="p-1">
-              <table className="min-w-full border-collapse text-[9px] border border-app-border">
+              <table className="min-w-full border-collapse text-xs border border-app-border/40">
                 <thead>
-                  <tr className="bg-pld-blue text-white text-[8px] font-black uppercase">
-                    <th className="p-2 border border-blue-700/50">CONCEPTO / ACTIVIDAD</th>
-                    <th className="p-2 border border-blue-700/50 w-32">IMPORTE S/</th>
+                  <tr className="bg-app-surface text-app-muted text-[10px] font-bold uppercase tracking-wider border-b border-app-border">
+                    <th className="p-2.5 text-left border-r border-app-border/30">CONCEPTO / ACTIVIDAD</th>
+                    <th className="p-2.5 text-right w-32">IMPORTE S/</th>
                   </tr>
                 </thead>
-                <tbody className="bg-app-surface text-app-text italic">
-                  <tr className="bg-app-bg font-black uppercase border-b border-app-border"><td className="p-2" colSpan={2}>Actividades de Operación</td></tr>
+                <tbody className="bg-app-surface text-app-text">
+                  <tr className="bg-app-surface/60 font-bold uppercase border-b border-app-border text-pld-blue text-[10px]">
+                    <td className="p-2.5 pl-4" colSpan={2}>Actividades de Operación</td>
+                  </tr>
                   {cashFlowData.operacion.items.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold text-pld-blue">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-app-bg/50 border-b border-app-border/50"><td className="p-2 pl-6 text-red-500 font-bold">MENOS:</td><td/></tr>
+                  <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-red-500">
+                    <td className="p-2.5 pl-6 text-xs" colSpan={2}>MENOS:</td>
+                  </tr>
                   {cashFlowData.operacion.menos.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-pld-blue/10 font-bold border-b-2 border-pld-blue">
-                    <td className="p-2 pl-4">Neto Actividades de Operación</td>
-                    <td className="p-2 text-right font-mono font-black text-pld-blue">{fmtAlways(cashFlowData.operacion.total)}</td>
+                  <tr className="bg-pld-blue/[0.08] font-bold border-b border-app-border">
+                    <td className="p-2.5 pl-4 text-xs font-black">Neto Actividades de Operación</td>
+                    <td className="p-2.5 text-right font-mono font-black text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.operacion.total)}</td>
                   </tr>
 
-                  <tr className="bg-app-bg font-black uppercase border-b border-app-border"><td className="p-2" colSpan={2}>Actividades de Inversión</td></tr>
+                  <tr className="bg-app-surface/60 font-bold uppercase border-b border-app-border text-pld-blue text-[10px]">
+                    <td className="p-2.5 pl-4" colSpan={2}>Actividades de Inversión</td>
+                  </tr>
                   {cashFlowData.inversion.items.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold text-pld-blue">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-app-bg/50 border-b border-app-border/50"><td className="p-2 pl-6 text-red-500 font-bold">MENOS:</td><td/></tr>
+                  <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-red-500">
+                    <td className="p-2.5 pl-6 text-xs" colSpan={2}>MENOS:</td>
+                  </tr>
                   {cashFlowData.inversion.menos.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-pld-blue/10 font-bold border-b-2 border-pld-blue">
-                    <td className="p-2 pl-4">Neto Actividades de Inversión</td>
-                    <td className="p-2 text-right font-mono font-black text-pld-blue">{fmtAlways(cashFlowData.inversion.total)}</td>
+                  <tr className="bg-pld-blue/[0.08] font-bold border-b border-app-border">
+                    <td className="p-2.5 pl-4 text-xs font-black">Neto Actividades de Inversión</td>
+                    <td className="p-2.5 text-right font-mono font-black text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.inversion.total)}</td>
                   </tr>
 
-                  <tr className="bg-app-bg font-black uppercase border-b border-app-border"><td className="p-2" colSpan={2}>Actividades de Financiamiento</td></tr>
+                  <tr className="bg-app-surface/60 font-bold uppercase border-b border-app-border text-pld-blue text-[10px]">
+                    <td className="p-2.5 pl-4" colSpan={2}>Actividades de Financiamiento</td>
+                  </tr>
                   {cashFlowData.financiamiento.items.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold text-pld-blue">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-app-bg/50 border-b border-app-border/50"><td className="p-2 pl-6 text-red-500 font-bold">MENOS:</td><td/></tr>
+                  <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-red-500">
+                    <td className="p-2.5 pl-6 text-xs" colSpan={2}>MENOS:</td>
+                  </tr>
                   {cashFlowData.financiamiento.menos.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
-                      <td className="p-2 pl-6 font-sans">{it.label}</td>
-                      <td className="p-2 text-right font-mono font-bold">{fmt(it.monto)}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-pld-blue/10 font-bold border-b-2 border-pld-blue">
-                    <td className="p-2 pl-4">Neto Actividades de Financiamiento</td>
-                    <td className="p-2 text-right font-mono font-black text-pld-blue">{fmtAlways(cashFlowData.financiamiento.total)}</td>
+                  <tr className="bg-pld-blue/[0.08] font-bold border-b border-app-border">
+                    <td className="p-2.5 pl-4 text-xs font-black">Neto Actividades de Financiamiento</td>
+                    <td className="p-2.5 text-right font-mono font-black text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.financiamiento.total)}</td>
                   </tr>
 
-                  <tr className="bg-pld-blue text-white font-black">
-                    <td className="p-3 uppercase">Aumento (Disminución) Neto de Efectivo</td>
-                    <td className="p-3 text-right font-mono text-[11px] underline decoration-double">{fmtAlways(cashFlowData.netoCashFlow)}</td>
+                  <tr className="bg-pld-blue/[0.15] font-black border-b border-app-border">
+                    <td className="p-3 uppercase text-xs">Aumento (Disminución) Neto de Efectivo</td>
+                    <td className="p-3 text-right font-mono text-xs font-black text-pld-blue border-l border-app-border/20 underline decoration-double">{fmtAlways(cashFlowData.netoCashFlow)}</td>
                   </tr>
-                  <tr className="bg-app-surface font-bold">
-                    <td className="p-2">Saldo al Inicio del Ejercicio</td>
-                    <td className="p-2 text-right font-mono">{fmtAlways(cashFlowData.saldoInicial)}</td>
+                  <tr className="bg-app-surface/40 font-bold border-b border-app-border/30">
+                    <td className="p-2.5 pl-4 text-xs">Saldo al Inicio del Ejercicio</td>
+                    <td className="p-2.5 text-right font-mono text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.saldoInicial)}</td>
                   </tr>
-                  <tr className="bg-pld-blue/5 font-black border-t-2 border-pld-blue">
-                    <td className="p-3">SALDO FINAL DE EFECTIVO</td>
-                    <td className="p-3 text-right font-mono text-[12px] text-pld-blue">{fmtAlways(cashFlowData.saldoFinal)}</td>
+                  <tr className="bg-pld-blue/[0.2] font-black border-t-2 border-pld-blue">
+                    <td className="p-3 text-xs uppercase">SALDO FINAL DE EFECTIVO</td>
+                    <td className="p-3 text-right font-mono text-sm text-pld-blue border-l border-app-border/20">{fmtAlways(cashFlowData.saldoFinal)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -337,31 +349,31 @@ const FinanceSecondaryView: React.FC = () => {
 
           {reportType === '3.19' && patrimonioData && (
             <div className="overflow-x-auto p-1">
-              <table className="min-w-max border-collapse text-[9px] border border-app-border">
+              <table className="min-w-max border-collapse text-xs border border-app-border/40">
                 <thead>
-                  <tr className="bg-pld-blue text-white text-[8px] font-black uppercase">
-                    <th className="p-2 border border-blue-700/50">DETALLE DE MOVIMIENTOS</th>
-                    {patrimonioData.cols.map(c => <th key={c.key} className="p-2 border border-blue-700/50 w-24">{c.label}</th>)}
-                    <th className="p-2 border border-blue-700/50 w-28">TOTAL</th>
+                  <tr className="bg-app-surface text-app-muted text-[9px] font-bold uppercase tracking-wider border-b border-app-border">
+                    <th className="p-2.5 text-left border-r border-app-border/30">DETALLE DE MOVIMIENTOS</th>
+                    {patrimonioData.cols.map(c => <th key={c.key} className="p-2.5 text-right border-r border-app-border/30 w-24">{c.label}</th>)}
+                    <th className="p-2.5 text-right w-28">TOTAL</th>
                   </tr>
                 </thead>
-                <tbody className="bg-app-surface text-app-text font-mono">
-                  <tr className="bg-pld-blue/5 font-black border-b-2 border-pld-blue/50">
-                    <td className="p-2 font-sans italic">Saldos al 01 de Enero</td>
-                    {patrimonioData.cols.map(c => <td key={c.key} className="p-2 text-right text-pld-blue">{fmt(patrimonioData.saldoInicial[c.key])}</td>)}
-                    <td className="p-2 text-right bg-pld-blue/10 font-black">{fmtAlways(Object.values(patrimonioData.saldoInicial).reduce((s,v)=>s+v,0))}</td>
+                <tbody className="bg-app-surface text-app-text">
+                  <tr className="bg-pld-blue/[0.03] font-bold border-b border-app-border/40">
+                    <td className="p-2.5 font-bold pl-4 text-xs">Saldos al 01 de Enero</td>
+                    {patrimonioData.cols.map(c => <td key={c.key} className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(patrimonioData.saldoInicial[c.key])}</td>)}
+                    <td className="p-2.5 text-right font-mono bg-pld-blue/[0.08] font-black text-xs border-l border-app-border/20">{fmtAlways(Object.values(patrimonioData.saldoInicial).reduce((s,v)=>s+v,0))}</td>
                   </tr>
                   {patrimonioData.rows.map((row, i) => (
-                    <tr key={i} className="border-b border-app-border/30 hover:bg-app-hover">
-                      <td className="p-2 font-sans text-[8px] pl-4"><span className="text-pld-blue font-black mr-2">{row.num}</span> {row.label}</td>
-                      {patrimonioData.cols.map(c => <td key={c.key} className="p-2 text-right">{row.num === '10.' && c.key === 'resultadosAcum' ? fmt(patrimonioData.movimiento[c.key]) : ''}</td>)}
-                      <td className="p-2 text-right font-bold">{row.num === '10.' ? fmt(patrimonioData.movimiento.resultadosAcum) : ''}</td>
+                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                      <td className="p-2.5 font-sans text-xs pl-6"><span className="text-pld-blue font-black mr-2">{row.num}</span> {row.label}</td>
+                      {patrimonioData.cols.map(c => <td key={c.key} className="p-2.5 text-right font-mono text-xs border-l border-app-border/20">{row.num === '10.' && c.key === 'resultadosAcum' ? fmt(patrimonioData.movimiento[c.key]) : ''}</td>)}
+                      <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{row.num === '10.' ? fmt(patrimonioData.movimiento.resultadosAcum) : ''}</td>
                     </tr>
                   ))}
-                  <tr className="bg-pld-blue/10 font-black border-t-4 border-double border-pld-blue">
-                    <td className="p-2 uppercase italic">Saldos al 31 de Diciembre</td>
-                    {patrimonioData.cols.map(c => <td key={c.key} className="p-2 text-right text-pld-blue text-[10px]">{fmtAlways(patrimonioData.saldoFinal[c.key])}</td>)}
-                    <td className="p-2 text-right bg-pld-blue/20 text-pld-blue font-black text-[11px] underline">
+                  <tr className="bg-pld-blue/[0.1] font-black border-t-2 border-pld-blue/50">
+                    <td className="p-2.5 uppercase font-bold text-xs pl-4">Saldos al 31 de Diciembre</td>
+                    {patrimonioData.cols.map(c => <td key={c.key} className="p-2.5 text-right font-mono text-pld-blue text-xs font-black border-l border-app-border/20">{fmtAlways(patrimonioData.saldoFinal[c.key])}</td>)}
+                    <td className="p-2.5 text-right font-mono bg-pld-blue/[0.2] text-pld-blue font-black text-xs border-l border-app-border/20 underline">
                       {fmtAlways(Object.values(patrimonioData.saldoFinal).reduce((s,v)=>s+v,0))}
                     </td>
                   </tr>
