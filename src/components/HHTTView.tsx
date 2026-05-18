@@ -85,9 +85,15 @@ interface HHTTRow {
     }
   }
 
-  // Clase 8 (Saldos intermediarios de gestión) → NATURALEZA
+  // Clase 8 (Saldos intermediarios de gestión)
   if (p1 === 8) {
-    types.push('NATURALEZA');
+    // 88 (Impuesto a la renta) va tanto a NATURALEZA como a FUNCION
+    if (p2 === 88) {
+      types.push('NATURALEZA');
+      types.push('FUNCION');
+    } else {
+      types.push('NATURALEZA');
+    }
   }
 
   // Clase 9 (Gastos por Función) → FUNCIÓN
