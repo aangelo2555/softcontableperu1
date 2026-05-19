@@ -115,7 +115,9 @@ class SireHandler {
       // Si el usuario indica Fila 8, cortamos los primeros 7 registros (cabeceras de metadatos)
       const dataRows = data.length > 7 ? data.slice(7) : data;
       
-      // Mapeo dinámico basado en headers
+      const isRVIE = proceso.includes('RVIE');
+      
+      // Mapeo dinámico basado en proceso (RCE vs RVIE)
       const mappedRecords = dataRows.map((row, index) => {
         const id = `${ruc}-${proceso}-${Date.now()}-${index}`;
         return {
@@ -129,14 +131,14 @@ class SireHandler {
           doc_tipo: row[10] || '',
           doc_num: row[11] || '',
           nombre: row[12] || '',
-          bi: parseNum(row[13]),
-          igv: parseNum(row[14]),
+          bi: parseNum(row[isRVIE ? 14 : 13]),
+          igv: parseNum(row[isRVIE ? 16 : 14]),
           noGravada: parseNum(row[19]),
-          isc: parseNum(row[20]),
-          icbper: parseNum(row[21]),
-          otros_tributos: parseNum(row[22]),
-          total: parseNum(row[24]), // Columna Y
-          tc: parseNum(row[25] || 1),
+          isc: parseNum(row[isRVIE ? 21 : 20]),
+          icbper: parseNum(row[isRVIE ? 23 : 21]),
+          otros_tributos: parseNum(row[isRVIE ? 24 : 22]),
+          total: parseNum(row[isRVIE ? 25 : 24]), 
+          tc: parseNum(row[isRVIE ? 27 : 26] || 1),
           car: row[3] || '',
           estado_sire: 'Propuesta'
         };
