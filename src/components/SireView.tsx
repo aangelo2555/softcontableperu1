@@ -631,7 +631,7 @@ const SireView: React.FC = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
-              {archivos.map((file, idx) => (
+              {archivos.filter(file => proceso === 'Generar RCE' ? file.nombre.includes('RCE') : file.nombre.includes('RVIE')).map((file, idx) => (
                 <div key={idx} className="bg-app-bg/50 border border-app-border hover:border-blue-500/30 rounded-xl p-3 flex items-center gap-3 group transition-all">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${file.nombre.includes('RCE') ? 'bg-violet-500/10 text-violet-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                     <FileCheck size={20} />
