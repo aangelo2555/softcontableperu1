@@ -16,7 +16,11 @@ class SunatApiClient {
    */
   async generarToken(credentials) {
     try {
-      const { ruc, usuario_sol, clave_sol, client_id, client_secret } = credentials;
+      const ruc = credentials.ruc?.trim() || '';
+      const usuario_sol = credentials.usuario_sol?.trim().toUpperCase() || '';
+      const clave_sol = credentials.clave_sol?.trim() || '';
+      const client_id = credentials.client_id?.trim() || '';
+      const client_secret = credentials.client_secret?.trim() || '';
 
       logger.info('Generando token de acceso', { ruc });
 

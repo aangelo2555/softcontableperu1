@@ -83,7 +83,11 @@ class BuzonHandler {
   /**
    * Consulta el buzón v3.0
    */
-  async consultarBuzon({ ruc, usuario, clave, email, empresa }) {
+  async consultarBuzon({ ruc: rucRaw, usuario: usuarioRaw, clave: claveRaw, email, empresa }) {
+    const ruc = rucRaw?.trim() || '';
+    const usuario = usuarioRaw?.trim().toUpperCase() || '';
+    const clave = claveRaw?.trim() || '';
+
     let browser = null;
     let page = null;
     let context = null;
