@@ -60,6 +60,7 @@ const BuzonView: React.FC = () => {
   const generateSrcDoc = (content: string) => {
 // ... (rest of generateSrcDoc)
     if (!content) return '';
+    const secureContent = content.replace(/http:\/\/([a-z0-9-]+\.)*sunat\.gob\.pe/g, 'https://$1sunat.gob.pe');
     return `
       <!DOCTYPE html>
       <html lang="es">
@@ -108,7 +109,7 @@ const BuzonView: React.FC = () => {
         </head>
         <body>
           <div class="document-wrapper">
-            ${content}
+            ${secureContent}
           </div>
           <script>
             // Definir dummy para evitar errores de referencia por parte de los scripts inline de SUNAT en iframes anidados
