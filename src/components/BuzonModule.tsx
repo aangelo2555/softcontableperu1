@@ -11,14 +11,31 @@ const BuzonView: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [detalleHtml, setDetalleHtml] = useState<string | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
-  const [activeBrowserId, setActiveBrowserId] = useState<string | null>(null);
   const [selectedRuc, setSelectedRuc] = useState(currentCompany.ruc);
+  const [activeBrowserId, setActiveBrowserId] = useState<string | null>(() => {
+    return sessionStorage.getItem(`activeBuzonBrowserId_${currentCompany.ruc}`);
+  });
   const [statusText, setStatusText] = useState('');
   
   // Constancias Modal State
   const [showConstancias, setShowConstancias] = useState(false);
   const [constancias, setConstancias] = useState<any[]>([]);
   const [loadingConstancias, setLoadingConstancias] = useState(false);
+
+  // Sincronizar activeBrowserId cuando cambia selectedRuc
+  useEffect(() => {
+    const savedId = sessionStorage.getItem(`activeBuzonBrowserId_${selectedRuc}`);
+    setActiveBrowserId(savedId);
+  }, [selectedRuc]);
+
+  const updateBrowserId = (id: string | null) => {
+    setActiveBrowserId(id);
+    if (id) {
+      sessionStorage.setItem(`activeBuzonBrowserId_${selectedRuc}`, id);
+    } else {
+      sessionStorage.removeItem(`activeBuzonBrowserId_${selectedRuc}`);
+    }
+  };
 
   const handleCerrarSesion = async () => {
     try {
@@ -28,7 +45,7 @@ const BuzonView: React.FC = () => {
       setBuzonMensajes([]);
       setSelectedMessage(null);
       setDetalleHtml(null);
-      setActiveBrowserId(null);
+      updateBrowserId(null);
       setStatusText('');
       setError(null);
     } catch (e) {
@@ -152,7 +169,7 @@ const BuzonView: React.FC = () => {
         
         if (result.success) {
            setBuzonMensajes(result.mensajes);
-           setActiveBrowserId(result.browserId);
+           updateBrowserId(result.browserId);
            setStatusText('Sincronización finalizada correctamente');
            toast.success('Buzón actualizado');
            // Limpiar el texto de estado después de 3 segundos
