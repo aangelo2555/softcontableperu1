@@ -120,6 +120,10 @@ export const webApiBridge = {
         const res = await api.post('/api/buzon/cerrar-todas');
         return res.data;
     },
+    buzonAbrirConstancia: async (args: any) => {
+        const res = await api.post('/api/buzon/descargar-archivo-constancia', args);
+        return res.data;
+    },
 
     // --- SIRE API ---
     ejecutarSire: async (datos: any) => {

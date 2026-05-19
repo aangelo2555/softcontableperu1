@@ -199,7 +199,22 @@ const BuzonView: React.FC = () => {
   const handleAbrirConstancia = async (ruta: string) => {
     try {
       const res = await (window as any).electronAPI.buzonAbrirConstancia({ ruta });
-      if (!res.success) alert('No se pudo abrir: ' + res.error);
+      if (res.success) {
+        if (res.fileBase64) {
+          const linkSource = `data:${res.fileType || 'application/pdf'};base64,${res.fileBase64}`;
+          const downloadLink = document.createElement("a");
+          downloadLink.href = linkSource;
+          downloadLink.download = res.fileName || "constancia.pdf";
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+          toast.success("Constancia descargada en su navegador.");
+        } else {
+          toast.success("Constancia abierta localmente.");
+        }
+      } else {
+        alert('No se pudo abrir: ' + res.error);
+      }
     } catch (e) {
       alert('Error al abrir archivo.');
     }
@@ -218,7 +233,18 @@ const BuzonView: React.FC = () => {
         mensajeId: msgId
       });
       if (res.success) {
-        alert('Archivo guardado en: ' + res.ruta);
+        if (res.fileBase64) {
+          const linkSource = `data:${res.fileType || 'application/pdf'};base64,${res.fileBase64}`;
+          const downloadLink = document.createElement("a");
+          downloadLink.href = linkSource;
+          downloadLink.download = res.fileName || "constancia.pdf";
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+          toast.success("Adjunto descargado correctamente en su navegador.");
+        } else {
+          alert('Archivo guardado en: ' + res.ruta);
+        }
       } else {
         setError('Error al descargar: ' + res.error);
       }

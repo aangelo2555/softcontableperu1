@@ -195,9 +195,115 @@ app.post('/api/buzon/consultar', async (req, res) => {
 app.post('/api/buzon/descargar-adjunto', async (req, res) => {
     try {
         const result = await buzonHandler.descargarAdjunto(req.body);
+        if (result.success && result.ruta) {
+            let filepath = null;
+            const fs = require('fs');
+            
+            if (result.ruta.includes('<b>FUSIÓN:</b>')) {
+                // Formato: <b>FUSIÓN:</b> nombre_fusion.pdf<br/><hr/>ruta1<br/>ruta2
+                const match = result.ruta.match(/<b>FUSIÓN:<\/b>\s*([^<]+)/);
+                if (match) {
+                    const mergedName = match[1].trim();
+                    const lines = result.ruta.split('<br/>');
+                    const sourceLine = lines.find(l => l.includes('/') || l.includes('\\'));
+                    if (sourceLine) {
+                        const cleanSourcePath = sourceLine.replace(/<\/?[^>]+(>|$)/g, "").trim();
+                        const dir = path.dirname(cleanSourcePath);
+                        const mergedPath = path.join(dir, mergedName);
+                        if (fs.existsSync(mergedPath)) {
+                            filepath = mergedPath;
+                        }
+                    }
+                }
+            }
+            
+            // Fallback si no hay fusión o no se encontró la fusión
+            if (!filepath) {
+                const paths = result.ruta.split('<br/>');
+                for (let p of paths) {
+                    let cleanPath = p.replace(/<\/?[^>]+(>|$)/g, "").trim();
+                    if (fs.existsSync(cleanPath) && fs.statSync(cleanPath).isFile()) {
+                        filepath = cleanPath;
+                        break;
+                    }
+                }
+            }
+
+            if (filepath && fs.existsSync(filepath)) {
+                const fileBuffer = fs.readFileSync(filepath);
+                result.fileBase64 = fileBuffer.toString('base64');
+                result.fileName = path.basename(filepath);
+                result.fileType = filepath.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf';
+            }
+        }
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/buzon/extraer-detalle', async (req, res) => {
+    try {
+        const { browserId, mensajeId } = req.body;
+        if (!browserId || !mensajeId) {
+            return res.status(400).json({ success: false, error: 'Parámetros inválidos.' });
+        }
+        const result = await buzonHandler.extraerDetalleMensaje(browserId, mensajeId);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/buzon/listar-constancias', async (req, res) => {
+    try {
+        const { ruc } = req.body;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'RUC inválido.' });
+        }
+        const result = await buzonHandler.listarConstancias(ruc);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/buzon/cerrar-todas', async (req, res) => {
+    try {
+        const result = await buzonHandler.cerrarTodasLasSesiones();
+        res.json(result || { success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/buzon/descargar-archivo-constancia', async (req, res) => {
+    try {
+        const { ruta } = req.body;
+        if (!ruta) {
+            return res.status(400).json({ success: false, error: 'Ruta inválida.' });
+        }
+        
+        const fs = require('fs');
+        const safePath = path.resolve(ruta);
+        const downloadBase = path.resolve(path.join(process.cwd(), 'descargas_buzon'));
+        if (!safePath.startsWith(downloadBase)) {
+            return res.status(403).json({ success: false, error: 'Acceso no autorizado.' });
+        }
+
+        if (!fs.existsSync(safePath)) {
+            return res.status(404).json({ success: false, error: 'El archivo ya no existe en el servidor.' });
+        }
+
+        const fileBuffer = fs.readFileSync(safePath);
+        res.json({
+            success: true,
+            fileBase64: fileBuffer.toString('base64'),
+            fileName: path.basename(safePath),
+            fileType: safePath.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
