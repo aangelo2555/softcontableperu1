@@ -149,6 +149,7 @@ db.exec(`
         workspace_id TEXT,
         codigo TEXT,
         descripcion TEXT,
+        porcentaje REAL,
         monto REAL,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
@@ -157,6 +158,8 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS maintenance (
         id TEXT PRIMARY KEY,
         workspace_id TEXT,
+        periodo TEXT,
+        anexo TEXT,
         descripcion TEXT,
         monto REAL,
         user_id TEXT,
@@ -356,6 +359,12 @@ const cashMovementsColsDef = [
     { name: 'cta', type: 'TEXT' }
 ];
 cashMovementsColsDef.forEach(c => ensureColumnExists('cash_movements', c.name, c.type));
+
+// Asegurar columnas de maintenance
+ensureColumnExists('maintenance', 'periodo', 'TEXT');
+ensureColumnExists('maintenance', 'anexo', 'TEXT');
+ensureColumnExists('costs', 'porcentaje', 'REAL');
+ensureColumnExists('glosas_habituales', 'category', 'TEXT');
 
 // --- Migración Forzada: Crear balance_inicial si no existe ---
 try {
