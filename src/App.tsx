@@ -550,13 +550,11 @@ const App: React.FC = () => {
             </div>
             <button
               onClick={handleOpenCompanyConfig}
-              className="group h-9 flex items-center justify-start gap-2 px-0 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-[36px] hover:w-[240px] hover:px-3 relative"
+              className="h-9 flex items-center gap-2 px-3 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-200 shadow-sm whitespace-nowrap"
               title="Configuración de la Empresa"
             >
-              <div className="w-[34px] shrink-0 flex items-center justify-center absolute left-0">
-                <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-[34px]">Configuración de la Empresa</span>
+              <Building2 size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="text-[10px] uppercase tracking-widest hidden md:inline">Configuración de la Empresa</span>
             </button>
           </div>
 
