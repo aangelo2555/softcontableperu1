@@ -193,6 +193,8 @@ const App: React.FC = () => {
       const element = document.getElementById('company-config-section');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const input = document.getElementById('empresa-ruc-input');
+        if (input) input.focus({ preventScroll: true });
       }
     }, 150);
   };

@@ -273,7 +273,7 @@ const EmpresaView: React.FC = () => {
                       <Hash size={12} className="text-pld-blue" /> RUC
                     </label>
                     <div className="relative">
-                      <input type="text" value={currentCompany.ruc} onChange={handleRucChange}
+                      <input id="empresa-ruc-input" type="text" value={currentCompany.ruc} onChange={handleRucChange}
                         placeholder="Ingrese RUC..." maxLength={11}
                         className="w-full text-sm font-mono tracking-wider pr-10" />
                       {isSearchingRuc && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-pld-blue animate-spin" />}
