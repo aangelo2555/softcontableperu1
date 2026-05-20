@@ -734,7 +734,7 @@ const SireView: React.FC = () => {
                     <p className="text-[10px] font-black text-app-text truncate uppercase tracking-tight group-hover:text-blue-500 transition-colors">{file.nombre}</p>
                     <p className="text-[9px] text-app-muted font-bold mt-1">{exactTime}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     <button 
                       onClick={() => electron.abrirArchivoSire(file.nombre)}
                       className="p-1.5 text-app-muted hover:text-emerald-500 bg-app-surface rounded-md border border-app-border transition-all"
