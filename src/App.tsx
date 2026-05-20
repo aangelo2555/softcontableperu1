@@ -192,9 +192,9 @@ const App: React.FC = () => {
     setTimeout(() => {
       const element = document.getElementById('company-config-section');
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 100);
+    }, 150);
   };
 
   const token = localStorage.getItem('softcontable_token');
@@ -548,11 +548,13 @@ const App: React.FC = () => {
             </div>
             <button
               onClick={handleOpenCompanyConfig}
-              className="group h-9 w-9 hover:w-56 px-0 hover:px-4 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 flex items-center justify-center hover:justify-start gap-2 text-[10px] uppercase tracking-widest shadow-sm overflow-hidden whitespace-nowrap"
+              className="group h-9 flex items-center justify-start gap-2 px-0 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-[36px] hover:w-[240px] hover:px-3 relative"
               title="Configuración de la Empresa"
             >
-              <Building2 size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Configuración de la Empresa</span>
+              <div className="w-[34px] shrink-0 flex items-center justify-center absolute left-0">
+                <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-[34px]">Configuración de la Empresa</span>
             </button>
           </div>
 

@@ -151,7 +151,7 @@ class SireOrchestrator {
         numTicket,
         periodo,
         periodo,
-        90 // máximo 90 intentos (180 segundos / 3 minutos)
+        40 // máximo 40 intentos (80 segundos) para evitar timeout de Railway (100s)
       );
 
       if (!ticketResult.archivoReporte || ticketResult.archivoReporte.length === 0) {

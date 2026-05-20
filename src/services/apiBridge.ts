@@ -8,6 +8,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 85000, // 85 segundos. Ligeramente menor al timeout del ingress de Railway (100s) para fallar con gracia
 });
 
 // Interceptor para añadir el Token JWT en cada petición
