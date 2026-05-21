@@ -52,18 +52,19 @@ export const SuggestionBox: React.FC = () => {
   const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return; // Solo clic izquierdo
     
-    // Obtener la posición física actual del botón al iniciar el arrastre
-    const rect = e.currentTarget.getBoundingClientRect();
-    const currentX = rect.left;
-    const currentY = rect.top;
+    // Al hacer clic, centramos inmediatamente la bombilla colapsada (44px) bajo el cursor.
+    // Esto evita saltos en el cálculo de distancias y cancela desfases por hover anterior.
+    const currentX = e.clientX - 22;
+    const currentY = e.clientY - 22;
     
     setPosition({ x: currentX, y: currentY });
     setHasDragged(true);
     
     dragStart.current = { x: e.clientX, y: e.clientY };
-    dragOffset.current = { x: e.clientX - currentX, y: e.clientY - currentY };
+    dragOffset.current = { x: 22, y: 22 }; // Fijado al centro del círculo
     clickTime.current = Date.now();
     setIsDragging(true);
+    setIsHovered(false); // Colapsar mientras se arrastra
     e.preventDefault();
   };
 
@@ -209,7 +210,7 @@ export const SuggestionBox: React.FC = () => {
 
   return (
     <>
-      {/* Botón Flotante Draggable, Libre de Círculo en modo pasivo y expansión inteligente */}
+      {/* Botón Flotante Draggable con contorno circular coloreado e instantáneo al mover */}
       <button
         onMouseDown={handleMouseDown}
         onMouseEnter={() => setIsHovered(true)}
@@ -220,12 +221,14 @@ export const SuggestionBox: React.FC = () => {
           right: 'auto',
           bottom: 'auto'
         } : {}}
-        className={`fixed z-[999] group flex items-center justify-start transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing h-11 w-11 hover:w-44 overflow-hidden ${
+        className={`fixed z-[999] group flex items-center justify-start overflow-hidden select-none cursor-grab active:cursor-grabbing h-11 w-11 hover:w-44 ${
           !hasDragged ? 'right-6 bottom-36' : ''
         } ${
+          isDragging ? 'transition-none' : 'transition-all duration-300 ease-in-out'
+        } ${
           isExpanded 
-            ? 'bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm border border-slate-300 dark:border-slate-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-md' 
-            : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-400 hover:text-blue-600 rounded-full'
+            ? 'bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-sm border border-slate-300 dark:border-slate-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-md' 
+            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-2 border-blue-500 dark:border-blue-400 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.25)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] rounded-full'
         }`}
         title="Arrastra para mover. Clic para reportar."
       >
