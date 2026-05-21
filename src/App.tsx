@@ -324,19 +324,6 @@ const App: React.FC = () => {
     }
   }, [activeTab, currentCompany, setActiveTab]);
 
-  if (isInitializing) {
-    return (
-      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center">
-        <img 
-          src="assets/logo.png" 
-          alt="Logo" 
-          className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)] animate-fade-in" 
-        />
-        <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE ERP</h1>
-        <p className="text-sm text-slate-400 animate-pulse">Iniciando motor de base de datos...</p>
-      </div>
-    );
-  }
 
   const handleBackup = async () => {
     const loadingToast = toast.loading('Creando respaldo...');
@@ -397,6 +384,20 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
     return <Login />;
+  }
+
+  if (isInitializing) {
+    return (
+      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center">
+        <img 
+          src="assets/logo.png" 
+          alt="Logo" 
+          className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)] animate-fade-in" 
+        />
+        <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE ERP</h1>
+        <p className="text-sm text-slate-400 animate-pulse">Iniciando motor de base de datos...</p>
+      </div>
+    );
   }
 
   return (
