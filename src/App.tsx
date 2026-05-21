@@ -226,10 +226,6 @@ const App: React.FC = () => {
     return userPayload?.name ? userPayload.name.trim().charAt(0).toUpperCase() : 'U';
   }, [userPayload]);
 
-  if (!isLoggedIn) {
-    return <Login />;
-  }
-
   const renderView = () => {
     switch (activeTab) {
       case 'EMPRESA': return <EmpresaView />;
@@ -398,6 +394,10 @@ const App: React.FC = () => {
   const searchResults = searchQuery 
     ? allTabs.filter(t => t.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : (isSearchFocused ? allTabs : []);
+
+  if (!isLoggedIn) {
+    return <Login />;
+  }
 
   return (
     <div className={`h-screen w-screen flex flex-col overflow-hidden bg-app-bg text-app-text font-sans selection:bg-blue-600 selection:text-white transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
