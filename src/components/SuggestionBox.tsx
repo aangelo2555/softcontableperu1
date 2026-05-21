@@ -221,7 +221,9 @@ export const SuggestionBox: React.FC = () => {
           right: 'auto',
           bottom: 'auto'
         } : {}}
-        className={`fixed z-[999] group flex items-center justify-start overflow-hidden select-none cursor-grab active:cursor-grabbing h-11 w-11 hover:w-44 ${
+        className={`fixed z-[999] group flex items-center justify-start overflow-hidden select-none cursor-grab active:cursor-grabbing h-11 ${
+          isExpanded ? 'w-44' : 'w-11'
+        } ${
           !hasDragged ? 'right-6 bottom-36' : ''
         } ${
           isDragging ? 'transition-none' : 'transition-all duration-300 ease-in-out'
