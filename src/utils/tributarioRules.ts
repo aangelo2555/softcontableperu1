@@ -138,7 +138,8 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     'DATOS',         // Tablas Generales
     'MANTENIMIENTO', // Configuración
     'BUZON',         // Buzón Electrónico
-    'SIRE'           // Módulo SIRE
+    'SIRE',          // Módulo SIRE
+    'ADMIN'          // Panel Admin
   ];
 
   if (alwaysEnabled.includes(tabId)) return true;

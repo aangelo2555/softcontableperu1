@@ -47,7 +47,7 @@ export const SuggestionBox: React.FC = () => {
   useEffect(() => {
     const handleResize = () => {
       setPosition(prev => {
-        const buttonWidth = 176;
+        const buttonWidth = 44; // Basado en el ancho colapsado
         const buttonHeight = 44;
         const newX = Math.max(10, Math.min(prev.x, window.innerWidth - buttonWidth - 10));
         const newY = Math.max(10, Math.min(prev.y, window.innerHeight - buttonHeight - 10));
@@ -74,7 +74,7 @@ export const SuggestionBox: React.FC = () => {
       let newX = e.clientX - dragOffset.current.x;
       let newY = e.clientY - dragOffset.current.y;
       
-      const buttonWidth = 176; // Ancho máximo cuando se expande (hover)
+      const buttonWidth = 44; // El límite de arrastre es sobre el botón colapsado (para que toque el extremo derecho)
       const buttonHeight = 44;
       newX = Math.max(10, Math.min(newX, window.innerWidth - buttonWidth - 10));
       newY = Math.max(10, Math.min(newY, window.innerHeight - buttonHeight - 10));
@@ -204,15 +204,17 @@ export const SuggestionBox: React.FC = () => {
     }
   };
 
-  // Ajuste matemático de posición para expandirse hacia la izquierda:
-  // Ancho colapsado = 44px, Ancho expandido = 176px. Diferencia = 132px.
-  // Cuando se expande, desplazamos la coordenada 'left' hacia la izquierda por 132px.
+  // Determinar si el botón está en la mitad izquierda o derecha de la pantalla
+  const isLeftSide = position.x < (typeof window !== 'undefined' ? window.innerWidth / 2 : 500);
   const isExpanded = isHovered && !isDragging;
-  const leftOffset = isExpanded ? 132 : 0;
+  
+  // Si está en la mitad derecha, se expande a la izquierda (offset = 132px).
+  // Si está en la mitad izquierda, se expande a la derecha (offset = 0px).
+  const leftOffset = isExpanded ? (isLeftSide ? 0 : 132) : 0;
 
   return (
     <>
-      {/* Botón Flotante Draggable, Transparente, se expande a la izquierda */}
+      {/* Botón Flotante Draggable, Libre de Círculo en modo pasivo y expansión inteligente */}
       <button
         onMouseDown={handleMouseDown}
         onMouseEnter={() => setIsHovered(true)}
@@ -223,13 +225,16 @@ export const SuggestionBox: React.FC = () => {
           right: hasInitializedPosition ? 'auto' : '24px',
           bottom: hasInitializedPosition ? 'auto' : '24px'
         }}
-        className="fixed z-[999] group flex items-center justify-start bg-transparent hover:bg-slate-500/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-full border border-slate-300/80 dark:border-slate-800/80 hover:border-blue-500/50 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing w-11 h-11 hover:w-44 overflow-hidden"
+        className={`fixed z-[999] group flex items-center justify-start transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing h-11 w-11 hover:w-44 overflow-hidden ${
+          isExpanded 
+            ? 'bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm border border-slate-300 dark:border-slate-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-md' 
+            : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-400 hover:text-blue-600 rounded-full'
+        }`}
         title="Arrastra para mover. Clic para reportar."
       >
-        <div className="flex items-center gap-2 px-3 justify-end w-full h-full">
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 whitespace-nowrap">
-            Reportar Incidencia
-          </span>
+        <div className={`flex items-center gap-2 px-3 w-full h-full ${
+          isLeftSide ? 'flex-row justify-start' : 'flex-row-reverse justify-end'
+        }`}>
           <div className="relative flex shrink-0">
             <Lightbulb size={16} className="text-yellow-500 dark:text-yellow-400 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
             <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
@@ -237,6 +242,9 @@ export const SuggestionBox: React.FC = () => {
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
             </span>
           </div>
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 whitespace-nowrap">
+            Reportar Incidencia
+          </span>
         </div>
       </button>
 
