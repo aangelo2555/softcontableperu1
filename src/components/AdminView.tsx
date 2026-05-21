@@ -12,8 +12,7 @@ import {
   Search, 
   Maximize2,
   X,
-  ShieldCheck,
-  AlertTriangle
+  ShieldCheck
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
@@ -129,52 +128,54 @@ export const AdminView: React.FC = () => {
         </div>
       </div>
 
-      {/* Tarjetas de Estadísticas Globales (Más compactas) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Usuarios</span>
-            <span className="text-2xl font-black text-app-text">{totalUsers}</span>
-            <span className="text-[9px] font-semibold text-app-muted/80">En base de datos</span>
+      {/* Tarjetas de Estadísticas Globales (Ocultas al expandir un reporte para maximizar el espacio vertical) */}
+      {!selectedSuggestion && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Usuarios</span>
+              <span className="text-2xl font-black text-app-text">{totalUsers}</span>
+              <span className="text-[9px] font-semibold text-app-muted/80">En base de datos</span>
+            </div>
+            <div className="p-2.5 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-xl">
+              <Users size={18} />
+            </div>
           </div>
-          <div className="p-2.5 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-xl">
-            <Users size={18} />
-          </div>
-        </div>
 
-        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Pendientes</span>
-            <span className="text-2xl font-black text-rose-555 text-rose-500">{pendingSuggestionsCount}</span>
-            <span className="text-[9px] font-semibold text-app-muted/80">Por resolver</span>
+          <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Pendientes</span>
+              <span className="text-2xl font-black text-rose-500">{pendingSuggestionsCount}</span>
+              <span className="text-[9px] font-semibold text-app-muted/80">Por resolver</span>
+            </div>
+            <div className="p-2.5 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-xl">
+              <MessageSquare size={18} />
+            </div>
           </div>
-          <div className="p-2.5 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-xl">
-            <MessageSquare size={18} />
-          </div>
-        </div>
 
-        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Empresas</span>
-            <span className="text-2xl font-black text-emerald-600">{totalWorkspaces}</span>
-            <span className="text-[9px] font-semibold text-app-muted/80">Configuradas</span>
+          <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Empresas</span>
+              <span className="text-2xl font-black text-emerald-600">{totalWorkspaces}</span>
+              <span className="text-[9px] font-semibold text-app-muted/80">Configuradas</span>
+            </div>
+            <div className="p-2.5 bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 rounded-xl">
+              <Building size={18} />
+            </div>
           </div>
-          <div className="p-2.5 bg-emerald-600/10 border border-emerald-500/20 text-emerald-555 rounded-xl">
-            <Building size={18} />
-          </div>
-        </div>
 
-        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Registros</span>
-            <span className="text-2xl font-black text-indigo-600">{totalEntries}</span>
-            <span className="text-[9px] font-semibold text-app-muted/80">Operaciones cargadas</span>
-          </div>
-          <div className="p-2.5 bg-indigo-600/10 border border-indigo-500/20 text-indigo-555 rounded-xl">
-            <Database size={18} />
+          <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Registros</span>
+              <span className="text-2xl font-black text-indigo-600">{totalEntries}</span>
+              <span className="text-[9px] font-semibold text-app-muted/80">Operaciones cargadas</span>
+            </div>
+            <div className="p-2.5 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 rounded-xl">
+              <Database size={18} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Contenido de la Vista Activa */}
       {activeSubTab === 'BUZON' ? (
@@ -226,14 +227,14 @@ export const AdminView: React.FC = () => {
               )}
             </div>
           ) : (
-            /* Vista B: Si hay sugerencia seleccionada, expande el reporte a ancho completo (12 columnas) */
+            /* Vista B: Si hay sugerencia seleccionada, expande el reporte a ancho completo (12 columnas) y retrae las tarjetas */
             <div className="lg:col-span-12 flex flex-col gap-4">
               
-              {/* Botón para volver y retraer la visualización */}
+              {/* Botón para volver y retraer la visualización (Respetando el tema nativo) */}
               <div className="flex justify-between items-center bg-app-surface border border-app-border px-4 py-3 rounded-2xl shadow-sm">
                 <button
                   onClick={() => setSelectedSuggestion(null)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-app-text rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border border-app-border shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-app-bg hover:bg-app-hover text-app-text border border-app-border rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                 >
                   <X size={14} />
                   Cerrar Detalle
@@ -243,8 +244,8 @@ export const AdminView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenedor del Detalle con scrollbar interno */}
-              <div className="bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto custom-scrollbar">
+              {/* Contenedor del Detalle con scrollbar interno y mayor espacio vertical */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm h-[calc(100vh-220px)] min-h-[550px] overflow-y-auto custom-scrollbar">
                 
                 {/* Cabecera del Detalle */}
                 <div className="flex justify-between items-start border-b border-app-border pb-4">
