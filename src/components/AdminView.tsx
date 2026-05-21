@@ -9,11 +9,7 @@ import {
   Calendar, 
   Building, 
   BrainCircuit, 
-  FileText, 
   Search, 
-  ArrowRight,
-  TrendingUp, 
-  Sparkles,
   Maximize2,
   X,
   ShieldCheck,
@@ -39,13 +35,6 @@ export const AdminView: React.FC = () => {
     loadAdminSuggestions();
     loadAdminUsers();
   }, []);
-
-  // Seleccionar la primera sugerencia por defecto si existe y ninguna está seleccionada
-  useEffect(() => {
-    if (adminSuggestions.length > 0 && !selectedSuggestion) {
-      setSelectedSuggestion(adminSuggestions[0]);
-    }
-  }, [adminSuggestions]);
 
   // Cálculos estadísticos
   const totalUsers = adminUsers.length;
@@ -156,7 +145,7 @@ export const AdminView: React.FC = () => {
         <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div className="flex flex-col gap-0.5">
             <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Pendientes</span>
-            <span className="text-2xl font-black text-rose-505 text-rose-500">{pendingSuggestionsCount}</span>
+            <span className="text-2xl font-black text-rose-555 text-rose-500">{pendingSuggestionsCount}</span>
             <span className="text-[9px] font-semibold text-app-muted/80">Por resolver</span>
           </div>
           <div className="p-2.5 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-xl">
@@ -170,7 +159,7 @@ export const AdminView: React.FC = () => {
             <span className="text-2xl font-black text-emerald-600">{totalWorkspaces}</span>
             <span className="text-[9px] font-semibold text-app-muted/80">Configuradas</span>
           </div>
-          <div className="p-2.5 bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 rounded-xl">
+          <div className="p-2.5 bg-emerald-600/10 border border-emerald-500/20 text-emerald-555 rounded-xl">
             <Building size={18} />
           </div>
         </div>
@@ -181,75 +170,87 @@ export const AdminView: React.FC = () => {
             <span className="text-2xl font-black text-indigo-600">{totalEntries}</span>
             <span className="text-[9px] font-semibold text-app-muted/80">Operaciones cargadas</span>
           </div>
-          <div className="p-2.5 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 rounded-xl">
+          <div className="p-2.5 bg-indigo-600/10 border border-indigo-500/20 text-indigo-555 rounded-xl">
             <Database size={18} />
           </div>
         </div>
       </div>
 
-      {/* Contenido de la Vista Activa (Scroll unificado del contenedor padre) */}
+      {/* Contenido de la Vista Activa */}
       {activeSubTab === 'BUZON' ? (
         
         /* --- BUZÓN INTELIGENTE --- */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Listado de Reportes (Izquierda) */}
-          <div className="lg:col-span-5 flex flex-col gap-4">
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-              📂 Reportes Recibidos
-            </h2>
-            
-            {sortedSuggestions.length === 0 ? (
-              <div className="bg-app-surface border border-app-border rounded-2xl p-8 text-center text-app-muted font-semibold text-xs shadow-sm">
-                No hay sugerencias registradas.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {sortedSuggestions.map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => setSelectedSuggestion(s)}
-                    className={`p-4 border rounded-2xl transition-all cursor-pointer flex flex-col gap-2.5 ${
-                      selectedSuggestion?.id === s.id
-                        ? 'bg-app-surface border-blue-500 shadow-md text-app-text'
-                        : 'bg-app-surface/60 border-app-border hover:bg-app-hover text-app-text'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {getCategoryBadge(s.id.startsWith('sug-') ? 'ERROR_CALCULO' : 'OTRO')}
-                        {getStatusBadge(s.status)}
+          {/* Vista A: Si no hay sugerencia seleccionada, mostramos la lista en ancho completo */}
+          {!selectedSuggestion ? (
+            <div className="lg:col-span-12 flex flex-col gap-4">
+              <h2 className="text-xs font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                📂 Reportes Recibidos
+              </h2>
+              
+              {sortedSuggestions.length === 0 ? (
+                <div className="bg-app-surface border border-app-border rounded-2xl p-8 text-center text-app-muted font-semibold text-xs shadow-sm">
+                  No hay sugerencias registradas.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sortedSuggestions.map((s) => (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedSuggestion(s)}
+                      className="p-4 border border-app-border bg-app-surface hover:border-blue-500 hover:shadow-md transition-all cursor-pointer rounded-2xl flex flex-col gap-2.5 text-app-text"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          {getCategoryBadge(s.id.startsWith('sug-') ? 'ERROR_CALCULO' : 'OTRO')}
+                          {getStatusBadge(s.status)}
+                        </div>
+                        <span className="text-[10px] font-bold text-app-muted flex items-center gap-1">
+                          <Calendar size={10} />
+                          {new Date(s.created_at).toLocaleDateString()}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-app-muted flex items-center gap-1">
-                        <Calendar size={10} />
-                        {new Date(s.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <p className="text-xs font-bold leading-relaxed">
-                      {s.user_comment}
-                    </p>
+                      
+                      <p className="text-xs font-bold leading-relaxed line-clamp-3">
+                        {s.user_comment}
+                      </p>
 
-                    <div className="flex items-center justify-between gap-2 border-t border-app-border pt-2 text-[10px] font-semibold text-app-muted">
-                      <span className="truncate max-w-[150px]">{s.user_email}</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">{s.view_context}</span>
+                      <div className="flex items-center justify-between gap-2 border-t border-app-border pt-2 text-[10px] font-semibold text-app-muted mt-auto">
+                        <span className="truncate max-w-[150px]">{s.user_email}</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-bold">{s.view_context}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Vista B: Si hay sugerencia seleccionada, expande el reporte a ancho completo (12 columnas) */
+            <div className="lg:col-span-12 flex flex-col gap-4">
+              
+              {/* Botón para volver y retraer la visualización */}
+              <div className="flex justify-between items-center bg-app-surface border border-app-border px-4 py-3 rounded-2xl shadow-sm">
+                <button
+                  onClick={() => setSelectedSuggestion(null)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-app-text rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border border-app-border shadow-sm"
+                >
+                  <X size={14} />
+                  Cerrar Detalle
+                </button>
+                <div className="text-[10px] font-bold text-app-muted uppercase tracking-widest">
+                  Visualizando Incidencia ID: <span className="text-blue-600 font-black">{selectedSuggestion.id}</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Detalle del Reporte e Informe IA (Derecha) */}
-          <div className="lg:col-span-7 bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm">
-            {selectedSuggestion ? (
-              <div className="flex flex-col gap-6">
+              {/* Contenedor del Detalle con scrollbar interno */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm h-[calc(100vh-280px)] min-h-[500px] overflow-y-auto custom-scrollbar">
                 
                 {/* Cabecera del Detalle */}
                 <div className="flex justify-between items-start border-b border-app-border pb-4">
                   <div>
-                    <h3 className="text-md font-black text-app-text">{selectedSuggestion.workspace_name || 'Sin empresa'}</h3>
-                    <p className="text-[10px] font-bold text-app-muted uppercase tracking-widest mt-1">
+                    <h3 className="text-lg font-black text-app-text">{selectedSuggestion.workspace_name || 'Sin empresa'}</h3>
+                    <p className="text-xs font-bold text-app-muted uppercase tracking-widest mt-1">
                       RUC: <span className="text-app-text">{selectedSuggestion.workspace_ruc || 'N/A'}</span> • Pestaña: <span className="text-blue-600 dark:text-blue-400">{selectedSuggestion.view_context}</span>
                     </p>
                   </div>
@@ -257,9 +258,9 @@ export const AdminView: React.FC = () => {
                   {selectedSuggestion.status === 'PENDIENTE' && (
                     <button
                       onClick={() => resolveAdminSuggestion(selectedSuggestion.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-emerald-600/10"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-emerald-600/10"
                     >
-                      <CheckCircle size={12} />
+                      <CheckCircle size={14} />
                       Resolver Incidencia
                     </button>
                   )}
@@ -267,17 +268,17 @@ export const AdminView: React.FC = () => {
 
                 {/* Comentario del Usuario */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Reporte del Usuario</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-app-muted">Reporte del Usuario</span>
                   <div className="bg-app-bg border border-app-border rounded-xl p-4 text-xs font-bold text-app-text leading-relaxed">
                     {selectedSuggestion.user_comment}
                   </div>
-                  <span className="text-[9px] text-app-muted font-medium">Enviado por: {selectedSuggestion.user_email}</span>
+                  <span className="text-[10px] text-app-muted font-medium">Enviado por: {selectedSuggestion.user_email}</span>
                 </div>
 
                 {/* Imagen Adjunta si Existe */}
                 {selectedSuggestion.image_base64 && (
                   <div className="flex flex-col gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Evidencia / Captura Adjunta</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-app-muted">Evidencia / Captura Adjunta</span>
                     <div className="relative group max-w-sm rounded-xl overflow-hidden border border-app-border bg-app-bg p-2">
                       <img 
                         src={selectedSuggestion.image_base64} 
@@ -298,10 +299,10 @@ export const AdminView: React.FC = () => {
                 {/* Datos del Estado Técnico */}
                 {selectedSuggestion.system_state && (
                   <div className="flex flex-col gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Datos Técnicos del Formulario</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-app-muted">Datos Técnicos del Formulario</span>
                     <div className="bg-app-bg border border-app-border rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                       {Object.entries(parseSystemState(selectedSuggestion.system_state) || {}).map(([key, val]: any) => (
-                        <div key={key} className="bg-app-surface border border-app-border p-2 rounded-lg shadow-sm">
+                        <div key={key} className="bg-app-surface border border-app-border p-2.5 rounded-lg shadow-sm">
                           <span className="text-[8px] font-black text-app-muted uppercase tracking-widest block truncate">{key}</span>
                           <span className="text-xs font-bold text-app-text mt-1 block truncate">
                             {typeof val === 'object' ? JSON.stringify(val) : String(val)}
@@ -326,13 +327,8 @@ export const AdminView: React.FC = () => {
                 )}
 
               </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-12 text-app-muted gap-3">
-                <BrainCircuit size={48} className="text-app-muted/50" />
-                <span className="font-bold text-xs">Selecciona un reporte de la izquierda para ver los diagnósticos de regla contable.</span>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
 
@@ -415,25 +411,33 @@ export const AdminView: React.FC = () => {
 
       )}
 
-      {/* Modal Overlay para ver Imagen Ampliada (Cerrable al hacer clic afuera o botón X flotante) */}
+      {/* Modal Overlay para ver Imagen Ampliada (Fijo en centro con escala máxima y botón Cerrar integrado) */}
       {zoomedImage && (
         <div 
           onClick={() => setZoomedImage(null)}
-          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 cursor-zoom-out animate-fade-in"
         >
-          <button 
-            onClick={() => setZoomedImage(null)}
-            className="absolute top-4 right-4 p-3 bg-red-600 hover:bg-red-500 text-white rounded-full transition-all cursor-pointer shadow-lg hover:scale-110 flex items-center justify-center z-50"
-            title="Cerrar imagen"
-          >
-            <X size={24} strokeWidth={2.5} />
-          </button>
-          <img 
-            src={zoomedImage} 
-            alt="Captura ampliada" 
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-slate-800 animate-scale-in" 
-          />
+          <div className="relative max-w-4xl w-full flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {/* Fila del Botón para Cerrar (Siempre visible encima de la imagen) */}
+            <div className="w-full flex justify-end">
+              <button 
+                onClick={() => setZoomedImage(null)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md hover:scale-105"
+              >
+                <X size={14} />
+                Cerrar Imagen
+              </button>
+            </div>
+            
+            {/* Tarjeta contenedora de la imagen */}
+            <div className="bg-slate-900 dark:bg-slate-950 p-2.5 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center max-w-full">
+              <img 
+                src={zoomedImage} 
+                alt="Captura ampliada" 
+                className="max-h-[70vh] max-w-full object-contain rounded-xl select-none" 
+              />
+            </div>
+          </div>
         </div>
       )}
 
