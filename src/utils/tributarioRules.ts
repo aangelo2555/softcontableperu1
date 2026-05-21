@@ -91,7 +91,11 @@ export function calcularObligacionesContables(
   }
 
   // 6. Inyección de modificadores por sector de negocio
-  if (sector === 'COMERCIAL' || sector === 'MANUFACTURA') {
+  const sectorNormalizado = sector.toUpperCase();
+  const esManufactura = sectorNormalizado.includes('MANUFACTUR');
+  const esComercial = sectorNormalizado === 'COMERCIAL';
+
+  if (esComercial || esManufactura) {
     if (tramosUit > 500 && tramosUit <= 1500) {
       libros.kardexFisico = true;
     } else if (tramosUit > 1500) {
@@ -99,7 +103,7 @@ export function calcularObligacionesContables(
     }
   }
 
-  if (sector === 'MANUFACTURA' && tramosUit > 1500) {
+  if (esManufactura && tramosUit > 1500) {
     libros.registroCostos = true;
   }
 
