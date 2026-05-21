@@ -10,6 +10,7 @@ import {
 import { useStore, type RegimenCode } from '../store';
 import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
+import { calcularObligacionesContables } from '../utils/tributarioRules';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -379,138 +380,47 @@ const EmpresaView: React.FC = () => {
                   const i = Number(currentCompany.annualIncomeUIT || 0);
 
                   const getObligationsList = () => {
+                    const valorUIT = 5500.00;
+                    const ingresosSoles = i * valorUIT;
+                    const tramosUit = i;
+                    const obligaciones = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
+                    
+                    let message = '';
+                    let isRed = false;
+
                     if (r === 'NRUS') {
-                      return {
-                        message: "El Nuevo RUS no exige llevar libros contables. Solo conserva tus comprobantes de pago de compras y ventas.",
-                        isRed: true,
-                        books: [
-                          { name: 'Registro de Ventas e Ingresos', required: false },
-                          { name: 'Registro de Compras', required: false },
-                          { name: 'Libro Diario / Simplificado', required: false },
-                          { name: 'Libro Mayor', required: false },
-                          { name: 'Libro Caja y Bancos', required: false },
-                          { name: 'Libro de Inventarios y Balances', required: false },
-                          { name: 'Registro de Activos Fijos', required: false },
-                          { name: 'Registro de Costos', required: false },
-                          { name: 'Kárdex de Inventario', required: false }
-                        ]
-                      };
+                      message = "El Nuevo RUS no exige llevar libros contables. Solo conserva tus comprobantes de pago de compras y ventas.";
+                      isRed = true;
+                    } else if (r === 'RER') {
+                      message = "El Régimen Especial de Renta (RER) solo exige llevar 2 registros obligatorios (Ventas y Compras), sin distinción de ingresos.";
+                    } else if (r === 'MYPE') {
+                      if (tramosUit <= 300) message = "Régimen MYPE (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
+                      else if (tramosUit <= 500) message = "Régimen MYPE (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
+                      else message = "Régimen MYPE (> 500 UIT): Contabilidad Completa (hasta 1,700 UIT).";
+                    } else if (r === 'RG') {
+                      if (tramosUit <= 300) message = "Régimen General (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
+                      else if (tramosUit <= 500) message = "Régimen General (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
+                      else if (tramosUit <= 1700) message = "Régimen General (> 500 a ≤ 1,700 UIT): Contabilidad Completa Básica.";
+                      else message = "Régimen General (> 1,700 UIT): Contabilidad Completa Integral (Incluye Caja y Bancos).";
                     }
-                    if (r === 'RER') {
-                      return {
-                        message: "El Régimen Especial de Renta (RER) solo exige llevar 2 registros obligatorios (Ventas y Compras), sin distinción de ingresos.",
-                        isRed: false,
-                        books: [
-                          { name: 'Registro de Ventas e Ingresos', required: true },
-                          { name: 'Registro de Compras', required: true },
-                          { name: 'Libro Diario / Simplificado', required: false },
-                          { name: 'Libro Mayor', required: false },
-                          { name: 'Libro Caja y Bancos', required: false },
-                          { name: 'Libro de Inventarios y Balances', required: false },
-                          { name: 'Registro de Activos Fijos', required: false },
-                          { name: 'Registro de Costos', required: false },
-                          { name: 'Kárdex de Inventario', required: false }
-                        ]
-                      };
-                    }
-                    if (r === 'MYPE') {
-                      if (i <= 300) {
-                        return {
-                          message: "Régimen MYPE (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).",
-                          isRed: false,
-                          books: [
-                            { name: 'Registro de Ventas e Ingresos', required: true },
-                            { name: 'Registro de Compras', required: true },
-                            { name: 'Libro Diario Formato Simplificado', required: true },
-                            { name: 'Libro Diario (Completo)', required: false },
-                            { name: 'Libro Mayor', required: false },
-                            { name: 'Libro Caja y Bancos', required: false },
-                            { name: 'Libro de Inventarios y Balances', required: false },
-                            { name: 'Registro de Activos Fijos', required: false },
-                            { name: 'Registro de Costos', required: false },
-                            { name: 'Kárdex de Inventario', required: false }
-                          ]
-                        };
-                      } else if (i <= 500) {
-                        const hasCostos = s === 'MANUFACTURERA';
-                        return {
-                          message: "Régimen MYPE (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor. Registro de Costos es condicional.",
-                          isRed: false,
-                          books: [
-                            { name: 'Registro de Ventas e Ingresos', required: true },
-                            { name: 'Registro de Compras', required: true },
-                            { name: 'Libro Diario (Completo)', required: true },
-                            { name: 'Libro Mayor', required: true },
-                            { name: 'Libro Caja y Bancos', required: false },
-                            { name: 'Libro de Inventarios y Balances', required: false },
-                            { name: 'Registro de Activos Fijos', required: false },
-                            { name: 'Registro de Costos', required: hasCostos, note: hasCostos ? 'Requerido para Manufactura' : 'Solo Manufactura' },
-                            { name: 'Kárdex de Inventario', required: false }
-                          ]
-                        };
-                      } else {
-                        const hasCostos = s === 'MANUFACTURERA';
-                        const hasUnidades = s === 'COMERCIAL' || s === 'MANUFACTURERA';
-                        const hasValorizado = s === 'MANUFACTURERA' || (s === 'COMERCIAL' && i > 1500);
-                        return {
-                          message: "Régimen MYPE (> 500 UIT): Contabilidad Completa y registros auxiliares obligatorios según sector e ingresos.",
-                          isRed: false,
-                          books: [
-                            { name: 'Registro de Ventas e Ingresos', required: true },
-                            { name: 'Registro de Compras', required: true },
-                            { name: 'Libro Diario (Completo)', required: true },
-                            { name: 'Libro Mayor', required: true },
-                            { name: 'Libro Caja y Bancos', required: true },
-                            { name: 'Libro de Inventarios y Balances', required: true },
-                            { name: 'Registro de Activos Fijos', required: true },
-                            { name: 'Registro de Costos', required: hasCostos, note: 'Solo Manufactura' },
-                            { name: 'Inventario Permanente Unidades', required: hasUnidades, note: 'Solo Comercio y Manufactura' },
-                            { name: 'Inventario Permanente Valorizado (Kárdex)', required: hasValorizado, note: 'Manufactura / Comercio > 1500 UIT' }
-                          ]
-                        };
-                      }
-                    }
-                    if (r === 'RG') {
-                      if (i <= 150) {
-                        return {
-                          message: "Régimen General (≤ 150 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).",
-                          isRed: false,
-                          books: [
-                            { name: 'Registro de Ventas e Ingresos', required: true },
-                            { name: 'Registro de Compras', required: true },
-                            { name: 'Libro Diario Formato Simplificado', required: true },
-                            { name: 'Libro Diario (Completo)', required: false },
-                            { name: 'Libro Mayor', required: false },
-                            { name: 'Libro Caja y Bancos', required: false },
-                            { name: 'Libro de Inventarios y Balances', required: false },
-                            { name: 'Registro de Activos Fijos', required: false },
-                            { name: 'Registro de Costos', required: false },
-                            { name: 'Kárdex de Inventario', required: false }
-                          ]
-                        };
-                      } else {
-                        const hasCostos = s === 'MANUFACTURERA';
-                        const hasUnidades = s === 'MANUFACTURERA' || (s === 'COMERCIAL' && i > 500);
-                        const hasValorizado = s === 'MANUFACTURERA' || (s === 'COMERCIAL' && i > 1500);
-                        return {
-                          message: "Régimen General (> 150 UIT): Contabilidad Completa y registros auxiliares obligatorios según sector e ingresos.",
-                          isRed: false,
-                          books: [
-                            { name: 'Registro de Ventas e Ingresos', required: true },
-                            { name: 'Registro de Compras', required: true },
-                            { name: 'Libro Diario (Completo)', required: true },
-                            { name: 'Libro Mayor', required: true },
-                            { name: 'Libro Caja y Bancos', required: true },
-                            { name: 'Libro de Inventarios y Balances', required: true },
-                            { name: 'Registro de Activos Fijos', required: true },
-                            { name: 'Registro de Costos', required: hasCostos, note: 'Solo Manufactura' },
-                            { name: 'Inventario Permanente Unidades', required: hasUnidades, note: 'Manufactura / Comercio > 500 UIT' },
-                            { name: 'Inventario Permanente Valorizado (Kárdex)', required: hasValorizado, note: 'Manufactura / Comercio > 1500 UIT' }
-                          ]
-                        };
-                      }
-                    }
-                    return { message: '', books: [], isRed: false };
+
+                    return {
+                      message,
+                      isRed,
+                      books: [
+                        { name: 'Registro de Ventas e Ingresos', required: obligaciones.registroVentas },
+                        { name: 'Registro de Compras', required: obligaciones.registroCompras },
+                        { name: 'Libro Diario (Simplificado)', required: obligaciones.libroDiarioSimplificado, note: 'Hasta 300 UIT' },
+                        { name: 'Libro Diario (Completo)', required: obligaciones.libroDiarioCompleto },
+                        { name: 'Libro Mayor', required: obligaciones.libroMayor },
+                        { name: 'Libro Caja y Bancos', required: obligaciones.libroCajaBancos, note: 'Exclusivo > 1,700 UIT' },
+                        { name: 'Libro de Inventarios y Balances', required: obligaciones.libroInventariosBalances },
+                        { name: 'Registro de Activos Fijos', required: obligaciones.libroInventariosBalances, note: 'Anexo de Balances' },
+                        { name: 'Inventario Permanente Unidades', required: obligaciones.kardexFisico, note: 'Comercio/Manuf > 500 UIT' },
+                        { name: 'Inventario Permanente Valorizado', required: obligaciones.kardexValorizado, note: 'Comercio/Manuf > 1500 UIT' },
+                        { name: 'Registro de Costos', required: obligaciones.registroCostos, note: 'Solo Manuf > 1500 UIT' }
+                      ]
+                    };
                   };
 
                   const currentRules = getObligationsList();
