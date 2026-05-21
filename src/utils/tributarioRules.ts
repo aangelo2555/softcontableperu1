@@ -121,8 +121,8 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
   const ingresosUIT = Number(company.annualIncomeUIT || 0); // En SoftContable se guarda en UIT
   
   // OBTENER VALOR UIT DEL PERIODO
-  // Usamos el valor estándar proporcionado para el cálculo inverso (2026)
-  const valorUIT = 5350.00;
+  // Valor actualizado para el año 2026
+  const valorUIT = 5500.00;
   const ingresosSoles = ingresosUIT * valorUIT; // Reconstruir soles para la función matemática pura
 
   // Módulos que NUNCA se deshabilitan (Transversales / No contables de SUNAT)
