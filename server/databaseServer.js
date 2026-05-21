@@ -252,6 +252,24 @@ db.exec(`
     );
 `);
 
+// --- Tabla de Sugerencias y Reportes Inteligentes ---
+db.exec(`
+    CREATE TABLE IF NOT EXISTS suggestions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        user_email TEXT,
+        workspace_ruc TEXT,
+        workspace_name TEXT,
+        view_context TEXT,
+        user_comment TEXT,
+        image_base64 TEXT,
+        system_state TEXT,
+        ai_analysis TEXT,
+        status TEXT DEFAULT 'PENDIENTE',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+`);
+
 // Función auxiliar para añadir columnas si no existen (para migración de tablas existentes)
 function ensureColumnExists(tableName, colName, colType) {
     try {
@@ -583,6 +601,41 @@ const dbManager = {
         return db.prepare(`
             DELETE FROM balance_inicial WHERE id = ? AND workspace_id = ? AND user_id = ?
         `).run(id, ruc, userId);
+    },
+
+    createSuggestion: (s) => {
+        const stmt = db.prepare(`
+            INSERT INTO suggestions (id, user_id, user_email, workspace_ruc, workspace_name, view_context, user_comment, image_base64, system_state, ai_analysis, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        return stmt.run(s.id, s.user_id, s.user_email, s.workspace_ruc, s.workspace_name, s.view_context, s.user_comment, s.image_base64, s.system_state, s.ai_analysis, s.status || 'PENDIENTE');
+    },
+
+    getSuggestions: () => {
+        return db.prepare(`SELECT * FROM suggestions ORDER BY created_at DESC`).all();
+    },
+
+    resolveSuggestion: (id) => {
+        return db.prepare(`UPDATE suggestions SET status = 'RESUELTO' WHERE id = ?`).run(id);
+    },
+
+    getAdminUsersSummary: () => {
+        const users = db.prepare(`SELECT id, email, name, role, created_at FROM users`).all();
+        return users.map(u => {
+            const workspaceCount = db.prepare(`SELECT COUNT(*) as count FROM workspaces WHERE user_id = ?`).get(u.id)?.count || 0;
+            const workspaces = db.prepare(`SELECT ruc, name FROM workspaces WHERE user_id = ?`).all(u.id);
+            const purchaseCount = db.prepare(`SELECT COUNT(*) as count FROM purchases WHERE user_id = ?`).get(u.id)?.count || 0;
+            const saleCount = db.prepare(`SELECT COUNT(*) as count FROM sales WHERE user_id = ?`).get(u.id)?.count || 0;
+            const journalCount = db.prepare(`SELECT COUNT(*) as count FROM journal WHERE user_id = ?`).get(u.id)?.count || 0;
+            return {
+                ...u,
+                workspaceCount,
+                workspaces,
+                purchaseCount,
+                saleCount,
+                journalCount
+            };
+        });
     }
 };
 

@@ -184,6 +184,28 @@ export const webApiBridge = {
         });
     },
 
+    // --- Suggestions & Admin API ---
+    submitSuggestion: async (data: any) => {
+        const res = await api.post('/api/suggestions', data);
+        return res.data;
+    },
+    adminGetSuggestions: async () => {
+        const res = await api.get(`/api/admin/suggestions?t=${Date.now()}`);
+        return res.data.suggestions || [];
+    },
+    adminResolveSuggestion: async (id: string) => {
+        const res = await api.post(`/api/admin/suggestions/${id}/resolve`);
+        return res.data;
+    },
+    adminGetUsers: async () => {
+        const res = await api.get(`/api/admin/users?t=${Date.now()}`);
+        return res.data.users || [];
+    },
+    adminGetUserWorkspaceData: async (userId: string, ruc: string) => {
+        const res = await api.get(`/api/admin/user-workspace-data/${userId}/${ruc}?t=${Date.now()}`);
+        return res.data.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

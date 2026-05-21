@@ -442,6 +442,171 @@ app.get('/api/sire/archivos/:nombre/descargar', async (req, res) => {
     }
 });
 
+// --- Middleware para verificar rol de Administrador ---
+const adminAuthMiddleware = (req, res, next) => {
+    const normalizedEmail = (req.user?.email || '').trim().toLowerCase();
+    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin');
+    if (!isAdmin) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado. Se requieren privilegios de Administrador.' });
+    }
+    next();
+};
+
+// --- Diagnóstico Inteligente Local ---
+function runAiDiagnostic(userComment, systemState = {}) {
+    const analysisLines = [];
+    analysisLines.push("### 🧠 Diagnóstico del Asistente Contable Inteligente\n");
+    
+    let checksPassed = true;
+    
+    if (systemState.bi !== undefined && systemState.igv !== undefined && systemState.total !== undefined) {
+        const bi = parseFloat(systemState.bi) || 0;
+        const igv = parseFloat(systemState.igv) || 0;
+        const total = parseFloat(systemState.total) || 0;
+        const noGravada = parseFloat(systemState.noGravada) || 0;
+        const isc = parseFloat(systemState.isc) || 0;
+        
+        const calculatedIgv = Math.round(bi * 0.18 * 100) / 100;
+        const diffIgv = Math.abs(calculatedIgv - igv);
+        
+        if (bi > 0) {
+            if (diffIgv > 0.1) {
+                checksPassed = false;
+                analysisLines.push(`* **⚠️ Alerta de IGV:** Se detectó una diferencia en el IGV. Registrado: **S/ ${igv.toFixed(2)}**, Esperado (18%): **S/ ${calculatedIgv.toFixed(2)}** (Diferencia: S/ ${diffIgv.toFixed(2)}).`);
+            } else {
+                analysisLines.push(`* **✅ Cálculo de IGV Correcto:** El IGV de S/ ${igv.toFixed(2)} corresponde al 18% de la base imponible S/ ${bi.toFixed(2)}.`);
+            }
+        }
+        
+        const expectedTotal = Math.round((bi + igv + noGravada + isc) * 100) / 100;
+        const diffTotal = Math.abs(expectedTotal - total);
+        if (diffTotal > 0.1) {
+            checksPassed = false;
+            analysisLines.push(`* **⚠️ Descuadre en Sumas:** La suma de Base Imponible (S/ ${bi.toFixed(2)}) + IGV (S/ ${igv.toFixed(2)}) + No Gravada (S/ ${noGravada.toFixed(2)}) + ISC (S/ ${isc.toFixed(2)}) es **S/ ${expectedTotal.toFixed(2)}**, pero se registró un total de **S/ ${total.toFixed(2)}**.`);
+        } else {
+            analysisLines.push(`* **✅ Consistencia en Totales:** La suma de los componentes coincide con el total registrado de S/ ${total.toFixed(2)}.`);
+        }
+    }
+    
+    if (systemState.regimenTributario) {
+        const regimen = systemState.regimenTributario;
+        const total = parseFloat(systemState.total) || 0;
+        
+        analysisLines.push(`* **Régimen de la Empresa:** ${regimen}`);
+        
+        if (regimen === 'NRUS') {
+            analysisLines.push("* **ℹ️ Regla NRUS:** Recuerda que las empresas en el Nuevo RUS (NRUS) no emiten Facturas, solo Boletas de Venta o Tickets. Tampoco pueden utilizar el crédito fiscal de compras.");
+            if (total > 8000) {
+                checksPassed = false;
+                analysisLines.push(`* **⚠️ Exceso de Límite NRUS:** Las compras/ventas registradas de S/ ${total.toFixed(2)} superan el límite mensual máximo de la Categoría 2 del NRUS (S/ 8,000).`);
+            }
+        } else if (regimen === 'RER') {
+            analysisLines.push("* **ℹ️ Regla RER:** El Régimen Especial de Renta (RER) tiene límites de compras/ventas anuales de S/ 525,000 y restricciones en actividades.");
+        }
+    }
+    
+    if (systemState.ctaGasto || systemState.ctaAbono) {
+        const ctaG = systemState.ctaGasto;
+        if (ctaG) {
+            if (ctaG.startsWith('60')) {
+                analysisLines.push(`* **Foco Contable (Cuenta de Compra):** Se utilizó la cuenta de gasto/costo **${ctaG}**. Esta cuenta requiere amarres al elemento 20/25 (Ingreso a Almacén) y elemento 61 (Variación de Inventarios) en el Libro Diario.`);
+            } else if (ctaG.startsWith('63') || ctaG.startsWith('64') || ctaG.startsWith('65')) {
+                analysisLines.push(`* **Foco Contable (Gastos de Servicios/Tributos):** Cuenta **${ctaG}**. Requiere amarre de gastos administrativos (Clase 94) o ventas (Clase 95) contra la cuenta 791.`);
+            }
+        }
+    }
+    
+    const lowerComment = userComment.toLowerCase();
+    if (lowerComment.includes('igv') || lowerComment.includes('impuesto')) {
+        analysisLines.push("\n**💡 Recomendación para el Reporte de Impuestos:** Revisa si la operación está gravada o exonerada. Si es una compra no gravada, asegúrate de colocar el monto en el campo 'No Gravada' para evitar que afecte el IGV.");
+    } else if (lowerComment.includes('amarre') || lowerComment.includes('destino') || lowerComment.includes('cuenta')) {
+        analysisLines.push("\n**💡 Recomendación para Asientos Contables:** Verifica los amarres automáticos configurados en el 'Plan Contable' para la cuenta indicada. Si el asiento de diario no se generó, la cuenta podría no tener configurados los amarres debe/haber.");
+    } else if (lowerComment.includes('sire') || lowerComment.includes('sol') || lowerComment.includes('sunat')) {
+        analysisLines.push("\n**💡 Recomendación para Buzón/SIRE:** Verifica que las credenciales SOL de la empresa estén vigentes y que el Client ID / Client Secret estén correctamente registrados en la configuración de la empresa.");
+    } else {
+        analysisLines.push("\n**💡 Recomendación:** El reporte ha sido clasificado para revisión de lógica contable general. Se recomienda al administrador auditar la base de datos de este workspace.");
+    }
+    
+    if (checksPassed) {
+        analysisLines.push("\n*Nota del Analizador: No se detectaron inconsistencias matemáticas evidentes basadas en los datos numéricos enviados. Podría tratarse de un problema de interfaz, de flujo o de criterio profesional del usuario.*");
+    } else {
+        analysisLines.push("\n*Nota del Analizador: Se han identificado discrepancias numéricas o de reglas tributarias. Se sugiere revisar la configuración del asiento o la empresa.*");
+    }
+    
+    return analysisLines.join("\n");
+}
+
+// --- API Endpoints: Sugerencias & Administración ---
+
+app.post('/api/suggestions', authMiddleware, async (req, res) => {
+    try {
+        const { workspace_ruc, workspace_name, view_context, user_comment, image_base64, system_state } = req.body;
+        
+        // Generar análisis IA local
+        const ai_analysis = runAiDiagnostic(user_comment || '', system_state || {});
+        
+        const suggestion = {
+            id: `sug-${Date.now()}`,
+            user_id: req.user.id,
+            user_email: req.user.email,
+            workspace_ruc: workspace_ruc || '',
+            workspace_name: workspace_name || '',
+            view_context: view_context || 'General',
+            user_comment: user_comment || '',
+            image_base64: image_base64 || null,
+            system_state: JSON.stringify(system_state || {}),
+            ai_analysis,
+            status: 'PENDIENTE'
+        };
+        
+        await db.createSuggestion(suggestion);
+        res.json({ success: true, suggestion });
+    } catch (error) {
+        console.error('[SUGGESTION ERROR]:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/admin/suggestions', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const suggestions = await db.getSuggestions();
+        res.json({ success: true, suggestions });
+    } catch (error) {
+        console.error('[ADMIN ERROR] Error en getSuggestions:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/admin/suggestions/:id/resolve', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        await db.resolveSuggestion(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[ADMIN ERROR] Error en resolveSuggestion:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/admin/users', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const users = await db.getAdminUsersSummary();
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error('[ADMIN ERROR] Error en getUsersSummary:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/admin/user-workspace-data/:userId/:ruc', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const data = await db.getWorkspaceData(req.params.ruc, req.params.userId);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('[ADMIN ERROR] Error en inspectWorkspace:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // --- Static Files & SPA Routing ---
 
 const distPath = path.join(__dirname, '../dist');

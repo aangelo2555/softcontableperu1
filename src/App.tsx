@@ -39,6 +39,9 @@ import RegistroVentas141View from './components/RegistroVentas141View';
 import BalanceInicialView from './components/BalanceInicialView';
 import CCCDashboard from './components/CCCDashboard';
 import { Login } from './components/Login';
+import { AdminView } from './components/AdminView';
+import { SuggestionBox } from './components/SuggestionBox';
+import { ShieldCheck, AlertTriangle } from 'lucide-react';
 
 import {
   LayoutDashboard,
@@ -186,7 +189,17 @@ function findGroupForTab(tabId: string): string | null {
 // ─── App Component ───
 
 const App: React.FC = () => {
-  const { activeTab, setActiveTab, theme, toggleTheme, buzonMensajes, setShowCompanyConfig, currentCompany } = useStore();
+  const { 
+    activeTab, 
+    setActiveTab, 
+    theme, 
+    toggleTheme, 
+    buzonMensajes, 
+    setShowCompanyConfig, 
+    currentCompany,
+    isInspectingUser,
+    stopInspectingWorkspace
+  } = useStore();
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('softcontable_token'));
 
   const handleOpenCompanyConfig = () => {
@@ -258,6 +271,7 @@ const App: React.FC = () => {
       case 'ESTADOS_SEC': return <FinanceSecondaryView />;
       case 'BALANCE_INICIAL': return <BalanceInicialView />;
       case 'CCC': return <CCCDashboard />;
+      case 'ADMIN': return <AdminView />;
       default: return <EmpresaView />;
     }
   };
@@ -375,6 +389,20 @@ const App: React.FC = () => {
     }).filter(group => group.items.length > 0);
   }, [currentCompany]);
 
+  const computedSidebarGroups = React.useMemo(() => {
+    const groups = [...filteredGroups];
+    if (isAdmin) {
+      groups.push({
+        groupLabel: 'Administración',
+        groupIcon: ShieldCheck,
+        items: [
+          { id: 'ADMIN', label: 'Panel Admin', icon: Settings },
+        ],
+      });
+    }
+    return groups;
+  }, [filteredGroups, isAdmin]);
+
   const groupHasActiveTab = (group: TabGroup) => group.items.some(item => item.id === activeTab);
 
   const allTabs = filteredGroups.flatMap(g => g.items);
@@ -427,7 +455,7 @@ const App: React.FC = () => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 custom-scrollbar flex flex-col gap-1 w-full px-2 bg-app-surface">
-          {filteredGroups.map((group) => {
+          {computedSidebarGroups.map((group) => {
             const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
             const isActiveGroup = groupHasActiveTab(group);
             const isSingleItem = group.items.length === 1;
@@ -524,6 +552,20 @@ const App: React.FC = () => {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
+        {isInspectingUser && (
+          <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-white flex items-center justify-between text-xs font-black uppercase tracking-wider shadow-md shrink-0 z-50">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} className="animate-bounce shrink-0 text-amber-200" />
+              <span>Modo Inspector Activo: Estás visualizando los datos de la empresa <strong className="underline">{currentCompany?.name} (RUC: {currentCompany?.ruc})</strong>.</span>
+            </div>
+            <button
+              onClick={stopInspectingWorkspace}
+              className="px-3 py-1 bg-white hover:bg-slate-100 text-orange-600 font-extrabold text-[10px] rounded-lg shadow-sm uppercase tracking-widest transition-all cursor-pointer shrink-0"
+            >
+              Salir de Inspección
+            </button>
+          </div>
+        )}
 
         {/* Top Header */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative">
@@ -699,6 +741,7 @@ const App: React.FC = () => {
           </div>
         </main>
       </div>
+      <SuggestionBox />
     </div>
   </div>
 );

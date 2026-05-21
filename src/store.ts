@@ -445,6 +445,18 @@ export interface AppState extends WorkspaceState {
   markBuzonMensajeAsRead: (id: string) => void;
   centralizeSireRecords: (ruc: string, records: any[], proceso: string) => Promise<void>;
   syncMaintenance: () => Promise<void>;
+  // --- Admin & Suggestions ---
+  adminSuggestions: any[];
+  adminUsers: any[];
+  isInspectingUser: boolean;
+  originalAdminCompany: CompanyData | null;
+  originalAdminWorkspaceData: Partial<WorkspaceState> | null;
+  loadAdminSuggestions: () => Promise<void>;
+  resolveAdminSuggestion: (id: string) => Promise<void>;
+  loadAdminUsers: () => Promise<void>;
+  startInspectingWorkspace: (userId: string, ruc: string, companyName: string) => Promise<void>;
+  stopInspectingWorkspace: () => Promise<void>;
+  sendSuggestion: (comment: string, imageBase64: string | null, category: string, systemState: any) => Promise<void>;
 }
 
 // ─── Helpers ───
@@ -565,6 +577,11 @@ export const useStore = create<AppState>()(
       workspaces: [],
       buzonMensajes: [],
       draftCompra: null, draftVenta: null, draftHonorario: null, draftAsiento: null,
+      adminSuggestions: [],
+      adminUsers: [],
+      isInspectingUser: false,
+      originalAdminCompany: null,
+      originalAdminWorkspaceData: null,
       
       // --- Lifecycle ---
       initApp: async () => {
@@ -1241,6 +1258,137 @@ export const useStore = create<AppState>()(
         }
         
         await get().syncCurrentWorkspace();
+      },
+
+      // --- Admin & Suggestions Actions ---
+      loadAdminSuggestions: async () => {
+        try {
+          const suggestions = await webApiBridge.adminGetSuggestions();
+          set({ adminSuggestions: suggestions });
+        } catch (error) {
+          console.error("Error loading admin suggestions:", error);
+        }
+      },
+
+      resolveAdminSuggestion: async (id) => {
+        try {
+          await webApiBridge.adminResolveSuggestion(id);
+          set({
+            adminSuggestions: get().adminSuggestions.map(s => s.id === id ? { ...s, status: 'RESUELTO' } : s)
+          });
+          toast.success("Sugerencia marcada como resuelta.");
+        } catch (error) {
+          console.error("Error resolving suggestion:", error);
+          toast.error("Error al resolver la sugerencia.");
+        }
+      },
+
+      loadAdminUsers: async () => {
+        try {
+          const users = await webApiBridge.adminGetUsers();
+          set({ adminUsers: users });
+        } catch (error) {
+          console.error("Error loading admin users:", error);
+        }
+      },
+
+      startInspectingWorkspace: async (userId, ruc, companyName) => {
+        try {
+          set({ isProcessing: true });
+          const userWorkspaceData = await webApiBridge.adminGetUserWorkspaceData(userId, ruc);
+          
+          if (!userWorkspaceData) {
+            toast.error("No se pudo obtener la información de esta empresa.");
+            return;
+          }
+          
+          // Respaldar estado del admin
+          const originalAdminCompany = get().currentCompany;
+          const originalAdminWorkspaceData = {
+            purchases: get().purchases,
+            sales: get().sales,
+            journal: get().journal,
+            asientos: get().asientos,
+            entities: get().entities,
+            maintenanceRecords: get().maintenanceRecords,
+            costs: get().costs,
+            honorarios: get().honorarios,
+            plan: get().plan,
+            movimientosData: get().movimientosData,
+            glosasHabituales: get().glosasHabituales,
+            products: get().products,
+            inventoryMovements: get().inventoryMovements,
+            cashMovements: get().cashMovements,
+            fixedAssets: get().fixedAssets,
+            employees: get().employees,
+            balanceInicial: get().balanceInicial,
+          };
+          
+          // Cargar datos del usuario
+          set({
+            isInspectingUser: true,
+            originalAdminCompany,
+            originalAdminWorkspaceData,
+            currentCompany: userWorkspaceData.currentCompany || { name: companyName, ruc },
+            ...userWorkspaceData,
+            activeTab: 'EMPRESA'
+          });
+          
+          toast.success(`Inspeccionando empresa: ${companyName} ✓`);
+        } catch (error) {
+          console.error("Error inspecting workspace:", error);
+          toast.error("Error al entrar en modo inspección.");
+        } finally {
+          set({ isProcessing: false });
+        }
+      },
+
+      stopInspectingWorkspace: async () => {
+        const originalCompany = get().originalAdminCompany;
+        const originalData = get().originalAdminWorkspaceData;
+        
+        if (originalCompany && originalData) {
+          set({
+            isInspectingUser: false,
+            originalAdminCompany: null,
+            originalAdminWorkspaceData: null,
+            currentCompany: originalCompany,
+            ...originalData,
+            activeTab: 'ADMIN' // Volver al panel de admin
+          });
+          toast.success("Has salido del modo inspección.");
+        } else {
+          set({ isInspectingUser: false });
+          await get().initApp();
+        }
+      },
+
+      sendSuggestion: async (comment, imageBase64, category, systemState) => {
+        try {
+          set({ isProcessing: true });
+          const ruc = get().currentCompany?.ruc || '';
+          const name = get().currentCompany?.name || '';
+          
+          await webApiBridge.submitSuggestion({
+            workspace_ruc: ruc,
+            workspace_name: name,
+            view_context: get().activeTab,
+            user_comment: comment,
+            image_base64: imageBase64,
+            system_state: {
+              ...systemState,
+              regimenTributario: get().currentCompany?.regimenTributario || 'RG',
+              businessType: get().currentCompany?.businessType || 'COMERCIAL',
+            }
+          });
+          
+          toast.success("Sugerencia inteligente enviada con éxito ✓");
+        } catch (error: any) {
+          console.error("Error submitting suggestion:", error);
+          toast.error(`Error al enviar sugerencia: ${error.message || 'Error desconocido'}`);
+        } finally {
+          set({ isProcessing: false });
+        }
       },
     }),
     {
