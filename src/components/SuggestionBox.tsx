@@ -15,6 +15,7 @@ export const SuggestionBox: React.FC = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const dragStart = useRef({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -203,31 +204,39 @@ export const SuggestionBox: React.FC = () => {
     }
   };
 
+  // Ajuste matemático de posición para expandirse hacia la izquierda:
+  // Ancho colapsado = 44px, Ancho expandido = 176px. Diferencia = 132px.
+  // Cuando se expande, desplazamos la coordenada 'left' hacia la izquierda por 132px.
+  const isExpanded = isHovered && !isDragging;
+  const leftOffset = isExpanded ? 132 : 0;
+
   return (
     <>
-      {/* Botón Flotante Draggable, Retraído por defecto y se expande al Hover */}
+      {/* Botón Flotante Draggable, Transparente, se expande a la izquierda */}
       <button
         onMouseDown={handleMouseDown}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         style={{ 
-          left: hasInitializedPosition ? `${position.x}px` : 'auto', 
+          left: hasInitializedPosition ? `${position.x - leftOffset}px` : 'auto', 
           top: hasInitializedPosition ? `${position.y}px` : 'auto',
           right: hasInitializedPosition ? 'auto' : '24px',
           bottom: hasInitializedPosition ? 'auto' : '24px'
         }}
-        className="fixed z-[999] group flex items-center justify-start bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-[0_8px_24px_rgba(37,99,235,0.3)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.5)] border border-blue-500/20 transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing w-11 h-11 hover:w-44 overflow-hidden"
+        className="fixed z-[999] group flex items-center justify-start bg-transparent hover:bg-slate-500/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-full border border-slate-300/80 dark:border-slate-800/80 hover:border-blue-500/50 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing w-11 h-11 hover:w-44 overflow-hidden"
         title="Arrastra para mover. Clic para reportar."
       >
-        <div className="flex items-center gap-2 px-3.5 justify-start w-full">
-          <div className="relative flex shrink-0">
-            <Lightbulb size={16} className="text-yellow-300 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
-            <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-100"></span>
-            </span>
-          </div>
+        <div className="flex items-center gap-2 px-3 justify-end w-full h-full">
           <span className="text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 whitespace-nowrap">
             Reportar Incidencia
           </span>
+          <div className="relative flex shrink-0">
+            <Lightbulb size={16} className="text-yellow-500 dark:text-yellow-400 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
+            <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+            </span>
+          </div>
         </div>
       </button>
 
