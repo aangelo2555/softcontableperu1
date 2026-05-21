@@ -95,156 +95,158 @@ export const AdminView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 bg-app-bg text-app-text flex flex-col gap-8">
+    <div className="flex-1 overflow-y-auto p-6 bg-app-bg text-app-text flex flex-col gap-6">
       
       {/* Encabezado Principal */}
-      <div className="flex items-center justify-between border-b border-app-border pb-6">
+      <div className="flex items-center justify-between border-b border-app-border pb-4">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">
+          <div className="flex items-center gap-2 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
             <ShieldCheck size={12} />
             Entorno de Control Admin
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-app-text">Panel de Administración</h1>
-          <p className="text-xs font-semibold text-app-muted mt-1">Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables.</p>
+          <h1 className="text-2xl font-black tracking-tight text-app-text">Panel de Administración</h1>
+          <p className="text-[11px] font-semibold text-app-muted mt-0.5">Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables.</p>
         </div>
 
         {/* Interruptor de Pestañas */}
-        <div className="flex bg-app-bg p-1.5 rounded-2xl border border-app-border">
+        <div className="flex bg-app-bg p-1 rounded-xl border border-app-border">
           <button
             onClick={() => setActiveSubTab('BUZON')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
               activeSubTab === 'BUZON' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' 
+                ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-app-muted hover:text-app-text'
             }`}
           >
-            <MessageSquare size={14} />
+            <MessageSquare size={12} />
             Buzón Inteligente
             {pendingSuggestionsCount > 0 && (
-              <span className="bg-rose-500 text-white font-bold text-[9px] h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+              <span className="bg-rose-500 text-white font-bold text-[9px] h-3.5 min-w-3.5 px-1 rounded-full flex items-center justify-center">
                 {pendingSuggestionsCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveSubTab('USUARIOS')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
               activeSubTab === 'USUARIOS' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' 
+                ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-app-muted hover:text-app-text'
             }`}
           >
-            <Users size={14} />
+            <Users size={12} />
             Usuarios & Auditoría
           </button>
         </div>
       </div>
 
-      {/* Tarjetas de Estadísticas Globales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-app-surface border border-app-border rounded-3xl p-6 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Usuarios Registrados</span>
-            <span className="text-3xl font-black text-app-text">{totalUsers}</span>
-            <span className="text-[10px] font-semibold text-app-muted">En base de datos</span>
+      {/* Tarjetas de Estadísticas Globales (Más compactas) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Usuarios</span>
+            <span className="text-2xl font-black text-app-text">{totalUsers}</span>
+            <span className="text-[9px] font-semibold text-app-muted/80">En base de datos</span>
           </div>
-          <div className="p-4 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-2xl">
-            <Users size={24} />
-          </div>
-        </div>
-
-        <div className="bg-app-surface border border-app-border rounded-3xl p-6 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Reportes Pendientes</span>
-            <span className="text-3xl font-black text-rose-500">{pendingSuggestionsCount}</span>
-            <span className="text-[10px] font-semibold text-app-muted">Por resolver</span>
-          </div>
-          <div className="p-4 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-2xl">
-            <MessageSquare size={24} />
+          <div className="p-2.5 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-xl">
+            <Users size={18} />
           </div>
         </div>
 
-        <div className="bg-app-surface border border-app-border rounded-3xl p-6 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Empresas (Workspaces)</span>
-            <span className="text-3xl font-black text-emerald-600">{totalWorkspaces}</span>
-            <span className="text-[10px] font-semibold text-app-muted">Configuradas</span>
+        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Pendientes</span>
+            <span className="text-2xl font-black text-rose-505 text-rose-500">{pendingSuggestionsCount}</span>
+            <span className="text-[9px] font-semibold text-app-muted/80">Por resolver</span>
           </div>
-          <div className="p-4 bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 rounded-2xl">
-            <Building size={24} />
+          <div className="p-2.5 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-xl">
+            <MessageSquare size={18} />
           </div>
         </div>
 
-        <div className="bg-app-surface border border-app-border rounded-3xl p-6 flex items-center justify-between shadow-sm">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Volumen Registros</span>
-            <span className="text-3xl font-black text-indigo-600">{totalEntries}</span>
-            <span className="text-[10px] font-semibold text-app-muted">Operaciones cargadas</span>
+        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Empresas</span>
+            <span className="text-2xl font-black text-emerald-600">{totalWorkspaces}</span>
+            <span className="text-[9px] font-semibold text-app-muted/80">Configuradas</span>
           </div>
-          <div className="p-4 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 rounded-2xl">
-            <Database size={24} />
+          <div className="p-2.5 bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 rounded-xl">
+            <Building size={18} />
+          </div>
+        </div>
+
+        <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Registros</span>
+            <span className="text-2xl font-black text-indigo-600">{totalEntries}</span>
+            <span className="text-[9px] font-semibold text-app-muted/80">Operaciones cargadas</span>
+          </div>
+          <div className="p-2.5 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 rounded-xl">
+            <Database size={18} />
           </div>
         </div>
       </div>
 
-      {/* Contenido de la Vista Activa */}
+      {/* Contenido de la Vista Activa (Scroll unificado del contenedor padre) */}
       {activeSubTab === 'BUZON' ? (
         
         /* --- BUZÓN INTELIGENTE --- */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-h-[500px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Listado de Reportes (Izquierda) */}
-          <div className="lg:col-span-5 flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-2">
+          <div className="lg:col-span-5 flex flex-col gap-4">
             <h2 className="text-xs font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
               📂 Reportes Recibidos
             </h2>
             
             {sortedSuggestions.length === 0 ? (
-              <div className="bg-app-surface border border-app-border rounded-3xl p-8 text-center text-app-muted font-semibold text-xs shadow-sm">
+              <div className="bg-app-surface border border-app-border rounded-2xl p-8 text-center text-app-muted font-semibold text-xs shadow-sm">
                 No hay sugerencias registradas.
               </div>
             ) : (
-              sortedSuggestions.map((s) => (
-                <div
-                  key={s.id}
-                  onClick={() => setSelectedSuggestion(s)}
-                  className={`p-4 border rounded-2xl transition-all cursor-pointer flex flex-col gap-2.5 ${
-                    selectedSuggestion?.id === s.id
-                      ? 'bg-app-surface border-blue-500 shadow-md text-app-text'
-                      : 'bg-app-surface/60 border-app-border hover:bg-app-hover text-app-text'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      {getCategoryBadge(s.id.startsWith('sug-') ? 'ERROR_CALCULO' : 'OTRO')}
-                      {getStatusBadge(s.status)}
+              <div className="flex flex-col gap-3">
+                {sortedSuggestions.map((s) => (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedSuggestion(s)}
+                    className={`p-4 border rounded-2xl transition-all cursor-pointer flex flex-col gap-2.5 ${
+                      selectedSuggestion?.id === s.id
+                        ? 'bg-app-surface border-blue-500 shadow-md text-app-text'
+                        : 'bg-app-surface/60 border-app-border hover:bg-app-hover text-app-text'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {getCategoryBadge(s.id.startsWith('sug-') ? 'ERROR_CALCULO' : 'OTRO')}
+                        {getStatusBadge(s.status)}
+                      </div>
+                      <span className="text-[10px] font-bold text-app-muted flex items-center gap-1">
+                        <Calendar size={10} />
+                        {new Date(s.created_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold text-app-muted flex items-center gap-1">
-                      <Calendar size={10} />
-                      {new Date(s.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <p className="text-xs font-bold leading-relaxed">
-                    {s.user_comment}
-                  </p>
+                    
+                    <p className="text-xs font-bold leading-relaxed">
+                      {s.user_comment}
+                    </p>
 
-                  <div className="flex items-center justify-between gap-2 border-t border-app-border pt-2 text-[10px] font-semibold text-app-muted">
-                    <span className="truncate max-w-[150px]">{s.user_email}</span>
-                    <span className="text-blue-600 dark:text-blue-400 font-bold">{s.view_context}</span>
+                    <div className="flex items-center justify-between gap-2 border-t border-app-border pt-2 text-[10px] font-semibold text-app-muted">
+                      <span className="truncate max-w-[150px]">{s.user_email}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">{s.view_context}</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
           {/* Detalle del Reporte e Informe IA (Derecha) */}
-          <div className="lg:col-span-7 bg-app-surface border border-app-border rounded-3xl p-6 flex flex-col gap-6 overflow-y-auto max-h-[600px] shadow-sm">
+          <div className="lg:col-span-7 bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm">
             {selectedSuggestion ? (
               <div className="flex flex-col gap-6">
                 
                 {/* Cabecera del Detalle */}
-                <div className="flex justify-between items-start border-b border-app-border pb-5">
+                <div className="flex justify-between items-start border-b border-app-border pb-4">
                   <div>
                     <h3 className="text-md font-black text-app-text">{selectedSuggestion.workspace_name || 'Sin empresa'}</h3>
                     <p className="text-[10px] font-bold text-app-muted uppercase tracking-widest mt-1">
@@ -266,7 +268,7 @@ export const AdminView: React.FC = () => {
                 {/* Comentario del Usuario */}
                 <div className="flex flex-col gap-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Reporte del Usuario</span>
-                  <div className="bg-app-bg border border-app-border rounded-2xl p-4 text-xs font-bold text-app-text leading-relaxed">
+                  <div className="bg-app-bg border border-app-border rounded-xl p-4 text-xs font-bold text-app-text leading-relaxed">
                     {selectedSuggestion.user_comment}
                   </div>
                   <span className="text-[9px] text-app-muted font-medium">Enviado por: {selectedSuggestion.user_email}</span>
@@ -276,11 +278,11 @@ export const AdminView: React.FC = () => {
                 {selectedSuggestion.image_base64 && (
                   <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Evidencia / Captura Adjunta</span>
-                    <div className="relative group max-w-sm rounded-2xl overflow-hidden border border-app-border bg-app-bg p-2">
+                    <div className="relative group max-w-sm rounded-xl overflow-hidden border border-app-border bg-app-bg p-2">
                       <img 
                         src={selectedSuggestion.image_base64} 
                         alt="Evidencia adjunta" 
-                        className="w-full h-auto rounded-xl object-contain max-h-[220px]"
+                        className="w-full h-auto rounded-lg object-contain max-h-[220px]"
                       />
                       <div 
                         onClick={() => setZoomedImage(selectedSuggestion.image_base64)}
@@ -297,9 +299,9 @@ export const AdminView: React.FC = () => {
                 {selectedSuggestion.system_state && (
                   <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Datos Técnicos del Formulario</span>
-                    <div className="bg-app-bg border border-app-border rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="bg-app-bg border border-app-border rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                       {Object.entries(parseSystemState(selectedSuggestion.system_state) || {}).map(([key, val]: any) => (
-                        <div key={key} className="bg-app-surface border border-app-border p-2 rounded-xl shadow-sm">
+                        <div key={key} className="bg-app-surface border border-app-border p-2 rounded-lg shadow-sm">
                           <span className="text-[8px] font-black text-app-muted uppercase tracking-widest block truncate">{key}</span>
                           <span className="text-xs font-bold text-app-text mt-1 block truncate">
                             {typeof val === 'object' ? JSON.stringify(val) : String(val)}
@@ -312,7 +314,7 @@ export const AdminView: React.FC = () => {
 
                 {/* Diagnóstico Contable IA */}
                 {selectedSuggestion.ai_analysis && (
-                  <div className="bg-gradient-to-br from-app-surface to-blue-500/5 border border-blue-500/20 rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
+                  <div className="bg-gradient-to-br from-app-surface to-blue-500/5 border border-blue-500/20 rounded-xl p-5 flex flex-col gap-3 shadow-sm">
                     <div className="flex items-center gap-2 text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                       <BrainCircuit size={16} className="text-blue-500 dark:text-blue-400 animate-pulse" />
                       Análisis Contable Inteligente
@@ -413,19 +415,24 @@ export const AdminView: React.FC = () => {
 
       )}
 
-      {/* Modal Overlay para ver Imagen Ampliada */}
+      {/* Modal Overlay para ver Imagen Ampliada (Cerrable al hacer clic afuera o botón X flotante) */}
       {zoomedImage && (
-        <div className="fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center p-4">
+        <div 
+          onClick={() => setZoomedImage(null)}
+          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+        >
           <button 
             onClick={() => setZoomedImage(null)}
-            className="absolute top-6 right-6 p-2 bg-slate-900 border border-slate-800 text-white rounded-full hover:bg-slate-800 transition-all cursor-pointer"
+            className="absolute top-4 right-4 p-3 bg-red-600 hover:bg-red-500 text-white rounded-full transition-all cursor-pointer shadow-lg hover:scale-110 flex items-center justify-center z-50"
+            title="Cerrar imagen"
           >
-            <X size={20} />
+            <X size={24} strokeWidth={2.5} />
           </button>
           <img 
             src={zoomedImage} 
             alt="Captura ampliada" 
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" 
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-slate-800 animate-scale-in" 
           />
         </div>
       )}
