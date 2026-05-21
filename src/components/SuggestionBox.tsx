@@ -13,7 +13,7 @@ export const SuggestionBox: React.FC = () => {
 
   // Posición del botón flotante
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -32,22 +32,12 @@ export const SuggestionBox: React.FC = () => {
     draftAsiento
   } = useStore();
 
-  // Inicializar posición en la esquina inferior derecha
+  // Mantener el botón visible si cambia el tamaño de la ventana (solo si ya se ha arrastrado)
   useEffect(() => {
-    if (!hasInitializedPosition && typeof window !== 'undefined') {
-      setPosition({
-        x: window.innerWidth - 60,
-        y: window.innerHeight - 150
-      });
-      setHasInitializedPosition(true);
-    }
-  }, [hasInitializedPosition]);
-
-  // Mantener el botón visible si cambia el tamaño de la ventana
-  useEffect(() => {
+    if (!hasDragged) return;
     const handleResize = () => {
       setPosition(prev => {
-        const buttonWidth = 44; // Basado en el ancho colapsado
+        const buttonWidth = 44;
         const buttonHeight = 44;
         const newX = Math.max(10, Math.min(prev.x, window.innerWidth - buttonWidth - 10));
         const newY = Math.max(10, Math.min(prev.y, window.innerHeight - buttonHeight - 10));
@@ -56,13 +46,22 @@ export const SuggestionBox: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [hasDragged]);
 
   // Lógica de arrastrar y soltar
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return; // Solo clic izquierdo
+    
+    // Obtener la posición física actual del botón al iniciar el arrastre
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentX = rect.left;
+    const currentY = rect.top;
+    
+    setPosition({ x: currentX, y: currentY });
+    setHasDragged(true);
+    
     dragStart.current = { x: e.clientX, y: e.clientY };
-    dragOffset.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    dragOffset.current = { x: e.clientX - currentX, y: e.clientY - currentY };
     clickTime.current = Date.now();
     setIsDragging(true);
     e.preventDefault();
@@ -74,7 +73,7 @@ export const SuggestionBox: React.FC = () => {
       let newX = e.clientX - dragOffset.current.x;
       let newY = e.clientY - dragOffset.current.y;
       
-      const buttonWidth = 44; // El límite de arrastre es sobre el botón colapsado (para que toque el extremo derecho)
+      const buttonWidth = 44;
       const buttonHeight = 44;
       newX = Math.max(10, Math.min(newX, window.innerWidth - buttonWidth - 10));
       newY = Math.max(10, Math.min(newY, window.innerHeight - buttonHeight - 10));
@@ -204,12 +203,8 @@ export const SuggestionBox: React.FC = () => {
     }
   };
 
-  // Determinar si el botón está en la mitad izquierda o derecha de la pantalla
-  const isLeftSide = position.x < (typeof window !== 'undefined' ? window.innerWidth / 2 : 500);
+  const isLeftSide = hasDragged ? (position.x < (typeof window !== 'undefined' ? window.innerWidth / 2 : 500)) : false;
   const isExpanded = isHovered && !isDragging;
-  
-  // Si está en la mitad derecha, se expande a la izquierda (offset = 132px).
-  // Si está en la mitad izquierda, se expande a la derecha (offset = 0px).
   const leftOffset = isExpanded ? (isLeftSide ? 0 : 132) : 0;
 
   return (
@@ -219,21 +214,25 @@ export const SuggestionBox: React.FC = () => {
         onMouseDown={handleMouseDown}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        style={{ 
-          left: hasInitializedPosition ? `${position.x - leftOffset}px` : 'auto', 
-          top: hasInitializedPosition ? `${position.y}px` : 'auto',
-          right: hasInitializedPosition ? 'auto' : '24px',
-          bottom: hasInitializedPosition ? 'auto' : '24px'
-        }}
+        style={hasDragged ? { 
+          left: `${position.x - leftOffset}px`, 
+          top: `${position.y}px`,
+          right: 'auto',
+          bottom: 'auto'
+        } : {}}
         className={`fixed z-[999] group flex items-center justify-start transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing h-11 w-11 hover:w-44 overflow-hidden ${
+          !hasDragged ? 'right-6 bottom-36' : ''
+        } ${
           isExpanded 
             ? 'bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm border border-slate-300 dark:border-slate-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-md' 
             : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-400 hover:text-blue-600 rounded-full'
         }`}
         title="Arrastra para mover. Clic para reportar."
       >
-        <div className={`flex items-center gap-2 px-3 w-full h-full ${
-          isLeftSide ? 'flex-row justify-start' : 'flex-row-reverse justify-end'
+        <div className={`flex items-center w-full h-full ${
+          !isExpanded 
+            ? 'justify-center' 
+            : (isLeftSide ? 'flex-row justify-start gap-2 px-3.5' : 'flex-row-reverse justify-start gap-2 px-3.5')
         }`}>
           <div className="relative flex shrink-0">
             <Lightbulb size={16} className="text-yellow-500 dark:text-yellow-400 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
@@ -242,9 +241,11 @@ export const SuggestionBox: React.FC = () => {
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
             </span>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 whitespace-nowrap">
-            Reportar Incidencia
-          </span>
+          {isExpanded && (
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Reportar Incidencia
+            </span>
+          )}
         </div>
       </button>
 
