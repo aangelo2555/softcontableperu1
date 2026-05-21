@@ -83,7 +83,7 @@ export const AdminView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-app-bg text-app-text flex flex-col gap-6">
+    <div className="flex-1 overflow-y-auto p-6 pb-16 bg-app-bg text-app-text flex flex-col gap-6">
       
       {/* Encabezado Principal */}
       <div className="flex items-center justify-between border-b border-app-border pb-4">
@@ -244,8 +244,8 @@ export const AdminView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenedor del Detalle con scrollbar interno y mayor espacio vertical */}
-              <div className="bg-app-surface border border-app-border rounded-2xl p-6 flex flex-col gap-6 shadow-sm h-[calc(100vh-220px)] min-h-[550px] overflow-y-auto custom-scrollbar">
+              {/* Contenedor del Detalle con scrollbar interno, pb-20 para evitar solapamiento del footer */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-6 pb-20 flex flex-col gap-6 shadow-sm h-[calc(100vh-220px)] min-h-[550px] overflow-y-auto custom-scrollbar">
                 
                 {/* Cabecera del Detalle */}
                 <div className="flex justify-between items-start border-b border-app-border pb-4">
