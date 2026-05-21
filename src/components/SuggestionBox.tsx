@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Lightbulb, X, Image as ImageIcon, Send, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,8 +11,16 @@ export const SuggestionBox: React.FC = () => {
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
+  // Posición del botón flotante
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const dragStart = useRef({ x: 0, y: 0 });
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const clickTime = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { 
     activeTab, 
     currentCompany, 
@@ -23,17 +31,91 @@ export const SuggestionBox: React.FC = () => {
     draftAsiento
   } = useStore();
 
+  // Inicializar posición en la esquina inferior derecha
+  useEffect(() => {
+    if (!hasInitializedPosition && typeof window !== 'undefined') {
+      setPosition({
+        x: window.innerWidth - 60,
+        y: window.innerHeight - 150
+      });
+      setHasInitializedPosition(true);
+    }
+  }, [hasInitializedPosition]);
+
+  // Mantener el botón visible si cambia el tamaño de la ventana
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition(prev => {
+        const buttonWidth = 176;
+        const buttonHeight = 44;
+        const newX = Math.max(10, Math.min(prev.x, window.innerWidth - buttonWidth - 10));
+        const newY = Math.max(10, Math.min(prev.y, window.innerHeight - buttonHeight - 10));
+        return { x: newX, y: newY };
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Lógica de arrastrar y soltar
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Solo clic izquierdo
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    dragOffset.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    clickTime.current = Date.now();
+    setIsDragging(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      let newX = e.clientX - dragOffset.current.x;
+      let newY = e.clientY - dragOffset.current.y;
+      
+      const buttonWidth = 176; // Ancho máximo cuando se expande (hover)
+      const buttonHeight = 44;
+      newX = Math.max(10, Math.min(newX, window.innerWidth - buttonWidth - 10));
+      newY = Math.max(10, Math.min(newY, window.innerHeight - buttonHeight - 10));
+      
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setIsDragging(false);
+      
+      const diffX = Math.abs(e.clientX - dragStart.current.x);
+      const diffY = Math.abs(e.clientY - dragStart.current.y);
+      const duration = Date.now() - clickTime.current;
+      
+      // Si el movimiento fue mínimo y rápido, es un click
+      if (diffX < 6 && diffY < 6 && duration < 250) {
+        setIsOpen(true);
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, seleccione un archivo de imagen válido (.png, .jpg, .jpeg)');
+      toast.error('Selecciona un archivo de imagen válido (.png, .jpg, .jpeg)');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('La imagen supera el límite de 2MB. Por favor, suba una imagen más ligera.');
+      toast.error('La imagen no debe superar los 2MB.');
       return;
     }
 
@@ -58,13 +140,12 @@ export const SuggestionBox: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) {
-      toast.error('Por favor, escribe una descripción de la sugerencia o incidencia.');
+      toast.error('Escribe una descripción de la sugerencia o incidencia.');
       return;
     }
 
     setIsSending(true);
 
-    // Capturar de forma inteligente el estado numérico del formulario activo
     let systemState: any = {};
     if (activeTab === 'COMPRAS' && draftCompra) {
       systemState = {
@@ -112,8 +193,6 @@ export const SuggestionBox: React.FC = () => {
 
     try {
       await sendSuggestion(comment, imageBase64, category, systemState);
-      
-      // Resetear campos
       setComment('');
       handleClearImage();
       setIsOpen(false);
@@ -126,117 +205,120 @@ export const SuggestionBox: React.FC = () => {
 
   return (
     <>
-      {/* Botón Flotante con micro-animación y brillo */}
+      {/* Botón Flotante Draggable, Retraído por defecto y se expande al Hover */}
       <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[999] group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-[12px] uppercase tracking-wider rounded-2xl shadow-[0_8px_32px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_40px_rgba(37,99,235,0.6)] hover:-translate-y-0.5 active:translate-y-0 border border-blue-500/20 transition-all duration-300 select-none cursor-pointer"
+        onMouseDown={handleMouseDown}
+        style={{ 
+          left: hasInitializedPosition ? `${position.x}px` : 'auto', 
+          top: hasInitializedPosition ? `${position.y}px` : 'auto',
+          right: hasInitializedPosition ? 'auto' : '24px',
+          bottom: hasInitializedPosition ? 'auto' : '24px'
+        }}
+        className="fixed z-[999] group flex items-center justify-start bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-[0_8px_24px_rgba(37,99,235,0.3)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.5)] border border-blue-500/20 transition-all duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing w-11 h-11 hover:w-44 overflow-hidden"
+        title="Arrastra para mover. Clic para reportar."
       >
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-100"></span>
-        </span>
-        <Lightbulb size={16} className="text-yellow-300 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
-        <span>¿Sugerencia / Error?</span>
+        <div className="flex items-center gap-2 px-3.5 justify-start w-full">
+          <div className="relative flex shrink-0">
+            <Lightbulb size={16} className="text-yellow-300 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
+            <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-100"></span>
+            </span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 whitespace-nowrap">
+            Reportar Incidencia
+          </span>
+        </div>
       </button>
 
       {/* Modal Backdrop */}
       {isOpen && (
         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           
-          {/* Modal Container con estética Premium Glassmorphism */}
-          <div className="w-full max-w-xl bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.4)] animate-scale-in text-slate-100">
+          {/* Modal Container Compacto */}
+          <div className="w-full max-w-md bg-slate-900/95 border border-slate-800 rounded-2xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.5)] animate-scale-in text-slate-100 max-h-[90vh] flex flex-col">
             
             {/* Header del Modal */}
-            <div className="px-6 py-5 bg-gradient-to-r from-blue-900/40 via-indigo-900/20 to-slate-900/0 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-600/10 rounded-xl border border-blue-500/20 text-blue-400">
-                  <Sparkles size={18} className="animate-pulse" />
+            <div className="px-5 py-4 bg-gradient-to-r from-blue-900/30 to-slate-900/0 border-b border-slate-850 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-600/10 rounded-lg border border-blue-500/20 text-blue-400">
+                  <Sparkles size={16} className="animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm uppercase tracking-wider text-white">Buzón de Reportes Inteligente</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    Modo Activo: <span className="text-blue-400">{activeTab}</span>
+                  <h3 className="font-black text-xs uppercase tracking-wider text-white">Buzón de Reportes</h3>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                    Módulo Activo: <span className="text-blue-400 font-extrabold">{activeTab}</span>
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* Formulario */}
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+            {/* Formulario (Scrollable) */}
+            <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4 overflow-y-auto">
               
-              {/* Información Detectada */}
-              <div className="bg-blue-950/20 border border-blue-900/30 rounded-2xl p-4 flex flex-col gap-2.5">
-                <div className="flex items-center gap-2 text-xs font-black text-blue-400 uppercase tracking-wider">
-                  <CheckCircle2 size={14} />
+              {/* Información Detectada (Compacta) */}
+              <div className="bg-blue-950/20 border border-blue-900/30 rounded-xl p-3 flex items-center justify-between text-[10px] font-semibold text-slate-300">
+                <div className="flex items-center gap-1.5 text-blue-400 font-black uppercase tracking-wider">
+                  <CheckCircle2 size={12} />
                   Contexto Detectado
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-[11px] font-semibold text-slate-300">
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-widest text-[9px] font-black">Empresa</span>
-                    <span className="truncate block font-bold text-white">{currentCompany?.name || 'Ninguna Empresa Activa'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-widest text-[9px] font-black">Régimen</span>
-                    <span className="truncate block font-bold text-white">{currentCompany?.regimenTributario || 'No Definido'}</span>
-                  </div>
+                <div className="truncate max-w-[200px] text-slate-400">
+                  <strong className="text-white font-bold">{currentCompany?.name || 'Ninguna'}</strong> ({currentCompany?.regimenTributario || 'N/A'})
                 </div>
               </div>
 
               {/* Categoría */}
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1.5">
                   Tipo de Incidencia / Reporte
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-semibold text-slate-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-200 outline-none focus:border-blue-500 transition-all"
                 >
                   <option value="ERROR_CALCULO">📐 Falla en Fórmulas o Cálculos Contables</option>
                   <option value="INCONSISTENCIA_TRIBUTARIA">🏛️ Inconsistencia en Reglas SUNAT</option>
-                  <option value="INTERFAZ_USUARIO">🎨 Problema de Diseño / Interfaz de Usuario</option>
+                  <option value="INTERFAZ_USUARIO">🎨 Problema de Diseño / Interfaz</option>
                   <option value="OTRO">✏️ Otro Comentario o Sugerencia</option>
                 </select>
               </div>
 
               {/* Descripción */}
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1.5">
                   Detalles del Reporte
                 </label>
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  rows={4}
+                  rows={3}
                   required
-                  placeholder="Por favor, describe detalladamente la inconsistencia contable, el error matemático o la sugerencia para poder replicarla y corregirla..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs font-semibold text-slate-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all resize-none placeholder:text-slate-600"
+                  placeholder="Describe la inconsistencia contable, el error de cálculo o la sugerencia aquí..."
+                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-200 outline-none focus:border-blue-500 transition-all resize-none placeholder:text-slate-600"
                 />
               </div>
 
-              {/* Imagen Adjunta */}
+              {/* Imagen Adjunta (Compacto) */}
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
-                  Adjuntar Captura de Pantalla o Imagen (Opcional)
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1.5">
+                  Adjuntar Captura de Pantalla (Opcional)
                 </label>
                 
                 {!imageBase64 ? (
                   <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-800 hover:border-blue-500/50 bg-slate-950/50 hover:bg-slate-950/80 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
+                    className="border border-dashed border-slate-800 hover:border-blue-500/50 bg-slate-950/40 hover:bg-slate-950/70 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2 group"
                   >
-                    <ImageIcon className="text-slate-600 group-hover:text-blue-500 transition-colors" size={24} />
-                    <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200">
-                      Haga clic para subir una captura (.png, .jpg)
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                      Límite de tamaño: 2MB
+                    <ImageIcon className="text-slate-600 group-hover:text-blue-500 transition-colors" size={16} />
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-200">
+                      Haz clic para subir captura (Máx. 2MB)
                     </span>
                     <input 
                       type="file" 
@@ -247,9 +329,9 @@ export const SuggestionBox: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-3 animate-fade-in">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-800 bg-slate-900 shrink-0">
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-2 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-805 bg-slate-900 shrink-0">
                         <img 
                           src={imageBase64} 
                           alt="Previsualización" 
@@ -257,50 +339,50 @@ export const SuggestionBox: React.FC = () => {
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-200 truncate">{imageFileName}</p>
-                        <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mt-0.5">Listo para enviar</p>
+                        <p className="text-[10px] font-bold text-slate-200 truncate">{imageFileName}</p>
+                        <p className="text-[9px] text-emerald-500 font-extrabold uppercase tracking-widest mt-0.5">Listo</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={handleClearImage}
-                      className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 rounded-xl transition-all cursor-pointer shrink-0"
+                      className="p-1 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 rounded-lg transition-all cursor-pointer shrink-0"
                       title="Eliminar imagen"
                     >
-                      <X size={16} />
+                      <X size={14} />
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Advertencia IA */}
-              <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                ℹ️ Al hacer clic en enviar, el motor del sistema recopilará automáticamente la configuración de la empresa actual, el régimen impositivo y los números en borrador del formulario activo. Un diagnóstico matemático automatizado analizará el caso de forma inmediata.
+              <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+                ℹ️ El sistema recopilará automáticamente el régimen, la pestaña y los números del formulario en borrador para el diagnóstico inteligente del administrador.
               </p>
 
               {/* Botón de Envío */}
-              <div className="border-t border-slate-800 pt-5 mt-2 flex items-center justify-end gap-3">
+              <div className="border-t border-slate-800/80 pt-4 mt-1 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-5 py-2.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-950 border border-slate-850 text-slate-300 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-blue-600/10 transition-all cursor-pointer"
                 >
                   {isSending ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                       <span>Enviando...</span>
                     </>
                   ) : (
                     <>
-                      <Send size={14} />
-                      <span>Enviar Reporte</span>
+                      <Send size={12} />
+                      <span>Enviar</span>
                     </>
                   )}
                 </button>
