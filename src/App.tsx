@@ -734,8 +734,8 @@ const App: React.FC = () => {
           </div>
           
           {/* Faint Footer */}
-          <div className="absolute bottom-2 inset-x-0 text-center pointer-events-none z-10">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-app-muted/50">
+          <div className="absolute bottom-2.5 inset-x-0 text-center pointer-events-none z-10">
+            <span className="text-xs font-bold uppercase tracking-widest text-app-muted/80">
               Desarrollado por Softcontable • ERP Contable 2026
             </span>
           </div>
