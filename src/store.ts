@@ -2016,6 +2016,9 @@ export const useStore = create<AppState>()(
             deferredTaxComputation: get().deferredTaxComputation,
           };
           
+          // Marcar el userId inspeccionado globalmente para que apiBridge lo envíe como header
+          (window as any).inspectingUserId = userId;
+          
           // Cargar datos del usuario
           set({
             isInspectingUser: true,
@@ -2036,6 +2039,9 @@ export const useStore = create<AppState>()(
       },
 
       stopInspectingWorkspace: async () => {
+        // Limpiar el userId inspeccionado para que las peticiones vuelvan a usar el del admin
+        (window as any).inspectingUserId = null;
+        
         const originalCompany = get().originalAdminCompany;
         const originalData = get().originalAdminWorkspaceData;
         

@@ -33,16 +33,36 @@ const authMiddleware = (req, res, next) => {
 // --- Rutas Públicas ---
 app.use('/api/auth', authRoutes);
 
+// --- Middleware de Inspección Admin ---
+// Permite que un admin inspeccione los datos de otro usuario sin absorber su empresa.
+// Si el header X-Inspect-User-Id está presente y el usuario es admin, las operaciones
+// de base de datos se ejecutan con el user_id del usuario inspeccionado.
+const inspectMiddleware = (req, res, next) => {
+    const inspectUserId = req.headers['x-inspect-user-id'];
+    if (inspectUserId && req.user) {
+        const normalizedEmail = (req.user.email || '').trim().toLowerCase();
+        const isAdmin = req.user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin');
+        if (isAdmin) {
+            req.targetUserId = inspectUserId;
+        } else {
+            req.targetUserId = req.user.id;
+        }
+    } else {
+        req.targetUserId = req.user ? req.user.id : null;
+    }
+    next();
+};
+
 // --- Rutas Protegidas ---
-app.use('/api/db', authMiddleware);
-app.use('/api/buzon', authMiddleware);
-app.use('/api/sire', authMiddleware);
+app.use('/api/db', authMiddleware, inspectMiddleware);
+app.use('/api/buzon', authMiddleware, inspectMiddleware);
+app.use('/api/sire', authMiddleware, inspectMiddleware);
 
 // --- API Endpoints: Database ---
 
 app.get('/api/db/workspaces', async (req, res) => {
     try {
-        const workspaces = await db.getWorkspaces(req.user.id);
+        const workspaces = await db.getWorkspaces(req.targetUserId);
         res.json({ success: true, workspaces });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaces:', error);
@@ -52,7 +72,7 @@ app.get('/api/db/workspaces', async (req, res) => {
 
 app.post('/api/db/workspaces', async (req, res) => {
     try {
-        await db.saveWorkspace(req.body, req.user.id);
+        await db.saveWorkspace(req.body, req.targetUserId);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -61,7 +81,7 @@ app.post('/api/db/workspaces', async (req, res) => {
 
 app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
     try {
-        const data = await db.getWorkspaceData(req.params.ruc, req.user.id);
+        const data = await db.getWorkspaceData(req.params.ruc, req.targetUserId);
         res.json({ success: true, data });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);
@@ -71,7 +91,7 @@ app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) 
 
 app.delete(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
     try {
-        await db.deleteWorkspace(req.params.ruc, req.user.id);
+        await db.deleteWorkspace(req.params.ruc, req.targetUserId);
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en delete:', error);
@@ -85,7 +105,7 @@ app.post('/api/db/execute', async (req, res) => {
         
         // ─── REESCRITURA AUTOMÁTICA DE SQL PARA SAAS (INYECCIÓN DE USER_ID) ───
         const insertMatch = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)/i);
-        if (insertMatch && req.user && req.user.id) {
+        if (insertMatch && req.targetUserId) {
             const tableName = insertMatch[1];
             try {
                 const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
@@ -101,7 +121,7 @@ app.post('/api/db/execute', async (req, res) => {
                         const endStr = sql.slice(valParenCloseIndex);
                         
                         sql = `${beforeCols}, user_id${afterCols}, ?${endStr}`;
-                        params.push(req.user.id);
+                        params.push(req.targetUserId);
                         console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName}`);
                     }
                 }
@@ -135,7 +155,7 @@ app.post('/api/db/backup', async (req, res) => {
 
 app.get('/api/db/analytics/ccc/:ruc', async (req, res) => {
     try {
-        const metrics = await db.getCCCMetrics(req.params.ruc, req.user.id);
+        const metrics = await db.getCCCMetrics(req.params.ruc, req.targetUserId);
         res.json({ success: true, metrics });
     } catch (error) {
         console.error('[DB ERROR] Error en analytics CCC:', error);
@@ -146,7 +166,7 @@ app.get('/api/db/analytics/ccc/:ruc', async (req, res) => {
 app.post('/api/db/balance-inicial/:ruc', async (req, res) => {
     try {
         console.log(`[DB] POST /balance-inicial/${req.params.ruc} - Body:`, JSON.stringify(req.body));
-        await db.saveBalanceInicial(req.params.ruc, req.user.id, req.body);
+        await db.saveBalanceInicial(req.params.ruc, req.targetUserId, req.body);
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en saveBalanceInicial:', error.message);
@@ -157,7 +177,7 @@ app.post('/api/db/balance-inicial/:ruc', async (req, res) => {
 app.post('/api/db/balance-inicial/bulk/:ruc', async (req, res) => {
     try {
         console.log(`[DB] POST /balance-inicial/bulk/${req.params.ruc} - Items: ${req.body.items?.length}`);
-        await db.saveBalanceInicialBulk(req.params.ruc, req.user.id, req.body.items);
+        await db.saveBalanceInicialBulk(req.params.ruc, req.targetUserId, req.body.items);
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en saveBalanceInicialBulk:', error.message);
@@ -168,7 +188,7 @@ app.post('/api/db/balance-inicial/bulk/:ruc', async (req, res) => {
 app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
     try {
         console.log(`[DB] DELETE /balance-inicial/${req.params.ruc}/${req.params.id}`);
-        await db.deleteBalanceInicial(req.params.ruc, req.user.id, req.params.id);
+        await db.deleteBalanceInicial(req.params.ruc, req.targetUserId, req.params.id);
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en deleteBalanceInicial:', error.message);
@@ -179,13 +199,13 @@ app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
 // --- Mejora #7: Auditoría de Correlatividad Documental ---
 // Art. 10 Reglamento de Comprobantes de Pago (R.S. 007-99/SUNAT)
 
-app.get('/api/audit/correlatividad/:ruc', authMiddleware, async (req, res) => {
+app.get('/api/audit/correlatividad/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const serie = req.query.serie || '';
         const tipo_doc = req.query.tipo_doc || '';
         const table = req.query.table || 'purchases'; // 'purchases' | 'sales'
-        const userId = req.user.id;
+        const userId = req.targetUserId;
 
         if (!['purchases', 'sales'].includes(table)) {
             return res.status(400).json({ success: false, error: 'Tabla inválida. Use purchases o sales.' });
@@ -260,7 +280,7 @@ app.get('/api/audit/correlatividad/:ruc', authMiddleware, async (req, res) => {
 });
 
 // --- Endpoint genérico de consulta SQL (lectura) para modo SaaS ---
-app.post('/api/db/query', authMiddleware, async (req, res) => {
+app.post('/api/db/query', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { sql, params } = req.body;
         // Solo permitir SELECT para seguridad
@@ -276,7 +296,7 @@ app.post('/api/db/query', authMiddleware, async (req, res) => {
 });
 
 // --- Mejora #3: Endpoint de Tipo de Cambio SBS ---
-app.get('/api/sbs/tipo-cambio', authMiddleware, async (req, res) => {
+app.get('/api/sbs/tipo-cambio', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { fecha } = req.query;
         if (!fecha) {
@@ -292,10 +312,10 @@ app.get('/api/sbs/tipo-cambio', authMiddleware, async (req, res) => {
 });
 
 // --- Mejora #3: Endpoint de Prorrata IGV ---
-app.post('/api/igv/prorrata', authMiddleware, async (req, res) => {
+app.post('/api/igv/prorrata', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc, periodo } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo) {
             return res.status(400).json({ success: false, error: 'Falta ruc o periodo.' });
         }
@@ -382,11 +402,11 @@ app.post('/api/igv/prorrata', authMiddleware, async (req, res) => {
 });
 
 // --- Mejora #3: Endpoint de DAOT ---
-app.get('/api/daot/:ruc', authMiddleware, async (req, res) => {
+app.get('/api/daot/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const { anio } = req.query;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !anio) {
             return res.status(400).json({ success: false, error: 'Falta ruc o anio.' });
         }
@@ -415,11 +435,11 @@ app.get('/api/daot/:ruc', authMiddleware, async (req, res) => {
 });
 
 // --- Sprint 4: Endpoints de Conciliación Bancaria ---
-app.get('/api/bank/statements/:ruc', authMiddleware, async (req, res) => {
+app.get('/api/bank/statements/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo } = req.query; // YYYY-MM
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc) {
             return res.status(400).json({ success: false, error: 'Falta RUC.' });
         }
@@ -437,10 +457,10 @@ app.get('/api/bank/statements/:ruc', authMiddleware, async (req, res) => {
     }
 });
 
-app.post('/api/bank/statements/import', authMiddleware, async (req, res) => {
+app.post('/api/bank/statements/import', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc, lines } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !Array.isArray(lines)) {
             return res.status(400).json({ success: false, error: 'Falta RUC o líneas inválidas.' });
         }
@@ -466,10 +486,10 @@ app.post('/api/bank/statements/import', authMiddleware, async (req, res) => {
     }
 });
 
-app.post('/api/bank/reconcile', authMiddleware, async (req, res) => {
+app.post('/api/bank/reconcile', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc, statementId, journalId } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !statementId || !journalId) {
             return res.status(400).json({ success: false, error: 'Falta RUC, statementId o journalId.' });
         }
@@ -486,10 +506,10 @@ app.post('/api/bank/reconcile', authMiddleware, async (req, res) => {
     }
 });
 
-app.post('/api/bank/unreconcile', authMiddleware, async (req, res) => {
+app.post('/api/bank/unreconcile', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc, statementId } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !statementId) {
             return res.status(400).json({ success: false, error: 'Falta RUC o statementId.' });
         }
@@ -506,10 +526,10 @@ app.post('/api/bank/unreconcile', authMiddleware, async (req, res) => {
     }
 });
 
-app.post('/api/bank/auto-match', authMiddleware, async (req, res) => {
+app.post('/api/bank/auto-match', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc, periodo } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo) {
             return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
         }
@@ -576,10 +596,10 @@ app.post('/api/bank/auto-match', authMiddleware, async (req, res) => {
 // --- Mejora #2 & #5: Endpoints de Gestión de Períodos y Cascada de Cambios ---
 
 // Listar períodos y sus estados
-app.get('/api/periods/:ruc', authMiddleware, async (req, res) => {
+app.get('/api/periods/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         const periods = db.queryAll(
             `SELECT * FROM accounting_periods WHERE workspace_id = ? AND user_id = ?`,
             [ruc, userId]
@@ -592,11 +612,11 @@ app.get('/api/periods/:ruc', authMiddleware, async (req, res) => {
 });
 
 // Consultar estado de obsolescencia de los libros contables
-app.get('/api/periods/:ruc/stale-status', authMiddleware, async (req, res) => {
+app.get('/api/periods/:ruc/stale-status', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo } = req.query; // YYYY-MM
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo (YYYY-MM).' });
         }
@@ -614,11 +634,11 @@ app.get('/api/periods/:ruc/stale-status', authMiddleware, async (req, res) => {
 });
 
 // Cerrar período con ejecución de pre-checks contables
-app.post('/api/periods/:ruc/close', authMiddleware, async (req, res) => {
+app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo, tipo, notas } = req.body; // periodo: YYYY-MM, tipo: MENSUAL|ANUAL
-        const userId = req.user.id;
+        const userId = req.targetUserId;
 
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
@@ -737,7 +757,7 @@ app.post('/api/periods/:ruc/close', authMiddleware, async (req, res) => {
                  VALUES (?, ?, ?, 'CERRADO', ?, CURRENT_TIMESTAMP, ?, ?)
                  ON CONFLICT(workspace_id, periodo, tipo, user_id)
                  DO UPDATE SET estado = 'CERRADO', cerrado_por = ?, cerrado_at = CURRENT_TIMESTAMP, notas = ?`,
-                [ruc, periodo, tipo || 'MENSUAL', req.user.email || req.user.id, notas || '', userId, req.user.email || req.user.id, notas || '']
+                [ruc, periodo, tipo || 'MENSUAL', req.user.email || req.targetUserId, notas || '', userId, req.user.email || req.targetUserId, notas || '']
             );
         }
 
@@ -759,11 +779,11 @@ app.post('/api/periods/:ruc/close', authMiddleware, async (req, res) => {
 });
 
 // Reabrir período
-app.post('/api/periods/:ruc/reopen', authMiddleware, async (req, res) => {
+app.post('/api/periods/:ruc/reopen', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo, tipo } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
 
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
@@ -932,7 +952,7 @@ app.post('/api/sire/ejecutar', async (req, res) => {
             clientId: req.body?.credentials?.client_id,
             hasClientSecret: !!req.body?.credentials?.client_secret
         });
-        const result = await sireHandler.ejecutarSire({ ...req.body, userId: req.user.id });
+        const result = await sireHandler.ejecutarSire({ ...req.body, userId: req.targetUserId });
         res.json(result);
     } catch (error) {
         console.error('[SIRE API ERROR]:', error.message);
@@ -1147,7 +1167,7 @@ function runAiDiagnostic(userComment, systemState = {}) {
 
 // --- API Endpoints: Sugerencias & Administración ---
 
-app.post('/api/suggestions', authMiddleware, async (req, res) => {
+app.post('/api/suggestions', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { workspace_ruc, workspace_name, view_context, user_comment, image_base64, system_state } = req.body;
         
@@ -1217,13 +1237,13 @@ app.get('/api/admin/user-workspace-data/:userId/:ruc', authMiddleware, adminAuth
 });
 
 // --- Sprint 5: IFRS/NIIF & NIC 12 Endpoints ---
-app.use('/api/finance', authMiddleware);
+app.use('/api/finance', authMiddleware, inspectMiddleware);
 
 app.get('/api/finance/notes/:ruc', async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo } = req.query;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo) {
             return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
         }
@@ -1238,7 +1258,7 @@ app.get('/api/finance/notes/:ruc', async (req, res) => {
 app.post('/api/finance/notes', async (req, res) => {
     try {
         const { ruc, periodo, notes } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo || !notes) {
             return res.status(400).json({ success: false, error: 'Falta RUC, periodo o notas.' });
         }
@@ -1255,7 +1275,7 @@ app.get('/api/finance/deferred-tax/:ruc', async (req, res) => {
     try {
         const { ruc } = req.params;
         const { periodo } = req.query;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo) {
             return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
         }
@@ -1270,7 +1290,7 @@ app.get('/api/finance/deferred-tax/:ruc', async (req, res) => {
 app.post('/api/finance/deferred-tax', async (req, res) => {
     try {
         const { ruc, periodo, computation } = req.body;
-        const userId = req.user.id;
+        const userId = req.targetUserId;
         if (!ruc || !periodo || !computation) {
             return res.status(400).json({ success: false, error: 'Falta RUC, periodo o computación.' });
         }

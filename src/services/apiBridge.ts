@@ -11,11 +11,16 @@ const api = axios.create({
     timeout: 85000, // 85 segundos. Ligeramente menor al timeout del ingress de Railway (100s) para fallar con gracia
 });
 
-// Interceptor para añadir el Token JWT en cada petición
+// Interceptor para añadir el Token JWT y el header de inspección en cada petición
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('softcontable_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Si el admin está inspeccionando un usuario, enviar su ID para que el backend lo use
+    const inspectUserId = (window as any).inspectingUserId;
+    if (inspectUserId) {
+        config.headers['X-Inspect-User-Id'] = inspectUserId;
     }
     return config;
 });

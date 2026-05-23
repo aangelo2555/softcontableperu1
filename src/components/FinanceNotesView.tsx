@@ -175,16 +175,16 @@ export default function FinanceNotesView() {
   const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
 
   return (
-    <div className="finance-notes-container p-6 space-y-6 max-w-7xl mx-auto text-gray-100">
+    <div className="finance-notes-container p-6 space-y-6 max-w-7xl mx-auto text-app-text h-full overflow-y-auto custom-scrollbar pb-24">
       
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#1e293b]/70 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-xl gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-app-surface/70 backdrop-blur-md p-6 rounded-2xl border border-app-border shadow-xl gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 Outfit flex items-center gap-3">
             <FileText className="h-8 w-8 text-blue-400" />
             Notas Financieras NIIF & NIC 12
           </h2>
-          <p className="text-sm text-slate-400 mt-1 font-medium">
+          <p className="text-sm text-app-muted mt-1 font-medium">
             Cumplimiento contable bajo la norma internacional NIC 12 y notas dinámicas estructuradas
           </p>
         </div>
@@ -192,11 +192,11 @@ export default function FinanceNotesView() {
         {/* CONTROLS */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-300">Período Contable:</span>
+            <span className="text-sm font-semibold text-app-muted">Período Contable:</span>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-2 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className="bg-app-bg border border-app-border rounded-xl px-4 py-2 text-app-text font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               {months.map(m => (
                 <option key={m} value={`${currentYear}-${m}`}>{`${currentYear}-${m}`}</option>
@@ -213,13 +213,13 @@ export default function FinanceNotesView() {
       </div>
 
       {/* TAB SYSTEM */}
-      <div className="flex bg-[#121b2e] p-1.5 rounded-xl border border-slate-700/40 w-fit">
+      <div className="flex bg-app-bg p-1.5 rounded-xl border border-app-border w-fit">
         <button
           onClick={() => setActiveSubTab('NIC12')}
           className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${
             activeSubTab === 'NIC12'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              : 'text-app-muted hover:text-app-text hover:bg-app-hover'
           }`}
         >
           Impuesto Diferido (NIC 12)
@@ -229,7 +229,7 @@ export default function FinanceNotesView() {
           className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${
             activeSubTab === 'NOTES'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              : 'text-app-muted hover:text-app-text hover:bg-app-hover'
           }`}
         >
           Notas a los EE.FF. (NIIF)
@@ -241,40 +241,40 @@ export default function FinanceNotesView() {
         <div className="space-y-6">
           
           {/* PARAMETERS BLOCK */}
-          <div className="bg-[#1e293b]/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-app-surface/50 backdrop-blur-sm p-6 rounded-2xl border border-app-border flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-app-text flex items-center gap-2">
                 Parámetros de Cálculo NIC 12
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-app-muted">
                 Define la tasa impositiva y calcula las diferencias temporarias activas o pasivas
               </p>
             </div>
             
             <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-300 font-semibold">Tasa del Impuesto a la Renta (%):</span>
+              <span className="text-sm text-app-muted font-semibold">Tasa del Impuesto a la Renta (%):</span>
               <input
                 type="number"
                 step="0.1"
                 value={taxRate}
                 disabled={isClosed}
                 onChange={(e) => setTaxRate(Number(e.target.value))}
-                className="w-24 bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-2 text-white font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-24 bg-app-bg border border-app-border rounded-xl px-4 py-2 text-app-text font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
           {/* MAIN CALCULATION SCHEDULE */}
-          <div className="bg-[#1e293b]/70 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-slate-700/50">
-              <h3 className="text-lg font-bold text-white">Conciliación de Diferencias Temporarias</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Base Contable NIIF vs Base Tributaria</p>
+          <div className="bg-app-surface/70 backdrop-blur-md rounded-2xl border border-app-border shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-app-border">
+              <h3 className="text-lg font-bold text-app-text">Conciliación de Diferencias Temporarias</h3>
+              <p className="text-xs text-app-muted mt-0.5">Base Contable NIIF vs Base Tributaria</p>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#0f172a]/60 text-slate-300 text-xs font-bold uppercase border-b border-slate-700/50">
+                  <tr className="bg-app-bg/60 text-app-muted text-xs font-bold uppercase border-b border-app-border">
                     <th className="p-4">Concepto</th>
                     <th className="p-4 text-center">Cuenta</th>
                     <th className="p-4 text-right">Base Contable (NIIF)</th>
@@ -286,12 +286,12 @@ export default function FinanceNotesView() {
                     <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/80 text-sm">
+                <tbody className="divide-y divide-app-border/80 text-sm">
                   {schedule.rows.map((row) => (
-                    <tr key={row.key} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-4 font-semibold text-white max-w-xs truncate">{row.concepto}</td>
-                      <td className="p-4 text-center text-slate-300 font-mono">{row.cuenta}</td>
-                      <td className="p-4 text-right text-white font-semibold">
+                    <tr key={row.key} className="hover:bg-app-hover transition-colors">
+                      <td className="p-4 font-semibold text-app-text max-w-xs truncate">{row.concepto}</td>
+                      <td className="p-4 text-center text-app-muted font-mono">{row.cuenta}</td>
+                      <td className="p-4 text-right text-app-text font-semibold">
                         {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(row.accountingBase)}
                       </td>
                       <td className="p-4 text-right">
@@ -305,7 +305,7 @@ export default function FinanceNotesView() {
                             cuenta: row.cuenta,
                             accountingBase: row.accountingBase
                           })}
-                          className="w-32 bg-[#0f172a] border border-slate-700 rounded-lg px-2.5 py-1.5 text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 text-white"
+                          className="w-32 bg-app-bg border border-app-border rounded-lg px-2.5 py-1.5 text-right font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 text-app-text"
                         />
                       </td>
                       <td className="p-4 text-right text-amber-400 font-semibold">
@@ -329,19 +329,19 @@ export default function FinanceNotesView() {
                           <button
                             onClick={() => handleRemoveCustomDifference(row.key)}
                             disabled={isClosed}
-                            className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-slate-800 transition"
+                            className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-app-hover transition"
                           >
                             <Trash2 className="h-4.5 w-4.5" />
                           </button>
                         ) : (
-                          <span className="text-slate-500 text-xs">-</span>
+                          <span className="text-app-muted text-xs">-</span>
                         )}
                       </td>
                     </tr>
                   ))}
                   
                   {/* TOTALS ROW */}
-                  <tr className="bg-[#0f172a]/80 font-bold text-white border-t-2 border-slate-700">
+                  <tr className="bg-app-bg/80 font-bold text-app-text border-t-2 border-app-border">
                     <td className="p-4" colSpan={6}>TOTALES</td>
                     <td className="p-4 text-right text-emerald-400 font-extrabold">
                       {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(schedule.totalActivoDiferido)}
@@ -356,9 +356,9 @@ export default function FinanceNotesView() {
             </div>
 
             {/* NET BALANCE RECONCILIATION SUMMARY */}
-            <div className="bg-[#0f172a]/40 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-t border-slate-700/50 gap-4">
+            <div className="bg-app-bg/40 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-t border-app-border gap-4">
               <div>
-                <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Efecto Tributario Diferido Neto:</span>
+                <span className="text-xs text-app-muted uppercase font-bold tracking-wider">Efecto Tributario Diferido Neto:</span>
                 <h4 className={`text-2xl font-black mt-0.5 ${
                   schedule.netDeferredTax >= 0 ? 'text-emerald-400' : 'text-red-400'
                 }`}>
@@ -373,9 +373,9 @@ export default function FinanceNotesView() {
                 <button
                   onClick={handleSaveNIC12}
                   disabled={isClosed}
-                  className="bg-slate-800 hover:bg-slate-750 text-white font-bold px-5 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-2 hover:scale-[1.02]"
+                  className="bg-app-surface hover:bg-app-hover text-app-text font-bold px-5 py-2.5 rounded-xl border border-app-border transition flex items-center gap-2 hover:scale-[1.02]"
                 >
-                  <Save className="h-4.5 w-4.5 text-slate-300" /> Guardar Parámetros
+                  <Save className="h-4.5 w-4.5 text-app-muted" /> Guardar Parámetros
                 </button>
 
                 <button
@@ -391,50 +391,50 @@ export default function FinanceNotesView() {
 
           {/* ADD CUSTOM DIFFERENCES SECTION */}
           {!isClosed && (
-            <div className="bg-[#1e293b]/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 space-y-4">
-              <h4 className="text-md font-bold text-white flex items-center gap-2">
+            <div className="bg-app-surface/50 backdrop-blur-sm p-6 rounded-2xl border border-app-border space-y-4">
+              <h4 className="text-md font-bold text-app-text flex items-center gap-2">
                 <Plus className="h-5 w-5 text-blue-400" />
                 Agregar Diferencia Temporaria Adicional
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs text-slate-400 font-bold uppercase">Concepto / Glosa</label>
+                  <label className="text-xs text-app-muted font-bold uppercase">Concepto / Glosa</label>
                   <input
                     type="text"
                     placeholder="Ej. Pérdida tributaria arrastrable"
                     value={customConcept}
                     onChange={(e) => setCustomConcept(e.target.value)}
-                    className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="bg-app-bg border border-app-border rounded-lg px-3 py-2 text-sm text-app-text focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-400 font-bold uppercase">Cuenta Relac.</label>
+                  <label className="text-xs text-app-muted font-bold uppercase">Cuenta Relac.</label>
                   <input
                     type="text"
                     placeholder="Ej. 37"
                     value={customCta}
                     onChange={(e) => setCustomCta(e.target.value)}
-                    className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    className="bg-app-bg border border-app-border rounded-lg px-3 py-2 text-sm text-app-text focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-400 font-bold uppercase">Base Contable</label>
+                  <label className="text-xs text-app-muted font-bold uppercase">Base Contable</label>
                   <input
                     type="number"
                     placeholder="0"
                     value={customAccBase}
                     onChange={(e) => setCustomAccBase(Number(e.target.value))}
-                    className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
+                    className="bg-app-bg border border-app-border rounded-lg px-3 py-2 text-sm text-app-text focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-400 font-bold uppercase">Base Tributaria</label>
+                  <label className="text-xs text-app-muted font-bold uppercase">Base Tributaria</label>
                   <input
                     type="number"
                     placeholder="0"
                     value={customTaxBase}
                     onChange={(e) => setCustomTaxBase(Number(e.target.value))}
-                    className="bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
+                    className="bg-app-bg border border-app-border rounded-lg px-3 py-2 text-sm text-app-text focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
                   />
                 </div>
               </div>
@@ -448,11 +448,11 @@ export default function FinanceNotesView() {
           )}
 
           {/* SUGGESTED JOURNAL PREVIEW */}
-          <div className="bg-[#1e293b]/70 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 space-y-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-300">Asiento Sugerido NIC 12</h4>
-            <div className="bg-[#0f172a] p-4 rounded-xl font-mono text-xs border border-slate-800 divide-y divide-slate-800/80">
+          <div className="bg-app-surface/70 backdrop-blur-md p-6 rounded-2xl border border-app-border space-y-3">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-app-muted">Asiento Sugerido NIC 12</h4>
+            <div className="bg-app-bg p-4 rounded-xl font-mono text-xs border border-app-border divide-y divide-app-border/80">
               {schedule.suggestedJournalEntries.map((e, index) => (
-                <div key={index} className="py-2.5 flex justify-between items-center text-slate-300">
+                <div key={index} className="py-2.5 flex justify-between items-center text-app-muted">
                   <div className="flex gap-4 items-center">
                     <span className="text-blue-400 font-black">{e.cuenta}</span>
                     <span>{e.detalle}</span>
@@ -471,16 +471,16 @@ export default function FinanceNotesView() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div className="space-y-0.5">
-              <h3 className="text-lg font-bold text-white">Notas a los Estados Financieros</h3>
-              <p className="text-xs text-slate-400">Edita y estructura las notas para su presentación y exportación</p>
+              <h3 className="text-lg font-bold text-app-text">Notas a los Estados Financieros</h3>
+              <p className="text-xs text-app-muted">Edita y estructura las notas para su presentación y exportación</p>
             </div>
             
             <div className="flex gap-2">
               <button
                 onClick={handlePrint}
-                className="bg-slate-800 hover:bg-slate-750 text-white font-bold px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-2"
+                className="bg-app-surface hover:bg-app-hover text-app-text font-bold px-4 py-2.5 rounded-xl border border-app-border transition flex items-center gap-2"
               >
-                <Printer className="h-4.5 w-4.5 text-slate-300" /> Imprimir Notas
+                <Printer className="h-4.5 w-4.5 text-app-muted" /> Imprimir Notas
               </button>
               
               <button
@@ -498,11 +498,11 @@ export default function FinanceNotesView() {
             {showNotesWithTables.map((note) => (
               <div
                 key={note.number}
-                className="bg-[#1e293b]/70 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-xl space-y-4 print:bg-white print:text-black print:border-none print:shadow-none print:p-0"
+                className="bg-app-surface/70 backdrop-blur-md p-6 rounded-2xl border border-app-border shadow-xl space-y-4 print:bg-white print:text-black print:border-none print:shadow-none print:p-0"
               >
                 {/* Note title */}
-                <div className="flex justify-between items-center border-b border-slate-700/50 pb-2 print:border-black">
-                  <h4 className="text-md font-bold text-white print:text-black font-Outfit flex items-center gap-2">
+                <div className="flex justify-between items-center border-b border-app-border pb-2 print:border-black">
+                  <h4 className="text-md font-bold text-app-text print:text-black font-Outfit flex items-center gap-2">
                     <span className="text-blue-400 font-extrabold print:text-black">Nota {note.number}:</span>
                     {note.title}
                   </h4>
@@ -517,23 +517,23 @@ export default function FinanceNotesView() {
                     [note.number]: e.target.value
                   }))}
                   rows={4}
-                  className="w-full bg-[#0f172a] border border-slate-750 rounded-xl p-4 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 leading-relaxed font-normal print:bg-transparent print:border-none print:text-black print:p-0 print:resize-none"
+                  className="w-full bg-app-bg border border-app-border rounded-xl p-4 text-sm text-app-text focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 leading-relaxed font-normal print:bg-transparent print:border-none print:text-black print:p-0 print:resize-none"
                 />
 
                 {/* Table Data Preview (If exist) */}
                 {note.tableData && (
-                  <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-[#0f172a]/30 print:border-black print:bg-transparent">
+                  <div className="overflow-x-auto rounded-xl border border-app-border bg-app-bg/30 print:border-black print:bg-transparent">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-[#0f172a]/80 text-slate-400 font-bold border-b border-slate-800 print:text-black print:border-black">
+                        <tr className="bg-app-bg/80 text-app-muted font-bold border-b border-app-border print:text-black print:border-black">
                           {note.tableData.headers.map((h, i) => (
                             <th key={i} className="p-3">{h}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60 print:divide-black">
+                      <tbody className="divide-y divide-app-border/60 print:divide-black">
                         {note.tableData.rows.map((row, ri) => (
-                          <tr key={ri} className="text-slate-300 print:text-black">
+                          <tr key={ri} className="text-app-muted print:text-black">
                             {row.map((cell, ci) => (
                               <td key={ci} className={`p-3 ${ci === row.length - 1 ? 'font-bold text-right' : ''}`}>{cell}</td>
                             ))}
