@@ -3,6 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { INITIAL_PLAN, type Account } from './logic/plan';
 import { SEED_GLOSAS } from './utils/seedCasuistica';
 import { determineIGVSubcuenta } from './engine/igvSegmentation';
+import { validateDoubleEntry } from './engine/doubleEntryValidator';
+import { propagateInvalidation, markModuleSynced, extractPeriodo } from './engine/cascadeInvalidator';
+import { isPeriodClosed } from './engine/periodClose';
 import toast from 'react-hot-toast';
 
 // --- Shared Interfaces (Sync with DB) ---
@@ -182,6 +185,17 @@ export interface CashMovement {
   banco_item?: string;
 }
 
+export interface BankStatementLine {
+  id?: string;
+  workspace_id?: string;
+  fecha: string;
+  referencia: string;
+  glosa: string;
+  monto: number;
+  reconciled_journal_id?: string | null;
+  user_id?: string;
+}
+
 export interface FixedAsset {
   id: string;
   codigo: string;
@@ -344,6 +358,7 @@ export interface WorkspaceState {
   fixedAssets: FixedAsset[];
   employees: Employee[];
   balanceInicial: BalanceInicialItem[];
+  bankStatements: BankStatementLine[];
 }
 
 // ─── App Global State ───
@@ -445,6 +460,27 @@ export interface AppState extends WorkspaceState {
   markBuzonMensajeAsRead: (id: string) => void;
   centralizeSireRecords: (ruc: string, records: any[], proceso: string) => Promise<void>;
   syncMaintenance: () => Promise<void>;
+  
+  // --- Mejora #2 & #5: Control de Períodos y Obsoleto (stale) ---
+  periodsList: any[];
+  staleVersions: any[];
+  checkIfPeriodClosed: (fecha: string) => Promise<boolean>;
+  loadPeriods: () => Promise<void>;
+  closePeriodAction: (periodo: string, tipo: 'MENSUAL' | 'ANUAL', notas?: string) => Promise<any>;
+  reopenPeriodAction: (periodo: string, tipo: 'MENSUAL' | 'ANUAL') => Promise<boolean>;
+  triggerCascadeInvalidation: (source: string, fecha: string) => Promise<void>;
+  syncStaleVersions: (periodo: string) => Promise<any[]>;
+  markSynced: (module: string, periodo: string) => Promise<void>;
+  executeProrrata: (periodo: string) => Promise<void>;
+  executeFxAdjustment: (periodo: string, tcCompraClosing: number, tcVentaClosing: number) => Promise<void>;
+  
+  // --- Bank Reconciliation ---
+  loadBankStatements: (periodo?: string) => Promise<void>;
+  importBankStatements: (lines: BankStatementLine[]) => Promise<boolean>;
+  reconcileTransaction: (statementId: string, journalId: string) => Promise<boolean>;
+  unreconcileTransaction: (statementId: string) => Promise<boolean>;
+  autoMatchBank: (periodo: string) => Promise<number>;
+
   // --- Admin & Suggestions ---
   adminSuggestions: any[];
   adminUsers: any[];
@@ -457,6 +493,15 @@ export interface AppState extends WorkspaceState {
   startInspectingWorkspace: (userId: string, ruc: string, companyName: string) => Promise<void>;
   stopInspectingWorkspace: () => Promise<void>;
   sendSuggestion: (comment: string, imageBase64: string | null, category: string, systemState: any) => Promise<void>;
+
+  // --- Sprint 5: IFRS/NIIF & NIC 12 ---
+  financeNotes: any[] | null;
+  deferredTaxComputation: any | null;
+  loadFinanceNotes: (periodo: string) => Promise<any[]>;
+  saveFinanceNotes: (periodo: string, notes: any[]) => Promise<void>;
+  loadDeferredTax: (periodo: string) => Promise<any>;
+  saveDeferredTax: (periodo: string, computation: any) => Promise<void>;
+  postDeferredTaxJournalEntry: (periodo: string, data: { lines: any[], glosa: string }) => Promise<void>;
 }
 
 // ─── Helpers ───
@@ -484,35 +529,63 @@ const sortPlan = (plan: Account[]): Account[] => {
   return [...plan].sort((a, b) => a.cta.localeCompare(b.cta, undefined, { numeric: true }));
 };
 
-function buildJournalEntries(source: 'COMPRA' | 'VENTA' | 'HONORARIO' | 'ASIENTO', data: any, plan: Account[]): JournalEntry[] {
-  // Logic from buildPurchaseJournal, buildSaleJournal, etc.
-  // Re-implemented here briefly to keep store clean
+function buildJournalEntries(
+  source: 'COMPRA' | 'VENTA' | 'HONORARIO' | 'ASIENTO',
+  data: any,
+  plan: Account[],
+  sbsRates?: { compra: number, venta: number }
+): JournalEntry[] {
   if (source === 'COMPRA') {
     const p = data as PurchaseEntry;
     const base = `compra-${p.id}`;
     const entries: JournalEntry[] = [];
     const ctaGasto = (p.ctaGasto || '6011').trim();
-    const totalGasto = p.bi + p.noGravada;
-
-    // 1. NATURALEZA (Provisión: 60, 40, 42)
+    
+    // Converted amounts in PEN
+    const rate = p.tc || 1;
+    const isUsd = p.moneda === 'DOLARES';
+    
+    // Convert to PEN if USD, else use raw values
+    const biPEN = isUsd ? Number((p.bi * rate).toFixed(2)) : p.bi;
+    const noGravadaPEN = isUsd ? Number((p.noGravada * rate).toFixed(2)) : p.noGravada;
+    const igvPEN = isUsd ? Number((p.igv * rate).toFixed(2)) : p.igv;
+    const iscPEN = isUsd ? Number((p.isc * rate).toFixed(2)) : p.isc;
+    const totalPEN = isUsd ? Number((p.total * rate).toFixed(2)) : p.total;
+    
+    // If USD, perform rounding adjustment to balance the provisión perfectly:
+    // SUM(debit) = SUM(credit)
+    let adjustedBiPEN = biPEN;
+    if (isUsd) {
+      const sumDebits = Number((biPEN + noGravadaPEN + igvPEN + iscPEN).toFixed(2));
+      const diff = Number((totalPEN - sumDebits).toFixed(2));
+      if (diff !== 0) {
+        if (p.bi > 0) {
+          adjustedBiPEN = Number((biPEN + diff).toFixed(2));
+        }
+      }
+    }
+    
+    const totalGastoPEN = Number((adjustedBiPEN + noGravadaPEN).toFixed(2));
+    
+    // Provisión
     const natureGlosa = p.glosa || `POR LA COMPRA DE MERCADERIA SEGUN ${p.tipo_doc} ${p.serie}-${p.numero}`;
     
-    if (p.bi > 0) entries.push({ id: `${base}-bi`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: ctaGasto, desc: 'BASE IMPONIBLE', debe: p.bi, haber: 0 });
-    if (p.noGravada > 0) entries.push({ id: `${base}-nogravada`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: ctaGasto, desc: 'NO GRAVADA', debe: p.noGravada, haber: 0 });
+    if (p.bi > 0) entries.push({ id: `${base}-bi`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: ctaGasto, desc: 'BASE IMPONIBLE', debe: adjustedBiPEN, haber: 0 });
+    if (p.noGravada > 0) entries.push({ id: `${base}-nogravada`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: ctaGasto, desc: 'NO GRAVADA', debe: noGravadaPEN, haber: 0 });
     if (p.igv > 0) {
       const igvSeg = determineIGVSubcuenta(p.tipOperCode);
-      entries.push({ id: `${base}-igv`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: igvSeg.subcuenta, desc: igvSeg.description, debe: p.igv, haber: 0 });
+      entries.push({ id: `${base}-igv`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: igvSeg.subcuenta, desc: igvSeg.description, debe: igvPEN, haber: 0 });
     }
-    if (p.isc > 0) entries.push({ id: `${base}-isc`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: '4012', desc: 'I.S.C.', debe: p.isc, haber: 0 });
-    if (p.total > 0) entries.push({ id: `${base}-total`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: (p.ctaAbono || '4212').trim(), desc: 'EMITIDAS', debe: 0, haber: p.total });
+    if (p.isc > 0) entries.push({ id: `${base}-isc`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: '4012', desc: 'I.S.C.', debe: iscPEN, haber: 0 });
+    if (p.total > 0) entries.push({ id: `${base}-total`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: (p.ctaAbono || '4212').trim(), desc: 'EMITIDAS', debe: 0, haber: totalPEN });
 
-    // 2. DESTINO (Ingreso Almacén: 20, 61)
-    if (totalGasto > 0) {
+    // Destino (Amarre)
+    if (totalGastoPEN > 0) {
       const acc = plan.find(a => a.cta === ctaGasto);
       if (acc?.amarreDebe && acc?.amarreHaber) {
         const destinationGlosa = 'POR EL INGRESO FISICO MERCADERIA AL ALMACEN';
-        entries.push({ id: `${base}-amd`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreDebe.trim(), desc: 'DESTINO DEBE', debe: totalGasto, haber: 0 });
-        entries.push({ id: `${base}-amh`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreHaber.trim(), desc: 'DESTINO HABER', debe: 0, haber: totalGasto });
+        entries.push({ id: `${base}-amd`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreDebe.trim(), desc: 'DESTINO DEBE', debe: totalGastoPEN, haber: 0 });
+        entries.push({ id: `${base}-amh`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreHaber.trim(), desc: 'DESTINO HABER', debe: 0, haber: totalGastoPEN });
       }
     }
     return entries;
@@ -522,12 +595,125 @@ function buildJournalEntries(source: 'COMPRA' | 'VENTA' | 'HONORARIO' | 'ASIENTO
     const base = `venta-${s.id}`;
     const entries: JournalEntry[] = [];
     
-    // 1. NATURALEZA (Venta: 12, 40, 70)
-    if (s.total > 0) entries.push({ id: `${base}-total`, source, asiento: s.registro, fecha: s.fecha, glosa: s.glosa || `VENTA ${s.tipo_doc} ${s.serie}-${s.numero}`, cta: (s.ctaCargo || '1212').trim(), desc: 'EMITIDAS', debe: s.total, haber: 0 });
-    if (s.igv > 0) entries.push({ id: `${base}-igv`, source, asiento: s.registro, fecha: s.fecha, glosa: 'IGV VENTA', cta: '40112', desc: 'IGV', debe: 0, haber: s.igv });
-    if (s.bi > 0) entries.push({ id: `${base}-bi`, source, asiento: s.registro, fecha: s.fecha, glosa: 'VENTA BI', cta: (s.ctaIngreso || '70111').trim(), desc: 'INGRESOS', debe: 0, haber: s.bi });
+    const isUsd = s.moneda === 'DOLARES';
+    const tcCompra = isUsd ? (sbsRates?.compra || s.tc || 1) : 1;
+    const tcVenta = isUsd ? (sbsRates?.venta || s.tc || 1) : 1;
 
-    // 2. COSTO DE VENTA (69 / 20) - Solo si hay costo_venta registrado
+    // Converted amounts in PEN
+    const cta12_pen = isUsd ? Number((s.total * tcCompra).toFixed(2)) : s.total;
+    const cta40_pen = isUsd ? Number((s.igv * tcVenta).toFixed(2)) : s.igv;
+    const cta70_pen = isUsd ? Number((s.bi * tcCompra).toFixed(2)) : s.bi;
+    const noGravada_pen = isUsd ? Number((s.noGravada * tcCompra).toFixed(2)) : s.noGravada;
+    const isc_pen = isUsd ? Number((s.isc * tcCompra).toFixed(2)) : s.isc;
+
+    // 1. NATURALEZA (Venta: 12, 40, 70)
+    const natureGlosa = s.glosa || `VENTA ${s.tipo_doc} ${s.serie}-${s.numero}`;
+    
+    if (cta12_pen > 0) {
+      entries.push({ 
+        id: `${base}-total`, 
+        source, 
+        asiento: s.registro, 
+        fecha: s.fecha, 
+        glosa: natureGlosa, 
+        cta: (s.ctaCargo || '1212').trim(), 
+        desc: 'EMITIDAS', 
+        debe: cta12_pen, 
+        haber: 0 
+      });
+    }
+
+    if (isUsd) {
+      // Calculate exchange asymmetry difference
+      const credits = Number((cta70_pen + cta40_pen + noGravada_pen + isc_pen).toFixed(2));
+      const descuadre = Number((cta12_pen - credits).toFixed(2));
+      
+      if (descuadre < 0) {
+        // Loss -> Cuenta 676
+        entries.push({
+          id: `${base}-diff-cambio`,
+          source,
+          asiento: s.registro,
+          fecha: s.fecha,
+          glosa: 'AJUSTE DIFERENCIA DE CAMBIO VENTAS (ASIMETRIA SBS)',
+          cta: '676',
+          desc: 'DIFERENCIA DE CAMBIO',
+          debe: Math.abs(descuadre),
+          haber: 0
+        });
+      } else if (descuadre > 0) {
+        // Gain -> Cuenta 776
+        entries.push({
+          id: `${base}-diff-cambio`,
+          source,
+          asiento: s.registro,
+          fecha: s.fecha,
+          glosa: 'AJUSTE DIFERENCIA DE CAMBIO VENTAS (ASIMETRIA SBS)',
+          cta: '776',
+          desc: 'DIFERENCIA EN CAMBIO',
+          debe: 0,
+          haber: descuadre
+        });
+      }
+    }
+
+    if (cta40_pen > 0) {
+      entries.push({ 
+        id: `${base}-igv`, 
+        source, 
+        asiento: s.registro, 
+        fecha: s.fecha, 
+        glosa: 'IGV VENTA', 
+        cta: '40112', 
+        desc: 'IGV', 
+        debe: 0, 
+        haber: cta40_pen 
+      });
+    }
+
+    if (cta70_pen > 0) {
+      entries.push({ 
+        id: `${base}-bi`, 
+        source, 
+        asiento: s.registro, 
+        fecha: s.fecha, 
+        glosa: 'VENTA BI', 
+        cta: (s.ctaIngreso || '70111').trim(), 
+        desc: 'INGRESOS', 
+        debe: 0, 
+        haber: cta70_pen 
+      });
+    }
+
+    if (noGravada_pen > 0) {
+      entries.push({ 
+        id: `${base}-nogravada`, 
+        source, 
+        asiento: s.registro, 
+        fecha: s.fecha, 
+        glosa: 'VENTA NO GRAVADA', 
+        cta: (s.ctaIngreso || '70111').trim(), 
+        desc: 'INGRESOS NO GRAVADOS', 
+        debe: 0, 
+        haber: noGravada_pen 
+      });
+    }
+
+    if (isc_pen > 0) {
+      entries.push({ 
+        id: `${base}-isc`, 
+        source, 
+        asiento: s.registro, 
+        fecha: s.fecha, 
+        glosa: 'VENTA ISC', 
+        cta: '4012', 
+        desc: 'I.S.C. VENTAS', 
+        debe: 0, 
+        haber: isc_pen 
+      });
+    }
+
+    // 2. COSTO DE VENTA (69 / 20)
     if (s.costo_venta && s.costo_venta > 0) {
       const costGlosa = 'Centralización del kárdex Costo de ventas - Formato 13.1';
       entries.push({ id: `${base}-cv-debe`, source, asiento: s.registro, fecha: s.fecha, glosa: costGlosa, cta: '6911', desc: 'COSTO DE VENTAS', debe: s.costo_venta, haber: 0 });
@@ -563,7 +749,8 @@ const EMPTY_WORKSPACE: WorkspaceState = {
   currentCompany: { name: '', ruc: '', regimenTributario: 'RG', location: '', address: '', support: '', period: '', businessType: 'COMERCIAL', annualIncomeUIT: 0 },
   purchases: [], sales: [], journal: [], asientos: [], entities: [], maintenanceRecords: [], costs: [], honorarios: [], plan: INITIAL_PLAN, hhttAdjustments: {}, movimientosData: [], glosasHabituales: [],
   products: [], inventoryMovements: [], cashMovements: [], fixedAssets: [], employees: [],
-  balanceInicial: []
+  balanceInicial: [],
+  bankStatements: []
 };
 
 export const useStore = create<AppState>()(
@@ -576,12 +763,16 @@ export const useStore = create<AppState>()(
       theme: 'dark',
       workspaces: [],
       buzonMensajes: [],
+      periodsList: [],
+      staleVersions: [],
       draftCompra: null, draftVenta: null, draftHonorario: null, draftAsiento: null,
       adminSuggestions: [],
       adminUsers: [],
       isInspectingUser: false,
       originalAdminCompany: null,
       originalAdminWorkspaceData: null,
+      financeNotes: null,
+      deferredTaxComputation: null,
       
       // --- Lifecycle ---
       initApp: async () => {
@@ -650,9 +841,60 @@ export const useStore = create<AppState>()(
 
       // --- Data Persistence (Proxy to DB) ---
       savePurchase: async (p) => {
-        const j = buildJournalEntries('COMPRA', p, get().plan);
         const ruc = get().currentCompany?.ruc || '';
-        await electron.dbExecute(`INSERT OR REPLACE INTO purchases (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono, moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, p.moneda, p.tc, p.bi, p.igv, p.noGravada, p.isc, p.total, p.glosa, p.detraccion]);
+        
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(p.fecha)) {
+          toast.error(`⚠️ Compra bloqueada: El período ${p.fecha.substring(0, 7)} está CERRADO.`);
+          return;
+        }
+
+        let sbsRates = undefined;
+        if (p.moneda === 'DOLARES') {
+          try {
+            const res = await electron.dbQuery('SELECT compra, venta FROM sbs_rates WHERE fecha = ?', [p.fecha]);
+            const rows = res?.rows || res || [];
+            if (rows && rows.length > 0) {
+              sbsRates = { compra: Number(rows[0].compra), venta: Number(rows[0].venta) };
+            } else {
+              const rate = await electron.sbsGetExchangeRate(p.fecha);
+              if (rate) {
+                sbsRates = { compra: Number(rate.compra), venta: Number(rate.venta) };
+              }
+            }
+          } catch (err) {
+            console.warn('[STORE] sbsRate lookup failed, using p.tc:', err);
+          }
+        }
+
+        const j = buildJournalEntries('COMPRA', p, get().plan, sbsRates);
+
+        // ── Barrera de partida doble (Mejora #1) ──
+        try {
+          validateDoubleEntry(j);
+        } catch (validationError: any) {
+          toast.error(`⚠️ Compra bloqueada: ${validationError.message}`);
+          console.error('[VALIDACIÓN] Partida doble falló en savePurchase:', validationError);
+          return;
+        }
+
+        const monto_me = p.moneda === 'DOLARES' ? p.total : 0;
+        const tc_origen = p.moneda === 'DOLARES' ? (p.tc || 1) : 1;
+
+        await electron.dbExecute(
+          `INSERT OR REPLACE INTO purchases (
+            id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
+            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono, 
+            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, 
+            monto_me, tc_origen
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+          [
+            p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, 
+            p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, 
+            p.moneda, p.tc, p.bi, p.igv, p.noGravada, p.isc, p.total, p.glosa, p.detraccion,
+            monto_me, tc_origen
+          ]
+        );
         
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${p.id}-%`]);
         for (const entry of j) {
@@ -660,10 +902,22 @@ export const useStore = create<AppState>()(
         }
         
         set({ purchases: [...get().purchases.filter(x => x.id !== p.id), p], journal: [...get().journal.filter(x => !x.id.startsWith(`compra-${p.id}`)), ...j] });
+        
+        // ── Invalidation Cascade Trigger ──
+        await get().triggerCascadeInvalidation('journal', p.fecha);
       },
 
       deletePurchase: async (id) => {
         const ruc = get().currentCompany?.ruc || '';
+        const item = get().purchases.find(x => x.id === id);
+        if (item) {
+          // ── Guard de Período Cerrado ──
+          if (await get().checkIfPeriodClosed(item.fecha)) {
+            toast.error(`⚠️ Eliminación bloqueada: El período ${item.fecha.substring(0, 7)} está CERRADO.`);
+            return;
+          }
+        }
+
         await electron.dbExecute('DELETE FROM purchases WHERE id = ?', [id]);
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${id}-%`]);
         await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
@@ -674,12 +928,68 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        // ── Invalidation Cascade Trigger ──
+        if (item) {
+          await get().triggerCascadeInvalidation('journal', item.fecha);
+        }
       },
 
       saveSale: async (s) => {
-        const j = buildJournalEntries('VENTA', s, get().plan);
         const ruc = get().currentCompany?.ruc || '';
-        await electron.dbExecute(`INSERT OR REPLACE INTO sales (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaCargo, ctaIngreso, moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [s.id, ruc, s.registro, s.fecha, s.fecVcto, s.tipo_doc, s.serie, s.numero, s.doc_tipo, s.doc_num, s.nombre, s.tipOper, s.tipOperCode, s.ctaCargo, s.ctaIngreso, s.moneda, s.tc, s.bi, s.igv, s.noGravada, s.isc, s.total, s.glosa, s.detraccion]);
+
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(s.fecha)) {
+          toast.error(`⚠️ Venta bloqueada: El período ${s.fecha.substring(0, 7)} está CERRADO.`);
+          return;
+        }
+
+        let sbsRates = undefined;
+        if (s.moneda === 'DOLARES') {
+          try {
+            const res = await electron.dbQuery('SELECT compra, venta FROM sbs_rates WHERE fecha = ?', [s.fecha]);
+            const rows = res?.rows || res || [];
+            if (rows && rows.length > 0) {
+              sbsRates = { compra: Number(rows[0].compra), venta: Number(rows[0].venta) };
+            } else {
+              const rate = await electron.sbsGetExchangeRate(s.fecha);
+              if (rate) {
+                sbsRates = { compra: Number(rate.compra), venta: Number(rate.venta) };
+              }
+            }
+          } catch (err) {
+            console.warn('[STORE] sbsRate lookup failed, using s.tc:', err);
+          }
+        }
+
+        const j = buildJournalEntries('VENTA', s, get().plan, sbsRates);
+
+        // ── Barrera de partida doble (Mejora #1) ──
+        try {
+          validateDoubleEntry(j);
+        } catch (validationError: any) {
+          toast.error(`⚠️ Venta bloqueada: ${validationError.message}`);
+          console.error('[VALIDACIÓN] Partida doble falló en saveSale:', validationError);
+          return;
+        }
+
+        const monto_me = s.moneda === 'DOLARES' ? s.total : 0;
+        const tc_origen = s.moneda === 'DOLARES' ? (sbsRates?.compra || s.tc || 1) : 1;
+
+        await electron.dbExecute(
+          `INSERT OR REPLACE INTO sales (
+            id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
+            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaCargo, ctaIngreso, 
+            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, 
+            monto_me, tc_origen
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+          [
+            s.id, ruc, s.registro, s.fecha, s.fecVcto, s.tipo_doc, s.serie, s.numero, 
+            s.doc_tipo, s.doc_num, s.nombre, s.tipOper, s.tipOperCode, s.ctaCargo, s.ctaIngreso, 
+            s.moneda, s.tc, s.bi, s.igv, s.noGravada, s.isc, s.total, s.glosa, s.detraccion,
+            monto_me, tc_origen
+          ]
+        );
         
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${s.id}-%`]);
         for (const entry of j) {
@@ -687,10 +997,22 @@ export const useStore = create<AppState>()(
         }
         
         set({ sales: [...get().sales.filter(x => x.id !== s.id), s], journal: [...get().journal.filter(x => !x.id.startsWith(`venta-${s.id}`)), ...j] });
+
+        // ── Invalidation Cascade Trigger ──
+        await get().triggerCascadeInvalidation('journal', s.fecha);
       },
 
       deleteSale: async (id) => {
         const ruc = get().currentCompany?.ruc || '';
+        const item = get().sales.find(x => x.id === id);
+        if (item) {
+          // ── Guard de Período Cerrado ──
+          if (await get().checkIfPeriodClosed(item.fecha)) {
+            toast.error(`⚠️ Eliminación bloqueada: El período ${item.fecha.substring(0, 7)} está CERRADO.`);
+            return;
+          }
+        }
+
         await electron.dbExecute('DELETE FROM sales WHERE id = ?', [id]);
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${id}-%`]);
         await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
@@ -701,35 +1023,82 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        // ── Invalidation Cascade Trigger ──
+        if (item) {
+          await get().triggerCascadeInvalidation('journal', item.fecha);
+        }
       },
 
       saveHonorario: async (h) => {
         const ruc = get().currentCompany?.ruc || '';
         if (!electron) return;
-        
-        await electron.dbExecute(`INSERT OR REPLACE INTO honorarios (id, workspace_id, registro, fecha, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, ctaGasto, ctaAbono, bi, retencion, total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [h.id, ruc, h.registro, h.fecha, h.tipo_doc, h.serie, h.numero, h.doc_tipo, h.doc_num, h.nombre, h.ctaGasto, h.ctaAbono, h.bi, h.retencion, h.total]);
-        
-        // Generar y guardar asientos
-        const entries = buildJournalEntries('HONORARIO', h, get().plan);
-        for (const entry of entries) {
-           await electron.dbExecute(`
-             INSERT OR REPLACE INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, [desc], debe, haber)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           `, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(h.fecha)) {
+          toast.error(`⚠️ Honorario bloqueado: El período ${h.fecha.substring(0, 7)} está CERRADO.`);
+          return;
         }
         
+        // Generar asientos primero para validar
+        const entries = buildJournalEntries('HONORARIO', h, get().plan);
+
+        // ── Barrera de partida doble (Mejora #1) ──
+        try {
+          validateDoubleEntry(entries);
+        } catch (validationError: any) {
+          toast.error(`⚠️ Honorario bloqueado: ${validationError.message}`);
+          console.error('[VALIDACIÓN] Partida doble falló en saveHonorario:', validationError);
+          return;
+        }
+
+        await electron.dbExecute(`INSERT OR REPLACE INTO honorarios (id, workspace_id, registro, fecha, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, ctaGasto, ctaAbono, bi, retencion, total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [h.id, ruc, h.registro, h.fecha, h.tipo_doc, h.serie, h.numero, h.doc_tipo, h.doc_num, h.nombre, h.ctaGasto, h.ctaAbono, h.bi, h.retencion, h.total]);
+        
+        // Guardar asientos validados
+        for (const entry of entries) {
+           await electron.dbExecute(`
+              INSERT OR REPLACE INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, [desc], debe, haber)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+         }
+        
         await get().syncCurrentWorkspace();
+
+        // ── Invalidation Cascade Trigger ──
+        await get().triggerCascadeInvalidation('journal', h.fecha);
       },
 
       deleteHonorario: async (id) => {
+        const ruc = get().currentCompany?.ruc || '';
+        const item = get().honorarios.find(x => x.id === id);
+        if (item) {
+          // ── Guard de Período Cerrado ──
+          if (await get().checkIfPeriodClosed(item.fecha)) {
+            toast.error(`⚠️ Eliminación bloqueada: El período ${item.fecha.substring(0, 7)} está CERRADO.`);
+            return;
+          }
+        }
+
         await electron.dbExecute('DELETE FROM honorarios WHERE id = ?', [id]);
         set({ honorarios: get().honorarios.filter(h => h.id !== id) });
+
+        // ── Invalidation Cascade Trigger ──
+        if (item) {
+          await get().triggerCascadeInvalidation('journal', item.fecha);
+        }
       },
 
       saveAsiento: async (header, lines) => {
         const ruc = get().currentCompany?.ruc || '';
+        const fecha = header.fecEmi || new Date().toISOString().split('T')[0];
+
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(fecha)) {
+          toast.error(`⚠️ Asiento bloqueado: El período ${fecha.substring(0, 7)} está CERRADO.`);
+          return `asiento-blocked-${Date.now()}`;
+        }
+
         const id = `asiento-${Date.now()}`;
-        await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
         
         // Generate journal entries
         const journalEntries: JournalEntry[] = lines
@@ -738,13 +1107,24 @@ export const useStore = create<AppState>()(
             id: `${id}-line-${index}`,
             source: 'ASIENTO',
             asiento: header.asiento || '',
-            fecha: header.fecEmi || new Date().toISOString().split('T')[0],
+            fecha,
             glosa: header.glosa || 'ASIENTO MANUAL',
             cta: (line.cuenta || '').trim(),
             desc: line.detalle || header.glosa || '',
             debe: line.debe || 0,
             haber: line.haber || 0
           }));
+
+        // ── Barrera de partida doble (Mejora #1) ──
+        try {
+          validateDoubleEntry(journalEntries);
+        } catch (validationError: any) {
+          toast.error(`⚠️ Asiento bloqueado: ${validationError.message}`);
+          console.error('[VALIDACIÓN] Partida doble falló en saveAsiento:', validationError);
+          return id; // Retorna id sin persistir
+        }
+
+        await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
 
         for (const entry of journalEntries) {
           await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
@@ -753,23 +1133,54 @@ export const useStore = create<AppState>()(
         // Trigger a data reload
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ ...data });
+
+        // ── Invalidation Cascade Trigger ──
+        await get().triggerCascadeInvalidation('journal', fecha);
+
         return id;
       },
 
       deleteAsientoById: async (id) => {
         const ruc = get().currentCompany?.ruc || '';
+        const item = get().asientos.find(x => x.id === id);
+        if (item) {
+          const fecha = item.header?.fecEmi || new Date().toISOString().split('T')[0];
+          // ── Guard de Período Cerrado ──
+          if (await get().checkIfPeriodClosed(fecha)) {
+            toast.error(`⚠️ Eliminación bloqueada: El período ${fecha.substring(0, 7)} está CERRADO.`);
+            return;
+          }
+        }
+
         await electron.dbExecute('DELETE FROM asientos WHERE id = ?', [id]);
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${id}-line-%`]);
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ ...data });
+
+        // ── Invalidation Cascade Trigger ──
+        if (item) {
+          const fecha = item.header?.fecEmi || new Date().toISOString().split('T')[0];
+          await get().triggerCascadeInvalidation('journal', fecha);
+        }
       },
 
       deleteJournalEntry: async (id) => {
         const ruc = get().currentCompany?.ruc || '';
         if (!ruc || !electron) return;
+        const entry = get().journal.find(x => x.id === id);
+        if (entry) {
+          if (await get().checkIfPeriodClosed(entry.fecha)) {
+            toast.error(`⚠️ Eliminación bloqueada: El período ${entry.fecha.substring(0, 7)} está CERRADO.`);
+            return;
+          }
+        }
         await electron.dbExecute(`DELETE FROM journal WHERE id = ? AND workspace_id = ?`, [id, ruc]);
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ ...data });
+
+        if (entry) {
+          await get().triggerCascadeInvalidation('journal', entry.fecha);
+        }
       },
 
       saveGlosaHabitual: async (glosa, lines, category) => {
@@ -827,10 +1238,274 @@ export const useStore = create<AppState>()(
         }
       },
 
+      // --- Mejora #2 & #5: Acciones de Gestión de Períodos y Obsoletos ---
+      checkIfPeriodClosed: async (fecha: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc || !fecha) return false;
+        const periodo = fecha.substring(0, 7);
+        try {
+          const res = await electron.dbQuery(
+            `SELECT estado FROM accounting_periods WHERE workspace_id = ? AND periodo = ? AND tipo = 'MENSUAL'`,
+            [ruc, periodo]
+          );
+          const rows = res?.rows || res || [];
+          return rows.some((r: any) => r.estado === 'CERRADO');
+        } catch (e) {
+          console.error('[PERIOD GUARD] Error comprobando periodo cerrado:', e);
+          return false;
+        }
+      },
+
+      loadPeriods: async () => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+        try {
+          const periods = await webApiBridge.getPeriods(ruc);
+          set({ periodsList: periods });
+        } catch (e) {
+          console.error('[STORE] Error cargando períodos:', e);
+        }
+      },
+
+      closePeriodAction: async (periodo: string, tipo: 'MENSUAL' | 'ANUAL', notas?: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return null;
+        try {
+          const res = await webApiBridge.closePeriod(ruc, { periodo, tipo, notas });
+          await get().loadPeriods();
+          return res;
+        } catch (e) {
+          console.error('[STORE] Error al cerrar período:', e);
+          return { success: false, error: String(e) };
+        }
+      },
+
+      reopenPeriodAction: async (periodo: string, tipo: 'MENSUAL' | 'ANUAL') => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return false;
+        try {
+          const res = await webApiBridge.reopenPeriod(ruc, { periodo, tipo });
+          await get().loadPeriods();
+          return res.success;
+        } catch (e) {
+          console.error('[STORE] Error al reabrir período:', e);
+          return false;
+        }
+      },
+
+      triggerCascadeInvalidation: async (source: string, fecha: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc || !fecha) return;
+        const periodo = extractPeriodo(fecha);
+        try {
+          await propagateInvalidation(source, ruc, periodo, electron.dbExecute);
+        } catch (e) {
+          console.error('[CASCADE] Error en propagación cascada:', e);
+        }
+      },
+
+      syncStaleVersions: async (periodo: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc || !periodo) return [];
+        try {
+          const rows = await webApiBridge.getStaleStatus(ruc, periodo);
+          // Actualizar estado en store
+          set({ staleVersions: rows });
+          return rows;
+        } catch (e) {
+          console.error('[STORE] Error al sincronizar stale versions:', e);
+          return [];
+        }
+      },
+
+      markSynced: async (module: string, periodo: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc || !periodo) return;
+        try {
+          await markModuleSynced(ruc, periodo, module, electron.dbExecute);
+          await get().syncStaleVersions(periodo);
+        } catch (e) {
+          console.error('[STORE] Error marcando módulo sincronizado:', e);
+        }
+      },
+
+      executeProrrata: async (periodo: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+        
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(`${periodo}-01`)) {
+          toast.error(`⚠️ Prorrata bloqueada: El período ${periodo} está CERRADO.`);
+          return;
+        }
+
+        try {
+          const res = await webApiBridge.executeProrrata(ruc, periodo);
+          if (res.success) {
+            toast.success(`✅ Prorrata calculada con éxito: Factor ${res.data.factor}`);
+            // Sync workspace data
+            const data = await electron.dbGetWorkspaceData(ruc);
+            set({ ...data });
+            await get().triggerCascadeInvalidation('journal', `${periodo}-28`);
+          } else {
+            toast.error(`⚠️ Error al calcular prorrata: ${res.error}`);
+          }
+        } catch (e: any) {
+          toast.error(`⚠️ Error de red al calcular prorrata: ${e.message || e}`);
+        }
+      },
+
+      executeFxAdjustment: async (periodo: string, tcCompraClosing: number, tcVentaClosing: number) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+
+        // ── Guard de Período Cerrado ──
+        if (await get().checkIfPeriodClosed(`${periodo}-01`)) {
+          toast.error(`⚠️ Diferencial cambiario bloqueado: El período ${periodo} está CERRADO.`);
+          return;
+        }
+
+        try {
+          const { calculateFxAdjustment } = await import('./engine/fxAdjustment');
+          const res = calculateFxAdjustment(periodo, get().purchases, get().sales, tcCompraClosing, tcVentaClosing);
+          
+          const asientoCorrelativo = `AJUS-DIFCAMBIO-${periodo.replace('-', '')}`;
+          const lastDay = new Date(Number(periodo.split('-')[0]), Number(periodo.split('-')[1]), 0).getDate();
+          const fechaAjuste = `${periodo}-${String(lastDay).padStart(2, '0')}`;
+
+          await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND asiento = ?', [ruc, asientoCorrelativo]);
+          
+          if (res.adjustingEntries.length > 0) {
+            for (const entry of res.adjustingEntries) {
+              await electron.dbExecute(
+                `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+                [entry.id, ruc, entry.source, entry.asiento, fechaAjuste, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]
+              );
+            }
+            toast.success(`✅ Ajuste por diferencia de cambio generado: ${res.adjustments.length} documentos procesados.`);
+          } else {
+            toast.success(`ℹ️ No se requirieron ajustes por diferencia de cambio para el período ${periodo}.`);
+          }
+
+          // Reload workspace
+          const data = await electron.dbGetWorkspaceData(ruc);
+          set({ ...data });
+          await get().triggerCascadeInvalidation('journal', fechaAjuste);
+        } catch (e: any) {
+          toast.error(`⚠️ Error al calcular diferencia de cambio: ${e.message || e}`);
+        }
+      },
+
+      loadBankStatements: async (periodo?: string) => {
+        try {
+          const ruc = get().currentCompany?.ruc;
+          if (!ruc) return;
+          const statements = await electron.getBankStatements(ruc, periodo);
+          set({ bankStatements: statements });
+        } catch (error) {
+          console.error('[STORE] Error loadBankStatements:', error);
+        }
+      },
+
+      importBankStatements: async (lines: BankStatementLine[]) => {
+        try {
+          const ruc = get().currentCompany?.ruc;
+          if (!ruc) return false;
+          const res = await electron.importBankStatements(ruc, lines);
+          if (res && res.success) {
+            const data = await electron.dbGetWorkspaceData(ruc);
+            if (data) {
+              set({ bankStatements: data.bankStatements });
+            }
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error('[STORE] Error importBankStatements:', error);
+          return false;
+        }
+      },
+
+      reconcileTransaction: async (statementId: string, journalId: string) => {
+        try {
+          const ruc = get().currentCompany?.ruc;
+          if (!ruc) return false;
+          const res = await electron.reconcileTransaction(ruc, statementId, journalId);
+          if (res && res.success) {
+            const data = await electron.dbGetWorkspaceData(ruc);
+            if (data) {
+              set({ bankStatements: data.bankStatements });
+            }
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error('[STORE] Error reconcileTransaction:', error);
+          return false;
+        }
+      },
+
+      unreconcileTransaction: async (statementId: string) => {
+        try {
+          const ruc = get().currentCompany?.ruc;
+          if (!ruc) return false;
+          const res = await electron.unreconcileTransaction(ruc, statementId);
+          if (res && res.success) {
+            const data = await electron.dbGetWorkspaceData(ruc);
+            if (data) {
+              set({ bankStatements: data.bankStatements });
+            }
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error('[STORE] Error unreconcileTransaction:', error);
+          return false;
+        }
+      },
+
+      autoMatchBank: async (periodo: string) => {
+        try {
+          const ruc = get().currentCompany?.ruc;
+          if (!ruc) return 0;
+          const res = await electron.autoMatchBank(ruc, periodo);
+          if (res && res.success) {
+            const data = await electron.dbGetWorkspaceData(ruc);
+            if (data) {
+              set({ bankStatements: data.bankStatements });
+            }
+            return res.matchCount || 0;
+          }
+          return 0;
+        } catch (error) {
+          console.error('[STORE] Error autoMatchBank:', error);
+          return 0;
+        }
+      },
+
       centralizeSireRecords: async (ruc, records, proceso) => {
+        let blockedCount = 0;
+        let closedCount = 0;
+        const periodsToInvalidate = new Set<string>();
+
         for (const r of records) {
+          // ── Guard de Período Cerrado ──
+          if (await get().checkIfPeriodClosed(r.fecha)) {
+            closedCount++;
+            continue;
+          }
+
           const j = buildJournalEntries(proceso === 'Generar RCE' ? 'COMPRA' : 'VENTA', r, get().plan);
           
+          // ── Barrera de partida doble (Mejora #1) ──
+          try {
+            validateDoubleEntry(j);
+          } catch (validationError: any) {
+            console.error(`[VALIDACIÓN SIRE] Registro ${r.id} descuadrado:`, validationError.message);
+            blockedCount++;
+            continue; // Saltar este registro, procesar el resto
+          }
+
           await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${proceso === 'Generar RCE' ? 'compra' : 'venta'}-${r.id}-%`]);
           
           for (const entry of j) {
@@ -840,9 +1515,23 @@ export const useStore = create<AppState>()(
           // Actualizar estado en la tabla de compras/ventas
           const table = proceso === 'Generar RCE' ? 'purchases' : 'sales';
           await electron.dbExecute(`UPDATE ${table} SET estado_sire = 'Aceptado' WHERE id = ?`, [r.id]);
+
+          periodsToInvalidate.add(r.fecha);
+        }
+        
+        if (blockedCount > 0) {
+          toast.error(`⚠️ ${blockedCount} registro(s) SIRE bloqueados por partida doble descuadrada.`);
+        }
+        if (closedCount > 0) {
+          toast.error(`⚠️ ${closedCount} registro(s) SIRE omitidos por pertenecer a un período CERRADO.`);
         }
         
         await get().syncCurrentWorkspace();
+
+        // ── Invalidation Cascade Trigger para cada periodo afectado ──
+        for (const fecha of periodsToInvalidate) {
+          await get().triggerCascadeInvalidation('journal', fecha);
+        }
       },
 
       updateEntity: async (id, data) => {
@@ -1322,6 +2011,9 @@ export const useStore = create<AppState>()(
             fixedAssets: get().fixedAssets,
             employees: get().employees,
             balanceInicial: get().balanceInicial,
+            bankStatements: get().bankStatements,
+            financeNotes: get().financeNotes,
+            deferredTaxComputation: get().deferredTaxComputation,
           };
           
           // Cargar datos del usuario
@@ -1389,6 +2081,126 @@ export const useStore = create<AppState>()(
         } finally {
           set({ isProcessing: false });
         }
+      },
+
+      loadFinanceNotes: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return [];
+        try {
+          const res = await webApiBridge.getFinanceNotes(ruc, periodo);
+          if (res && res.success && res.notes) {
+            set({ financeNotes: res.notes });
+            return res.notes;
+          }
+          set({ financeNotes: null });
+          return [];
+        } catch (e) {
+          console.error('[STORE] Error loading finance notes:', e);
+          return [];
+        }
+      },
+
+      saveFinanceNotes: async (periodo, notes) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+        try {
+          const res = await webApiBridge.saveFinanceNotes(ruc, periodo, notes);
+          if (res && res.success) {
+            set({ financeNotes: notes });
+            toast.success('✅ Notas NIIF guardadas con éxito.');
+          } else {
+            toast.error(`⚠️ Error al guardar Notas: ${res.error || 'Error desconocido'}`);
+          }
+        } catch (e: any) {
+          console.error('[STORE] Error saving finance notes:', e);
+          toast.error(`⚠️ Error de red al guardar Notas: ${e.message || e}`);
+        }
+      },
+
+      loadDeferredTax: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return null;
+        try {
+          const res = await webApiBridge.getDeferredTax(ruc, periodo);
+          if (res && res.success && res.computation) {
+            set({ deferredTaxComputation: res.computation });
+            return res.computation;
+          }
+          set({ deferredTaxComputation: null });
+          return null;
+        } catch (e) {
+          console.error('[STORE] Error loading deferred tax:', e);
+          return null;
+        }
+      },
+
+      saveDeferredTax: async (periodo, computation) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+        try {
+          const res = await webApiBridge.saveDeferredTax(ruc, periodo, computation);
+          if (res && res.success) {
+            set({ deferredTaxComputation: computation });
+            toast.success('✅ Cálculo de Impuesto Diferido guardado.');
+          } else {
+            toast.error(`⚠️ Error al guardar Impuesto Diferido: ${res.error || 'Error desconocido'}`);
+          }
+        } catch (e: any) {
+          console.error('[STORE] Error saving deferred tax:', e);
+          toast.error(`⚠️ Error de red al guardar Impuesto Diferido: ${e.message || e}`);
+        }
+      },
+
+      postDeferredTaxJournalEntry: async (periodo, { lines, glosa }) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+
+        const lastDay = new Date(Number(periodo.split('-')[0]), Number(periodo.split('-')[1]), 0).getDate();
+        const fecha = `${periodo}-${String(lastDay).padStart(2, '0')}`;
+        if (await get().checkIfPeriodClosed(fecha)) {
+          toast.error(`⚠️ Asiento bloqueado: El período ${periodo} está CERRADO.`);
+          return;
+        }
+
+        const id = `asiento-nic12-${periodo.replace('-', '')}`;
+        const header = {
+          asiento: `NIC12-${periodo.replace('-', '')}`,
+          fecEmi: fecha,
+          glosa: glosa || 'AJUSTE IMPUESTO DIFERIDO NIC 12',
+          anio: periodo.split('-')[0],
+          mes: periodo.split('-')[1]
+        };
+
+        const journalEntries: JournalEntry[] = lines.map((line: any, index: number) => ({
+          id: `${id}-line-${index}`,
+          source: 'ASIENTO',
+          asiento: header.asiento,
+          fecha,
+          glosa: header.glosa,
+          cta: line.cuenta.trim(),
+          desc: line.detalle || header.glosa,
+          debe: line.debe || 0,
+          haber: line.haber || 0
+        }));
+
+        try {
+          validateDoubleEntry(journalEntries);
+        } catch (e: any) {
+          toast.error(`⚠️ Error de partida doble: ${e.message}`);
+          return;
+        }
+
+        await electron.dbExecute('DELETE FROM asientos WHERE id = ? AND workspace_id = ?', [id, ruc]);
+        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${id}-line-%`]);
+
+        await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
+        for (const entry of journalEntries) {
+          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+        }
+
+        await get().syncCurrentWorkspace();
+        await get().triggerCascadeInvalidation('journal', fecha);
+        toast.success('✅ Asiento NIC 12 contabilizado correctamente.');
       },
     }),
     {

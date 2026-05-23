@@ -99,6 +99,63 @@ export const webApiBridge = {
         const res = await api.get(`/api/db/analytics/ccc/${ruc}?t=${Date.now()}`);
         return res.data.metrics;
     },
+    
+    // --- Period Management & Invalidation ---
+    getPeriods: async (ruc: string) => {
+        const res = await api.get(`/api/periods/${ruc}`);
+        return res.data.periods || [];
+    },
+    getStaleStatus: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/periods/${ruc}/stale-status?periodo=${periodo}`);
+        return res.data.rows || [];
+    },
+    closePeriod: async (ruc: string, payload: { periodo: string, tipo: string, notas?: string }) => {
+        const res = await api.post(`/api/periods/${ruc}/close`, payload);
+        return res.data;
+    },
+    reopenPeriod: async (ruc: string, payload: { periodo: string, tipo: string }) => {
+        const res = await api.post(`/api/periods/${ruc}/reopen`, payload);
+        return res.data;
+    },
+
+    // --- SBS API ---
+    sbsGetExchangeRate: async (fecha: string) => {
+        const res = await api.get(`/api/sbs/tipo-cambio?fecha=${fecha}`);
+        return res.data.rate;
+    },
+
+    // --- Prorrata & DAOT API ---
+    executeProrrata: async (ruc: string, periodo: string) => {
+        const res = await api.post('/api/igv/prorrata', { ruc, periodo });
+        return res.data;
+    },
+    getDaotData: async (ruc: string, anio: string) => {
+        const res = await api.get(`/api/daot/${ruc}?anio=${anio}`);
+        return res.data;
+    },
+
+    // --- Bank Reconciliation API ---
+    getBankStatements: async (ruc: string, periodo?: string) => {
+        const url = periodo ? `/api/bank/statements/${ruc}?periodo=${periodo}` : `/api/bank/statements/${ruc}`;
+        const res = await api.get(url);
+        return res.data.statements || [];
+    },
+    importBankStatements: async (ruc: string, lines: any[]) => {
+        const res = await api.post('/api/bank/statements/import', { ruc, lines });
+        return res.data;
+    },
+    reconcileTransaction: async (ruc: string, statementId: string, journalId: string) => {
+        const res = await api.post('/api/bank/reconcile', { ruc, statementId, journalId });
+        return res.data;
+    },
+    unreconcileTransaction: async (ruc: string, statementId: string) => {
+        const res = await api.post('/api/bank/unreconcile', { ruc, statementId });
+        return res.data;
+    },
+    autoMatchBank: async (ruc: string, periodo: string) => {
+        const res = await api.post('/api/bank/auto-match', { ruc, periodo });
+        return res.data;
+    },
 
     // --- Buzon API ---
     buzonConsultar: async (args: any) => {
@@ -204,6 +261,24 @@ export const webApiBridge = {
     adminGetUserWorkspaceData: async (userId: string, ruc: string) => {
         const res = await api.get(`/api/admin/user-workspace-data/${userId}/${ruc}?t=${Date.now()}`);
         return res.data.data;
+    },
+
+    // --- Sprint 5: IFRS/NIIF & NIC 12 API ---
+    getFinanceNotes: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/finance/notes/${ruc}?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
+    saveFinanceNotes: async (ruc: string, periodo: string, notes: any) => {
+        const res = await api.post('/api/finance/notes', { ruc, periodo, notes });
+        return res.data;
+    },
+    getDeferredTax: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/finance/deferred-tax/${ruc}?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
+    saveDeferredTax: async (ruc: string, periodo: string, computation: any) => {
+        const res = await api.post('/api/finance/deferred-tax', { ruc, periodo, computation });
+        return res.data;
     },
 
     // --- Window Control (No-ops en Web) ---

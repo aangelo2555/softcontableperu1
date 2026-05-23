@@ -228,3 +228,16 @@ export const CORPORATE_TAX = {
   RMT_TIER_2_RATE: 0.295,
   RG_FLAT_RATE: 0.295,
 } as const;
+
+// ══════════════════════════════════════════════════════
+// CONSTANTES ADICIONALES SPRINT 3
+// ══════════════════════════════════════════════════════
+
+export const UMBRAL_DAOT = 3500;
+export const UMBRAL_RETENCION_IR_3RA = 700;
+export const ITF_RATE = 0.00005;
+export const TIM_SUNAT_MENSUAL = 0.009;
+export const IR_RMT_LIMIT_UIT = 1700;
+export const IR_RER_LIMIT = 525000;
+export const NRUS_CAT1_LIMIT = 5000;
+export const NRUS_CAT2_LIMIT = 8000;

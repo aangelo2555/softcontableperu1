@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Printer, FileDown, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import StaleWarningBanner from './shared/StaleWarningBanner';
+import toast from 'react-hot-toast';
 
 /**
  * LIBRO MAYOR (Formato 6.1)
@@ -13,7 +15,7 @@ import { exportSingleSheet } from '../utils/excelExport';
 const MONTHS = ['', 'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
 const MayorView: React.FC = () => {
-  const { currentCompany, plan } = useStore();
+  const { currentCompany, plan, staleVersions, syncStaleVersions, markSynced } = useStore();
   const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
   const [collapsedAccounts, setCollapsedAccounts] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +31,25 @@ const MayorView: React.FC = () => {
   });
   const dominantMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '12';
   const monthName = MONTHS[parseInt(dominantMonth, 10)] || 'DICIEMBRE';
+
+  const periodStr = `${currentYear}-${dominantMonth.padStart(2, '0')}`;
+  
+  useEffect(() => {
+    syncStaleVersions(periodStr);
+  }, [periodStr, syncStaleVersions]);
+
+  const mayorStale = staleVersions.find((x: any) => x.module === 'mayor');
+  const isStale = mayorStale?.is_stale === 1 || mayorStale?.is_stale === true;
+  const staleSince = mayorStale?.stale_since;
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    await markSynced('mayor', periodStr);
+    setIsRecalculating(false);
+    toast.success('Libro Mayor recalculado con éxito');
+  };
 
   // Group journal entries by account code
   const accountsMap = journal.reduce((acc, entry) => {
@@ -183,6 +204,14 @@ const MayorView: React.FC = () => {
            <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
         </div>
       </div>
+
+      <StaleWarningBanner
+        moduleName="mayor"
+        isStale={isStale}
+        staleSince={staleSince}
+        onRecalculate={handleRecalculate}
+        isRecalculating={isRecalculating}
+      />
 
       <div id="mayor-container" className="flex-1 overflow-auto p-3 custom-scrollbar">
         {accounts.length === 0 && (

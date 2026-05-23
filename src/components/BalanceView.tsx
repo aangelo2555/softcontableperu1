@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Landmark, Printer, FileDown } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import StaleWarningBanner from './shared/StaleWarningBanner';
+import toast from 'react-hot-toast';
 
 const ReportLine: React.FC<{ label: string; value: number; indent?: boolean; subtract?: boolean }> = ({ label, value, indent, subtract }) => {
   const formattedValue = value !== 0 ? Math.abs(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
@@ -17,8 +19,37 @@ const ReportLine: React.FC<{ label: string; value: number; indent?: boolean; sub
 };
 
 const BalanceView: React.FC = () => {
-  const { currentCompany } = useStore();
+  const { currentCompany, staleVersions, syncStaleVersions, markSynced } = useStore();
   const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
+
+  const currentYear = currentCompany.period || '2025';
+
+  // Determine the most common month from journal entries
+  const monthCounts: Record<string, number> = {};
+  journal.forEach(entry => {
+    const parts = entry.fecha.includes('/') ? entry.fecha.split('/') : entry.fecha.split('-');
+    const m = entry.fecha.includes('/') ? parts[1] : parts[1];
+    if (m) monthCounts[m] = (monthCounts[m] || 0) + 1;
+  });
+  const dominantMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '12';
+  const periodStr = `${currentYear}-${dominantMonth.padStart(2, '0')}`;
+
+  useEffect(() => {
+    syncStaleVersions(periodStr);
+  }, [periodStr, syncStaleVersions]);
+
+  const eeffStale = staleVersions.find((x: any) => x.module === 'eeff');
+  const isStale = eeffStale?.is_stale === 1 || eeffStale?.is_stale === true;
+  const staleSince = eeffStale?.stale_since;
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    await markSynced('eeff', periodStr);
+    setIsRecalculating(false);
+    toast.success('Estado de Situación Financiera recalculado con éxito');
+  };
 
   // Logic to derive balance amounts from journal
   const accountBalances = journal.reduce((acc, entry) => {
@@ -197,6 +228,14 @@ const BalanceView: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
+      <StaleWarningBanner
+        moduleName="eeff"
+        isStale={isStale}
+        staleSince={staleSince}
+        onRecalculate={handleRecalculate}
+        isRecalculating={isRecalculating}
+      />
+
       <div className="flex-1 overflow-auto p-8 custom-scrollbar bg-app-bg/50">
         <div className="max-w-6xl mx-auto bg-app-surface border border-app-border shadow-2xl p-10 rounded-lg print:shadow-none print:border-none">
           

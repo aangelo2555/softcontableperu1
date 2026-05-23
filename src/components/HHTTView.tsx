@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Scale, Printer, FileDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import StaleWarningBanner from './shared/StaleWarningBanner';
+import toast from 'react-hot-toast';
 
 /**
  * HHTT — BALANCE DE COMPROBACIÓN
@@ -111,9 +113,38 @@ const fmt = (n: number) => n !== 0 ? n.toLocaleString('en-US', { minimumFraction
 const fmtAlways = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const HHTTView: React.FC = () => {
-  const { currentCompany, plan, hhttAdjustments, setHhttAdjustment } = useStore();
+  const { currentCompany, plan, hhttAdjustments, setHhttAdjustment, staleVersions, syncStaleVersions, markSynced } = useStore();
   const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
   const [digits, setDigits] = useState<number>(100);
+
+  const currentYear = currentCompany.period || '2025';
+
+  // Determine the most common month from journal entries
+  const monthCounts: Record<string, number> = {};
+  journal.forEach(entry => {
+    const parts = entry.fecha.includes('/') ? entry.fecha.split('/') : entry.fecha.split('-');
+    const m = entry.fecha.includes('/') ? parts[1] : parts[1];
+    if (m) monthCounts[m] = (monthCounts[m] || 0) + 1;
+  });
+  const dominantMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '12';
+  const periodStr = `${currentYear}-${dominantMonth.padStart(2, '0')}`;
+
+  useEffect(() => {
+    syncStaleVersions(periodStr);
+  }, [periodStr, syncStaleVersions]);
+
+  const hhttStale = staleVersions.find((x: any) => x.module === 'hhtt');
+  const isStale = hhttStale?.is_stale === 1 || hhttStale?.is_stale === true;
+  const staleSince = hhttStale?.stale_since;
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    await markSynced('hhtt', periodStr);
+    setIsRecalculating(false);
+    toast.success('Hoja de Trabajo (HHTT) recalculada con éxito');
+  };
 
   const handleAdjust = (cta: string, field: 'debe' | 'haber', valStr: string) => {
     const val = parseFloat(valStr) || 0;
@@ -441,6 +472,14 @@ const HHTTView: React.FC = () => {
            <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
         </div>
       </div>
+
+      <StaleWarningBanner
+        moduleName="hhtt"
+        isStale={isStale}
+        staleSince={staleSince}
+        onRecalculate={handleRecalculate}
+        isRecalculating={isRecalculating}
+      />
 
       {/* High-Density Table */}
       <div className="flex-1 overflow-auto p-2 custom-scrollbar">

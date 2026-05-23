@@ -38,6 +38,7 @@ import FinanceSecondaryView from './components/FinanceSecondaryView';
 import RegistroVentas141View from './components/RegistroVentas141View';
 import BalanceInicialView from './components/BalanceInicialView';
 import CCCDashboard from './components/CCCDashboard';
+import FinanceNotesView from './components/FinanceNotesView';
 import { Login } from './components/Login';
 import { AdminView } from './components/AdminView';
 import { SuggestionBox } from './components/SuggestionBox';
@@ -164,6 +165,7 @@ const SIDEBAR_GROUPS: TabGroup[] = [
       { id: 'ESTADOS_SEC', label: 'E. Efectivo / Patrimonio', icon: TrendingUp },
       { id: 'ANEXOS', label: 'Anexos de Balance', icon: FileSearch },
       { id: 'CCC', label: 'Ciclo Efectivo (CCC)', icon: Activity },
+      { id: 'FINANCE_NOTES', label: 'Notas NIIF & NIC 12', icon: FileText },
     ],
   },
   {
@@ -271,6 +273,7 @@ const App: React.FC = () => {
       case 'ESTADOS_SEC': return <FinanceSecondaryView />;
       case 'BALANCE_INICIAL': return <BalanceInicialView />;
       case 'CCC': return <CCCDashboard />;
+      case 'FINANCE_NOTES': return <FinanceNotesView />;
       case 'ADMIN': return <AdminView />;
       default: return <EmpresaView />;
     }

@@ -6,7 +6,7 @@ import { useStore, type Entity } from '../store';
 import Modal from './shared/Modal';
 
 const CliProView: React.FC = () => {
-  const { entities, addEntity, updateEntity, deleteEntity, currentCompany } = useStore();
+  const { entities, addEntity, updateEntity, deleteEntity, currentCompany, sales, purchases } = useStore();
   const [query, setQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,7 +82,29 @@ const CliProView: React.FC = () => {
     },
     {
       header: 'RAZÓN SOCIAL / NOMBRE',
-      accessor: 'descripcion' as keyof Entity,
+      accessor: (row: Entity) => {
+        const currentYear = currentCompany?.period ? currentCompany.period.substring(0, 4) : new Date().getFullYear().toString();
+        const totalSales = sales.filter(s => s.doc_num === row.ruc && s.fecha.startsWith(currentYear)).reduce((acc, s) => acc + s.total, 0);
+        const totalPurchases = purchases.filter(p => p.doc_num === row.ruc && p.fecha.startsWith(currentYear)).reduce((acc, p) => acc + p.total, 0);
+        const maxAmount = Math.max(totalSales, totalPurchases);
+        
+        return (
+          <div className="flex flex-col">
+            <span className="uppercase text-[11px] font-bold tracking-tight">{row.descripcion}</span>
+            {maxAmount >= 2800 && (
+              <div className="flex gap-2 mt-0.5">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider ${
+                  maxAmount >= 3500 
+                    ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
+                    : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                }`}>
+                  DAOT {maxAmount >= 3500 ? 'ALERTA 100%' : 'ADVERTENCIA 80%'}: S/ {maxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      },
       className: 'uppercase text-[11px] font-bold tracking-tight'
     },
     {

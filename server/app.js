@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./databaseServer');
+const sbsService = require('./sbsService');
 const buzonHandler = require('../main/buzonHandler');
 const sireHandler = require('../modulo/sireHandler');
 const { sireDir, buzonDir } = require('./storageConfig');
@@ -171,6 +172,614 @@ app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en deleteBalanceInicial:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #7: Auditoría de Correlatividad Documental ---
+// Art. 10 Reglamento de Comprobantes de Pago (R.S. 007-99/SUNAT)
+
+app.get('/api/audit/correlatividad/:ruc', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const serie = req.query.serie || '';
+        const tipo_doc = req.query.tipo_doc || '';
+        const table = req.query.table || 'purchases'; // 'purchases' | 'sales'
+        const userId = req.user.id;
+
+        if (!['purchases', 'sales'].includes(table)) {
+            return res.status(400).json({ success: false, error: 'Tabla inválida. Use purchases o sales.' });
+        }
+
+        // Obtener todos los números de la serie, excluyendo anulados
+        const rows = db.queryAll(
+            `SELECT CAST(numero AS INTEGER) as num, numero as numero_raw, serie, tipo_doc
+             FROM ${table}
+             WHERE workspace_id = ? AND user_id = ?
+               AND (serie = ? OR ? = '')
+               AND (tipo_doc = ? OR ? = '')
+               AND (estado_sire IS NULL OR estado_sire != 'ANULADO')
+             ORDER BY CAST(numero AS INTEGER) ASC`,
+            [ruc, userId, serie, serie, tipo_doc, tipo_doc]
+        );
+
+        if (rows.length === 0) {
+            return res.json({
+                success: true,
+                data: { serie, tipo_doc, primer_numero: 0, ultimo_numero: 0, vacios: [], duplicados: [], total_vacios: 0, total_registros: 0 }
+            });
+        }
+
+        const numeros = rows.map(r => r.num).filter(n => !isNaN(n));
+        const primerNumero = Math.min(...numeros);
+        const ultimoNumero = Math.max(...numeros);
+
+        // Detectar vacíos (gap analysis)
+        const numerosSet = new Set(numeros);
+        const vacios = [];
+        let gapStart = null;
+
+        for (let i = primerNumero; i <= ultimoNumero; i++) {
+            if (!numerosSet.has(i)) {
+                if (gapStart === null) gapStart = i;
+            } else if (gapStart !== null) {
+                vacios.push({ desde: gapStart, hasta: i - 1 });
+                gapStart = null;
+            }
+        }
+        if (gapStart !== null) {
+            vacios.push({ desde: gapStart, hasta: ultimoNumero });
+        }
+
+        // Detectar duplicados
+        const conteo = {};
+        numeros.forEach(n => { conteo[n] = (conteo[n] || 0) + 1; });
+        const duplicados = Object.entries(conteo)
+            .filter(([, count]) => count > 1)
+            .map(([num, count]) => ({ numero: parseInt(num), repeticiones: count }));
+
+        const totalVacios = vacios.reduce((sum, v) => sum + (v.hasta - v.desde + 1), 0);
+
+        res.json({
+            success: true,
+            data: {
+                serie: serie || '(todas)',
+                tipo_doc: tipo_doc || '(todos)',
+                primer_numero: primerNumero,
+                ultimo_numero: ultimoNumero,
+                vacios,
+                duplicados,
+                total_vacios: totalVacios,
+                total_registros: numeros.length
+            }
+        });
+    } catch (error) {
+        console.error('[AUDIT ERROR] Error en correlatividad:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Endpoint genérico de consulta SQL (lectura) para modo SaaS ---
+app.post('/api/db/query', authMiddleware, async (req, res) => {
+    try {
+        const { sql, params } = req.body;
+        // Solo permitir SELECT para seguridad
+        if (!sql.trim().toUpperCase().startsWith('SELECT')) {
+            return res.status(403).json({ success: false, error: 'Solo se permiten consultas SELECT en este endpoint.' });
+        }
+        const rows = db.queryAll(sql, params || []);
+        res.json({ success: true, rows });
+    } catch (error) {
+        console.error('[DB ERROR] Error en query:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #3: Endpoint de Tipo de Cambio SBS ---
+app.get('/api/sbs/tipo-cambio', authMiddleware, async (req, res) => {
+    try {
+        const { fecha } = req.query;
+        if (!fecha) {
+            return res.status(400).json({ success: false, error: 'Se requiere el parámetro fecha (YYYY-MM-DD).' });
+        }
+        
+        const rate = await sbsService.getExchangeRate(fecha);
+        res.json({ success: true, rate });
+    } catch (error) {
+        console.error('[SBS SERVICE ERROR] Error al obtener tipo de cambio:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #3: Endpoint de Prorrata IGV ---
+app.post('/api/igv/prorrata', authMiddleware, async (req, res) => {
+    try {
+        const { ruc, periodo } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !periodo) {
+            return res.status(400).json({ success: false, error: 'Falta ruc o periodo.' });
+        }
+
+        const sales = db.queryAll(
+            `SELECT * FROM sales WHERE workspace_id = ? AND user_id = ? AND fecha LIKE ?`,
+            [ruc, userId, `${periodo}%`]
+        );
+        const journal = db.queryAll(
+            `SELECT * FROM journal WHERE workspace_id = ? AND user_id = ? AND fecha LIKE ?`,
+            [ruc, userId, `${periodo}%`]
+        );
+
+        const ventasGravadas = sales
+            .filter(s => ['01', '02', '08'].includes(s.tipOperCode || '01'))
+            .reduce((sum, s) => sum + (s.bi || 0), 0);
+
+        const ventasNoGravadas = sales
+            .filter(s => ['03', '04', '05'].includes(s.tipOperCode || ''))
+            .reduce((sum, s) => sum + (s.bi || 0), 0);
+
+        const totalVentas = ventasGravadas + ventasNoGravadas;
+        const factor = totalVentas > 0 ? Number((ventasGravadas / totalVentas).toFixed(4)) : 1.0;
+
+        const commonIgvEntries = journal.filter(
+            j => j.cta === '40112' && j.source === 'COMPRA'
+        );
+        const igvComun = commonIgvEntries.reduce((sum, j) => sum + (j.debe || 0), 0);
+
+        const creditoFiscal = Number((igvComun * factor).toFixed(2));
+        const gastoCosto = Number((igvComun - creditoFiscal).toFixed(2));
+
+        const asientoCorrelativo = `AJUS-PRORRATA-${periodo.replace('-', '')}`;
+        const lastDay = new Date(Number(periodo.split('-')[0]), Number(periodo.split('-')[1]), 0).getDate();
+        const fechaAjuste = `${periodo}-${String(lastDay).padStart(2, '0')}`;
+
+        db.run(
+            `DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND asiento = ?`,
+            [ruc, userId, asientoCorrelativo]
+        );
+
+        if (igvComun > 0) {
+            db.run(
+                `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, user_id) 
+                 VALUES (?, ?, 'ASIENTO', ?, ?, ?, '40112', 'IGV - PRORRATA (EXTORNO)', 0, ?, ?)`,
+                [`prorrata-${periodo}-clear-40112`, ruc, asientoCorrelativo, fechaAjuste, `AJUSTE PRORRATA IGV MES ${periodo}`, igvComun, userId]
+            );
+
+            if (creditoFiscal > 0) {
+                db.run(
+                    `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, user_id) 
+                     VALUES (?, ?, 'ASIENTO', ?, ?, ?, '40111', 'IGV - CREDITO FISCAL PLENO', ?, 0, ?)`,
+                    [`prorrata-${periodo}-debit-40111`, ruc, asientoCorrelativo, fechaAjuste, `AJUSTE PRORRATA IGV MES ${periodo}`, creditoFiscal, userId]
+                );
+            }
+
+            if (gastoCosto > 0) {
+                const currentDebitSum = creditoFiscal;
+                const difference = Number((igvComun - currentDebitSum).toFixed(2));
+                db.run(
+                    `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, user_id) 
+                     VALUES (?, ?, 'ASIENTO', ?, ?, ?, '64901', 'IGV NO ACEPTADO - GASTO', ?, 0, ?)`,
+                    [`prorrata-${periodo}-debit-64901`, ruc, asientoCorrelativo, fechaAjuste, `AJUSTE PRORRATA IGV MES ${periodo}`, difference, userId]
+                );
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                periodo,
+                ventasGravadas,
+                ventasNoGravadas,
+                factor,
+                igvComun,
+                creditoFiscal,
+                gastoCosto
+            }
+        });
+    } catch (error) {
+        console.error('[PRORRATA ERROR] Error en prorrata calculation:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #3: Endpoint de DAOT ---
+app.get('/api/daot/:ruc', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { anio } = req.query;
+        const userId = req.user.id;
+        if (!ruc || !anio) {
+            return res.status(400).json({ success: false, error: 'Falta ruc o anio.' });
+        }
+
+        const purchases = db.queryAll(
+            `SELECT doc_num, doc_tipo, nombre, SUM(total) as total_amount 
+             FROM purchases 
+             WHERE workspace_id = ? AND user_id = ? AND fecha LIKE ? 
+             GROUP BY doc_num`,
+            [ruc, userId, `${anio}%`]
+        );
+
+        const sales = db.queryAll(
+            `SELECT doc_num, doc_tipo, nombre, SUM(total) as total_amount 
+             FROM sales 
+             WHERE workspace_id = ? AND user_id = ? AND fecha LIKE ? 
+             GROUP BY doc_num`,
+            [ruc, userId, `${anio}%`]
+        );
+
+        res.json({ success: true, purchases, sales });
+    } catch (error) {
+        console.error('[DAOT ERROR] Error en endpoint DAOT:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Sprint 4: Endpoints de Conciliación Bancaria ---
+app.get('/api/bank/statements/:ruc', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query; // YYYY-MM
+        const userId = req.user.id;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'Falta RUC.' });
+        }
+        let sql = `SELECT * FROM bank_statements WHERE workspace_id = ? AND user_id = ?`;
+        let params = [ruc, userId];
+        if (periodo) {
+            sql += ` AND fecha LIKE ?`;
+            params.push(`${periodo}%`);
+        }
+        const statements = db.queryAll(sql, params);
+        res.json({ success: true, statements });
+    } catch (error) {
+        console.error('[BANK ERROR] Error en GET statements:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/bank/statements/import', authMiddleware, async (req, res) => {
+    try {
+        const { ruc, lines } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !Array.isArray(lines)) {
+            return res.status(400).json({ success: false, error: 'Falta RUC o líneas inválidas.' });
+        }
+
+        const insertStmt = db.prepare(`
+            INSERT OR REPLACE INTO bank_statements (id, workspace_id, fecha, referencia, glosa, monto, reconciled_journal_id, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+        `);
+
+        const transaction = db.transaction((rows) => {
+            for (const row of rows) {
+                const id = row.id || `bank-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                insertStmt.run(id, ruc, row.fecha, row.referencia || '', row.glosa || '', row.monto, userId);
+            }
+        });
+
+        transaction(lines);
+
+        res.json({ success: true, count: lines.length });
+    } catch (error) {
+        console.error('[BANK ERROR] Error al importar statements:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/bank/reconcile', authMiddleware, async (req, res) => {
+    try {
+        const { ruc, statementId, journalId } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !statementId || !journalId) {
+            return res.status(400).json({ success: false, error: 'Falta RUC, statementId o journalId.' });
+        }
+
+        db.run(
+            `UPDATE bank_statements SET reconciled_journal_id = ? WHERE id = ? AND workspace_id = ? AND user_id = ?`,
+            [journalId, statementId, ruc, userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[BANK ERROR] Error al conciliar:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/bank/unreconcile', authMiddleware, async (req, res) => {
+    try {
+        const { ruc, statementId } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !statementId) {
+            return res.status(400).json({ success: false, error: 'Falta RUC o statementId.' });
+        }
+
+        db.run(
+            `UPDATE bank_statements SET reconciled_journal_id = NULL WHERE id = ? AND workspace_id = ? AND user_id = ?`,
+            [statementId, ruc, userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[BANK ERROR] Error al desconciliar:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/bank/auto-match', authMiddleware, async (req, res) => {
+    try {
+        const { ruc, periodo } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !periodo) {
+            return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
+        }
+
+        const statements = db.queryAll(
+            `SELECT * FROM bank_statements 
+             WHERE workspace_id = ? AND user_id = ? AND fecha LIKE ? AND reconciled_journal_id IS NULL`,
+            [ruc, userId, `${periodo}%`]
+        );
+
+        const journal = db.queryAll(
+            `SELECT j.* FROM journal j
+             LEFT JOIN bank_statements bs ON j.id = bs.reconciled_journal_id AND bs.user_id = j.user_id
+             WHERE j.workspace_id = ? AND j.user_id = ? AND j.fecha LIKE ? 
+               AND (j.cta LIKE '10%' OR j.cta LIKE '104%')
+               AND bs.id IS NULL`,
+            [ruc, userId, `${periodo}%`]
+        );
+
+        let matchCount = 0;
+        const updates = [];
+
+        for (const stmt of statements) {
+            const targetAmount = Math.abs(stmt.monto);
+            
+            const matchedJ = journal.find(j => {
+                const amtMatch = stmt.monto > 0 ? (Math.abs(j.debe - targetAmount) < 0.01) : (Math.abs(j.haber - targetAmount) < 0.01);
+                if (!amtMatch) return false;
+
+                const stmtDate = new Date(stmt.fecha);
+                const jDate = new Date(j.fecha);
+                const diffTime = Math.abs(stmtDate.getTime() - jDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                return diffDays <= 3;
+            });
+
+            if (matchedJ) {
+                updates.push({ stmtId: stmt.id, journalId: matchedJ.id });
+                const idx = journal.indexOf(matchedJ);
+                if (idx > -1) journal.splice(idx, 1);
+                matchCount++;
+            }
+        }
+
+        const updateStmt = db.prepare(`
+            UPDATE bank_statements SET reconciled_journal_id = ? 
+            WHERE id = ? AND workspace_id = ? AND user_id = ?
+        `);
+        const updateTransaction = db.transaction((matches) => {
+            for (const m of matches) {
+                updateStmt.run(m.journalId, m.stmtId, ruc, userId);
+            }
+        });
+        updateTransaction(updates);
+
+        res.json({ success: true, matchCount });
+    } catch (error) {
+        console.error('[BANK ERROR] Error en auto-match:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #2 & #5: Endpoints de Gestión de Períodos y Cascada de Cambios ---
+
+// Listar períodos y sus estados
+app.get('/api/periods/:ruc', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const userId = req.user.id;
+        const periods = db.queryAll(
+            `SELECT * FROM accounting_periods WHERE workspace_id = ? AND user_id = ?`,
+            [ruc, userId]
+        );
+        res.json({ success: true, periods });
+    } catch (error) {
+        console.error('[DB ERROR] Error en getPeriods:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Consultar estado de obsolescencia de los libros contables
+app.get('/api/periods/:ruc/stale-status', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query; // YYYY-MM
+        const userId = req.user.id;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo (YYYY-MM).' });
+        }
+        const rows = db.queryAll(
+            `SELECT module, is_stale, stale_since, last_sync, version 
+             FROM period_versions 
+             WHERE workspace_id = ? AND user_id = ? AND periodo = ?`,
+            [ruc, userId, periodo]
+        );
+        res.json({ success: true, rows });
+    } catch (error) {
+        console.error('[DB ERROR] Error en stale-status:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Cerrar período con ejecución de pre-checks contables
+app.post('/api/periods/:ruc/close', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo, tipo, notas } = req.body; // periodo: YYYY-MM, tipo: MENSUAL|ANUAL
+        const userId = req.user.id;
+
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
+        }
+
+        const dateFilter = (tipo === 'ANUAL')
+            ? `substr(fecha, 1, 4) = '${periodo}'`
+            : `substr(fecha, 1, 7) = '${periodo}'`;
+
+        const checks = [];
+
+        // Check 1: Partida Doble Cuadrada
+        const journalBalance = db.queryAll(
+            `SELECT COALESCE(SUM(debe), 0) as total_debe, COALESCE(SUM(haber), 0) as total_haber
+             FROM journal WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}`,
+            [ruc, userId]
+        )[0] || { total_debe: 0, total_haber: 0 };
+        const diff = Math.abs(journalBalance.total_debe - journalBalance.total_haber);
+        checks.push({
+            id: 'PARTIDA_DOBLE',
+            nombre: 'Partida Doble Cuadrada',
+            descripcion: 'SUM(DEBE) = SUM(HABER) en el Libro Diario del período',
+            ok: diff <= 0.01,
+            detalle: diff <= 0.01
+                ? `Cuadrado: DEBE S/ ${journalBalance.total_debe.toFixed(2)} = HABER S/ ${journalBalance.total_haber.toFixed(2)}`
+                : `DESCUADRE: DEBE S/ ${journalBalance.total_debe.toFixed(2)} vs HABER S/ ${journalBalance.total_haber.toFixed(2)} (diff: S/ ${diff.toFixed(2)})`,
+            bloqueante: true
+        });
+
+        // Check 2: SIRE sin riesgos críticos
+        const sireRisk = db.queryAll(
+            `SELECT COUNT(*) as count FROM purchases
+             WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}
+               AND estado_sire IN ('RIESGO_CRITICO', 'RIESGO_ALTO')`,
+            [ruc, userId]
+        )[0]?.count || 0;
+        checks.push({
+            id: 'SIRE_LIMPIO',
+            nombre: 'SIRE sin Riesgos Críticos',
+            descripcion: 'No hay comprobantes con estado RIESGO_CRITICO o RIESGO_ALTO',
+            ok: sireRisk === 0,
+            detalle: sireRisk === 0 ? 'Sin riesgos pendientes' : `${sireRisk} comprobante(s) con riesgo crítico/alto`,
+            bloqueante: false
+        });
+
+        // Check 3: Cuenta 40112 saldada (Uso común)
+        const prorrataIGV = db.queryAll(
+            `SELECT COALESCE(SUM(debe) - SUM(haber), 0) as saldo
+             FROM journal WHERE workspace_id = ? AND user_id = ? AND cta = '40112' AND ${dateFilter}`,
+            [ruc, userId]
+        )[0]?.saldo || 0;
+        checks.push({
+            id: 'PRORRATA_IGV',
+            nombre: 'Prorrata IGV Aplicada',
+            descripcion: 'Saldo de cuenta 40112 (IGV uso común) debe estar en cero',
+            ok: Math.abs(prorrataIGV) <= 0.01,
+            detalle: Math.abs(prorrataIGV) <= 0.01 ? 'Cuenta 40112 saldada' : `Saldo pendiente en 40112: S/ ${Math.abs(prorrataIGV).toFixed(2)}`,
+            bloqueante: false
+        });
+
+        // Check 4: Depreciación cargada
+        const fixedAssets = db.queryAll(
+            `SELECT COUNT(*) as total, SUM(CASE WHEN deprec_ejercicio > 0 THEN 1 ELSE 0 END) as con_deprec
+             FROM fixed_assets WHERE workspace_id = ? AND user_id = ?`,
+            [ruc, userId]
+        )[0] || { total: 0, con_deprec: 0 };
+        const sinDeprec = fixedAssets.total - fixedAssets.con_deprec;
+        checks.push({
+            id: 'DEPRECIACION',
+            nombre: 'Depreciación Cargada',
+            descripcion: 'Todos los activos fijos deben tener depreciación calculada',
+            ok: sinDeprec === 0 || fixedAssets.total === 0,
+            detalle: fixedAssets.total === 0 ? 'Sin activos fijos registrados' : (sinDeprec === 0 ? `${fixedAssets.total} activo(s) con depreciación OK` : `${sinDeprec} activo(s) sin depreciación`),
+            bloqueante: false
+        });
+
+        // Check 5: Tipo de Cambio SBS
+        const foreignDocs = db.queryAll(
+            `SELECT COUNT(*) as count FROM purchases
+             WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}
+               AND moneda IS NOT NULL AND moneda != 'PEN' AND moneda != ''
+               AND (tc IS NULL OR tc = 0 OR tc = 1)`,
+            [ruc, userId]
+        )[0]?.count || 0;
+        checks.push({
+            id: 'TC_SBS',
+            nombre: 'TC SBS Ajustado',
+            descripcion: 'Documentos en moneda extranjera deben tener tipo de cambio SBS válido',
+            ok: foreignDocs === 0,
+            detalle: foreignDocs === 0 ? 'Todos los comprobantes en ME tienen TC' : `${foreignDocs} comprobantes en ME sin TC`,
+            bloqueante: false
+        });
+
+        // Check 6: Kárdex cuadrado
+        const kardexInconsistent = db.queryAll(
+            `SELECT COUNT(*) as count FROM inventory_movements
+             WHERE workspace_id = ? AND user_id = ? AND total_saldo < 0`,
+            [ruc, userId]
+        )[0]?.count || 0;
+        checks.push({
+            id: 'KARDEX',
+            nombre: 'Kárdex Cuadrado',
+            descripcion: 'No debe haber saldos negativos en el inventario valorizado',
+            ok: kardexInconsistent === 0,
+            detalle: kardexInconsistent === 0 ? 'Inventario sin inconsistencias' : `${kardexInconsistent} movimiento(s) con saldo negativo`,
+            bloqueante: false
+        });
+
+        const blockers = checks.filter(c => !c.ok && c.bloqueante).map(c => c.nombre);
+        const warnings = checks.filter(c => !c.ok && !c.bloqueante).map(c => c.nombre);
+        const canClose = blockers.length === 0;
+
+        if (canClose) {
+            db.run(
+                `INSERT INTO accounting_periods (workspace_id, periodo, tipo, estado, cerrado_por, cerrado_at, notas, user_id)
+                 VALUES (?, ?, ?, 'CERRADO', ?, CURRENT_TIMESTAMP, ?, ?)
+                 ON CONFLICT(workspace_id, periodo, tipo, user_id)
+                 DO UPDATE SET estado = 'CERRADO', cerrado_por = ?, cerrado_at = CURRENT_TIMESTAMP, notas = ?`,
+                [ruc, periodo, tipo || 'MENSUAL', req.user.email || req.user.id, notas || '', userId, req.user.email || req.user.id, notas || '']
+            );
+        }
+
+        res.json({
+            success: true,
+            report: {
+                periodo,
+                tipo: tipo || 'MENSUAL',
+                checks,
+                canClose,
+                blockers,
+                warnings
+            }
+        });
+    } catch (error) {
+        console.error('[DB ERROR] Error en closePeriod:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Reabrir período
+app.post('/api/periods/:ruc/reopen', authMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo, tipo } = req.body;
+        const userId = req.user.id;
+
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
+        }
+
+        db.run(
+            `INSERT INTO accounting_periods (workspace_id, periodo, tipo, estado, user_id)
+             VALUES (?, ?, ?, 'ABIERTO', ?)
+             ON CONFLICT(workspace_id, periodo, tipo, user_id)
+             DO UPDATE SET estado = 'ABIERTO', cerrado_por = NULL, cerrado_at = NULL`,
+            [ruc, periodo, tipo || 'MENSUAL', userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[DB ERROR] Error en reopenPeriod:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -603,6 +1212,73 @@ app.get('/api/admin/user-workspace-data/:userId/:ruc', authMiddleware, adminAuth
         res.json({ success: true, data });
     } catch (error) {
         console.error('[ADMIN ERROR] Error en inspectWorkspace:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Sprint 5: IFRS/NIIF & NIC 12 Endpoints ---
+app.use('/api/finance', authMiddleware);
+
+app.get('/api/finance/notes/:ruc', async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.user.id;
+        if (!ruc || !periodo) {
+            return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
+        }
+        const row = await db.getFinanceNotes(ruc, periodo, userId);
+        res.json({ success: true, notes: row ? JSON.parse(row.notes_json) : null });
+    } catch (error) {
+        console.error('[DB ERROR] Error en GET finance notes:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/finance/notes', async (req, res) => {
+    try {
+        const { ruc, periodo, notes } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !periodo || !notes) {
+            return res.status(400).json({ success: false, error: 'Falta RUC, periodo o notas.' });
+        }
+        const notesJson = JSON.stringify(notes);
+        await db.saveFinanceNotes(ruc, periodo, notesJson, userId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[DB ERROR] Error en POST finance notes:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/finance/deferred-tax/:ruc', async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.user.id;
+        if (!ruc || !periodo) {
+            return res.status(400).json({ success: false, error: 'Falta RUC o periodo.' });
+        }
+        const row = await db.getDeferredTax(ruc, periodo, userId);
+        res.json({ success: true, computation: row ? JSON.parse(row.computation_json) : null });
+    } catch (error) {
+        console.error('[DB ERROR] Error en GET deferred tax:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/finance/deferred-tax', async (req, res) => {
+    try {
+        const { ruc, periodo, computation } = req.body;
+        const userId = req.user.id;
+        if (!ruc || !periodo || !computation) {
+            return res.status(400).json({ success: false, error: 'Falta RUC, periodo o computación.' });
+        }
+        const computationJson = JSON.stringify(computation);
+        await db.saveDeferredTax(ruc, periodo, computationJson, userId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[DB ERROR] Error en POST deferred tax:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

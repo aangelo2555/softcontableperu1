@@ -1,5 +1,7 @@
 import { exportMultipleSheets, type SheetData, type ColumnDef } from './excelExport';
 import type { AppState } from '../store';
+import { calculateDeferredTaxSchedule } from '../engine/deferredTax';
+import { generateNotesTemplates } from '../engine/notesGenerator';
 
 // ─── Helper para obtener saldo por cuenta ───
 function getAccountBalances(journal: AppState['journal']) {
@@ -390,6 +392,127 @@ export async function generateMassiveWorkbook(state: AppState) {
       companyInfo,
     });
   }
+
+  // ═══ 14. DAOT (PDT 3500) ═══
+  const currentYear = companyInfo.period.substring(0, 4);
+  const daotRows: any[] = [];
+  
+  const clientTotals: Record<string, { ruc: string; nombre: string; total: number; docTipo: string }> = {};
+  sales.filter(s => s.fecha.startsWith(currentYear) && s.estado_sire !== 'Propuesta').forEach(s => {
+    const key = s.doc_num;
+    if (!clientTotals[key]) {
+      clientTotals[key] = { ruc: s.doc_num, nombre: s.nombre, total: 0, docTipo: s.doc_tipo || '6' };
+    }
+    clientTotals[key].total += s.total;
+  });
+
+  const supplierTotals: Record<string, { ruc: string; nombre: string; total: number; docTipo: string }> = {};
+  purchases.filter(p => p.fecha.startsWith(currentYear) && p.estado_sire !== 'Propuesta').forEach(p => {
+    const key = p.doc_num;
+    if (!supplierTotals[key]) {
+      supplierTotals[key] = { ruc: p.doc_num, nombre: p.nombre, total: 0, docTipo: p.doc_tipo || '6' };
+    }
+    supplierTotals[key].total += p.total;
+  });
+
+  Object.values(clientTotals).forEach(c => {
+    if (c.total >= 3500) {
+      daotRows.push({
+        tipo_op: 'CLIENTE',
+        doc_tipo: c.docTipo,
+        doc_num: c.ruc,
+        nombre: c.nombre,
+        total: c.total
+      });
+    }
+  });
+
+  Object.values(supplierTotals).forEach(p => {
+    if (p.total >= 3500) {
+      daotRows.push({
+        tipo_op: 'PROVEEDOR',
+        doc_tipo: p.docTipo,
+        doc_num: p.ruc,
+        nombre: p.nombre,
+        total: p.total
+      });
+    }
+  });
+
+  if (daotRows.length > 0) {
+    sheets.push({
+      sheetName: '14. DAOT (PDT 3500)',
+      title: `OPERACIONES CON TERCEROS - DAOT (PDT 3500) - AÑO ${currentYear}`,
+      columns: [
+        { header: 'TIPO OPERACIÓN', key: 'tipo_op', width: 18, alignment: 'center' },
+        { header: 'TIPO DOC', key: 'doc_tipo', width: 12, alignment: 'center' },
+        { header: 'NÚMERO DOC', key: 'doc_num', width: 16, alignment: 'center' },
+        { header: 'RAZÓN SOCIAL / NOMBRE', key: 'nombre', width: 45 },
+        { header: 'MONTO ANUAL', key: 'total', width: 18, style: 'currency' }
+      ],
+      rows: daotRows,
+      totals: {
+        tipo_op: 'TOTAL DECLARABLE', doc_tipo: '', doc_num: '', nombre: '',
+        total: daotRows.reduce((sum, r) => sum + r.total, 0)
+      },
+      companyInfo
+    });
+  }
+
+  // ═══ 15. NOTAS CONTABLES (NIIF) ═══
+  const taxRate = state.deferredTaxComputation?.taxRate || 29.5;
+  const overrides = state.deferredTaxComputation?.overrides || {};
+  const dtSchedule = calculateDeferredTaxSchedule(journal, fixedAssets, taxRate, overrides);
+
+  const baseNotes = generateNotesTemplates(state, dtSchedule.rows);
+  const notesRows = baseNotes.map(n => {
+    const userEdit = state.financeNotes?.find((fn: any) => fn.number === n.number);
+    return {
+      number: `Nota ${n.number}`,
+      title: n.title,
+      content: userEdit ? userEdit.content : n.content
+    };
+  });
+
+  sheets.push({
+    sheetName: '15. Notas NIIF',
+    title: 'NOTAS A LOS ESTADOS FINANCIEROS (NIIF)',
+    columns: [
+      { header: 'N° NOTA', key: 'number', width: 15, alignment: 'center' },
+      { header: 'TÍTULO DE LA NOTA', key: 'title', width: 35 },
+      { header: 'CONTENIDO REVELADO', key: 'content', width: 90 }
+    ],
+    rows: notesRows,
+    companyInfo
+  });
+
+  // ═══ 16. IMPUESTO DIFERIDO (NIC 12) ═══
+  sheets.push({
+    sheetName: '16. Impuesto Diferido (NIC 12)',
+    title: 'CONCILIACIÓN DE DIFERENCIAS TEMPORARIAS (NIC 12)',
+    columns: [
+      { header: 'CONCEPTO', key: 'concepto', width: 45 },
+      { header: 'CUENTA', key: 'cuenta', width: 12, alignment: 'center' },
+      { header: 'BASE CONTABLE (NIIF)', key: 'accountingBase', width: 22, style: 'currency' },
+      { header: 'BASE TRIBUTARIA (LIR)', key: 'taxBase', width: 22, style: 'currency' },
+      { header: 'DIFERENCIA', key: 'diferencia', width: 22, style: 'currency' },
+      { header: 'TIPO', key: 'tipo', width: 15, alignment: 'center' },
+      { header: 'ACTIVO DIFERIDO', key: 'activoDiferido', width: 22, style: 'currency' },
+      { header: 'PASIVO DIFERIDO', key: 'pasivoDiferido', width: 22, style: 'currency' }
+    ],
+    rows: dtSchedule.rows,
+    totals: {
+      concepto: 'TOTALES',
+      cuenta: '',
+      accountingBase: '',
+      taxBase: '',
+      diferencia: '',
+      tipo: '',
+      activoDiferido: dtSchedule.totalActivoDiferido,
+      pasivoDiferido: dtSchedule.totalPasivoDiferido
+    },
+    companyInfo
+  });
 
   // ─── Generate & Download ───
   const filename = `LibroContable_${companyInfo.ruc}_${companyInfo.period}`;

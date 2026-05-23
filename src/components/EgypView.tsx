@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Printer, FileDown, Layers, Layout } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import StaleWarningBanner from './shared/StaleWarningBanner';
+import toast from 'react-hot-toast';
 
 const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?: boolean; isTotal?: boolean; isNet?: boolean }> = ({ label, value, indent, bold, isTotal, isNet }) => (
   <div className={`flex justify-between text-[11px] py-1 border-b border-app-border/50 ${indent ? 'pl-8' : ''} ${isTotal ? 'border-t-2 border-app-border pt-2' : ''} ${isNet ? 'bg-pld-blue/10 p-2 rounded border-none mt-4 ring-1 ring-pld-blue/20' : ''}`}>
@@ -16,9 +18,38 @@ const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?
 );
 
 const EgypView: React.FC = () => {
-  const { currentCompany } = useStore();
+  const { currentCompany, staleVersions, syncStaleVersions, markSynced } = useStore();
   const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
   const [viewMode, setViewMode] = useState<'FUNCION' | 'NATURALEZA'>('FUNCION');
+
+  const currentYear = currentCompany.period || '2025';
+
+  // Determine the most common month from journal entries
+  const monthCounts: Record<string, number> = {};
+  journal.forEach(entry => {
+    const parts = entry.fecha.includes('/') ? entry.fecha.split('/') : entry.fecha.split('-');
+    const m = entry.fecha.includes('/') ? parts[1] : parts[1];
+    if (m) monthCounts[m] = (monthCounts[m] || 0) + 1;
+  });
+  const dominantMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '12';
+  const periodStr = `${currentYear}-${dominantMonth.padStart(2, '0')}`;
+
+  useEffect(() => {
+    syncStaleVersions(periodStr);
+  }, [periodStr, syncStaleVersions]);
+
+  const eeffStale = staleVersions.find((x: any) => x.module === 'eeff');
+  const isStale = eeffStale?.is_stale === 1 || eeffStale?.is_stale === true;
+  const staleSince = eeffStale?.stale_since;
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    await markSynced('eeff', periodStr);
+    setIsRecalculating(false);
+    toast.success('Estado de Resultados recalculado con éxito');
+  };
 
   // Aggregate results from journal with trimming
   const accountBalances = journal.reduce((acc, entry) => {
@@ -181,6 +212,14 @@ const EgypView: React.FC = () => {
       </div>
 
       {/* Content Area */}
+      <StaleWarningBanner
+        moduleName="eeff"
+        isStale={isStale}
+        staleSince={staleSince}
+        onRecalculate={handleRecalculate}
+        isRecalculating={isRecalculating}
+      />
+
       <div className="flex-1 overflow-auto p-8 custom-scrollbar bg-app-bg/50">
         <div className="max-w-3xl mx-auto bg-app-surface border border-app-border shadow-2xl p-10 rounded-lg print:shadow-none print:border-none">
           

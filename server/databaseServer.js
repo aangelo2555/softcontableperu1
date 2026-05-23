@@ -250,6 +250,37 @@ db.exec(`
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS bank_statements (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT,
+        fecha TEXT,
+        referencia TEXT,
+        glosa TEXT,
+        monto REAL,
+        reconciled_journal_id TEXT,
+        user_id TEXT,
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_bank_statements_reconciled ON bank_statements(reconciled_journal_id);
+
+    CREATE TABLE IF NOT EXISTS finance_notes (
+        workspace_id TEXT,
+        periodo TEXT,
+        notes_json TEXT,
+        user_id TEXT,
+        PRIMARY KEY(workspace_id, periodo, user_id),
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS deferred_tax_computations (
+        workspace_id TEXT,
+        periodo TEXT,
+        computation_json TEXT,
+        user_id TEXT,
+        PRIMARY KEY(workspace_id, periodo, user_id),
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
 `);
 
 // --- Tabla de Sugerencias y Reportes Inteligentes ---
@@ -270,6 +301,55 @@ db.exec(`
     );
 `);
 
+// ─── Mejora #7: Control de correlatividad y series documentales ───
+// UNIQUE INDEX parcial para evitar duplicados de comprobantes activos
+// El filtro WHERE estado_sire != 'ANULADO' permite anulaciones sin violar unicidad
+try {
+    db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_purchases_doc_uniq
+        ON purchases(workspace_id, tipo_doc, serie, numero)
+        WHERE estado_sire IS NULL OR estado_sire != 'ANULADO';
+    `);
+    db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_doc_uniq
+        ON sales(workspace_id, tipo_doc, serie, numero)
+        WHERE estado_sire IS NULL OR estado_sire != 'ANULADO';
+    `);
+    console.log('[DB] Índices de correlatividad documental creados/verificados.');
+} catch (e) {
+    // Los índices ya existen o hay un conflicto con datos existentes
+    console.warn('[DB] Nota al crear índices de correlatividad:', e.message);
+}
+
+// ─── Mejora #2 + #5: Pipeline de cascada y cierre contable ───
+db.exec(`
+    CREATE TABLE IF NOT EXISTS period_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id TEXT NOT NULL,
+        periodo TEXT NOT NULL,
+        module TEXT NOT NULL,
+        version INTEGER DEFAULT 1,
+        is_stale INTEGER DEFAULT 0,
+        stale_since DATETIME,
+        last_sync DATETIME,
+        user_id TEXT,
+        UNIQUE(workspace_id, periodo, module, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounting_periods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id TEXT NOT NULL,
+        periodo TEXT NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'MENSUAL',
+        estado TEXT NOT NULL DEFAULT 'ABIERTO',
+        cerrado_por TEXT,
+        cerrado_at DATETIME,
+        notas TEXT,
+        user_id TEXT,
+        UNIQUE(workspace_id, periodo, tipo, user_id)
+    );
+`);
+console.log('[DB] Tablas period_versions y accounting_periods verificadas.');
 // Función auxiliar para añadir columnas si no existen (para migración de tablas existentes)
 function ensureColumnExists(tableName, colName, colType) {
     try {
@@ -284,7 +364,7 @@ function ensureColumnExists(tableName, colName, colType) {
 }
 
 // Asegurar user_id en todas las tablas por si acaso
-['workspaces', 'purchases', 'sales', 'journal', 'entities', 'asientos', 'products', 'inventory_movements', 'cash_movements', 'fixed_assets', 'employees', 'balance_inicial', 'maintenance', 'costs', 'honorarios', 'movimientos_data'].forEach(tbl => ensureColumnExists(tbl, 'user_id', 'TEXT'));
+['workspaces', 'purchases', 'sales', 'journal', 'entities', 'asientos', 'products', 'inventory_movements', 'cash_movements', 'fixed_assets', 'employees', 'balance_inicial', 'maintenance', 'costs', 'honorarios', 'movimientos_data', 'bank_statements'].forEach(tbl => ensureColumnExists(tbl, 'user_id', 'TEXT'));
 
 // Migraciones generales para sincronizar la base de datos de Railway con todos los campos del sistema local
 ensureColumnExists('workspaces', 'businessType', "TEXT DEFAULT 'COMERCIAL'");
@@ -345,6 +425,21 @@ const fixedAssetsColsDef = [
     { name: 'deprec_acum_anterior', type: 'REAL DEFAULT 0' }
 ];
 fixedAssetsColsDef.forEach(c => ensureColumnExists('fixed_assets', c.name, c.type));
+
+// --- Mejora #3: SBS exchange rates cache table and ME columns ---
+db.exec(`
+    CREATE TABLE IF NOT EXISTS sbs_rates (
+        fecha TEXT PRIMARY KEY,
+        compra REAL NOT NULL,
+        venta REAL NOT NULL
+    );
+`);
+console.log('[DB] Tabla sbs_rates verificada.');
+
+ensureColumnExists('purchases', 'monto_me', 'REAL DEFAULT 0');
+ensureColumnExists('purchases', 'tc_origen', 'REAL DEFAULT 1');
+ensureColumnExists('sales', 'monto_me', 'REAL DEFAULT 0');
+ensureColumnExists('sales', 'tc_origen', 'REAL DEFAULT 1');
 
 const employeesColsDef = [
     { name: 'doc_num', type: 'TEXT' },
@@ -474,6 +569,7 @@ const dbManager = {
         const fixedAssets = db.prepare('SELECT * FROM fixed_assets WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const employees = db.prepare('SELECT * FROM employees WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const balanceInicial = db.prepare('SELECT * FROM balance_inicial WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
+        const bankStatements = db.prepare('SELECT * FROM bank_statements WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
 
         return {
             currentCompany: {
@@ -493,7 +589,8 @@ const dbManager = {
             cashMovements,
             fixedAssets,
             employees,
-            balanceInicial
+            balanceInicial,
+            bankStatements
         };
     },
 
@@ -636,6 +733,30 @@ const dbManager = {
                 journalCount
             };
         });
+    },
+
+    getFinanceNotes: (ruc, periodo, userId) => {
+        return db.prepare(`SELECT * FROM finance_notes WHERE workspace_id = ? AND periodo = ? AND user_id = ?`).get(ruc, periodo, userId);
+    },
+
+    saveFinanceNotes: (ruc, periodo, notesJson, userId) => {
+        const stmt = db.prepare(`
+            INSERT OR REPLACE INTO finance_notes (workspace_id, periodo, notes_json, user_id)
+            VALUES (?, ?, ?, ?)
+        `);
+        return stmt.run(ruc, periodo, notesJson, userId);
+    },
+
+    getDeferredTax: (ruc, periodo, userId) => {
+        return db.prepare(`SELECT * FROM deferred_tax_computations WHERE workspace_id = ? AND periodo = ? AND user_id = ?`).get(ruc, periodo, userId);
+    },
+
+    saveDeferredTax: (ruc, periodo, computationJson, userId) => {
+        const stmt = db.prepare(`
+            INSERT OR REPLACE INTO deferred_tax_computations (workspace_id, periodo, computation_json, user_id)
+            VALUES (?, ?, ?, ?)
+        `);
+        return stmt.run(ruc, periodo, computationJson, userId);
     }
 };
 
