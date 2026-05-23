@@ -185,6 +185,7 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     case 'ESTADOS_SEC':
     case 'ANEXOS':
     case 'CCC':
+    case 'FINANCE_NOTES':
     case 'ACTIVOS': // Activos Fijos es condicional al Libro de Inventarios y Balances
       return obligaciones.libroInventariosBalances;
 
