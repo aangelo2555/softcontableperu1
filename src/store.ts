@@ -502,6 +502,20 @@ export interface AppState extends WorkspaceState {
   loadDeferredTax: (periodo: string) => Promise<any>;
   saveDeferredTax: (periodo: string, computation: any) => Promise<void>;
   postDeferredTaxJournalEntry: (periodo: string, data: { lines: any[], glosa: string }) => Promise<void>;
+
+  // --- Libro Diario 5.2 ---
+  ld52Entries: any[];
+  ld52TotalDebe: number;
+  ld52TotalHaber: number;
+  ld52BalanceValido: boolean;
+  ld52Descuadrados: any[];
+  loadLd52Entries: (periodo: string) => Promise<void>;
+  generarLd52Masivo: (periodo: string) => Promise<any>;
+  registrarLd52Asiento: (lineas: any[]) => Promise<any>;
+  corregirLd52Asiento: (cuoOriginal: string, tipo: number, nuevasLineas: any[]) => Promise<any>;
+  validarLd52Balance: (periodo: string) => Promise<any>;
+  exportarLd52TXT: (periodo: string) => Promise<void>;
+  exportarLd52TXT54: (periodo: string) => Promise<void>;
 }
 
 // ─── Helpers ───
@@ -757,6 +771,11 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       ...EMPTY_WORKSPACE,
+      ld52Entries: [],
+      ld52TotalDebe: 0,
+      ld52TotalHaber: 0,
+      ld52BalanceValido: true,
+      ld52Descuadrados: [],
       activeTab: 'EMPRESA',
       showCompanyConfig: false,
       isProcessing: false,
@@ -905,6 +924,12 @@ export const useStore = create<AppState>()(
         
         // ── Invalidation Cascade Trigger ──
         await get().triggerCascadeInvalidation('journal', p.fecha);
+
+        try {
+          await electron.ld52SyncCompra(ruc, p.id);
+        } catch (err) {
+          console.warn('[STORE] ld52SyncCompra failed:', err);
+        }
       },
 
       deletePurchase: async (id) => {
@@ -932,6 +957,12 @@ export const useStore = create<AppState>()(
         // ── Invalidation Cascade Trigger ──
         if (item) {
           await get().triggerCascadeInvalidation('journal', item.fecha);
+        }
+
+        try {
+          await electron.ld52DeleteOrigen(ruc, id);
+        } catch (err) {
+          console.warn('[STORE] ld52DeleteOrigen failed:', err);
         }
       },
 
@@ -1000,6 +1031,12 @@ export const useStore = create<AppState>()(
 
         // ── Invalidation Cascade Trigger ──
         await get().triggerCascadeInvalidation('journal', s.fecha);
+
+        try {
+          await electron.ld52SyncVenta(ruc, s.id);
+        } catch (err) {
+          console.warn('[STORE] ld52SyncVenta failed:', err);
+        }
       },
 
       deleteSale: async (id) => {
@@ -1027,6 +1064,12 @@ export const useStore = create<AppState>()(
         // ── Invalidation Cascade Trigger ──
         if (item) {
           await get().triggerCascadeInvalidation('journal', item.fecha);
+        }
+
+        try {
+          await electron.ld52DeleteOrigen(ruc, id);
+        } catch (err) {
+          console.warn('[STORE] ld52DeleteOrigen failed:', err);
         }
       },
 
@@ -2207,6 +2250,126 @@ export const useStore = create<AppState>()(
         await get().syncCurrentWorkspace();
         await get().triggerCascadeInvalidation('journal', fecha);
         toast.success('✅ Asiento NIC 12 contabilizado correctamente.');
+      },
+
+      // --- Libro Diario 5.2 Actions ---
+      loadLd52Entries: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52GetAsientos(ruc, periodo);
+          if (res?.success) {
+            const entries = res.data || [];
+            let debe = 0;
+            let haber = 0;
+            for (const e of entries) {
+              debe += e.monto_debe;
+              haber += e.monto_haber;
+            }
+            set({
+              ld52Entries: entries,
+              ld52TotalDebe: debe / 100,
+              ld52TotalHaber: haber / 100
+            });
+            await get().validarLd52Balance(periodo);
+          }
+        } catch (e: any) {
+          console.error('[STORE] loadLd52Entries failed:', e);
+        }
+      },
+      generarLd52Masivo: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52GenerarMasivo(ruc, periodo);
+          if (res?.success) {
+            toast.success(`✅ Asientos 5.2 generados: ${res.data.compras} compras, ${res.data.ventas} ventas`);
+            await get().loadLd52Entries(periodo);
+            return res.data;
+          }
+        } catch (e: any) {
+          toast.error(`⚠️ Error al generar asientos masivos: ${e.message}`);
+          throw e;
+        }
+      },
+      registrarLd52Asiento: async (lineas) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52Registrar(ruc, lineas);
+          if (res?.success) {
+            toast.success(`✅ Asiento 5.2 registrado con CUO ${res.data.cuo}`);
+            return res.data;
+          }
+        } catch (e: any) {
+          toast.error(`⚠️ Error al registrar asiento: ${e.message}`);
+          throw e;
+        }
+      },
+      corregirLd52Asiento: async (cuoOriginal, tipo, nuevasLineas) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52Corregir(ruc, cuoOriginal, tipo, nuevasLineas);
+          if (res?.success) {
+            toast.success(`✅ Asiento 5.2 corregido con éxito.`);
+            return res.data;
+          }
+        } catch (e: any) {
+          toast.error(`⚠️ Error al corregir asiento: ${e.message}`);
+          throw e;
+        }
+      },
+      validarLd52Balance: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52ValidarBalance(ruc, periodo);
+          if (res?.success) {
+            set({
+              ld52BalanceValido: res.data.valido,
+              ld52Descuadrados: res.data.descuadrados || []
+            });
+            return res.data;
+          }
+        } catch (e: any) {
+          console.error('[STORE] validarLd52Balance failed:', e);
+        }
+      },
+      exportarLd52TXT: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.ld52ExportarTXT(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          link.setAttribute('download', `LE${ruc}${y}${m}00050200001.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Libro Diario 5.2 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 5.2: ${e.message}`);
+        }
+      },
+      exportarLd52TXT54: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.ld52ExportarTXT54(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          link.setAttribute('download', `LE${ruc}${y}${m}00050400001.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Plan de Cuentas 5.4 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 5.4: ${e.message}`);
+        }
       },
     }),
     {

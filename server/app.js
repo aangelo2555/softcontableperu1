@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const db = require('./databaseServer');
+const createLibroDiario52Service = require('./libroDiario52Service');
+const ld52Service = createLibroDiario52Service(db.rawDb);
 const sbsService = require('./sbsService');
 const buzonHandler = require('../main/buzonHandler');
 const sireHandler = require('../modulo/sireHandler');
@@ -1299,6 +1301,168 @@ app.post('/api/finance/deferred-tax', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en POST deferred tax:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─── Endpoints Libro Diario 5.2 (Simplificado) ───
+app.get('/api/libro-diario-52/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo (AAAAMM00)' });
+        }
+        const asientos = ld52Service.obtenerAsientosPeriodo(ruc, userId, periodo);
+        res.json({ success: true, data: asientos });
+    } catch (error) {
+        console.error('[API ERROR] Error en GET libro-diario-52:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/libro-diario-52/:ruc/registrar', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { lineas } = req.body;
+        const userId = req.targetUserId;
+        const result = ld52Service.registrarAsiento(ruc, userId, lineas);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[API ERROR] Error en registrar asiento 5.2:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/libro-diario-52/:ruc/generar-masivo', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.body;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta periodo en el cuerpo de la petición' });
+        }
+        const result = ld52Service.generarMasivo(ruc, userId, periodo);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[API ERROR] Error en generar masivo 5.2:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put('/api/libro-diario-52/:ruc/corregir', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { cuoOriginal, tipo, nuevasLineas } = req.body;
+        const userId = req.targetUserId;
+        const result = ld52Service.corregirAsiento(ruc, userId, cuoOriginal, parseInt(tipo), nuevasLineas);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[API ERROR] Error en corregir asiento 5.2:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/libro-diario-52/:ruc/validar-balance', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const result = ld52Service.validarBalancePeriodo(ruc, userId, periodo);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[API ERROR] Error en validar balance 5.2:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/libro-diario-52/:ruc/exportar-txt', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = ld52Service.generarTXT52(ruc, userId, periodo);
+        const filename = ld52Service.nombreArchivoTXT(ruc, periodo);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt 5.2:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/libro-diario-52/:ruc/exportar-txt-54', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = ld52Service.generarTXT54(ruc, userId, periodo);
+        const filename = ld52Service.nombreArchivoTXT54(ruc, periodo);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt-54:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/libro-diario-52/:ruc/sync-compra', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { id } = req.body;
+        const userId = req.targetUserId;
+        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='COMPRAS'`).run(ruc, userId, id);
+        const purchase = db.rawDb.prepare(`SELECT * FROM purchases WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
+        if (purchase) {
+            ld52Service.generarAsientoDesdeCompra(purchase, ruc, userId);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API ERROR] Error en sync-compra:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/libro-diario-52/:ruc/sync-venta', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { id } = req.body;
+        const userId = req.targetUserId;
+        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='VENTAS'`).run(ruc, userId, id);
+        const sale = db.rawDb.prepare(`SELECT * FROM sales WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
+        if (sale) {
+            ld52Service.generarAsientoDesdeVenta(sale, ruc, userId);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API ERROR] Error en sync-venta:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/libro-diario-52/:ruc/delete-origen', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { id } = req.body;
+        const userId = req.targetUserId;
+        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=?`).run(ruc, userId, id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API ERROR] Error en delete-origen:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

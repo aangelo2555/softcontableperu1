@@ -36,6 +36,7 @@ import PlanillaView from './components/PlanillaView';
 import BalanceAnexosView from './components/BalanceAnexosView';
 import FinanceSecondaryView from './components/FinanceSecondaryView';
 import RegistroVentas141View from './components/RegistroVentas141View';
+import LibroDiario52View from './components/LibroDiario52View';
 import BalanceInicialView from './components/BalanceInicialView';
 import CCCDashboard from './components/CCCDashboard';
 import FinanceNotesView from './components/FinanceNotesView';
@@ -152,6 +153,7 @@ const SIDEBAR_GROUPS: TabGroup[] = [
       { id: 'VENTAS_141', label: 'Registro de Ventas', icon: BookOpen },
       { id: 'CAJABANCOS', label: 'Libro Caja y Bancos', icon: Landmark },
       { id: 'DIARIO', label: 'Libro Diario', icon: CalendarDays },
+      { id: 'DIARIO_52', label: 'Libro Diario 5.2', icon: CalendarDays },
       { id: 'MAYOR', label: 'Libro Mayor', icon: BarChart3 },
     ],
   },
@@ -267,6 +269,7 @@ const App: React.FC = () => {
       case 'KARDEX': return <KardexView />;
       case 'CAJABANCOS': return <LibroCajaBancosView />;
       case 'VENTAS_141': return <RegistroVentas141View />;
+      case 'DIARIO_52': return <LibroDiario52View />;
       case 'ACTIVOS': return <ActivosFijosView />;
       case 'PLANILLA': return <PlanillaView />;
       case 'ANEXOS': return <BalanceAnexosView />;

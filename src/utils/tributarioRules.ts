@@ -167,6 +167,9 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     case 'PLANILLA': // Las planillas generan asientos de diario
       return obligaciones.libroDiarioSimplificado || obligaciones.libroDiarioCompleto;
 
+    case 'DIARIO_52':
+      return obligaciones.libroDiarioSimplificado;
+
     // 4. Libro Mayor
     case 'MAYOR':
       return obligaciones.libroMayor;

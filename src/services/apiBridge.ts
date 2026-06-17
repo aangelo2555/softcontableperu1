@@ -286,6 +286,48 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // --- Libro Diario 5.2 API ---
+    ld52GetAsientos: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/libro-diario-52/${ruc}?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
+    ld52Registrar: async (ruc: string, lineas: any[]) => {
+        const res = await api.post(`/api/libro-diario-52/${ruc}/registrar`, { lineas });
+        return res.data;
+    },
+    ld52GenerarMasivo: async (ruc: string, periodo: string) => {
+        const res = await api.post(`/api/libro-diario-52/${ruc}/generar-masivo`, { periodo });
+        return res.data;
+    },
+    ld52Corregir: async (ruc: string, cuoOriginal: string, tipo: number, nuevasLineas: any[]) => {
+        const res = await api.put(`/api/libro-diario-52/${ruc}/corregir`, { cuoOriginal, tipo, nuevasLineas });
+        return res.data;
+    },
+    ld52ValidarBalance: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/libro-diario-52/${ruc}/validar-balance?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
+    ld52ExportarTXT: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/libro-diario-52/${ruc}/exportar-txt?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+    ld52ExportarTXT54: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/libro-diario-52/${ruc}/exportar-txt-54?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+    ld52SyncCompra: async (ruc: string, id: string) => {
+        const res = await api.post(`/api/libro-diario-52/${ruc}/sync-compra`, { id });
+        return res.data;
+    },
+    ld52SyncVenta: async (ruc: string, id: string) => {
+        const res = await api.post(`/api/libro-diario-52/${ruc}/sync-venta`, { id });
+        return res.data;
+    },
+    ld52DeleteOrigen: async (ruc: string, id: string) => {
+        const res = await api.post(`/api/libro-diario-52/${ruc}/delete-origen`, { id });
+        return res.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

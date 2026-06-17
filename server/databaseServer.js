@@ -301,6 +301,103 @@ db.exec(`
     );
 `);
 
+// ─── Libro Diario Formato 5.2 (Simplificado) ───
+// RS N° 234-2006/SUNAT · RS N° 286-2009/SUNAT · RS N° 112-2021/SUNAT · RS N° 040-2022/SUNAT
+db.exec(`
+    CREATE TABLE IF NOT EXISTS libro_diario_52 (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id          TEXT NOT NULL,
+        user_id               TEXT,
+        periodo               TEXT NOT NULL,
+        cuo                   TEXT NOT NULL,
+        correlativo_asiento   TEXT NOT NULL,
+        fecha_operacion       TEXT NOT NULL,
+        glosa                 TEXT NOT NULL,
+        ref_codigo_libro      TEXT,
+        ref_periodo           TEXT,
+        ref_cuo               TEXT,
+        codigo_cuenta         TEXT NOT NULL,
+        denominacion_cuenta   TEXT NOT NULL,
+        codigo_auxiliar       TEXT,
+        denominacion_auxiliar TEXT,
+        centro_costos         TEXT,
+        moneda                TEXT DEFAULT '01',
+        tipo_cambio           REAL DEFAULT 0.000,
+        fecha_tipo_cambio     TEXT,
+        monto_debe            INTEGER NOT NULL DEFAULT 0,
+        monto_haber           INTEGER NOT NULL DEFAULT 0,
+        indicador_operacion   TEXT,
+        dato_estructurado     TEXT,
+        estado                TEXT NOT NULL DEFAULT '1',
+        origen_modulo         TEXT,
+        asiento_id_origen     TEXT,
+        ejercicio             INTEGER NOT NULL,
+        created_at            TEXT DEFAULT (datetime('now','localtime')),
+        updated_at            TEXT DEFAULT (datetime('now','localtime')),
+        CONSTRAINT chk_monto_positivo CHECK (monto_debe >= 0 AND monto_haber >= 0),
+        CONSTRAINT chk_no_ambos_lados CHECK (NOT (monto_debe > 0 AND monto_haber > 0)),
+        CONSTRAINT uq_cuo_correlativo UNIQUE (workspace_id, user_id, periodo, cuo, correlativo_asiento),
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ld52_periodo ON libro_diario_52(workspace_id, user_id, periodo);
+    CREATE INDEX IF NOT EXISTS idx_ld52_cuo ON libro_diario_52(workspace_id, cuo);
+    CREATE INDEX IF NOT EXISTS idx_ld52_cuenta ON libro_diario_52(codigo_cuenta);
+    CREATE INDEX IF NOT EXISTS idx_ld52_origen ON libro_diario_52(origen_modulo, asiento_id_origen);
+    CREATE INDEX IF NOT EXISTS idx_ld52_estado ON libro_diario_52(estado);
+
+    CREATE TABLE IF NOT EXISTS formato_54_plan_contable (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id      TEXT NOT NULL,
+        user_id           TEXT,
+        periodo           TEXT NOT NULL,
+        codigo_cuenta     TEXT NOT NULL,
+        denominacion      TEXT NOT NULL,
+        nivel             INTEGER,
+        tipo_cuenta       TEXT,
+        ejercicio         INTEGER NOT NULL,
+        CONSTRAINT uq_cuenta_periodo_54 UNIQUE (workspace_id, user_id, periodo, codigo_cuenta),
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS diario_52_secuencia (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id  TEXT NOT NULL,
+        user_id       TEXT,
+        periodo       TEXT NOT NULL,
+        ultimo_seq    INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(workspace_id, user_id, periodo)
+    );
+`);
+
+try {
+    db.exec(`
+        CREATE VIEW IF NOT EXISTS v_balance_asientos_52 AS
+        SELECT
+            workspace_id,
+            user_id,
+            periodo,
+            cuo,
+            SUM(monto_debe)   AS total_debe_centimos,
+            SUM(monto_haber)  AS total_haber_centimos,
+            CAST(SUM(monto_debe) AS REAL) / 100.0   AS total_debe_soles,
+            CAST(SUM(monto_haber) AS REAL) / 100.0  AS total_haber_soles,
+            CASE
+                WHEN SUM(monto_debe) = SUM(monto_haber) THEN 'CUADRADO'
+                ELSE 'DESCUADRADO'
+            END AS estado_partida_doble,
+            ABS(SUM(monto_debe) - SUM(monto_haber)) / 100.0 AS diferencia_soles
+        FROM libro_diario_52
+        WHERE estado IN ('1','8')
+        GROUP BY workspace_id, user_id, periodo, cuo;
+    `);
+} catch(e) {
+    // La vista ya existe
+    console.warn('[DB] Nota vista v_balance_asientos_52:', e.message);
+}
+
+console.log('[DB] Tablas Libro Diario 5.2, Formato 5.4 y secuencias verificadas.');
+
 // ─── Mejora #7: Control de correlatividad y series documentales ───
 // UNIQUE INDEX parcial para evitar duplicados de comprobantes activos
 // El filtro WHERE estado_sire != 'ANULADO' permite anulaciones sin violar unicidad
@@ -757,7 +854,8 @@ const dbManager = {
             VALUES (?, ?, ?, ?)
         `);
         return stmt.run(ruc, periodo, computationJson, userId);
-    }
+    },
+    rawDb: db
 };
 
 // --- Carga Inicial de Plan Contable (si está vacío) ---
