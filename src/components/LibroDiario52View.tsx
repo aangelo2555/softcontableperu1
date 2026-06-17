@@ -18,6 +18,7 @@ import {
 import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
 import { exportTableToXLSX } from '../utils/export';
+import { exportLd52FisicoToXLSX } from '../utils/excelExport';
 
 const MONTHS = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -505,7 +506,16 @@ const LibroDiario52View: React.FC = () => {
               <button
                 onClick={() => {
                   const filename = `Libro_Diario_Fisico_5_2_${currentCompany.ruc || ''}_${periodoActual}`;
-                  exportTableToXLSX('tabla9-pcge-table', filename);
+                  exportLd52FisicoToXLSX(
+                    ld52FisicoEntries,
+                    columnTotals,
+                    {
+                      ruc: currentCompany.ruc || '',
+                      name: currentCompany.name || 'EMPRESA',
+                      period: periodoActual
+                    },
+                    filename
+                  );
                   toast.success('📊 Exportando a Excel...');
                 }}
                 className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-[10px] font-bold"

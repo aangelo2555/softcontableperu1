@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp, ShoppingBag, Activity,
   Building2, Hash, MapPin, MapPinHouse, MessageCircleMore,
@@ -22,6 +22,12 @@ const EmpresaView: React.FC = () => {
   const [fetchSuccess, setFetchSuccess] = useState(false);
   const [supportLinkDraft, setSupportLinkDraft] = useState('');
   const [isSupportSaved, setIsSupportSaved] = useState(!!currentCompany.support);
+  
+  const [localUIT, setLocalUIT] = useState<string>('');
+
+  useEffect(() => {
+    setLocalUIT(String(currentCompany.annualIncomeUIT || 0));
+  }, [currentCompany.ruc, currentCompany.annualIncomeUIT]);
 
   // ─── Computed Metrics (Excluyendo Propuestas SIRE) ───
   const localSales = useMemo(() => sales.filter(s => s.estado_sire !== 'Propuesta'), [sales]);
@@ -359,8 +365,22 @@ const EmpresaView: React.FC = () => {
                         type="number" 
                         min="0"
                         step="0.1"
-                        value={currentCompany.annualIncomeUIT || 0}
-                        onChange={(e) => updateCompany({ annualIncomeUIT: Math.max(0, parseFloat(e.target.value) || 0) })}
+                        value={localUIT}
+                        onChange={(e) => setLocalUIT(e.target.value)}
+                        onBlur={() => {
+                          const val = Math.max(0, parseFloat(localUIT) || 0);
+                          if (val !== currentCompany.annualIncomeUIT) {
+                            updateCompany({ annualIncomeUIT: val });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = Math.max(0, parseFloat(localUIT) || 0);
+                            if (val !== currentCompany.annualIncomeUIT) {
+                              updateCompany({ annualIncomeUIT: val });
+                            }
+                          }
+                        }}
                         className="w-full text-sm font-bold pr-12" 
                       />
                       <span className="absolute right-3 text-[10px] font-bold text-app-muted select-none">
@@ -368,7 +388,7 @@ const EmpresaView: React.FC = () => {
                       </span>
                     </div>
                     <span className="text-[10px] text-app-muted">
-                      Equiv: S/ {((currentCompany.annualIncomeUIT || 0) * getUIT(currentCompany.period || '2026')).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                      Equiv: S/ {((parseFloat(localUIT) || 0) * getUIT(currentCompany.period || '2026')).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -416,6 +436,13 @@ const EmpresaView: React.FC = () => {
                         { name: 'Libro Caja y Bancos', required: obligaciones.libroCajaBancos, note: 'Exclusivo > 1,700 UIT' },
                         { name: 'Libro de Inventarios y Balances', required: obligaciones.libroInventariosBalances },
                         { name: 'Registro de Activos Fijos', required: obligaciones.libroInventariosBalances, note: 'Anexo de Balances' },
+                        { name: 'Balance de Comprobación (Hoja de Trabajo)', required: obligaciones.libroInventariosBalances, note: 'Inventarios y Balances' },
+                        { name: 'Estado de Situación Financiera', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                        { name: 'Estado de Resultados', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                        { name: 'Estado de Flujo de Efectivo', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                        { name: 'Estado de Cambios en el Patrimonio', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                        { name: 'Notas a los Estados Financieros', required: obligaciones.libroInventariosBalances, note: 'Revelaciones' },
+                        { name: 'Impuesto a la Renta Diferido (NIC 12)', required: obligaciones.libroInventariosBalances, note: 'IFRS / NIC' },
                         { name: 'Inventario Permanente Unidades', required: obligaciones.kardexFisico, note: 'Comercio/Manuf > 500 UIT' },
                         { name: 'Inventario Permanente Valorizado', required: obligaciones.kardexValorizado, note: 'Comercio/Manuf > 1500 UIT' },
                         { name: 'Registro de Costos', required: obligaciones.registroCostos, note: 'Solo Manuf > 1500 UIT' }
