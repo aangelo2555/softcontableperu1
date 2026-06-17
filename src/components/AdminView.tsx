@@ -83,10 +83,10 @@ export const AdminView: React.FC = () => {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden p-6 bg-app-bg text-app-text flex flex-col gap-4">
+    <div className="h-full w-full overflow-hidden p-4 md:p-6 bg-app-bg text-app-text flex flex-col gap-4">
       
       {/* Encabezado Principal */}
-      <div className="flex items-center justify-between border-b border-app-border pb-3 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-app-border pb-3 shrink-0 gap-3">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">
             <ShieldCheck size={12} />
@@ -95,7 +95,7 @@ export const AdminView: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-app-text">Panel de Administración</h1>
           <p className="text-[11px] font-semibold text-app-muted mt-0.5">Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables.</p>
         </div>
-
+ 
         {/* Interruptor de Pestañas */}
         <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0">
           <button
@@ -127,10 +127,10 @@ export const AdminView: React.FC = () => {
           </button>
         </div>
       </div>
-
+ 
       {/* Tarjetas de Estadísticas Globales (Ocultas al expandir un reporte para maximizar el espacio vertical) */}
       {!selectedSuggestion && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           <div className="bg-app-surface border border-app-border rounded-xl p-4 flex items-center justify-between shadow-sm">
             <div className="flex flex-col gap-0.5">
               <span className="text-[9px] font-black uppercase tracking-widest text-app-muted">Usuarios</span>
@@ -251,7 +251,7 @@ export const AdminView: React.FC = () => {
                 <div className="flex-1 min-h-0 bg-app-surface border border-app-border rounded-2xl p-6 pb-24 flex flex-col gap-6 shadow-sm overflow-y-auto">
                   
                   {/* Cabecera del Detalle */}
-                  <div className="flex justify-between items-start border-b border-app-border pb-4 shrink-0">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-app-border pb-4 shrink-0 gap-3">
                     <div>
                       <h3 className="text-lg font-black text-app-text">{selectedSuggestion.workspace_name || 'Sin empresa'}</h3>
                       <p className="text-xs font-bold text-app-muted uppercase tracking-widest mt-1">
@@ -304,7 +304,7 @@ export const AdminView: React.FC = () => {
                   {selectedSuggestion.system_state && (
                     <div className="flex flex-col gap-2">
                       <span className="text-xs font-black uppercase tracking-widest text-app-muted">Datos Técnicos del Formulario</span>
-                      <div className="bg-app-bg border border-app-border rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div className="bg-app-bg border border-app-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {Object.entries(parseSystemState(selectedSuggestion.system_state) || {}).map(([key, val]: any) => (
                           <div key={key} className="bg-app-surface border border-app-border p-2.5 rounded-lg shadow-sm">
                             <span className="text-[8px] font-black text-app-muted uppercase tracking-widest block truncate">{key}</span>
@@ -355,7 +355,8 @@ export const AdminView: React.FC = () => {
 
             {/* Tabla de Usuarios en contenedor con scroll interno */}
             <div className="flex-1 overflow-y-auto custom-scrollbar border border-app-border bg-app-surface rounded-2xl shadow-sm pb-6">
-              <table className="w-full text-left text-xs font-semibold text-app-text">
+              <div className="responsive-table-container">
+                <table className="w-full text-left text-xs font-semibold text-app-text min-w-[900px]">
                 <thead className="bg-app-bg border-b border-app-border text-[10px] font-black uppercase text-app-muted tracking-widest sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-4">Usuario</th>
@@ -409,6 +410,7 @@ export const AdminView: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
           </div>

@@ -79,7 +79,8 @@ import {
   HardDrive,
   FileSearch,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  LogOut
 } from 'lucide-react';
 
 // ─── Types ───
@@ -549,6 +550,50 @@ const App: React.FC = () => {
           })}
         </nav>
 
+        {/* User Profile & Logout (Full) */}
+        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface/50 ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate" translate="no">
+              {userInitial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
+              <p className="text-[9px] text-blue-500 font-bold uppercase tracking-wider">Usuario</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm('¿Desea cerrar sesión?')) {
+                localStorage.removeItem('softcontable_token');
+                window.location.reload();
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <LogOut size={12} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+
+        {/* User Profile & Logout (Collapsed) */}
+        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface/50 items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate animate-fade-in" translate="no" title={userName}>
+            {userInitial}
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm('¿Desea cerrar sesión?')) {
+                localStorage.removeItem('softcontable_token');
+                window.location.reload();
+              }
+            }}
+            className="w-8 h-8 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
+            title="Cerrar Sesión"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+
         {/* Bottom: Theme */}
         <div className={`p-4 flex items-center shrink-0 border-t border-app-border ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isSidebarCollapsed && (
@@ -715,28 +760,6 @@ const App: React.FC = () => {
                 {isExportingMassive ? 'Generando...' : 'Excel Masivo'}
               </span>
             </button>
-
-            <div className="w-px h-8 bg-app-border hidden sm:block" />
-
-            {/* Profile */}
-            <div 
-              className="flex items-center gap-1.5 sm:gap-3 cursor-pointer group relative"
-              onClick={() => {
-                if (window.confirm('¿Desea cerrar sesión?')) {
-                  localStorage.removeItem('softcontable_token');
-                  window.location.reload();
-                }
-              }}
-            >
-              <div className="text-right hidden sm:block">
-                <p className="text-[11px] font-black uppercase text-app-text leading-tight group-hover:text-red-500 transition-colors">Cerrar Sesión</p>
-                <p className="text-[10px] text-blue-500 font-bold notranslate" translate="no">{userName}</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-600/20 text-white font-black text-sm uppercase transition-transform hover:scale-105 notranslate" translate="no">
-                {userInitial}
-              </div>
-            </div>
-
           </div>
         </header>
 
