@@ -398,6 +398,132 @@ try {
 
 console.log('[DB] Tablas Libro Diario 5.2, Formato 5.4 y secuencias verificadas.');
 
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS mapa_pcge_tabla9 (
+            codigo_cuenta_prefijo TEXT PRIMARY KEY,
+            columna_tabla9        TEXT NOT NULL,
+            grupo                 TEXT NOT NULL,
+            es_debito_normal      INTEGER DEFAULT 1
+        );
+    `);
+
+    db.exec(`
+        INSERT OR REPLACE INTO mapa_pcge_tabla9 (codigo_cuenta_prefijo, columna_tabla9, grupo, es_debito_normal) VALUES
+        ('10',   '10',    'ACTIVO',     1),
+        ('11',   '10',    'ACTIVO',     1),
+        ('12',   '12',    'ACTIVO',     1),
+        ('13',   '12',    'ACTIVO',     1),
+        ('14',   '12',    'ACTIVO',     1),
+        ('16',   '16',    'ACTIVO',     1),
+        ('17',   '16',    'ACTIVO',     1),
+        ('18',   '38',    'ACTIVO',     1),
+        ('19',   '38',    'ACTIVO',     1),
+        ('20',   '20',    'ACTIVO',     1),
+        ('21',   '21',    'ACTIVO',     1),
+        ('22',   '21',    'ACTIVO',     1),
+        ('23',   '21',    'ACTIVO',     1),
+        ('24',   '21',    'ACTIVO',     1),
+        ('25',   '21',    'ACTIVO',     1),
+        ('26',   '21',    'ACTIVO',     1),
+        ('27',   '21',    'ACTIVO',     1),
+        ('28',   '38',    'ACTIVO',     1),
+        ('29',   '38',    'ACTIVO',     0),
+        ('30',   '38',    'ACTIVO',     1),
+        ('31',   '38',    'ACTIVO',     1),
+        ('32',   '38',    'ACTIVO',     1),
+        ('33',   '33',    'ACTIVO',     1),
+        ('34',   '34',    'ACTIVO',     1),
+        ('35',   '38',    'ACTIVO',     1),
+        ('36',   '38',    'ACTIVO',     1),
+        ('37',   '38',    'ACTIVO',     1),
+        ('38',   '38',    'ACTIVO',     1),
+        ('39',   '39',    'ACTIVO',     0),
+        ('4011', '4011D', 'PASIVO',     0),
+        ('4012', '402',   'PASIVO',     0),
+        ('4017', '4017D', 'PASIVO',     0),
+        ('402',  '402',   'PASIVO',     0),
+        ('403',  '402',   'PASIVO',     0),
+        ('41',   '42',    'PASIVO',     0),
+        ('42',   '42',    'PASIVO',     0),
+        ('43',   '42',    'PASIVO',     0),
+        ('44',   '46',    'PASIVO',     0),
+        ('45',   '46',    'PASIVO',     0),
+        ('46',   '46',    'PASIVO',     0),
+        ('47',   '46',    'PASIVO',     0),
+        ('48',   '46',    'PASIVO',     0),
+        ('49',   '46',    'PASIVO',     0),
+        ('50',   '50',    'PATRIMONIO', 0),
+        ('51',   '50',    'PATRIMONIO', 0),
+        ('52',   '50',    'PATRIMONIO', 0),
+        ('56',   '58',    'PATRIMONIO', 0),
+        ('57',   '58',    'PATRIMONIO', 0),
+        ('58',   '58',    'PATRIMONIO', 0),
+        ('59',   '59',    'PATRIMONIO', 0),
+        ('60',   '60',    'GASTOS',     1),
+        ('61',   '61',    'GASTOS',     1),
+        ('62',   '62',    'GASTOS',     1),
+        ('63',   '63',    'GASTOS',     1),
+        ('64',   '63',    'GASTOS',     1),
+        ('65',   '65',    'GASTOS',     1),
+        ('66',   '66',    'GASTOS',     1),
+        ('67',   '67',    'GASTOS',     1),
+        ('68',   '68',    'GASTOS',     1),
+        ('69',   '69',    'GASTOS',     1),
+        ('94',   '96',    'GASTOS',     1),
+        ('95',   '97',    'GASTOS',     1),
+        ('96',   '96',    'GASTOS',     1),
+        ('97',   '97',    'GASTOS',     1),
+        ('70',   '70',    'INGRESOS',   0),
+        ('71',   '70',    'INGRESOS',   0),
+        ('72',   '70',    'INGRESOS',   0),
+        ('73',   '70',    'INGRESOS',   0),
+        ('74',   '70',    'INGRESOS',   0),
+        ('75',   '75',    'INGRESOS',   0),
+        ('76',   '76',    'INGRESOS',   0),
+        ('77',   '77',    'INGRESOS',   0),
+        ('78',   '79',    'INGRESOS',   0),
+        ('79',   '79',    'INGRESOS',   0);
+    `);
+
+    // Alter table to add physical format columns
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN columna_tabla9 TEXT;"); } catch(e) {}
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN grupo_tabla9 TEXT;"); } catch(e) {}
+
+    // Backfill mapping for existing rows
+    db.exec(`
+        UPDATE libro_diario_52
+        SET
+          columna_tabla9 = (
+            CASE
+              WHEN codigo_cuenta LIKE '4011%' AND monto_debe > 0 THEN '4011D'
+              WHEN codigo_cuenta LIKE '4011%' AND monto_haber > 0 THEN '4011C'
+              WHEN codigo_cuenta LIKE '4017%' AND monto_debe > 0 THEN '4017D'
+              WHEN codigo_cuenta LIKE '4017%' AND monto_haber > 0 THEN '4017C'
+              ELSE (
+                SELECT m.columna_tabla9
+                FROM mapa_pcge_tabla9 m
+                WHERE libro_diario_52.codigo_cuenta LIKE (m.codigo_cuenta_prefijo || '%')
+                ORDER BY length(m.codigo_cuenta_prefijo) DESC
+                LIMIT 1
+              )
+            END
+          ),
+          grupo_tabla9 = (
+            SELECT m.grupo
+            FROM mapa_pcge_tabla9 m
+            WHERE libro_diario_52.codigo_cuenta LIKE (m.codigo_cuenta_prefijo || '%')
+            ORDER BY length(m.codigo_cuenta_prefijo) DESC
+            LIMIT 1
+          )
+        WHERE columna_tabla9 IS NULL;
+    `);
+
+    console.log('[DB] Mapeo de Tabla 9 inicializado e integrado.');
+} catch (e) {
+    console.error('[DB] Error inicializando mapeo Tabla 9:', e.message);
+}
+
 // ─── Mejora #7: Control de correlatividad y series documentales ───
 // UNIQUE INDEX parcial para evitar duplicados de comprobantes activos
 // El filtro WHERE estado_sire != 'ANULADO' permite anulaciones sin violar unicidad

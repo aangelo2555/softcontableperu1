@@ -1322,6 +1322,22 @@ app.get('/api/libro-diario-52/:ruc', authMiddleware, inspectMiddleware, async (r
     }
 });
 
+app.get('/api/libro-diario-52/:ruc/formato-fisico', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo (AAAAMM00)' });
+        }
+        const data = ld52Service.obtenerFormatoFisico(ruc, userId, periodo);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('[API ERROR] Error en GET formato-fisico 5.2:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/libro-diario-52/:ruc/registrar', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;

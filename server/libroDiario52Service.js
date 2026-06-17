@@ -76,6 +76,33 @@ function createLibroDiario52Service(db) {
     return row.estado === 'ABIERTO';
   };
 
+  const resolverMapeoTabla9 = (codigoCuenta, montoDebe, montoHaber) => {
+    if (codigoCuenta.startsWith('4011')) {
+      return {
+        columna: montoDebe > 0 ? '4011D' : '4011C',
+        grupo: 'PASIVO'
+      };
+    }
+    if (codigoCuenta.startsWith('4017')) {
+      return {
+        columna: montoDebe > 0 ? '4017D' : '4017C',
+        grupo: 'PASIVO'
+      };
+    }
+    const row = db.prepare(`
+      SELECT columna_tabla9, grupo
+      FROM mapa_pcge_tabla9
+      WHERE ? LIKE (codigo_cuenta_prefijo || '%')
+      ORDER BY length(codigo_cuenta_prefijo) DESC
+      LIMIT 1
+    `).get(codigoCuenta);
+
+    if (row) {
+      return { columna: row.columna_tabla9, grupo: row.grupo };
+    }
+    return { columna: '38', grupo: 'ACTIVO' }; // Default fallback
+  };
+
   // ── Registrar Asiento (Transacción Atómica) ──
   const registrarAsiento = (workspaceId, userId, lineas) => {
     if (!lineas || lineas.length === 0) throw new Error('No hay líneas para registrar');
@@ -106,12 +133,14 @@ function createLibroDiario52Service(db) {
         ref_codigo_libro, ref_periodo, ref_cuo, codigo_cuenta, denominacion_cuenta,
         codigo_auxiliar, denominacion_auxiliar, centro_costos, moneda, tipo_cambio,
         fecha_tipo_cambio, monto_debe, monto_haber, indicador_operacion,
-        dato_estructurado, estado, origen_modulo, asiento_id_origen, ejercicio
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        dato_estructurado, estado, origen_modulo, asiento_id_origen, ejercicio,
+        columna_tabla9, grupo_tabla9
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
 
     const transaction = db.transaction((rows) => {
       for (const l of rows) {
+        const mapping = resolverMapeoTabla9(l.codigo_cuenta, l.monto_debe, l.monto_haber);
         insertStmt.run(
           workspaceId, userId, l.periodo, l.cuo, l.correlativo_asiento,
           l.fecha_operacion, l.glosa, l.ref_codigo_libro || null, l.ref_periodo || null,
@@ -120,7 +149,8 @@ function createLibroDiario52Service(db) {
           l.moneda || '01', l.tipo_cambio || 0, l.fecha_tipo_cambio || null,
           l.monto_debe, l.monto_haber, l.indicador_operacion || null,
           l.dato_estructurado || null, l.estado || '1',
-          l.origen_modulo || 'MANUAL', l.asiento_id_origen || null, ejercicio
+          l.origen_modulo || 'MANUAL', l.asiento_id_origen || null, ejercicio,
+          mapping.columna, mapping.grupo
         );
       }
     });
@@ -310,6 +340,89 @@ function createLibroDiario52Service(db) {
     };
   };
 
+  // ── Obtener Formato Físico (Pivote Tabla 9 PCGE) ──
+  const obtenerFormatoFisico = (workspaceId, userId, periodo) => {
+    const lines = db.prepare(`
+      SELECT * FROM libro_diario_52
+      WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
+      ORDER BY cuo, correlativo_asiento
+    `).all(workspaceId, userId, periodo);
+
+    const groups = {};
+    for (const l of lines) {
+      if (!groups[l.cuo]) groups[l.cuo] = [];
+      groups[l.cuo].push(l);
+    }
+
+    const rows = [];
+    for (const cuo of Object.keys(groups)) {
+      const g = groups[cuo];
+      const first = g[0];
+      const row = {
+        periodo: first.periodo,
+        cuo: first.cuo,
+        fecha: fechaToDD_MM_AAAA(first.fecha_operacion),
+        glosa: first.glosa,
+        car: first.dato_estructurado || '',
+        // ACTIVO
+        c10_d: 0, c10_h: 0,
+        c12_d: 0, c12_h: 0,
+        c16_d: 0, c16_h: 0,
+        c20_d: 0, c20_h: 0,
+        c21_d: 0, c21_h: 0,
+        c33_d: 0, c33_h: 0,
+        c34_d: 0, c34_h: 0,
+        c38_d: 0, c38_h: 0,
+        c39_d: 0, c39_h: 0,
+        // PASIVO
+        c4011D: 0, c4011C: 0,
+        c4017D: 0, c4017C: 0,
+        c402_d: 0, c402_h: 0,
+        c42_d: 0, c42_h: 0,
+        c46_d: 0, c46_h: 0,
+        // PATRIMONIO
+        c50_d: 0, c50_h: 0,
+        c58_d: 0, c58_h: 0,
+        c59_d: 0, c59_h: 0,
+        // GASTOS
+        c60_d: 0, c60_h: 0,
+        c61_d: 0, c61_h: 0,
+        c62_d: 0, c62_h: 0,
+        c63_d: 0, c63_h: 0,
+        c65_d: 0, c65_h: 0,
+        c66_d: 0, c66_h: 0,
+        c67_d: 0, c67_h: 0,
+        c68_d: 0, c68_h: 0,
+        c69_d: 0, c69_h: 0,
+        c96_d: 0, c96_h: 0,
+        c97_d: 0, c97_h: 0,
+        // INGRESOS
+        c70_d: 0, c70_h: 0,
+        c75_d: 0, c75_h: 0,
+        c76_d: 0, c76_h: 0,
+        c77_d: 0, c77_h: 0,
+        c79_d: 0, c79_h: 0,
+      };
+
+      for (const line of g) {
+        const col = line.columna_tabla9;
+        if (!col) continue;
+
+        if (col === '4011D' || col === '4011C' || col === '4017D' || col === '4017C') {
+          row[col] += (line.monto_debe + line.monto_haber) / 100;
+        } else {
+          const keyD = `c${col}_d`;
+          const keyH = `c${col}_h`;
+          if (keyD in row) row[keyD] += line.monto_debe / 100;
+          if (keyH in row) row[keyH] += line.monto_haber / 100;
+        }
+      }
+      rows.push(row);
+    }
+
+    return rows;
+  };
+
   // ── Generar TXT PLE Formato 5.2 ──
   const generarTXT52 = (workspaceId, userId, periodo) => {
     const balance = validarBalancePeriodo(workspaceId, userId, periodo);
@@ -381,7 +494,7 @@ function createLibroDiario52Service(db) {
     generarCUO, registrarAsiento, generarAsientoDesdeCompra, generarAsientoDesdeVenta,
     generarMasivo, corregirAsiento, obtenerAsientosPeriodo, validarBalancePeriodo,
     generarTXT52, generarTXT54, nombreArchivoTXT, nombreArchivoTXT54, reporteMayor,
-    solesToCentimos, centimosToSoles, formatSoles, fechaToPeriodo
+    obtenerFormatoFisico, solesToCentimos, centimosToSoles, formatSoles, fechaToPeriodo
   };
 }
 

@@ -11,10 +11,12 @@ import {
   Calendar,
   X,
   Save,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
 import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
+import { exportTableToXLSX } from '../utils/export';
 
 const MONTHS = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -36,11 +38,13 @@ const LibroDiario52View: React.FC = () => {
     currentCompany,
     plan,
     ld52Entries,
+    ld52FisicoEntries,
     ld52TotalDebe,
     ld52TotalHaber,
     ld52BalanceValido,
     ld52Descuadrados,
     loadLd52Entries,
+    loadLd52FisicoEntries,
     generarLd52Masivo,
     registrarLd52Asiento,
     corregirLd52Asiento,
@@ -49,6 +53,7 @@ const LibroDiario52View: React.FC = () => {
     exportarLd52TXT54
   } = useStore();
 
+  const [activeTabSub, setActiveTabSub] = useState<'ple' | 'tabla9'>('ple');
   const [periodoMes, setPeriodoMes] = useState(new Date().getMonth());
   const [periodoAnio, setPeriodoAnio] = useState(parseInt(currentCompany.period) || new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,10 +85,11 @@ const LibroDiario52View: React.FC = () => {
   const mm = (periodoMes + 1).toString().padStart(2, '0');
   const periodoActual = `${yyyy}${mm}00`;
 
-  // Load entries when period changes
+  // Load entries when period changes or active tab changes
   useEffect(() => {
     loadLd52Entries(periodoActual);
-  }, [periodoMes, periodoAnio, currentCompany.ruc]);
+    loadLd52FisicoEntries(periodoActual);
+  }, [periodoMes, periodoAnio, currentCompany.ruc, activeTabSub]);
 
   // Filtered entries for UI searching
   const filteredEntries = useMemo(() => {
@@ -328,6 +334,50 @@ const LibroDiario52View: React.FC = () => {
   const currentTotals = getInputTotals(false);
   const corrTotals = getInputTotals(true);
 
+  const columnTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    const keys = [
+      'c10_d', 'c10_h', 'c12_d', 'c12_h', 'c16_d', 'c16_h', 'c20_d', 'c20_h', 'c21_d', 'c21_h',
+      'c33_d', 'c33_h', 'c34_d', 'c34_h', 'c38_d', 'c38_h', 'c39_d', 'c39_h',
+      'c4011D', 'c4011C', 'c4017D', 'c4017C', 'c402_d', 'c402_h', 'c42_d', 'c42_h', 'c46_d', 'c46_h',
+      'c50_d', 'c50_h', 'c58_d', 'c58_h', 'c59_d', 'c59_h',
+      'c60_d', 'c60_h', 'c61_d', 'c61_h', 'c62_d', 'c62_h', 'c63_d', 'c63_h', 'c65_d', 'c65_h',
+      'c66_d', 'c66_h', 'c67_d', 'c67_h', 'c68_d', 'c68_h', 'c69_d', 'c69_h', 'c96_d', 'c96_h', 'c97_d', 'c97_h',
+      'c70_d', 'c70_h', 'c75_d', 'c75_h', 'c76_d', 'c76_h', 'c77_d', 'c77_h', 'c79_d', 'c79_h'
+    ];
+    for (const key of keys) {
+      totals[key] = 0;
+    }
+    for (const r of ld52FisicoEntries) {
+      for (const key of keys) {
+        totals[key] += r[key] || 0;
+      }
+    }
+    return totals;
+  }, [ld52FisicoEntries]);
+
+  const sumDebitsFisico = useMemo(() => {
+    const debKeys = [
+      'c10_d', 'c12_d', 'c16_d', 'c20_d', 'c21_d', 'c33_d', 'c34_d', 'c38_d', 'c39_d',
+      'c4011D', 'c4017D', 'c402_d', 'c42_d', 'c46_d',
+      'c50_d', 'c58_d', 'c59_d',
+      'c60_d', 'c61_d', 'c62_d', 'c63_d', 'c65_d', 'c66_d', 'c67_d', 'c68_d', 'c69_d', 'c96_d', 'c97_d',
+      'c70_d', 'c75_d', 'c76_d', 'c77_d', 'c79_d'
+    ];
+    return debKeys.reduce((sum, key) => sum + (columnTotals[key] || 0), 0);
+  }, [columnTotals]);
+
+  const sumCreditsFisico = useMemo(() => {
+    const credKeys = [
+      'c10_h', 'c12_h', 'c16_h', 'c20_h', 'c21_h', 'c33_h', 'c34_h', 'c38_h', 'c39_h',
+      'c4011C', 'c4017C', 'c402_h', 'c42_h', 'c46_h',
+      'c50_h', 'c58_h', 'c59_h',
+      'c60_h', 'c61_h', 'c62_h', 'c63_h', 'c65_h', 'c66_h', 'c67_h', 'c68_h', 'c69_h', 'c96_h', 'c97_h',
+      'c70_h', 'c75_h', 'c76_h', 'c77_h', 'c79_h'
+    ];
+    return credKeys.reduce((sum, key) => sum + (columnTotals[key] || 0), 0);
+  }, [columnTotals]);
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text select-none">
       {/* ═══ HEADER TOOLBAR ═══ */}
@@ -420,25 +470,49 @@ const LibroDiario52View: React.FC = () => {
         </div>
 
         {/* Downloads */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => exportarLd52TXT54(periodoActual)}
-            className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue hover:border-pld-blue/30 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-          >
-            <Download size={14} /> PLE Plan 5.4 (.TXT)
-          </button>
+        <div className="flex items-center gap-2 print:hidden">
+          {activeTabSub === 'ple' ? (
+            <>
+              <button
+                onClick={() => exportarLd52TXT54(periodoActual)}
+                className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue hover:border-pld-blue/30 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+              >
+                <Download size={14} /> PLE Plan 5.4 (.TXT)
+              </button>
 
-          <button
-            onClick={() => exportarLd52TXT(periodoActual)}
-            disabled={!ld52BalanceValido}
-            className={`h-8 px-3 rounded-lg transition-colors flex items-center gap-1.5 text-[10px] font-bold ${
-              ld52BalanceValido
-                ? 'bg-pld-magenta text-white hover:bg-pld-magenta/90 cursor-pointer'
-                : 'bg-app-bg border border-app-border text-app-muted cursor-not-allowed opacity-50'
-            }`}
-          >
-            <Download size={14} /> Exportar PLE 5.2 (.TXT)
-          </button>
+              <button
+                onClick={() => exportarLd52TXT(periodoActual)}
+                disabled={!ld52BalanceValido}
+                className={`h-8 px-3 rounded-lg transition-colors flex items-center gap-1.5 text-[10px] font-bold ${
+                  ld52BalanceValido
+                    ? 'bg-pld-magenta text-white hover:bg-pld-magenta/90 cursor-pointer'
+                    : 'bg-app-bg border border-app-border text-app-muted cursor-not-allowed opacity-50'
+                }`}
+              >
+                <Download size={14} /> Exportar PLE 5.2 (.TXT)
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => window.print()}
+                className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue hover:border-pld-blue/30 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+              >
+                <Printer size={14} /> Imprimir / PDF
+              </button>
+
+              <button
+                onClick={() => {
+                  const filename = `Libro_Diario_Fisico_5_2_${currentCompany.ruc || ''}_${periodoActual}`;
+                  exportTableToXLSX('tabla9-pcge-table', filename);
+                  toast.success('📊 Exportando a Excel...');
+                }}
+                className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-[10px] font-bold"
+              >
+                <Download size={14} /> Exportar Excel (.XLSX)
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -463,91 +537,413 @@ const LibroDiario52View: React.FC = () => {
         </div>
       )}
 
-      {/* ═══ SEARCH FILTER ═══ */}
-      <div className="px-4 py-2 border-b border-app-border bg-app-surface/20 flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search size={14} className="absolute left-3 top-2.5 text-app-muted" />
-          <input
-            type="text"
-            placeholder="Buscar por CUO, cuenta, descripción o glosa..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-9 pr-4 bg-app-bg border border-app-border rounded-lg text-[10px] text-app-text placeholder:text-app-muted focus:ring-pld-magenta focus:border-pld-magenta font-bold"
-          />
-        </div>
+      {/* ── Sub-tabs ── */}
+      <div className="flex bg-app-surface/30 border-b border-app-border px-4 py-1 gap-2 print:hidden animate-fade-in">
+        <button
+          onClick={() => setActiveTabSub('ple')}
+          className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-md transition-colors ${
+            activeTabSub === 'ple'
+              ? 'bg-pld-magenta text-white shadow-md'
+              : 'text-app-muted hover:text-app-text hover:bg-app-surface'
+          }`}
+        >
+          Vista PLE 5.2 (Plano)
+        </button>
+        <button
+          onClick={() => setActiveTabSub('tabla9')}
+          className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-md transition-colors ${
+            activeTabSub === 'tabla9'
+              ? 'bg-pld-magenta text-white shadow-md'
+              : 'text-app-muted hover:text-app-text hover:bg-app-surface'
+          }`}
+        >
+          Vista Columnas T9 (Físico)
+        </button>
       </div>
+
+      {/* ═══ SEARCH FILTER ═══ */}
+      {activeTabSub === 'ple' && (
+        <div className="px-4 py-2 border-b border-app-border bg-app-surface/20 flex items-center gap-3 print:hidden">
+          <div className="relative flex-1 max-w-md">
+            <Search size={14} className="absolute left-3 top-2.5 text-app-muted" />
+            <input
+              type="text"
+              placeholder="Buscar por CUO, cuenta, descripción o glosa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-8 pl-9 pr-4 bg-app-bg border border-app-border rounded-lg text-[10px] text-app-text placeholder:text-app-muted focus:ring-pld-magenta focus:border-pld-magenta font-bold"
+            />
+          </div>
+        </div>
+      )}
 
       {/* ═══ MAIN TABLE ═══ */}
       <div className="flex-1 overflow-auto p-4 custom-scrollbar">
         <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
-          <table className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface">
-            <thead>
-              <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">
-                <th className="px-2 py-2 border border-pink-700/50 w-16">PERIODO</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-28">CUO</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-14">ASIENTO</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-20">FECHA OP</th>
-                <th className="px-2 py-2 border border-pink-700/50 min-w-[200px]">GLOSA / DESCRIPCION</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-16">CUENTA</th>
-                <th className="px-2 py-2 border border-pink-700/50 min-w-[120px]">DENOMINACION CUENTA</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-24">DEBE (S/)</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-24">HABER (S/)</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-20">ORIGEN</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-10">ESTADO</th>
-                <th className="px-2 py-2 border border-pink-700/50 w-12">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-[9px] bg-app-surface">
-              {filteredEntries.length === 0 && (
-                <tr>
-                  <td colSpan={12} className="text-center py-16 text-app-muted font-sans italic text-sm">
-                    No se encontraron asientos contables en el Libro Diario 5.2 para este periodo
-                  </td>
+          {activeTabSub === 'ple' ? (
+            <table className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface">
+              <thead>
+                <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">
+                  <th className="px-2 py-2 border border-pink-700/50 w-16">PERIODO</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-28">CUO</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-14">ASIENTO</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-20">FECHA OP</th>
+                  <th className="px-2 py-2 border border-pink-700/50 min-w-[200px]">GLOSA / DESCRIPCION</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-16">CUENTA</th>
+                  <th className="px-2 py-2 border border-pink-700/50 min-w-[120px]">DENOMINACION CUENTA</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-24">DEBE (S/)</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-24">HABER (S/)</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-20">ORIGEN</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-10">ESTADO</th>
+                  <th className="px-2 py-2 border border-pink-700/50 w-12">ACCIONES</th>
                 </tr>
-              )}
+              </thead>
+              <tbody className="font-mono text-[9px] bg-app-surface">
+                {filteredEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={12} className="text-center py-16 text-app-muted font-sans italic text-sm">
+                      No se encontraron asientos contables en el Libro Diario 5.2 para este periodo
+                    </td>
+                  </tr>
+                )}
 
-              {filteredEntries.map((e) => (
-                <tr key={e.id} className="hover:bg-pld-magenta/5 transition-colors border-b border-app-border/40">
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center text-app-muted">{e.periodo}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 font-bold text-pld-magenta text-center">{e.cuo}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.correlativo_asiento}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.fecha_operacion}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8.5px] truncate max-w-[280px]" title={e.glosa}>{e.glosa}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold text-pld-blue">{e.codigo_cuenta}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8px] truncate max-w-[140px]" title={e.denominacion_cuenta}>{e.denominacion_cuenta}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-emerald-400">{e.monto_debe > 0 ? fmt(e.monto_debe / 100) : ''}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-rose-400">{e.monto_haber > 0 ? fmt(e.monto_haber / 100) : ''}</td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-sans font-bold text-[8px]">
-                    <span className={`px-1.5 py-0.5 rounded-full ${
-                      e.origen_modulo === 'COMPRAS' 
-                        ? 'bg-pld-magenta/10 text-pld-magenta' 
-                        : e.origen_modulo === 'VENTAS'
-                          ? 'bg-pld-blue/10 text-pld-blue'
-                          : 'bg-app-bg text-app-muted border border-app-border'
-                    }`}>
-                      {e.origen_modulo}
-                    </span>
+                {filteredEntries.map((e) => (
+                  <tr key={e.id} className="hover:bg-pld-magenta/5 transition-colors border-b border-app-border/40">
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center text-app-muted">{e.periodo}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 font-bold text-pld-magenta text-center">{e.cuo}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.correlativo_asiento}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.fecha_operacion}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8.5px] truncate max-w-[280px]" title={e.glosa}>{e.glosa}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold text-pld-blue">{e.codigo_cuenta}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8px] truncate max-w-[140px]" title={e.denominacion_cuenta}>{e.denominacion_cuenta}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-emerald-400">{e.monto_debe > 0 ? fmt(e.monto_debe / 100) : ''}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-rose-400">{e.monto_haber > 0 ? fmt(e.monto_haber / 100) : ''}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-sans font-bold text-[8px]">
+                      <span className={`px-1.5 py-0.5 rounded-full ${
+                        e.origen_modulo === 'COMPRAS' 
+                          ? 'bg-pld-magenta/10 text-pld-magenta' 
+                          : e.origen_modulo === 'VENTAS'
+                            ? 'bg-pld-blue/10 text-pld-blue'
+                            : 'bg-app-bg text-app-muted border border-app-border'
+                      }`}>
+                        {e.origen_modulo}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold">{e.estado}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        onClick={() => handleOpenCorrection(e.cuo)}
+                        className="p-1 text-app-muted hover:text-pld-magenta transition-colors bg-app-bg/50 border border-app-border rounded"
+                        title="Editar / Corregir Asiento (Estado 8 u 9)"
+                      >
+                        <Edit3 size={11} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table id="tabla9-pcge-table" className="min-w-full border-collapse text-[8px] border border-app-border bg-app-surface table-fixed">
+              <thead>
+                {/* Row 1: Groups */}
+                <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">
+                  <th colSpan={4} className="px-2 py-1.5 border border-pink-700/50">DATOS DE CABECERA</th>
+                  <th colSpan={18} className="px-2 py-1.5 border border-pink-700/50 bg-blue-950/40 text-blue-300">ACTIVO</th>
+                  <th colSpan={10} className="px-2 py-1.5 border border-pink-700/50 bg-emerald-950/40 text-emerald-300">PASIVO</th>
+                  <th colSpan={6} className="px-2 py-1.5 border border-pink-700/50 bg-amber-950/40 text-amber-300">PATRIMONIO</th>
+                  <th colSpan={22} className="px-2 py-1.5 border border-pink-700/50 bg-rose-950/40 text-rose-300">CUENTAS DE GASTOS (E6 / E9)</th>
+                  <th colSpan={10} className="px-2 py-1.5 border border-pink-700/50 bg-teal-950/40 text-teal-300">CUENTAS DE INGRESOS (E7)</th>
+                </tr>
+                {/* Row 2: Sub-columns */}
+                <tr className="bg-app-surface/90 text-app-text text-[7px] font-bold uppercase text-center font-mono">
+                  <th className="px-1 py-1 border border-app-border w-24 shrink-0">CUO</th>
+                  <th className="px-1 py-1 border border-app-border w-16 shrink-0">FECHA</th>
+                  <th className="px-1 py-1 border border-app-border min-w-[120px]">GLOSA</th>
+                  <th className="px-1 py-1 border border-app-border w-24 shrink-0">CAR</th>
+                  
+                  {/* ACTIVO */}
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">10 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">10 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10 font-black text-pld-blue">12 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10 font-black text-pld-blue">12 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">16 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">16 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">20 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">20 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">21 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">21 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">33 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">33 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">34 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">34 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">38 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10">38 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10 text-rose-400">39 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-blue-900/10 text-rose-400">39 H</th>
+
+                  {/* PASIVO */}
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10 text-emerald-400">4011 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10 text-emerald-400">4011 C</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">4017 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">4017 C</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">402 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">402 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10 font-black text-emerald-400">42 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10 font-black text-emerald-400">42 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">46 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-emerald-900/10">46 H</th>
+
+                  {/* PATRIMONIO */}
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">50 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">50 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">58 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">58 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">59 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-amber-900/10">59 H</th>
+
+                  {/* GASTOS */}
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">60 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">60 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">61 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">61 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">62 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">62 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">63 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">63 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">65 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">65 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">66 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">66 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">67 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">67 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">68 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">68 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">69 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">69 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">96 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">96 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">97 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-rose-900/10">97 H</th>
+
+                  {/* INGRESOS */}
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">70 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">70 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">75 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">75 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">76 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">76 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">77 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">77 H</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">79 D</th>
+                  <th className="px-1 py-1 border border-app-border w-12 bg-teal-900/10">79 H</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono text-[7px] bg-app-surface divide-y divide-app-border/40">
+                {ld52FisicoEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={68} className="text-center py-16 text-app-muted font-sans italic text-sm">
+                      No se encontraron asientos contables físicos para este periodo. Use "Generar Asientos" para crearlos.
+                    </td>
+                  </tr>
+                )}
+                {ld52FisicoEntries.map((r, idx) => (
+                  <tr key={idx} className="hover:bg-app-bg/30">
+                    <td className="px-1 py-1 border border-app-border text-center font-bold text-app-text">{r.cuo}</td>
+                    <td className="px-1 py-1 border border-app-border text-center text-app-muted">{r.fecha}</td>
+                    <td className="px-1.5 py-1 border border-app-border text-left truncate max-w-[180px] font-bold text-app-text uppercase">{r.glosa}</td>
+                    <td className="px-1 py-1 border border-app-border text-center text-app-muted font-mono">{r.car}</td>
+                    
+                    {/* ACTIVO */}
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c10_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c10_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5 font-bold">{fmt(r.c12_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5 font-bold">{fmt(r.c12_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c16_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c16_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c20_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c20_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c21_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c21_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c33_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c33_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c34_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c34_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5">{fmt(r.c38_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5">{fmt(r.c38_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-blue-900/5 text-rose-300">{fmt(r.c39_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-blue-900/5 text-rose-300">{fmt(r.c39_h)}</td>
+
+                    {/* PASIVO */}
+                    <td className="px-1 py-1 text-right border border-app-border text-emerald-300 bg-emerald-900/5">{fmt(r.c4011D)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-emerald-300 bg-emerald-900/5">{fmt(r.c4011C)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-emerald-900/5">{fmt(r.c4017D)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-emerald-900/5">{fmt(r.c4017C)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-emerald-900/5">{fmt(r.c402_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-emerald-900/5">{fmt(r.c402_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-emerald-300 bg-emerald-900/5 font-bold">{fmt(r.c42_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-emerald-300 bg-emerald-900/5 font-bold">{fmt(r.c42_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-emerald-900/5">{fmt(r.c46_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-emerald-900/5">{fmt(r.c46_h)}</td>
+
+                    {/* PATRIMONIO */}
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-amber-900/5">{fmt(r.c50_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-amber-900/5">{fmt(r.c50_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-amber-900/5">{fmt(r.c58_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-amber-900/5">{fmt(r.c58_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-amber-900/5">{fmt(r.c59_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-amber-900/5">{fmt(r.c59_h)}</td>
+
+                    {/* GASTOS */}
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c60_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c60_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c61_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c61_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c62_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c62_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c63_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c63_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c65_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c65_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c66_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c66_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c67_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c67_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c68_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c68_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c69_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c69_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c96_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c96_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-rose-900/5">{fmt(r.c97_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-rose-900/5">{fmt(r.c97_h)}</td>
+
+                    {/* INGRESOS */}
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-teal-900/5">{fmt(r.c70_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-teal-900/5">{fmt(r.c70_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-teal-900/5">{fmt(r.c75_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-teal-900/5">{fmt(r.c75_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-teal-900/5">{fmt(r.c76_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-teal-900/5">{fmt(r.c76_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-teal-900/5">{fmt(r.c77_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-teal-900/5">{fmt(r.c77_h)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-text bg-teal-900/5">{fmt(r.c79_d)}</td>
+                    <td className="px-1 py-1 text-right border border-app-border text-app-muted bg-teal-900/5">{fmt(r.c79_h)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              {/* Totals Row */}
+              <tfoot>
+                <tr className="bg-app-surface/90 text-app-text text-[7px] font-black uppercase text-center font-mono border-t border-app-border">
+                  <td colSpan={4} className="px-2 py-1.5 border border-app-border text-right font-black text-[8px]">TOTALES PERIODO:</td>
+                  
+                  {/* ACTIVO */}
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c10_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c10_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-pld-blue font-bold">{fmt(columnTotals.c12_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-pld-blue font-bold">{fmt(columnTotals.c12_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c16_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c16_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c20_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c20_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c21_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c21_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c33_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c33_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c34_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c34_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c38_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-app-text">{fmt(columnTotals.c38_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-rose-300">{fmt(columnTotals.c39_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-blue-950/20 text-rose-300">{fmt(columnTotals.c39_h)}</td>
+
+                  {/* PASIVO */}
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-emerald-300">{fmt(columnTotals.c4011D)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-emerald-300">{fmt(columnTotals.c4011C)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c4017D)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c4017C)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c402_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c402_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-emerald-300 font-bold">{fmt(columnTotals.c42_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-emerald-300 font-bold">{fmt(columnTotals.c42_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c46_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-emerald-950/20 text-app-text">{fmt(columnTotals.c46_h)}</td>
+
+                  {/* PATRIMONIO */}
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c50_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c50_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c58_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c58_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c59_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-amber-950/20 text-app-text">{fmt(columnTotals.c59_h)}</td>
+
+                  {/* GASTOS */}
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c60_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c60_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c61_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c61_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c62_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c62_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c63_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c63_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c65_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c65_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c66_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c66_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c67_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c67_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c68_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c68_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c69_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c69_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c96_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c96_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c97_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-rose-950/20 text-app-text">{fmt(columnTotals.c97_h)}</td>
+
+                  {/* INGRESOS */}
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c70_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c70_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c75_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c75_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c76_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c76_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c77_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c77_h)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c79_d)}</td>
+                  <td className="px-1 py-1 text-right border border-app-border bg-teal-950/20 text-app-text">{fmt(columnTotals.c79_h)}</td>
+                </tr>
+                <tr className="bg-pld-magenta/15 text-app-text text-[9px] font-black uppercase text-left font-mono">
+                  <td colSpan={4} className="px-2 py-2 border border-app-border text-right">CUADRE DE COLUMNAS (DEBE vs HABER):</td>
+                  <td colSpan={28} className="px-2 py-2 border border-app-border text-left">
+                    SUMA DE COLUMNAS DEBE: <span className="text-emerald-400 font-extrabold">S/ {fmt(sumDebitsFisico)}</span>
                   </td>
-                  <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold">{e.estado}</td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button
-                      onClick={() => handleOpenCorrection(e.cuo)}
-                      className="p-1 text-app-muted hover:text-pld-magenta transition-colors bg-app-bg/50 border border-app-border rounded"
-                      title="Editar / Corregir Asiento (Estado 8 u 9)"
-                    >
-                      <Edit3 size={11} />
-                    </button>
+                  <td colSpan={36} className="px-2 py-2 border border-app-border text-left">
+                    SUMA DE COLUMNAS HABER: <span className="text-emerald-400 font-extrabold">S/ {fmt(sumCreditsFisico)}</span>
+                    {Math.abs(sumDebitsFisico - sumCreditsFisico) > 0.01 && (
+                      <span className="ml-4 text-rose-400 font-black animate-pulse">⚠️ DESBALANCE: S/ {fmt(Math.abs(sumDebitsFisico - sumCreditsFisico))}</span>
+                    )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </tfoot>
+            </table>
+          )}
         </div>
       </div>
 
+      {/* ═══ Print Styles ═══ */}
+      <style>{`
+        @media print {
+          .print\\:hidden { display: none !important; }
+          table { font-size: 6px !important; }
+          th, td { padding: 1px 2px !important; }
+          body { background: white !important; color: black !important; }
+        }
+      `}</style>
+
       {/* ═══ MODAL: NEW MANUAL ENTRY ═══ */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:hidden">
           <div className="w-full max-w-4xl bg-app-surface border border-app-border rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between p-4 border-b border-app-border">
               <div className="flex items-center gap-2 text-pld-blue">

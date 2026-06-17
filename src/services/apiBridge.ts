@@ -291,6 +291,10 @@ export const webApiBridge = {
         const res = await api.get(`/api/libro-diario-52/${ruc}?periodo=${periodo}&t=${Date.now()}`);
         return res.data;
     },
+    ld52GetFormatoFisico: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/libro-diario-52/${ruc}/formato-fisico?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
     ld52Registrar: async (ruc: string, lineas: any[]) => {
         const res = await api.post(`/api/libro-diario-52/${ruc}/registrar`, { lineas });
         return res.data;

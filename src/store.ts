@@ -505,11 +505,13 @@ export interface AppState extends WorkspaceState {
 
   // --- Libro Diario 5.2 ---
   ld52Entries: any[];
+  ld52FisicoEntries: any[];
   ld52TotalDebe: number;
   ld52TotalHaber: number;
   ld52BalanceValido: boolean;
   ld52Descuadrados: any[];
   loadLd52Entries: (periodo: string) => Promise<void>;
+  loadLd52FisicoEntries: (periodo: string) => Promise<void>;
   generarLd52Masivo: (periodo: string) => Promise<any>;
   registrarLd52Asiento: (lineas: any[]) => Promise<any>;
   corregirLd52Asiento: (cuoOriginal: string, tipo: number, nuevasLineas: any[]) => Promise<any>;
@@ -772,6 +774,7 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       ...EMPTY_WORKSPACE,
       ld52Entries: [],
+      ld52FisicoEntries: [],
       ld52TotalDebe: 0,
       ld52TotalHaber: 0,
       ld52BalanceValido: true,
@@ -2274,6 +2277,17 @@ export const useStore = create<AppState>()(
           }
         } catch (e: any) {
           console.error('[STORE] loadLd52Entries failed:', e);
+        }
+      },
+      loadLd52FisicoEntries: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const res = await electron.ld52GetFormatoFisico(ruc, periodo);
+          if (res?.success) {
+            set({ ld52FisicoEntries: res.data || [] });
+          }
+        } catch (e: any) {
+          console.error('[STORE] loadLd52FisicoEntries failed:', e);
         }
       },
       generarLd52Masivo: async (periodo) => {
