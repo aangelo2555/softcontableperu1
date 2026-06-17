@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   BookOpen, 
   Download, 
@@ -942,7 +943,7 @@ const LibroDiario52View: React.FC = () => {
       `}</style>
 
       {/* ═══ MODAL: NEW MANUAL ENTRY ═══ */}
-      {showNewModal && (
+      {showNewModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:hidden">
           <div className="w-full max-w-4xl bg-app-surface border border-app-border rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between p-4 border-b border-app-border">
@@ -1147,11 +1148,12 @@ const LibroDiario52View: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ═══ MODAL: CORRECTION (STATE 8 / 9) ═══ */}
-      {showCorrectionModal && (
+      {showCorrectionModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-4xl bg-app-surface border border-app-border rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between p-4 border-b border-app-border">
@@ -1322,7 +1324,8 @@ const LibroDiario52View: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Datalist for account autocomplete */}
