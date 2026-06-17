@@ -778,13 +778,14 @@ const App: React.FC = () => {
             </Suspense>
           </div>
           
-          {/* Faint Footer */}
-          <div className="absolute bottom-2.5 inset-x-0 text-center pointer-events-none z-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-app-muted/80">
-              Desarrollado por Softcontable • ERP Contable 2026
-            </span>
-          </div>
         </main>
+
+        {/* Faint Footer */}
+        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border">
+          <span className="text-[9px] font-black uppercase tracking-widest text-app-muted/85">
+            Desarrollado por Softcontable • ERP Contable 2026
+          </span>
+        </div>
       </div>
       <SuggestionBox />
     </div>

@@ -97,10 +97,10 @@ export const AdminView: React.FC = () => {
         </div>
  
         {/* Interruptor de Pestañas */}
-        <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0">
+        <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0 w-full sm:w-auto justify-between sm:justify-start">
           <button
             onClick={() => setActiveSubTab('BUZON')}
-            className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
               activeSubTab === 'BUZON' 
                 ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-app-muted hover:text-app-text'
@@ -116,7 +116,7 @@ export const AdminView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveSubTab('USUARIOS')}
-            className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
               activeSubTab === 'USUARIOS' 
                 ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-app-muted hover:text-app-text'
@@ -359,42 +359,42 @@ export const AdminView: React.FC = () => {
                 <table className="w-full text-left text-xs font-semibold text-app-text min-w-[900px]">
                 <thead className="bg-app-bg border-b border-app-border text-[10px] font-black uppercase text-app-muted tracking-widest sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-4">Usuario</th>
-                    <th className="px-6 py-4">Email</th>
-                    <th className="px-6 py-4">Rol</th>
-                    <th className="px-6 py-4 text-center">Empresas</th>
-                    <th className="px-6 py-4 text-center">Registros (Com/Ven/Dia)</th>
-                    <th className="px-6 py-4">Empresas del Usuario (Inspeccionar)</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4">Usuario</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4">Email</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4">Rol</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4 text-center">Empresas</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4 text-center">Registros (Com/Ven/Dia)</th>
+                    <th className="px-4 py-3 md:px-6 md:py-4">Empresas del Usuario (Inspeccionar)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-app-border">
                   {filteredUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-app-hover">
-                      <td className="px-6 py-4 font-bold text-app-text">{u.name}</td>
-                      <td className="px-6 py-4 font-semibold text-app-muted">{u.email}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 md:px-6 md:py-4 font-bold text-app-text">{u.name}</td>
+                      <td className="px-4 py-3 md:px-6 md:py-4 font-semibold text-app-muted">{u.email}</td>
+                      <td className="px-4 py-3 md:px-6 md:py-4">
                         {u.role === 'admin' ? (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">ADMIN</span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-app-bg text-app-muted border border-app-border">USER</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-emerald-600">{u.workspaceCount || 0}</td>
-                      <td className="px-6 py-4 text-center font-semibold text-app-muted">
+                      <td className="px-4 py-3 md:px-6 md:py-4 text-center font-bold text-emerald-600">{u.workspaceCount || 0}</td>
+                      <td className="px-4 py-3 md:px-6 md:py-4 text-center font-semibold text-app-muted">
                         {u.purchaseCount} / {u.saleCount} / {u.journalCount}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 md:px-6 md:py-4">
                         {u.workspaces && u.workspaces.length > 0 ? (
                           <div className="flex flex-col gap-1.5">
                             {u.workspaces.map((w: any) => (
-                              <div key={w.ruc} className="flex items-center justify-between gap-4 bg-app-bg px-3 py-1.5 rounded-xl border border-app-border">
-                                <div className="min-w-0">
+                              <div key={w.ruc} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 bg-app-bg p-2 sm:px-3 sm:py-1.5 rounded-xl border border-app-border">
+                                <div className="min-w-0 w-full sm:w-auto">
                                   <span className="text-[10px] font-bold text-app-text block truncate">{w.name}</span>
                                   <span className="text-[9px] font-semibold text-app-muted block">RUC: {w.ruc}</span>
                                 </div>
                                 <button
                                   onClick={() => startInspectingWorkspace(u.id, w.ruc, w.name)}
-                                  className="flex items-center gap-1 px-2.5 py-1 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-wider border border-blue-500/20 transition-all cursor-pointer shrink-0 shadow-sm"
+                                  className="flex items-center justify-center gap-1 w-full sm:w-auto px-2.5 py-1 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-wider border border-blue-500/20 transition-all cursor-pointer shrink-0 shadow-sm"
                                 >
                                   <Eye size={10} />
                                   Inspeccionar
