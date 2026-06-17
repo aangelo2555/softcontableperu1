@@ -655,7 +655,7 @@ const LibroDiario52View: React.FC = () => {
               </tbody>
             </table>
           ) : (
-            <table id="tabla9-pcge-table" className="min-w-full border-collapse text-[8px] border border-app-border bg-app-surface table-fixed">
+            <table id="tabla9-pcge-table" className="min-w-[2800px] border-collapse text-[8px] border border-app-border bg-app-surface table-fixed">
               <thead>
                 {/* Row 1: Groups */}
                 <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">

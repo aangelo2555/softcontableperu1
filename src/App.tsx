@@ -290,6 +290,7 @@ const App: React.FC = () => {
   });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -336,6 +337,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const group = findGroupForTab(activeTab);
     if (group) setExpandedGroups(new Set([group]));
+    setIsMobileSidebarOpen(false);
   }, [activeTab]);
 
   useEffect(() => {
@@ -441,8 +443,16 @@ const App: React.FC = () => {
 
 
 
+      {/* ═══ MOBILE BACKDROP ═══ */}
+      {isMobileSidebarOpen && (
+        <div 
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-300 animate-fade-in"
+        />
+      )}
+
       {/* ═══ SIDEBAR ═══ */}
-      <aside className={`flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'}`} style={{ width: isSidebarCollapsed ? '72px' : '256px' }}>
+      <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64`}>
         {/* Brand Header */}
         <div className="h-16 flex items-center px-5 bg-app-surface shrink-0 border-b border-app-border overflow-hidden" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
             <div className="flex items-center gap-3 w-full">
@@ -574,19 +584,25 @@ const App: React.FC = () => {
         )}
 
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative">
+        <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative">
           
           {/* Left: Hamburger + Search Bar */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              onClick={() => {
+                if (window.innerWidth <= 768) {
+                  setIsMobileSidebarOpen(!isMobileSidebarOpen);
+                } else {
+                  setIsSidebarCollapsed(!isSidebarCollapsed);
+                }
+              }}
               className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all"
               title="Alternar panel lateral"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
 
-            <div ref={searchRef} className="relative w-[280px] lg:w-[360px] group">
+            <div ref={searchRef} className="relative w-[120px] sm:w-[280px] lg:w-[360px] group">
               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110">
                 <Search size={18} className="text-app-muted/60" strokeWidth={2.5} />
               </div>
@@ -597,7 +613,7 @@ const App: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-2.5 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
                 style={{ paddingLeft: '3.25rem' }}
-                placeholder="Buscar módulos, diarios, opciones..."
+                placeholder="Buscar..."
               />
 
               {/* Search Results Dropdown */}
@@ -642,7 +658,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
             {/* Notifications */}
             <button
               onClick={() => setActiveTab('BUZON')}
@@ -704,7 +720,7 @@ const App: React.FC = () => {
 
             {/* Profile */}
             <div 
-              className="flex items-center gap-3 cursor-pointer group relative"
+              className="flex items-center gap-1.5 sm:gap-3 cursor-pointer group relative"
               onClick={() => {
                 if (window.confirm('¿Desea cerrar sesión?')) {
                   localStorage.removeItem('softcontable_token');
