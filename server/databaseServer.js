@@ -98,6 +98,9 @@ db.exec(`
         desc TEXT,
         debe REAL,
         haber REAL,
+        medio_pago TEXT,
+        nro_transaccion TEXT,
+        razon_social TEXT,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
@@ -133,12 +136,18 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS honorarios (
         id TEXT PRIMARY KEY,
         workspace_id TEXT,
+        registro TEXT,
         fecha TEXT,
         tipo_doc TEXT,
         serie TEXT,
         numero TEXT,
+        doc_tipo TEXT,
         doc_num TEXT,
         nombre TEXT,
+        ctaGasto TEXT,
+        ctaAbono TEXT,
+        bi REAL,
+        retencion REAL,
         total REAL,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
@@ -151,6 +160,8 @@ db.exec(`
         descripcion TEXT,
         porcentaje REAL,
         monto REAL,
+        cuenta_debe TEXT,
+        cuenta_haber TEXT,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
@@ -212,8 +223,33 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS fixed_assets (
         id TEXT PRIMARY KEY,
         workspace_id TEXT,
+        codigo TEXT,
         descripcion TEXT,
-        costo REAL,
+        marca TEXT,
+        modelo TEXT,
+        serie_placa TEXT,
+        fecha_adquisicion TEXT,
+        fecha_uso TEXT,
+        costo_adquisicion REAL,
+        saldo_inicial REAL,
+        adquisiciones REAL,
+        mejoras REAL,
+        retiros_bajas REAL,
+        otros_ajustes REAL,
+        ajuste_inflacion REAL,
+        tasa_depreciacion REAL,
+        deprec_ejercicio REAL,
+        deprec_bajas REAL,
+        deprec_otros REAL,
+        deprec_acum_anterior REAL,
+        depreciacion_acumulada REAL,
+        metodo TEXT,
+        cuenta_activo TEXT,
+        cuenta_depreciacion TEXT,
+        tasa_depreciacion_tributaria REAL,
+        deprec_ejercicio_tributaria REAL,
+        depreciacion_acumulada_tributaria REAL,
+        deprec_acum_anterior_tributaria REAL,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
@@ -633,19 +669,32 @@ const sireSalesColsDef = [
 sireSalesColsDef.forEach(c => ensureColumnExists('sales', c.name, c.type));
 
 const fixedAssetsColsDef = [
+    { name: 'codigo', type: 'TEXT' },
     { name: 'marca', type: 'TEXT' },
     { name: 'modelo', type: 'TEXT' },
     { name: 'serie_placa', type: 'TEXT' },
+    { name: 'fecha_adquisicion', type: 'TEXT' },
+    { name: 'fecha_uso', type: 'TEXT' },
+    { name: 'costo_adquisicion', type: 'REAL DEFAULT 0' },
     { name: 'saldo_inicial', type: 'REAL DEFAULT 0' },
     { name: 'adquisiciones', type: 'REAL DEFAULT 0' },
     { name: 'mejoras', type: 'REAL DEFAULT 0' },
     { name: 'retiros_bajas', type: 'REAL DEFAULT 0' },
     { name: 'otros_ajustes', type: 'REAL DEFAULT 0' },
     { name: 'ajuste_inflacion', type: 'REAL DEFAULT 0' },
+    { name: 'tasa_depreciacion', type: 'REAL DEFAULT 0' },
     { name: 'deprec_ejercicio', type: 'REAL DEFAULT 0' },
     { name: 'deprec_bajas', type: 'REAL DEFAULT 0' },
     { name: 'deprec_otros', type: 'REAL DEFAULT 0' },
-    { name: 'deprec_acum_anterior', type: 'REAL DEFAULT 0' }
+    { name: 'deprec_acum_anterior', type: 'REAL DEFAULT 0' },
+    { name: 'depreciacion_acumulada', type: 'REAL DEFAULT 0' },
+    { name: 'metodo', type: 'TEXT' },
+    { name: 'cuenta_activo', type: 'TEXT' },
+    { name: 'cuenta_depreciacion', type: 'TEXT' },
+    { name: 'tasa_depreciacion_tributaria', type: 'REAL DEFAULT 0' },
+    { name: 'deprec_ejercicio_tributaria', type: 'REAL DEFAULT 0' },
+    { name: 'depreciacion_acumulada_tributaria', type: 'REAL DEFAULT 0' },
+    { name: 'deprec_acum_anterior_tributaria', type: 'REAL DEFAULT 0' }
 ];
 fixedAssetsColsDef.forEach(c => ensureColumnExists('fixed_assets', c.name, c.type));
 
@@ -684,7 +733,20 @@ const inventoryMovementsColsDef = [
     { name: 'costo_unitario', type: 'REAL' },
     { name: 'costo_total', type: 'REAL' },
     { name: 'glosa', type: 'TEXT' },
-    { name: 'reference_id', type: 'TEXT' }
+    { name: 'reference_id', type: 'TEXT' },
+    { name: 'tipo_operacion', type: 'TEXT' },
+    { name: 'tipo_doc', type: 'TEXT' },
+    { name: 'serie', type: 'TEXT' },
+    { name: 'numero', type: 'TEXT' },
+    { name: 'cantidad_in', type: 'REAL DEFAULT 0' },
+    { name: 'costo_unit_in', type: 'REAL DEFAULT 0' },
+    { name: 'total_in', type: 'REAL DEFAULT 0' },
+    { name: 'cantidad_out', type: 'REAL DEFAULT 0' },
+    { name: 'costo_unit_out', type: 'REAL DEFAULT 0' },
+    { name: 'total_out', type: 'REAL DEFAULT 0' },
+    { name: 'cantidad_saldo', type: 'REAL DEFAULT 0' },
+    { name: 'costo_unit_saldo', type: 'REAL DEFAULT 0' },
+    { name: 'total_saldo', type: 'REAL DEFAULT 0' }
 ];
 inventoryMovementsColsDef.forEach(c => ensureColumnExists('inventory_movements', c.name, c.type));
 
@@ -701,7 +763,61 @@ cashMovementsColsDef.forEach(c => ensureColumnExists('cash_movements', c.name, c
 ensureColumnExists('maintenance', 'periodo', 'TEXT');
 ensureColumnExists('maintenance', 'anexo', 'TEXT');
 ensureColumnExists('costs', 'porcentaje', 'REAL');
+ensureColumnExists('costs', 'cuenta_debe', 'TEXT');
+ensureColumnExists('costs', 'cuenta_haber', 'TEXT');
 ensureColumnExists('glosas_habituales', 'category', 'TEXT');
+ensureColumnExists('journal', 'medio_pago', 'TEXT');
+ensureColumnExists('journal', 'nro_transaccion', 'TEXT');
+ensureColumnExists('journal', 'razon_social', 'TEXT');
+
+// Asegurar columnas de honorarios
+ensureColumnExists('honorarios', 'registro', 'TEXT');
+ensureColumnExists('honorarios', 'doc_tipo', 'TEXT');
+ensureColumnExists('honorarios', 'ctaGasto', 'TEXT');
+ensureColumnExists('honorarios', 'ctaAbono', 'TEXT');
+ensureColumnExists('honorarios', 'bi', 'REAL DEFAULT 0');
+ensureColumnExists('honorarios', 'retencion', 'REAL DEFAULT 0');
+
+// --- SPOT / Retenciones / Percepciones Columns ---
+ensureColumnExists('workspaces', 'agente_retencion', 'INTEGER DEFAULT 0');
+ensureColumnExists('purchases', 'spot_tipo', 'TEXT');
+ensureColumnExists('purchases', 'spot_monto', 'REAL DEFAULT 0');
+ensureColumnExists('purchases', 'spot_constancia', 'TEXT');
+ensureColumnExists('purchases', 'spot_fecha', 'TEXT');
+ensureColumnExists('purchases', 'retencion_monto', 'REAL DEFAULT 0');
+ensureColumnExists('purchases', 'retencion_comprobante', 'TEXT');
+ensureColumnExists('purchases', 'retencion_fecha', 'TEXT');
+ensureColumnExists('purchases', 'percepcion_monto', 'REAL DEFAULT 0');
+ensureColumnExists('purchases', 'percepcion_comprobante', 'TEXT');
+
+ensureColumnExists('sales', 'spot_tipo', 'TEXT');
+ensureColumnExists('sales', 'spot_monto', 'REAL DEFAULT 0');
+ensureColumnExists('sales', 'spot_constancia', 'TEXT');
+ensureColumnExists('sales', 'spot_fecha', 'TEXT');
+ensureColumnExists('sales', 'retencion_monto', 'REAL DEFAULT 0');
+ensureColumnExists('sales', 'retencion_comprobante', 'TEXT');
+ensureColumnExists('workspaces', 'certificado_pfx', 'BLOB');
+ensureColumnExists('workspaces', 'certificado_pass', 'BLOB');
+
+// --- Audit Logs Table ---
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id TEXT PRIMARY KEY,
+            workspace_id TEXT,
+            user_id TEXT,
+            timestamp TEXT,
+            cuo_afectado TEXT,
+            accion TEXT,
+            contenido_previo TEXT,
+            contenido_nuevo TEXT,
+            justificacion TEXT
+        )
+    `);
+    console.log('[DB] Tabla audit_logs verificada/creada.');
+} catch (e) {
+    console.error('[DB ERROR] No se pudo crear audit_logs:', e.message);
+}
 
 // --- Migración Forzada: Crear balance_inicial si no existe ---
 try {
@@ -747,8 +863,8 @@ const dbManager = {
     saveWorkspace: (w, userId) => {
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO workspaces 
-            (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, user_id, annualIncomeUIT)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, user_id, annualIncomeUIT, agente_retencion)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         stmt.run(
             w.ruc, w.name, w.regimenTributario, w.location, w.address,
@@ -756,7 +872,8 @@ const dbManager = {
             encrypt(w.sol_user), encrypt(w.sol_pass),
             encrypt(w.sunatClientId), encrypt(w.sunatClientSecret),
             userId,
-            Number(w.annualIncomeUIT || 0)
+            Number(w.annualIncomeUIT || 0),
+            w.agente_retencion ? 1 : 0
         );
     },
 
@@ -980,6 +1097,25 @@ const dbManager = {
             VALUES (?, ?, ?, ?)
         `);
         return stmt.run(ruc, periodo, computationJson, userId);
+    },
+    saveCertificado: (ruc, userId, pfxBuffer, password) => {
+        const stmt = db.prepare(`
+            UPDATE workspaces
+            SET certificado_pfx = ?, certificado_pass = ?
+            WHERE ruc = ? AND user_id = ?
+        `);
+        return stmt.run(pfxBuffer, encrypt(password), ruc, userId);
+    },
+    getCertificado: (ruc, userId) => {
+        const row = db.prepare(`
+            SELECT certificado_pfx, certificado_pass FROM workspaces
+            WHERE ruc = ? AND user_id = ?
+        `).get(ruc, userId);
+        if (!row || !row.certificado_pfx) return null;
+        return {
+            pfx: row.certificado_pfx,
+            pass: decrypt(row.certificado_pass)
+        };
     },
     rawDb: db
 };

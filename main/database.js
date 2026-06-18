@@ -103,6 +103,9 @@ db.exec(`
     desc TEXT,
     debe REAL,
     haber REAL,
+    medio_pago TEXT,
+    nro_transaccion TEXT,
+    razon_social TEXT,
     FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
   );
 
@@ -212,6 +215,8 @@ db.exec(`
     descripcion TEXT,
     porcentaje REAL,
     monto REAL,
+    cuenta_debe TEXT,
+    cuenta_haber TEXT,
     FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
   );
 
@@ -319,6 +324,25 @@ if (!info.some(col => col.name === 'category')) {
   db.exec("ALTER TABLE glosas_habituales ADD COLUMN category TEXT");
 }
 
+const costsCols = db.prepare("PRAGMA table_info(costs)").all();
+if (!costsCols.some(col => col.name === 'cuenta_debe')) {
+  db.exec("ALTER TABLE costs ADD COLUMN cuenta_debe TEXT");
+}
+if (!costsCols.some(col => col.name === 'cuenta_haber')) {
+  db.exec("ALTER TABLE costs ADD COLUMN cuenta_haber TEXT");
+}
+
+const journalCols = db.prepare("PRAGMA table_info(journal)").all();
+if (!journalCols.some(col => col.name === 'medio_pago')) {
+  db.exec("ALTER TABLE journal ADD COLUMN medio_pago TEXT");
+}
+if (!journalCols.some(col => col.name === 'nro_transaccion')) {
+  db.exec("ALTER TABLE journal ADD COLUMN nro_transaccion TEXT");
+}
+if (!journalCols.some(col => col.name === 'razon_social')) {
+  db.exec("ALTER TABLE journal ADD COLUMN razon_social TEXT");
+}
+
 // Migración para SIRE Credentials en workspaces
 const wsCols = db.prepare("PRAGMA table_info(workspaces)").all();
 if (!wsCols.some(col => col.name === 'sunatClientId')) {
@@ -418,6 +442,66 @@ employeeNewCols.forEach(col => {
   }
 });
 
+// --- SPOT / Retenciones / Percepciones Columns ---
+const workspacesCols = db.prepare("PRAGMA table_info(workspaces)").all();
+if (!workspacesCols.some(c => c.name === 'agente_retencion')) {
+  db.exec(`ALTER TABLE workspaces ADD COLUMN agente_retencion INTEGER DEFAULT 0`);
+}
+
+const purchaseColsForSpot = db.prepare("PRAGMA table_info(purchases)").all();
+const purchaseSpotCols = [
+  { name: 'spot_tipo', type: 'TEXT' },
+  { name: 'spot_monto', type: 'REAL DEFAULT 0' },
+  { name: 'spot_constancia', type: 'TEXT' },
+  { name: 'spot_fecha', type: 'TEXT' },
+  { name: 'retencion_monto', type: 'REAL DEFAULT 0' },
+  { name: 'retencion_comprobante', type: 'TEXT' },
+  { name: 'retencion_fecha', type: 'TEXT' },
+  { name: 'percepcion_monto', type: 'REAL DEFAULT 0' },
+  { name: 'percepcion_comprobante', type: 'TEXT' }
+];
+purchaseSpotCols.forEach(col => {
+  if (!purchaseColsForSpot.some(c => c.name === col.name)) {
+    db.exec(`ALTER TABLE purchases ADD COLUMN ${col.name} ${col.type}`);
+  }
+});
+
+const salesColsForSpot = db.prepare("PRAGMA table_info(sales)").all();
+const salesSpotCols = [
+  { name: 'spot_tipo', type: 'TEXT' },
+  { name: 'spot_monto', type: 'REAL DEFAULT 0' },
+  { name: 'spot_constancia', type: 'TEXT' },
+  { name: 'spot_fecha', type: 'TEXT' },
+  { name: 'retencion_monto', type: 'REAL DEFAULT 0' },
+  { name: 'retencion_comprobante', type: 'TEXT' },
+  { name: 'retencion_fecha', type: 'TEXT' }
+];
+salesSpotCols.forEach(col => {
+  if (!salesColsForSpot.some(c => c.name === col.name)) {
+    db.exec(`ALTER TABLE sales ADD COLUMN ${col.name} ${col.type}`);
+  }
+});
+
+// --- Audit Logs Table ---
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT,
+      user_id TEXT,
+      timestamp TEXT,
+      cuo_afectado TEXT,
+      accion TEXT,
+      contenido_previo TEXT,
+      contenido_nuevo TEXT,
+      justificacion TEXT
+    )
+  `);
+  console.log('[DB] Tabla audit_logs verificada/creada.');
+} catch (e) {
+  console.error('[DB ERROR] No se pudo crear audit_logs:', e.message);
+}
+
 // ─── Funciones de cifrado ───
 function encrypt(text) {
   if (!text) return null;
@@ -453,15 +537,16 @@ const dbManager = {
   saveWorkspace: (w) => {
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO workspaces 
-      (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, annualIncomeUIT)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, annualIncomeUIT, agente_retencion)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       w.ruc, w.name, w.regimenTributario, w.location, w.address, 
       w.support, w.period, w.logoBase64, 
       encrypt(w.sol_user), encrypt(w.sol_pass),
       encrypt(w.sunatClientId), encrypt(w.sunatClientSecret),
-      Number(w.annualIncomeUIT || 0)
+      Number(w.annualIncomeUIT || 0),
+      w.agente_retencion ? 1 : 0
     );
   },
 
@@ -657,8 +742,8 @@ const dbManager = {
       // 1. Guardar/Actualizar Workspace
       const stmtWS = db.prepare(`
         INSERT OR REPLACE INTO workspaces 
-        (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, businessType, annualIncomeUIT)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, businessType, annualIncomeUIT, agente_retencion)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       stmtWS.run(
         ruc, w.name, w.regimenTributario || 'RG', w.location || '', w.address || '', 
@@ -666,7 +751,8 @@ const dbManager = {
         encrypt(w.sol_user), encrypt(w.sol_pass),
         encrypt(w.sunatClientId), encrypt(w.sunatClientSecret),
         w.businessType || 'COMERCIAL',
-        Number(w.annualIncomeUIT || 0)
+        Number(w.annualIncomeUIT || 0),
+        w.agente_retencion ? 1 : 0
       );
 
       // 2. Limpiar datos antiguos
@@ -682,25 +768,53 @@ const dbManager = {
 
       // 3. Insertar compras
       if (Array.isArray(data.purchases)) {
-        const ins = db.prepare(`INSERT OR REPLACE INTO purchases (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono, moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        const ins = db.prepare(`
+          INSERT OR REPLACE INTO purchases (
+            id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
+            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono, 
+            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion,
+            spot_tipo, spot_monto, spot_constancia, spot_fecha,
+            retencion_monto, retencion_comprobante, retencion_fecha,
+            percepcion_monto, percepcion_comprobante
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `);
         for (const p of data.purchases) {
-          ins.run(p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, p.moneda, p.tc, p.bi, p.igv, p.noGravada, p.isc, p.total, p.glosa, p.detraccion);
+          ins.run(
+            p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, 
+            p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, 
+            p.moneda, p.tc, p.bi, p.igv, p.noGravada, p.isc, p.total, p.glosa, p.detraccion,
+            p.spot_tipo || null, p.spot_monto || 0, p.spot_constancia || null, p.spot_fecha || null,
+            p.retencion_monto || 0, p.retencion_comprobante || null, p.retencion_fecha || null,
+            p.percepcion_monto || 0, p.percepcion_comprobante || null
+          );
         }
       }
 
       // 4. Insertar ventas
       if (Array.isArray(data.sales)) {
-        const ins = db.prepare(`INSERT OR REPLACE INTO sales (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        const ins = db.prepare(`
+          INSERT OR REPLACE INTO sales (
+            id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
+            doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire,
+            spot_tipo, spot_monto, spot_constancia, spot_fecha,
+            retencion_monto, retencion_comprobante, retencion_fecha
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `);
         for (const s of data.sales) {
-          ins.run(s.id, ruc, s.registro, s.fecha, s.fecVcto, s.tipo_doc, s.serie, s.numero, s.doc_tipo, s.doc_num, s.nombre, s.tc, s.bi, s.igv, s.noGravada, s.isc, s.icbper || 0, s.otros_tributos || 0, s.total, s.car, s.estado_sire);
+          ins.run(
+            s.id, ruc, s.registro, s.fecha, s.fecVcto, s.tipo_doc, s.serie, s.numero, 
+            s.doc_tipo, s.doc_num, s.nombre, s.tc, s.bi, s.igv, s.noGravada, s.isc, s.icbper || 0, s.otros_tributos || 0, s.total, s.car, s.estado_sire,
+            s.spot_tipo || null, s.spot_monto || 0, s.spot_constancia || null, s.spot_fecha || null,
+            s.retencion_monto || 0, s.retencion_comprobante || null, s.retencion_fecha || null
+          );
         }
       }
 
       // 5. Insertar diario
       if (Array.isArray(data.journal)) {
-        const ins = db.prepare(`INSERT OR REPLACE INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, [desc], debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+        const ins = db.prepare(`INSERT OR REPLACE INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, [desc], debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
         for (const j of data.journal) {
-          ins.run(j.id, ruc, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc, j.debe, j.haber);
+          ins.run(j.id, ruc, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc, j.debe, j.haber, j.medio_pago || null, j.nro_transaccion || null, j.razon_social || null);
         }
       }
 
@@ -748,8 +862,8 @@ const dbManager = {
         for (const m of data.maintenanceRecords) ins.run(m.id, ruc, m.periodo, m.anexo, m.descripcion, m.monto);
       }
       if (Array.isArray(data.costs)) {
-        const ins = db.prepare(`INSERT OR REPLACE INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto) VALUES (?,?,?,?,?,?)`);
-        for (const co of data.costs) ins.run(co.id, ruc, co.codigo, co.descripcion, co.porcentaje, co.monto);
+        const ins = db.prepare(`INSERT OR REPLACE INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto, cuenta_debe, cuenta_haber) VALUES (?,?,?,?,?,?,?,?)`);
+        for (const co of data.costs) ins.run(co.id, ruc, co.codigo, co.descripcion, co.porcentaje, co.monto, co.cuenta_debe || '94111', co.cuenta_haber || '79111');
       }
       if (Array.isArray(data.entities)) {
         const ins = db.prepare(`INSERT OR REPLACE INTO entities (id, workspace_id, tipo, ruc, descripcion) VALUES (?,?,?,?,?)`);

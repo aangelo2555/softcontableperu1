@@ -12,7 +12,9 @@ import {
   ChevronLeft,
   ChevronRight,
   FileDown,
-  Printer
+  Printer,
+  Landmark,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
@@ -23,6 +25,8 @@ const PlanillaView: React.FC = () => {
   const [periodoMes, setPeriodoMes] = useState(new Date().getMonth());
   const [periodoAnio, setPeriodoAnio] = useState(parseInt(currentCompany.period) || new Date().getFullYear());
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showProvisionesPanel, setShowProvisionesPanel] = useState(false);
+  const [showProvisionesConfirm, setShowProvisionesConfirm] = useState(false);
 
   const MONTHS = [
     'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -38,10 +42,12 @@ const PlanillaView: React.FC = () => {
   }, [employees, searchTerm]);
 
   // Constantes de Ley 2026 (Perú)
-  const RMV = 1025;
-  const ASIG_FAMILIAR = 102.50; // 10% de RMV
+  const RMV = 1130;
+  const ASIG_FAMILIAR = 113.00; // 10% de RMV
   const ESSALUD_TASA = 0.09;
   const ONP_TASA = 0.13;
+  const UIT = 5500;
+  const DEDUCCION_5TA = 7 * UIT; // S/ 38,500 en 2026
 
   const AFP_RATES: Record<string, { fondo: number, seguro: number, comision: number }> = {
     'INTEGRA': { fondo: 0.10, seguro: 0.017, comision: 0.0155 },
@@ -55,6 +61,47 @@ const PlanillaView: React.FC = () => {
     const af = e.asignacion_familiar ? ASIG_FAMILIAR : 0;
     const he = e.horas_extras_importe || 0;
     return basico + af + he;
+  };
+
+  const calculateEssalud = (e: Employee) => {
+    const totalRem = calculateTotalRemuneracion(e);
+    const minBase = RMV * ((e.dias_trabajados || 30) / 30);
+    return Math.max(totalRem, minBase) * ESSALUD_TASA;
+  };
+
+  const calculate5taRenta = (e: Employee) => {
+    const totalRem = calculateTotalRemuneracion(e);
+    const sueldoProyectado = totalRem * 12;
+    const gratificaciones = totalRem * 2;
+    const ingresosAnuales = sueldoProyectado + gratificaciones;
+    const baseImponible = Math.max(0, ingresosAnuales - DEDUCCION_5TA);
+    if (baseImponible <= 0) return 0;
+
+    let impuestoAnual = 0;
+    let baseRestante = baseImponible;
+
+    const tramos = [
+      { limite: 5 * UIT, tasa: 0.08 },
+      { limite: 20 * UIT, tasa: 0.14 },
+      { limite: 35 * UIT, tasa: 0.17 },
+      { limite: 45 * UIT, tasa: 0.20 },
+      { limite: Infinity, tasa: 0.30 }
+    ];
+
+    let anteriorLimite = 0;
+    for (const tramo of tramos) {
+      const rango = tramo.limite - anteriorLimite;
+      if (baseRestante > rango) {
+        impuestoAnual += rango * tramo.tasa;
+        baseRestante -= rango;
+        anteriorLimite = tramo.limite;
+      } else {
+        impuestoAnual += baseRestante * tramo.tasa;
+        break;
+      }
+    }
+
+    return parseFloat((impuestoAnual / 12).toFixed(2));
   };
 
   const calculateDescuentos = (e: Employee) => {
@@ -71,7 +118,8 @@ const PlanillaView: React.FC = () => {
       totalD = fondo + seguro + comision;
     }
 
-    const otrosD = (e.essalud_vida || 0) + (e.impuesto_renta_5ta || 0) + (e.retencion_judicial || 0);
+    const renta5ta = e.impuesto_renta_5ta !== undefined ? e.impuesto_renta_5ta : calculate5taRenta(e);
+    const otrosD = (e.essalud_vida || 0) + renta5ta + (e.retencion_judicial || 0);
     return totalD + otrosD;
   };
 
@@ -88,14 +136,45 @@ const PlanillaView: React.FC = () => {
 
   const stats = useMemo(() => {
     const totalBruto = filteredEmployees.reduce((acc, e) => acc + calculateTotalRemuneracion(e), 0);
-    const totalNeto = filteredEmployees.reduce((acc, e) => acc + (calculateTotalRemuneracion(e) - calculateDescuentos(e)), 0);
-    const totalEssalud = totalBruto * ESSALUD_TASA;
+    const totalEssalud = filteredEmployees.reduce((acc, e) => acc + calculateEssalud(e), 0);
     
+    let totalONP = 0;
+    let totalAFP = 0;
+    let totalRenta5ta = 0;
+    let totalOtrosDesc = 0;
+
+    filteredEmployees.forEach(e => {
+      const totalRem = calculateTotalRemuneracion(e);
+      if (e.regimen_pensionario === 'ONP') {
+        totalONP += totalRem * ONP_TASA;
+      } else if (AFP_RATES[e.regimen_pensionario]) {
+        const rates = AFP_RATES[e.regimen_pensionario];
+        totalAFP += totalRem * (rates.fondo + rates.seguro + rates.comision);
+      }
+      totalRenta5ta += e.impuesto_renta_5ta !== undefined ? e.impuesto_renta_5ta : calculate5taRenta(e);
+      totalOtrosDesc += (e.essalud_vida || 0) + (e.retencion_judicial || 0);
+    });
+
+    totalONP = parseFloat(totalONP.toFixed(2));
+    totalAFP = parseFloat(totalAFP.toFixed(2));
+    totalRenta5ta = parseFloat(totalRenta5ta.toFixed(2));
+    totalOtrosDesc = parseFloat(totalOtrosDesc.toFixed(2));
+
+    const totalNeto = totalBruto - (totalONP + totalAFP + totalRenta5ta + totalOtrosDesc);
+
     return {
       bruto: totalBruto,
       neto: totalNeto,
       essalud: totalEssalud,
-      count: filteredEmployees.length
+      totalONP,
+      totalAFP,
+      totalRenta5ta,
+      totalOtrosDesc,
+      count: filteredEmployees.length,
+      // Provisiones mensuales
+      provCTS: parseFloat((totalBruto / 12).toFixed(2)),           // 1/12 de la remuneración
+      provVacaciones: parseFloat((totalBruto / 12).toFixed(2)),    // 1/12 de la remuneración
+      provGratificaciones: parseFloat((totalBruto / 6).toFixed(2)) // 1/6 de la remuneración (2 gratificaciones / 12 meses)
     };
   }, [filteredEmployees]);
 
@@ -160,27 +239,39 @@ const PlanillaView: React.FC = () => {
         mes: monthStr
       };
 
-      const totalDesc = stats.bruto - stats.neto;
-
       const lines = [
         { id: 1, cuenta: '6211', detalle: 'REMUNERACIONES - SUELDOS', debe: stats.bruto, haber: 0 },
         { id: 2, cuenta: '6271', detalle: 'ESSALUD EMPLEADOR', debe: stats.essalud, haber: 0 },
         { id: 3, cuenta: '4031', detalle: 'ESSALUD POR PAGAR', debe: 0, haber: stats.essalud },
-        { id: 4, cuenta: '4032', detalle: 'ONP / AFP POR PAGAR', debe: 0, haber: totalDesc },
-        { id: 5, cuenta: '4111', detalle: 'SUELDOS POR PAGAR', debe: 0, haber: stats.neto },
       ];
+
+      let currentId = 4;
+      if (stats.totalONP > 0) {
+        lines.push({ id: currentId++, cuenta: '4032', detalle: 'ONP POR PAGAR', debe: 0, haber: stats.totalONP });
+      }
+      if (stats.totalAFP > 0) {
+        lines.push({ id: currentId++, cuenta: '417', detalle: 'AFP POR PAGAR (PCGE 417)', debe: 0, haber: stats.totalAFP });
+      }
+      if (stats.totalRenta5ta > 0) {
+        lines.push({ id: currentId++, cuenta: '40173', detalle: 'IMPUESTO A LA RENTA 5TA CATEGORÍA', debe: 0, haber: stats.totalRenta5ta });
+      }
+      if (stats.totalOtrosDesc > 0) {
+        lines.push({ id: currentId++, cuenta: '419', detalle: 'OTROS DESCUENTOS Y RETENCIONES', debe: 0, haber: stats.totalOtrosDesc });
+      }
+
+      lines.push({ id: currentId++, cuenta: '4111', detalle: 'SUELDOS POR PAGAR', debe: 0, haber: stats.neto });
 
       // Agregar amarres de destino si existen en el plan para las cuentas 62
       const acc6211 = plan.find(a => a.cta === '6211' || a.cta === '621');
       if (acc6211?.amarreDebe && acc6211?.amarreHaber) {
-        lines.push({ id: 6, cuenta: acc6211.amarreDebe, detalle: 'GASTOS ADMIN (PLANILLA)', debe: stats.bruto, haber: 0 });
-        lines.push({ id: 7, cuenta: acc6211.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.bruto });
+        lines.push({ id: currentId++, cuenta: acc6211.amarreDebe, detalle: 'GASTOS ADMIN (PLANILLA)', debe: stats.bruto, haber: 0 });
+        lines.push({ id: currentId++, cuenta: acc6211.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.bruto });
       }
 
       const acc6271 = plan.find(a => a.cta === '6271' || a.cta === '627');
       if (acc6271?.amarreDebe && acc6271?.amarreHaber) {
-        lines.push({ id: 8, cuenta: acc6271.amarreDebe, detalle: 'GASTOS ADMIN (ESSALUD)', debe: stats.essalud, haber: 0 });
-        lines.push({ id: 9, cuenta: acc6271.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.essalud });
+        lines.push({ id: currentId++, cuenta: acc6271.amarreDebe, detalle: 'GASTOS ADMIN (ESSALUD)', debe: stats.essalud, haber: 0 });
+        lines.push({ id: currentId++, cuenta: acc6271.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.essalud });
       }
 
       await saveAsiento(header, lines);
@@ -188,6 +279,64 @@ const PlanillaView: React.FC = () => {
     } catch (error) {
       console.error(error);
       toast.error('Ocurrió un error al generar el asiento');
+    }
+  };
+
+  const processGenerarAsientoProvisiones = async () => {
+    setShowProvisionesConfirm(false);
+    try {
+      const monthStr = String(periodoMes + 1).padStart(2, '0');
+      const dateStr = `30/${monthStr}/${periodoAnio}`;
+
+      const header = {
+        asiento: `06-PROV-${monthStr}`,
+        fecEmi: dateStr,
+        glosa: `POR LA PROVISION DE CTS, VACACIONES Y GRATIFICACIONES DE ${MONTHS[periodoMes]} ${periodoAnio}`,
+        anio: String(periodoAnio),
+        mes: monthStr
+      };
+
+      const lines: any[] = [];
+      let currentId = 1;
+
+      // CTS: 6291 → 4151
+      if (stats.provCTS > 0) {
+        lines.push({ id: currentId++, cuenta: '6291', detalle: 'PROVISIÓN CTS (1/12)', debe: stats.provCTS, haber: 0 });
+        lines.push({ id: currentId++, cuenta: '4151', detalle: 'CTS POR PAGAR', debe: 0, haber: stats.provCTS });
+      }
+
+      // Vacaciones: 6214 → 4115
+      if (stats.provVacaciones > 0) {
+        lines.push({ id: currentId++, cuenta: '6214', detalle: 'PROVISIÓN VACACIONES (1/12)', debe: stats.provVacaciones, haber: 0 });
+        lines.push({ id: currentId++, cuenta: '4115', detalle: 'VACACIONES POR PAGAR', debe: 0, haber: stats.provVacaciones });
+      }
+
+      // Gratificaciones: 6215 → 4114
+      if (stats.provGratificaciones > 0) {
+        lines.push({ id: currentId++, cuenta: '6215', detalle: 'PROVISIÓN GRATIFICACIONES (1/6)', debe: stats.provGratificaciones, haber: 0 });
+        lines.push({ id: currentId++, cuenta: '4114', detalle: 'GRATIFICACIONES POR PAGAR', debe: 0, haber: stats.provGratificaciones });
+      }
+
+      // Destino Clase 9 para cada cuenta 62xx
+      const totalProvGasto = stats.provCTS + stats.provVacaciones + stats.provGratificaciones;
+      if (totalProvGasto > 0) {
+        const acc62 = plan.find(a => a.cta === '621' || a.cta === '6211');
+        if (acc62?.amarreDebe && acc62?.amarreHaber) {
+          lines.push({ id: currentId++, cuenta: acc62.amarreDebe, detalle: 'GASTOS ADMIN (PROVISIONES)', debe: totalProvGasto, haber: 0 });
+          lines.push({ id: currentId++, cuenta: acc62.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: totalProvGasto });
+        }
+      }
+
+      if (lines.length === 0) {
+        toast.error('No hay provisiones para generar');
+        return;
+      }
+
+      await saveAsiento(header, lines);
+      toast.success(`✅ Asiento de provisiones ${MONTHS[periodoMes]} generado correctamente`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al generar el asiento de provisiones');
     }
   };
 
@@ -302,6 +451,86 @@ const PlanillaView: React.FC = () => {
             <p className="text-2xl font-black text-app-text tracking-tighter italic">{stats.count}</p>
          </div>
       </div>
+
+      {/* Provisiones Mensuales Panel */}
+      {stats.count > 0 && (
+        <div className="card-elevated !p-0 overflow-hidden shrink-0">
+          <button
+            onClick={() => setShowProvisionesPanel(!showProvisionesPanel)}
+            className="w-full flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/15 hover:to-orange-500/15 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500">
+                <Landmark size={16} />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Provisiones Mensuales</p>
+                <p className="text-[8px] text-app-muted font-bold">CTS (1/12) · Vacaciones (1/12) · Gratificaciones (1/6)</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-black text-amber-600 italic">
+                S/ {(stats.provCTS + stats.provVacaciones + stats.provGratificaciones).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              </span>
+              <ChevronDown size={16} className={`text-app-muted transition-transform duration-200 ${showProvisionesPanel ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+
+          {showProvisionesPanel && (
+            <div className="p-5 border-t border-app-border space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* CTS */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/5 to-amber-600/5 border border-amber-500/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">CTS (1/12)</span>
+                    <span className="text-[8px] font-bold text-app-muted">Cta 6291 → 4151</span>
+                  </div>
+                  <p className="text-lg font-black text-amber-600 italic">
+                    S/ {stats.provCTS.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[8px] text-app-muted mt-1">= Remuneración Computable ÷ 12</p>
+                </div>
+
+                {/* Vacaciones */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500/5 to-teal-600/5 border border-teal-500/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-teal-600">Vacaciones (1/12)</span>
+                    <span className="text-[8px] font-bold text-app-muted">Cta 6214 → 4115</span>
+                  </div>
+                  <p className="text-lg font-black text-teal-600 italic">
+                    S/ {stats.provVacaciones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[8px] text-app-muted mt-1">= Remuneración Computable ÷ 12</p>
+                </div>
+
+                {/* Gratificaciones */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/5 to-violet-600/5 border border-violet-500/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-violet-600">Gratificaciones (1/6)</span>
+                    <span className="text-[8px] font-bold text-app-muted">Cta 6215 → 4114</span>
+                  </div>
+                  <p className="text-lg font-black text-violet-600 italic">
+                    S/ {stats.provGratificaciones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[8px] text-app-muted mt-1">= Remuneración Computable ÷ 6 (2 gratificaciones anuales)</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-app-border/50">
+                <div className="text-[9px] text-app-muted font-bold">
+                  <span className="text-amber-600">Base de cálculo:</span> Total Rem. Bruta S/ {stats.bruto.toLocaleString('es-PE', { minimumFractionDigits: 2 })} × {stats.count} trabajadores
+                </div>
+                <button
+                  onClick={() => setShowProvisionesConfirm(true)}
+                  className="px-5 py-2.5 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/10"
+                >
+                  <Calculator size={14} /> Generar Asiento de Provisiones
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Table Container */}
       <div className="card-elevated !p-0 flex flex-col overflow-hidden shadow-2xl border-app-border/40">
@@ -522,7 +751,7 @@ const PlanillaView: React.FC = () => {
                     <td className="px-3 py-2 text-right">
                         <input 
                         type="number" 
-                        value={emp.impuesto_renta_5ta} 
+                        value={emp.impuesto_renta_5ta !== undefined ? emp.impuesto_renta_5ta : calculate5taRenta(emp)} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveEmployee({...emp, impuesto_renta_5ta: parseFloat(e.target.value) || 0})}
                         className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-right text-app-muted focus:ring-0 w-full [appearance:textfield] outline-none"
@@ -570,7 +799,7 @@ const PlanillaView: React.FC = () => {
 
                     {/* Empleador */}
                     <td className="px-3 py-2 text-right">
-                        {(calculateTotalRemuneracion(emp) * ESSALUD_TASA).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        {calculateEssalud(emp).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-3 py-2 text-right">
                         <input 
@@ -656,10 +885,30 @@ const PlanillaView: React.FC = () => {
                     <span className="text-[10px] font-black text-app-muted uppercase tracking-wider">Essalud Empl. (6271)</span>
                     <span className="text-xs font-black text-app-text italic">S/ {stats.essalud.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                  </div>
-                 <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10">
-                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider">Descuentos (4032)</span>
-                    <span className="text-xs font-black text-rose-500 italic">- S/ {(stats.bruto - stats.neto).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
-                 </div>
+                  {stats.totalONP > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                       <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider">ONP Por Pagar (4032)</span>
+                       <span className="text-xs font-black text-rose-500 italic">S/ {stats.totalONP.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {stats.totalAFP > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                       <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wider">AFP Por Pagar (417)</span>
+                       <span className="text-xs font-black text-indigo-500 italic">S/ {stats.totalAFP.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {stats.totalRenta5ta > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                       <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider">Renta 5ta (40173)</span>
+                       <span className="text-xs font-black text-amber-500 italic">S/ {stats.totalRenta5ta.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {stats.totalOtrosDesc > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                       <span className="text-[10px] font-black text-rose-400 uppercase tracking-wider">Otros Desc. (419)</span>
+                       <span className="text-xs font-black text-rose-400 italic">S/ {stats.totalOtrosDesc.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                  <div className="flex items-center justify-between p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20">
                     <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">NETO A PAGAR (4111)</span>
                     <span className="text-lg font-black text-blue-600 italic tracking-tighter">S/ {stats.neto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
@@ -677,6 +926,67 @@ const PlanillaView: React.FC = () => {
                  <button 
                     onClick={processGenerarAsiento}
                     className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                 >
+                    Confirmar y Generar
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN PROVISIONES */}
+      {showProvisionesConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-app-bg/80 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="w-full max-w-md bg-app-surface border border-app-border rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="p-6 bg-gradient-to-br from-amber-500/10 to-orange-600/10 border-b border-app-border">
+                 <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+                       <Landmark size={24} />
+                    </div>
+                    <div>
+                       <h3 className="text-lg font-black text-app-text tracking-tight uppercase">Provisiones</h3>
+                       <p className="text-[10px] text-app-muted font-bold tracking-widest uppercase italic">{MONTHS[periodoMes]} {periodoAnio}</p>
+                    </div>
+                 </div>
+                 <p className="text-[11px] text-app-text/70 leading-relaxed font-medium italic">
+                    Se generará un asiento contable con las provisiones de CTS, Vacaciones y Gratificaciones:
+                 </p>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-3">
+                 <div className="flex items-center justify-between p-3 bg-amber-500/5 rounded-2xl border border-amber-500/10">
+                    <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider">CTS 1/12 (6291 → 4151)</span>
+                    <span className="text-xs font-black text-amber-600 italic">S/ {stats.provCTS.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                 </div>
+                 <div className="flex items-center justify-between p-3 bg-teal-500/5 rounded-2xl border border-teal-500/10">
+                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-wider">Vacaciones 1/12 (6214 → 4115)</span>
+                    <span className="text-xs font-black text-teal-600 italic">S/ {stats.provVacaciones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                 </div>
+                 <div className="flex items-center justify-between p-3 bg-violet-500/5 rounded-2xl border border-violet-500/10">
+                    <span className="text-[10px] font-black text-violet-600 uppercase tracking-wider">Gratificaciones 1/6 (6215 → 4114)</span>
+                    <span className="text-xs font-black text-violet-600 italic">S/ {stats.provGratificaciones.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                 </div>
+                 <div className="flex items-center justify-between p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">TOTAL PROVISIONES</span>
+                    <span className="text-lg font-black text-amber-700 italic tracking-tighter">
+                       S/ {(stats.provCTS + stats.provVacaciones + stats.provGratificaciones).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                    </span>
+                 </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 bg-app-surface border-t border-app-border flex gap-3">
+                 <button 
+                    onClick={() => setShowProvisionesConfirm(false)}
+                    className="flex-1 py-3 px-4 rounded-xl border border-app-border text-[10px] font-black uppercase tracking-widest text-app-muted hover:bg-app-bg transition-colors"
+                 >
+                    Cancelar
+                 </button>
+                 <button 
+                    onClick={processGenerarAsientoProvisiones}
+                    className="flex-1 py-3 px-4 rounded-xl bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
                  >
                     Confirmar y Generar
                  </button>

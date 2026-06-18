@@ -16,6 +16,7 @@ const globalSyncState: Record<string, SyncState> = {};
 const globalSyncListeners: Record<string, (state: SyncState) => void> = {};
 
 const BuzonView: React.FC = () => {
+  const isElectron = !!(window as any).electronAPI;
   const { workspaces, currentCompany, buzonMensajes, setBuzonMensajes, markBuzonMensajeAsRead } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -255,13 +256,18 @@ const BuzonView: React.FC = () => {
         }
       } else {
         // MOCK para desarrollo/navegador
-        setTimeout(() => {
-          setBuzonMensajes([
-            { id: '900001', asunto: 'Resolución de Intendencia N° 023-2026', fecha: '28/03/2026', tieneAdjunto: true, estado: 'no_leido' },
-            { id: '900002', asunto: 'Notificación de Orden de Pago', fecha: '25/03/2026', tieneAdjunto: true, estado: 'leido' }
-          ]);
-          setSyncState(ruc, { loading: false, statusText: '' });
-        }, 1500);
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          setTimeout(() => {
+            setBuzonMensajes([
+              { id: '900001', asunto: 'Resolución de Intendencia N° 023-2026', fecha: '28/03/2026', tieneAdjunto: true, estado: 'no_leido' },
+              { id: '900002', asunto: 'Notificación de Orden de Pago', fecha: '25/03/2026', tieneAdjunto: true, estado: 'leido' }
+            ]);
+            setSyncState(ruc, { loading: false, statusText: '' });
+          }, 1500);
+        } else {
+          setSyncState(ruc, { loading: false, error: 'La sincronización automática del buzón tributario requiere instalar el cliente de escritorio de SoftContable.', statusText: '' });
+          toast.error('Función no disponible en entorno web');
+        }
       }
     } catch (err: any) {
       setSyncState(ruc, { loading: false, error: err.message || 'Error inesperado del sistema.', statusText: '' });
@@ -269,6 +275,10 @@ const BuzonView: React.FC = () => {
   };
 
   const handleVerConstancias = async () => {
+    if (!(window as any).electronAPI) {
+      toast.error('Función no disponible: requiere el cliente de escritorio de SoftContable.');
+      return;
+    }
     setShowConstancias(true);
     setLoadingConstancias(true);
     try {
@@ -286,6 +296,10 @@ const BuzonView: React.FC = () => {
   };
 
   const handleAbrirConstancia = async (ruta: string) => {
+    if (!(window as any).electronAPI) {
+      toast.error('Función no disponible: requiere el cliente de escritorio de SoftContable.');
+      return;
+    }
     try {
       const res = await (window as any).electronAPI.buzonAbrirConstancia({ ruta });
       if (res.success) {
@@ -310,6 +324,10 @@ const BuzonView: React.FC = () => {
   };
 
   const handleDownload = async (msgId: string) => {
+    if (!(window as any).electronAPI) {
+      toast.error('Función no disponible: requiere el cliente de escritorio de SoftContable.');
+      return;
+    }
     if (!activeBrowserId) {
       setError('La sesión ha expirado. Por favor consulte el buzón nuevamente.');
       return;
@@ -344,8 +362,20 @@ const BuzonView: React.FC = () => {
     }
   };
 
+
   return (
     <div className="flex flex-col h-full p-3 space-y-4">
+      {!isElectron && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
+          <AlertCircle size={20} className="shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider">Modo Web Limitado</h4>
+            <p className="text-[11px] font-bold mt-1 text-red-500/80">
+              La sincronización en vivo del buzón tributario SUNAT, extracción de notificaciones y descargas directas de constancias requieren la instalación del cliente de escritorio de SoftContable. En este entorno web SaaS, estas funciones automatizadas están restringidas.
+            </p>
+          </div>
+        </div>
+      )}
       
       {/* Top Banner: Multi-client Selector */}
       <div className="bg-app-surface/50 border border-app-border rounded-xl p-3 shadow-xl flex flex-wrap gap-4 items-center justify-between">

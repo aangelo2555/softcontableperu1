@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Trash2, FileDown, Printer } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Users, Trash2, FileDown, Printer, FileText } from 'lucide-react';
 import { exportSingleSheet } from '../utils/excelExport';
 import { useStore } from '../store';
 import type { HonorarioEntry } from '../store';
@@ -14,7 +14,7 @@ import FormField from './ui/FormField';
 import DateInput from './shared/DateInput';
 
 const HonorariosView: React.FC = () => {
-  const { plan, honorarios, saveHonorario, deleteHonorario, entities, draftHonorario, setDraftHonorario, getNextHonorarioNumber, currentCompany } = useStore();
+  const { plan, honorarios, saveHonorario, deleteHonorario, entities, draftHonorario, setDraftHonorario, getNextHonorarioNumber, currentCompany, exportarRetenciones41TXT } = useStore();
 
   const lookupAccount = (cta: string) => plan.find(a => a.cta === cta);
 
@@ -112,7 +112,19 @@ const HonorariosView: React.FC = () => {
           </span>
         }
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => {
+                const y = parseInt(currentCompany?.period || String(new Date().getFullYear()));
+                const m = new Date().getMonth() + 1;
+                const periodo = `${y}${String(m).padStart(2, '0')}00`;
+                exportarRetenciones41TXT(periodo);
+              }}
+              className="h-8 px-3 bg-gradient-to-r from-pld-blue/10 to-pld-magenta/10 border border-pld-blue/30 rounded-lg hover:border-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-pld-blue"
+              title="Descargar archivo PLE Formato 4.1 (Retenciones 4ta categoría)"
+            >
+              <FileText size={14} /> PLE 4.1
+            </button>
             <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
             <button onClick={() => exportSingleSheet({
               sheetName: 'Honorarios',

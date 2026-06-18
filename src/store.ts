@@ -44,6 +44,16 @@ export interface PurchaseEntry {
   // --- Inventory Association ---
   productId?: string;
   quantity?: number;
+  // --- SPOT / Retenciones / Percepciones ---
+  spot_tipo?: string;
+  spot_monto?: number;
+  spot_constancia?: string;
+  spot_fecha?: string;
+  retencion_monto?: number;
+  retencion_comprobante?: string;
+  retencion_fecha?: string;
+  percepcion_monto?: number;
+  percepcion_comprobante?: string;
 }
 
 export interface SaleEntry {
@@ -82,6 +92,14 @@ export interface SaleEntry {
   productId?: string;
   quantity?: number;
   costo_venta?: number;
+  // --- SPOT / Retenciones ---
+  spot_tipo?: string;
+  spot_monto?: number;
+  spot_constancia?: string;
+  spot_fecha?: string;
+  retencion_monto?: number;
+  retencion_comprobante?: string;
+  retencion_fecha?: string;
 }
 
 export interface JournalEntry {
@@ -94,6 +112,9 @@ export interface JournalEntry {
   desc: string;
   debe: number;
   haber: number;
+  medio_pago?: string;
+  nro_transaccion?: string;
+  razon_social?: string;
 }
 
 export interface AsientoLine {
@@ -152,6 +173,8 @@ export interface CostEntry {
   descripcion: string;
   porcentaje: number;
   monto: number;
+  cuenta_debe?: string;
+  cuenta_haber?: string;
 }
 
 export interface HonorarioEntry {
@@ -221,6 +244,11 @@ export interface FixedAsset {
   metodo: string;
   cuenta_activo: string;
   cuenta_depreciacion: string;
+  // --- Dual Rate Tax Depreciation ---
+  tasa_depreciacion_tributaria?: number;
+  deprec_ejercicio_tributaria?: number;
+  depreciacion_acumulada_tributaria?: number;
+  deprec_acum_anterior_tributaria?: number;
 }
 
 export interface Employee {
@@ -326,6 +354,8 @@ export interface CompanyData {
   sunatClientId?: string;
   sunatClientSecret?: string;
   annualIncomeUIT?: number;
+  agente_retencion?: boolean;
+  regimen?: RegimenCode;
 }
 
 export interface BuzonMensaje {
@@ -393,8 +423,9 @@ export interface AppState extends WorkspaceState {
   deleteHonorario: (id: string) => Promise<void>;
   
   saveAsiento: (header: AsientoHeader, lines: AsientoLine[]) => Promise<string>;
-  deleteAsientoById: (id: string) => Promise<void>;
+  deleteAsientoById: (id: string, justificacion?: string) => Promise<void>;
   deleteJournalEntry: (id: string) => Promise<void>;
+  saveAuditLog: (cuo: string, accion: string, previo: any, nuevo: any, justificacion: string) => Promise<void>;
 
   saveGlosaHabitual: (glosa: string, lines: { cuenta: string, detalle: string }[], category?: string) => Promise<void>;
   deleteGlosaHabitual: (id: string) => Promise<void>;
@@ -518,6 +549,19 @@ export interface AppState extends WorkspaceState {
   validarLd52Balance: (periodo: string) => Promise<any>;
   exportarLd52TXT: (periodo: string) => Promise<void>;
   exportarLd52TXT54: (periodo: string) => Promise<void>;
+
+  // --- Libro de Retenciones 4.1 ---
+  exportarRetenciones41TXT: (periodo: string) => Promise<void>;
+  // --- Libro de Activos Fijos 7.1 ---
+  exportarPle71TXT: (periodo: string) => Promise<void>;
+  // --- Libro de Costos 10.1 ---
+  exportarPle101TXT: (periodo: string) => Promise<void>;
+  // --- Libro de Inventario Físico 12.1 ---
+  exportarPle121TXT: (periodo: string) => Promise<void>;
+  
+  // --- Facturación Electrónica UBL 2.1 ---
+  facturacionConfigurarCertificadoAction: (password: string, pfxBase64: string) => Promise<any>;
+  facturacionEmitirComprobanteAction: (comprobanteId: string) => Promise<any>;
 }
 
 // ─── Helpers ───
@@ -604,6 +648,88 @@ function buildJournalEntries(
         entries.push({ id: `${base}-amh`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreHaber.trim(), desc: 'DESTINO HABER', debe: 0, haber: totalGastoPEN });
       }
     }
+
+    // --- SPOT (Detracción) ---
+    if (p.spot_monto && p.spot_monto > 0 && p.spot_constancia && p.spot_fecha) {
+      const spotPEN = isUsd ? Number((p.spot_monto * rate).toFixed(2)) : p.spot_monto;
+      entries.push({
+        id: `${base}-spot-pay-debe`,
+        source,
+        asiento: p.registro,
+        fecha: p.spot_fecha,
+        glosa: `PAGO DE DETRACCION CONSTANCIA ${p.spot_constancia}`,
+        cta: (p.ctaAbono || '4212').trim(),
+        desc: 'PAGO DETRACCION PROVEEDOR',
+        debe: spotPEN,
+        haber: 0
+      });
+      entries.push({
+        id: `${base}-spot-pay-haber`,
+        source,
+        asiento: p.registro,
+        fecha: p.spot_fecha,
+        glosa: `PAGO DE DETRACCION CONSTANCIA ${p.spot_constancia}`,
+        cta: '10411',
+        desc: 'BANCO DE LA NACION DETRACCIONES',
+        debe: 0,
+        haber: spotPEN
+      });
+    }
+
+    // --- Retención ---
+    if (p.retencion_monto && p.retencion_monto > 0 && p.retencion_comprobante && p.retencion_fecha) {
+      const retPEN = isUsd ? Number((p.retencion_monto * rate).toFixed(2)) : p.retencion_monto;
+      entries.push({
+        id: `${base}-ret-debe`,
+        source,
+        asiento: p.registro,
+        fecha: p.retencion_fecha,
+        glosa: `RETENCION 3% COMPROBANTE ${p.retencion_comprobante}`,
+        cta: (p.ctaAbono || '4212').trim(),
+        desc: 'RETENCION IGV PROVEEDOR',
+        debe: retPEN,
+        haber: 0
+      });
+      entries.push({
+        id: `${base}-ret-haber`,
+        source,
+        asiento: p.registro,
+        fecha: p.retencion_fecha,
+        glosa: `RETENCION 3% COMPROBANTE ${p.retencion_comprobante}`,
+        cta: '40114',
+        desc: 'IGV - REGIMEN DE RETENCIONES',
+        debe: 0,
+        haber: retPEN
+      });
+    }
+
+    // --- Percepción ---
+    if (p.percepcion_monto && p.percepcion_monto > 0) {
+      const percPEN = isUsd ? Number((p.percepcion_monto * rate).toFixed(2)) : p.percepcion_monto;
+      entries.push({
+        id: `${base}-perc-debe`,
+        source,
+        asiento: p.registro,
+        fecha: p.fecha,
+        glosa: `PERCEPCION IGV COMPROBANTE ${p.percepcion_comprobante || ''}`,
+        cta: '40113',
+        desc: 'IGV - REGIMEN DE PERCEPCIONES',
+        debe: percPEN,
+        haber: 0
+      });
+      entries.push({
+        id: `${base}-perc-haber`,
+        source,
+        asiento: p.registro,
+        fecha: p.fecha,
+        glosa: `PERCEPCION IGV COMPROBANTE ${p.percepcion_comprobante || ''}`,
+        cta: (p.ctaAbono || '4212').trim(),
+        desc: 'PROVEEDOR POR PERCEPCION',
+        debe: 0,
+        haber: percPEN
+      });
+    }
+
     return entries;
   }
   if (source === 'VENTA') {
@@ -729,6 +855,60 @@ function buildJournalEntries(
       });
     }
 
+    // --- SPOT (Detracción) ---
+    if (s.spot_monto && s.spot_monto > 0 && s.spot_constancia && s.spot_fecha) {
+      const spotPEN = isUsd ? Number((s.spot_monto * tcCompra).toFixed(2)) : s.spot_monto;
+      entries.push({
+        id: `${base}-spot-rec-debe`,
+        source,
+        asiento: s.registro,
+        fecha: s.spot_fecha,
+        glosa: `DEPOSITO DE DETRACCION CONSTANCIA ${s.spot_constancia}`,
+        cta: '10411',
+        desc: 'BANCO DE LA NACION DETRACCIONES',
+        debe: spotPEN,
+        haber: 0
+      });
+      entries.push({
+        id: `${base}-spot-rec-haber`,
+        source,
+        asiento: s.registro,
+        fecha: s.spot_fecha,
+        glosa: `DEPOSITO DE DETRACCION CONSTANCIA ${s.spot_constancia}`,
+        cta: (s.ctaCargo || '1212').trim(),
+        desc: 'COBRO DETRACCION CLIENTE',
+        debe: 0,
+        haber: spotPEN
+      });
+    }
+
+    // --- Retención ---
+    if (s.retencion_monto && s.retencion_monto > 0 && s.retencion_comprobante && s.retencion_fecha) {
+      const retPEN = isUsd ? Number((s.retencion_monto * tcCompra).toFixed(2)) : s.retencion_monto;
+      entries.push({
+        id: `${base}-ret-rec-debe`,
+        source,
+        asiento: s.registro,
+        fecha: s.retencion_fecha,
+        glosa: `COMPROBANTE DE RETENCION ${s.retencion_comprobante}`,
+        cta: '40114',
+        desc: 'IGV - REGIMEN DE RETENCIONES',
+        debe: retPEN,
+        haber: 0
+      });
+      entries.push({
+        id: `${base}-ret-rec-haber`,
+        source,
+        asiento: s.registro,
+        fecha: s.retencion_fecha,
+        glosa: `COMPROBANTE DE RETENCION ${s.retencion_comprobante}`,
+        cta: (s.ctaCargo || '1212').trim(),
+        desc: 'COBRO RETENCION CLIENTE',
+        debe: 0,
+        haber: retPEN
+      });
+    }
+
     // 2. COSTO DE VENTA (69 / 20)
     if (s.costo_venta && s.costo_venta > 0) {
       const costGlosa = 'Centralización del kárdex Costo de ventas - Formato 13.1';
@@ -760,6 +940,43 @@ function buildJournalEntries(
   // Simplified for asientos
   return [];
 }
+
+const checkPermission = (actionType: 'WRITE' | 'DELETE' | 'PERIOD_CONTROL'): boolean => {
+  const token = localStorage.getItem('softcontable_token');
+  if (!token) {
+    toast.error('⚠️ No autorizado: Inicie sesión.');
+    return false;
+  }
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const email = (payload.email || '').trim().toLowerCase();
+    const isAdmin = payload.role === 'admin' || email === 'aangelo2555@gmail.com' || email.startsWith('admin');
+    const role = isAdmin ? 'contador' : (payload.role || 'user');
+    
+    if (role === 'contador') {
+      return true;
+    }
+    if (role === 'gerente') {
+      toast.error('🚫 Acceso denegado: El perfil de GERENTE es de solo lectura.');
+      return false;
+    }
+    if (role === 'asistente') {
+      if (actionType === 'DELETE') {
+        toast.error('🚫 Acceso denegado: El ASISTENTE no tiene permisos de eliminación.');
+        return false;
+      }
+      if (actionType === 'PERIOD_CONTROL') {
+        toast.error('🚫 Acceso denegado: El ASISTENTE no puede cerrar ni reabrir períodos.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  } catch {
+    toast.error('⚠️ Error al validar permisos de usuario.');
+    return false;
+  }
+};
 
 const EMPTY_WORKSPACE: WorkspaceState = {
   currentCompany: { name: '', ruc: '', regimenTributario: 'RG', location: '', address: '', support: '', period: '', businessType: 'COMERCIAL', annualIncomeUIT: 0 },
@@ -863,6 +1080,7 @@ export const useStore = create<AppState>()(
 
       // --- Data Persistence (Proxy to DB) ---
       savePurchase: async (p) => {
+        if (!checkPermission('WRITE')) return;
         const ruc = get().currentCompany?.ruc || '';
         
         // ── Guard de Período Cerrado ──
@@ -908,19 +1126,25 @@ export const useStore = create<AppState>()(
             id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
             doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono, 
             moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, 
-            monto_me, tc_origen
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+            monto_me, tc_origen,
+            spot_tipo, spot_monto, spot_constancia, spot_fecha,
+            retencion_monto, retencion_comprobante, retencion_fecha,
+            percepcion_monto, percepcion_comprobante
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
           [
             p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, 
             p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, 
             p.moneda, p.tc, p.bi, p.igv, p.noGravada, p.isc, p.total, p.glosa, p.detraccion,
-            monto_me, tc_origen
+            monto_me, tc_origen,
+            p.spot_tipo || null, p.spot_monto || 0, p.spot_constancia || null, p.spot_fecha || null,
+            p.retencion_monto || 0, p.retencion_comprobante || null, p.retencion_fecha || null,
+            p.percepcion_monto || 0, p.percepcion_comprobante || null
           ]
         );
         
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${p.id}-%`]);
         for (const entry of j) {
-          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
         }
         
         set({ purchases: [...get().purchases.filter(x => x.id !== p.id), p], journal: [...get().journal.filter(x => !x.id.startsWith(`compra-${p.id}`)), ...j] });
@@ -936,6 +1160,7 @@ export const useStore = create<AppState>()(
       },
 
       deletePurchase: async (id) => {
+        if (!checkPermission('DELETE')) return;
         const ruc = get().currentCompany?.ruc || '';
         const item = get().purchases.find(x => x.id === id);
         if (item) {
@@ -970,6 +1195,7 @@ export const useStore = create<AppState>()(
       },
 
       saveSale: async (s) => {
+        if (!checkPermission('WRITE')) return;
         const ruc = get().currentCompany?.ruc || '';
 
         // ── Guard de Período Cerrado ──
@@ -1015,19 +1241,23 @@ export const useStore = create<AppState>()(
             id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, 
             doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaCargo, ctaIngreso, 
             moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, 
-            monto_me, tc_origen
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+            monto_me, tc_origen,
+            spot_tipo, spot_monto, spot_constancia, spot_fecha,
+            retencion_monto, retencion_comprobante, retencion_fecha
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
           [
             s.id, ruc, s.registro, s.fecha, s.fecVcto, s.tipo_doc, s.serie, s.numero, 
             s.doc_tipo, s.doc_num, s.nombre, s.tipOper, s.tipOperCode, s.ctaCargo, s.ctaIngreso, 
             s.moneda, s.tc, s.bi, s.igv, s.noGravada, s.isc, s.total, s.glosa, s.detraccion,
-            monto_me, tc_origen
+            monto_me, tc_origen,
+            s.spot_tipo || null, s.spot_monto || 0, s.spot_constancia || null, s.spot_fecha || null,
+            s.retencion_monto || 0, s.retencion_comprobante || null, s.retencion_fecha || null
           ]
         );
         
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${s.id}-%`]);
         for (const entry of j) {
-          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
         }
         
         set({ sales: [...get().sales.filter(x => x.id !== s.id), s], journal: [...get().journal.filter(x => !x.id.startsWith(`venta-${s.id}`)), ...j] });
@@ -1043,6 +1273,7 @@ export const useStore = create<AppState>()(
       },
 
       deleteSale: async (id) => {
+        if (!checkPermission('DELETE')) return;
         const ruc = get().currentCompany?.ruc || '';
         const item = get().sales.find(x => x.id === id);
         if (item) {
@@ -1077,6 +1308,7 @@ export const useStore = create<AppState>()(
       },
 
       saveHonorario: async (h) => {
+        if (!checkPermission('WRITE')) return;
         const ruc = get().currentCompany?.ruc || '';
         if (!electron) return;
 
@@ -1115,6 +1347,7 @@ export const useStore = create<AppState>()(
       },
 
       deleteHonorario: async (id) => {
+        if (!checkPermission('DELETE')) return;
         const ruc = get().currentCompany?.ruc || '';
         const item = get().honorarios.find(x => x.id === id);
         if (item) {
@@ -1135,6 +1368,7 @@ export const useStore = create<AppState>()(
       },
 
       saveAsiento: async (header, lines) => {
+        if (!checkPermission('WRITE')) return `asiento-blocked-${Date.now()}`;
         const ruc = get().currentCompany?.ruc || '';
         const fecha = header.fecEmi || new Date().toISOString().split('T')[0];
 
@@ -1173,7 +1407,7 @@ export const useStore = create<AppState>()(
         await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
 
         for (const entry of journalEntries) {
-          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
         }
 
         // Trigger a data reload
@@ -1186,7 +1420,8 @@ export const useStore = create<AppState>()(
         return id;
       },
 
-      deleteAsientoById: async (id) => {
+      deleteAsientoById: async (id, justificacion) => {
+        if (!checkPermission('DELETE')) return;
         const ruc = get().currentCompany?.ruc || '';
         const item = get().asientos.find(x => x.id === id);
         if (item) {
@@ -1195,6 +1430,9 @@ export const useStore = create<AppState>()(
           if (await get().checkIfPeriodClosed(fecha)) {
             toast.error(`⚠️ Eliminación bloqueada: El período ${fecha.substring(0, 7)} está CERRADO.`);
             return;
+          }
+          if (justificacion) {
+            await get().saveAuditLog(item.header?.asiento || id, 'DELETE', item, null, justificacion);
           }
         }
 
@@ -1208,6 +1446,28 @@ export const useStore = create<AppState>()(
           const fecha = item.header?.fecEmi || new Date().toISOString().split('T')[0];
           await get().triggerCascadeInvalidation('journal', fecha);
         }
+      },
+
+      saveAuditLog: async (cuo, accion, previo, nuevo, justificacion) => {
+        const ruc = get().currentCompany?.ruc || '';
+        const userId = (window as any).inspectingUserId || localStorage.getItem('softcontable_user_id') || 'default_user';
+        const timestamp = new Date().toISOString();
+        const id = `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await electron.dbExecute(
+          `INSERT INTO audit_logs (id, workspace_id, user_id, timestamp, cuo_afectado, accion, contenido_previo, contenido_nuevo, justificacion)
+           VALUES (?,?,?,?,?,?,?,?,?)`,
+          [
+            id,
+            ruc,
+            userId,
+            timestamp,
+            cuo,
+            accion,
+            previo ? JSON.stringify(previo) : null,
+            nuevo ? JSON.stringify(nuevo) : null,
+            justificacion
+          ]
+        );
       },
 
       deleteJournalEntry: async (id) => {
@@ -1314,6 +1574,7 @@ export const useStore = create<AppState>()(
       },
 
       closePeriodAction: async (periodo: string, tipo: 'MENSUAL' | 'ANUAL', notas?: string) => {
+        if (!checkPermission('PERIOD_CONTROL')) return { success: false, error: 'Acceso denegado' };
         const ruc = get().currentCompany?.ruc || '';
         if (!ruc) return null;
         try {
@@ -1327,6 +1588,7 @@ export const useStore = create<AppState>()(
       },
 
       reopenPeriodAction: async (periodo: string, tipo: 'MENSUAL' | 'ANUAL') => {
+        if (!checkPermission('PERIOD_CONTROL')) return false;
         const ruc = get().currentCompany?.ruc || '';
         if (!ruc) return false;
         try {
@@ -1424,8 +1686,8 @@ export const useStore = create<AppState>()(
           if (res.adjustingEntries.length > 0) {
             for (const entry of res.adjustingEntries) {
               await electron.dbExecute(
-                `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-                [entry.id, ruc, entry.source, entry.asiento, fechaAjuste, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]
+                `INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [entry.id, ruc, entry.source, entry.asiento, fechaAjuste, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]
               );
             }
             toast.success(`✅ Ajuste por diferencia de cambio generado: ${res.adjustments.length} documentos procesados.`);
@@ -1555,7 +1817,7 @@ export const useStore = create<AppState>()(
           await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${proceso === 'Generar RCE' ? 'compra' : 'venta'}-${r.id}-%`]);
           
           for (const entry of j) {
-            await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+            await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
           }
 
           // Actualizar estado en la tabla de compras/ventas
@@ -1644,7 +1906,7 @@ export const useStore = create<AppState>()(
         const costs = get().costs.map(c => c.id === id ? { ...c, ...data } : c);
         const cost = costs.find(c => c.id === id);
         if (cost) {
-          await electron.dbExecute(`UPDATE costs SET codigo=?, descripcion=?, porcentaje=?, monto=? WHERE id=? AND workspace_id=?`, [cost.codigo, cost.descripcion, cost.porcentaje, cost.monto, id, ruc]);
+          await electron.dbExecute(`UPDATE costs SET codigo=?, descripcion=?, porcentaje=?, monto=?, cuenta_debe=?, cuenta_haber=? WHERE id=? AND workspace_id=?`, [cost.codigo, cost.descripcion, cost.porcentaje, cost.monto, cost.cuenta_debe || '94111', cost.cuenta_haber || '79111', id, ruc]);
         }
         set({ costs });
       },
@@ -1652,8 +1914,8 @@ export const useStore = create<AppState>()(
       addCost: async (c) => {
         const id = `cost-${Date.now()}`;
         const ruc = get().currentCompany?.ruc || '';
-        await electron.dbExecute(`INSERT INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto) VALUES (?,?,?,?,?,?)`, [id, ruc, c.codigo, c.descripcion, c.porcentaje, c.monto]);
-        set({ costs: [...get().costs, { ...c, id }] });
+        await electron.dbExecute(`INSERT INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto, cuenta_debe, cuenta_haber) VALUES (?,?,?,?,?,?,?,?)`, [id, ruc, c.codigo, c.descripcion, c.porcentaje, c.monto, c.cuenta_debe || '94111', c.cuenta_haber || '79111']);
+        set({ costs: [...get().costs, { ...c, id, cuenta_debe: c.cuenta_debe || '94111', cuenta_haber: c.cuenta_haber || '79111' }] });
       },
 
       deleteCost: async (id) => {
@@ -1718,6 +1980,7 @@ export const useStore = create<AppState>()(
         let currentCant = 0;
         let currentTotal = 0;
         let currentCost = 0;
+        let negativeDetected = false;
 
         for (const m of movements) {
           if (m.cantidad_in > 0) {
@@ -1729,15 +1992,28 @@ export const useStore = create<AppState>()(
             m.costo_unit_saldo = currentCost;
             m.total_saldo = currentTotal;
           } else if (m.cantidad_out > 0) {
-            m.costo_unit_out = currentCost;
-            m.total_out = m.cantidad_out * currentCost;
-            
-            currentCant -= m.cantidad_out;
-            currentTotal -= m.total_out;
-            
-            m.cantidad_saldo = currentCant;
-            m.costo_unit_saldo = currentCost;
-            m.total_saldo = currentTotal;
+            if (m.cantidad_out > currentCant) {
+              negativeDetected = true;
+              m.costo_unit_out = currentCost;
+              m.total_out = currentCant * currentCost;
+              
+              currentCant = 0;
+              currentTotal = 0;
+              
+              m.cantidad_saldo = 0;
+              m.costo_unit_saldo = currentCost;
+              m.total_saldo = 0;
+            } else {
+              m.costo_unit_out = currentCost;
+              m.total_out = m.cantidad_out * currentCost;
+              
+              currentCant -= m.cantidad_out;
+              currentTotal -= m.total_out;
+              
+              m.cantidad_saldo = currentCant;
+              m.costo_unit_saldo = currentCost;
+              m.total_saldo = currentTotal;
+            }
           }
 
           // Update balances in DB
@@ -1748,6 +2024,10 @@ export const useStore = create<AppState>()(
             WHERE id=?`, 
             [m.cantidad_saldo, m.costo_unit_saldo, m.total_saldo, 
              m.costo_unit_out || 0, m.total_out || 0, m.id]);
+        }
+
+        if (negativeDetected) {
+          toast.error('Kárdex: Se detectó stock insuficiente en salidas. Ajustado a cero para evitar distorsión en costo promedio.');
         }
 
         const refreshed = await electron.dbGetWorkspaceData(ruc);
@@ -1808,14 +2088,18 @@ export const useStore = create<AppState>()(
             fecha_adquisicion, fecha_uso, costo_adquisicion, saldo_inicial, adquisiciones,
             mejoras, retiros_bajas, otros_ajustes, ajuste_inflacion, tasa_depreciacion,
             deprec_ejercicio, deprec_bajas, deprec_otros, deprec_acum_anterior, 
-            depreciacion_acumulada, metodo, cuenta_activo, cuenta_depreciacion
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            depreciacion_acumulada, metodo, cuenta_activo, cuenta_depreciacion,
+            tasa_depreciacion_tributaria, deprec_ejercicio_tributaria,
+            depreciacion_acumulada_tributaria, deprec_acum_anterior_tributaria
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `, [
           a.id, ruc, a.codigo, a.descripcion, a.marca || '', a.modelo || '', a.serie_placa || '',
           a.fecha_adquisicion, a.fecha_uso, a.costo_adquisicion, a.saldo_inicial || 0, a.adquisiciones || 0,
           a.mejoras || 0, a.retiros_bajas || 0, a.otros_ajustes || 0, a.ajuste_inflacion || 0, a.tasa_depreciacion,
           a.deprec_ejercicio || 0, a.deprec_bajas || 0, a.deprec_otros || 0, a.deprec_acum_anterior || 0,
-          a.depreciacion_acumulada, a.metodo, a.cuenta_activo, a.cuenta_depreciacion
+          a.depreciacion_acumulada, a.metodo, a.cuenta_activo, a.cuenta_depreciacion,
+          a.tasa_depreciacion_tributaria || 0, a.deprec_ejercicio_tributaria || 0,
+          a.depreciacion_acumulada_tributaria || 0, a.deprec_acum_anterior_tributaria || 0
         ]);
         set({ fixedAssets: [...get().fixedAssets.filter(x => x.id !== a.id), a] });
       },
@@ -2247,7 +2531,7 @@ export const useStore = create<AppState>()(
 
         await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
         for (const entry of journalEntries) {
-          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber) VALUES (?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber]);
+          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
         }
 
         await get().syncCurrentWorkspace();
@@ -2383,6 +2667,124 @@ export const useStore = create<AppState>()(
           toast.success('✅ Plan de Cuentas 5.4 exportado con éxito.');
         } catch (e: any) {
           toast.error(`⚠️ Error al exportar TXT 5.4: ${e.message}`);
+        }
+      },
+      exportarRetenciones41TXT: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.retenciones41ExportarTXT(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          link.setAttribute('download', `LE${ruc}${y}${m}00040100001111.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Libro de Retenciones 4.1 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 4.1: ${e.message}`);
+        }
+      },
+      exportarPle71TXT: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.ple71ExportarTXT(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          const tieneDatos = data.length > 0;
+          const contentIndicator = tieneDatos ? '1' : '0';
+          link.setAttribute('download', `LE${ruc}${y}${m}00070100001${contentIndicator}11.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Registro de Activos Fijos 7.1 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 7.1: ${e.message}`);
+        }
+      },
+      exportarPle101TXT: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.ple101ExportarTXT(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          const tieneDatos = data.length > 0;
+          const contentIndicator = tieneDatos ? '1' : '0';
+          link.setAttribute('download', `LE${ruc}${y}${m}00100100001${contentIndicator}11.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Registro de Costos 10.1 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 10.1: ${e.message}`);
+        }
+      },
+      exportarPle121TXT: async (periodo) => {
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          const data = await electron.ple121ExportarTXT(ruc, periodo);
+          const blob = new Blob([data], { type: 'text/plain; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const y = periodo.substring(0, 4);
+          const m = periodo.substring(4, 6);
+          const tieneDatos = data.length > 0;
+          const contentIndicator = tieneDatos ? '1' : '0';
+          link.setAttribute('download', `LE${ruc}${y}${m}00120100001${contentIndicator}11.txt`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('✅ Registro de Inventario Físico 12.1 exportado con éxito.');
+        } catch (e: any) {
+          toast.error(`⚠️ Error al exportar TXT 12.1: ${e.message}`);
+        }
+      },
+      facturacionConfigurarCertificadoAction: async (password: string, pfxBase64: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return null;
+        try {
+          const res = await webApiBridge.facturacionConfigurarCertificado(ruc, { password, pfxBase64 });
+          if (res?.success) {
+            toast.success('✅ Certificado digital configurado correctamente.');
+          }
+          return res;
+        } catch (e: any) {
+          toast.error(`⚠️ Error al configurar certificado: ${e.message || e}`);
+          return { success: false, error: String(e) };
+        }
+      },
+      facturacionEmitirComprobanteAction: async (comprobanteId: string) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return null;
+        try {
+          set({ isProcessing: true });
+          const res = await webApiBridge.facturacionEmitirComprobante(ruc, comprobanteId);
+          if (res?.success) {
+            toast.success(`✅ Comprobante enviado y ACEPTADO por SUNAT/OSE.`);
+          }
+          return res;
+        } catch (e: any) {
+          const errorMsg = e.response?.data?.error || e.message || e;
+          toast.error(`⚠️ Error al emitir comprobante: ${errorMsg}`);
+          return { success: false, error: String(errorMsg) };
+        } finally {
+          set({ isProcessing: false });
         }
       },
     }),

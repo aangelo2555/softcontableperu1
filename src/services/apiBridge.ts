@@ -332,6 +332,37 @@ export const webApiBridge = {
         return res.data;
     },
 
+    retenciones41Listar: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/retenciones-41/${ruc}?periodo=${periodo}&t=${Date.now()}`);
+        return res.data;
+    },
+    retenciones41ExportarTXT: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/retenciones-41/${ruc}/exportar-txt?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+    ple71ExportarTXT: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/ple-71/${ruc}/exportar-txt?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+    ple101ExportarTXT: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/ple-101/${ruc}/exportar-txt?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+    ple121ExportarTXT: async (ruc: string, periodo: string) => {
+        const res = await api.get(`/api/ple-121/${ruc}/exportar-txt?periodo=${periodo}`, { responseType: 'blob' });
+        return res.data;
+    },
+
+    // --- Facturación Electrónica UBL 2.1 ---
+    facturacionConfigurarCertificado: async (ruc: string, data: { password: string, pfxBase64: string }) => {
+        const res = await api.post('/api/facturacion/configurar-certificado', { ruc, ...data });
+        return res.data;
+    },
+    facturacionEmitirComprobante: async (ruc: string, comprobanteId: string) => {
+        const res = await api.post('/api/facturacion/emitir-comprobante', { ruc, comprobanteId });
+        return res.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

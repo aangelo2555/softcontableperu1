@@ -57,7 +57,7 @@ function parseFechaDisplay(fecha: string): { anio: string; mes: string } {
 }
 
 const AsientosView: React.FC = () => {
-  const { plan, asientos, saveAsiento, deleteAsientoById, getNextAsientoNumber, draftAsiento, setDraftAsiento, addAccount, glosasHabituales, saveGlosaHabitual, currentCompany } = useStore();
+  const { plan, asientos, saveAsiento, deleteAsientoById, saveAuditLog, getNextAsientoNumber, draftAsiento, setDraftAsiento, addAccount, glosasHabituales, saveGlosaHabitual, currentCompany } = useStore();
   
   const [lines, setLines] = useState<AsientoLine[]>(draftAsiento?.lines || []);
   const [currentInput, setCurrentInput] = useState({ cuenta: '', debe: '' as string | number, haber: '' as string | number });
@@ -69,6 +69,13 @@ const AsientosView: React.FC = () => {
   const [pendingLines, setPendingLines] = useState<Omit<AsientoLine, 'id'>[]>([]);
   const [focusedField, setFocusedField] = useState<'debe' | 'haber' | null>(null);
   const [glosaModal, setGlosaModal] = useState<{ show: boolean, glosa: string, lines: any[] } | null>(null);
+  const [auditModal, setAuditModal] = useState<{
+    show: boolean;
+    type: 'edit' | 'delete';
+    id: string;
+    onConfirm: (justificacion: string) => void;
+  } | null>(null);
+  const [justificacionText, setJustificacionText] = useState('');
   
   const nextNum = getNextAsientoNumber();
   const [header, setHeader] = useState({
@@ -234,19 +241,41 @@ const AsientosView: React.FC = () => {
     if (!balanced) { setToast({ type: 'error', message: `No cuadra. Diferencia: ${(totalDebe - totalHaber).toFixed(2)}` }); return; }
     if (!header.glosa.trim()) { setToast({ type: 'error', message: 'Ingrese una glosa.' }); return; }
     
-    if (editingId) deleteAsientoById(editingId);
-    await saveAsiento({ asiento: header.asiento, fecEmi: header.fecEmi, glosa: header.glosa, anio: header.anio, mes: header.mes }, lines);
-    setToast({ type: 'success', message: `Asiento ${header.asiento} guardado ✓` });
+    if (editingId) {
+      setAuditModal({
+        show: true,
+        type: 'edit',
+        id: editingId,
+        onConfirm: async (justificacion) => {
+          const oldItem = asientos.find(x => x.id === editingId);
+          await deleteAsientoById(editingId, justificacion);
+          const newId = await saveAsiento({ asiento: header.asiento, fecEmi: header.fecEmi, glosa: header.glosa, anio: header.anio, mes: header.mes }, lines);
+          await saveAuditLog(header.asiento || newId, 'UPDATE', oldItem, { header, lines }, justificacion);
+          setToast({ type: 'success', message: `Asiento ${header.asiento} actualizado ✓` });
 
-    // Check if glosa is new to suggest saving as habitual
-    const isHabitual = glosasHabituales.some(g => g.glosa.toUpperCase() === header.glosa.toUpperCase());
-    if (!isHabitual) {
-      setGlosaModal({ show: true, glosa: header.glosa.toUpperCase(), lines: [...lines] });
+          // Check if glosa is new to suggest saving as habitual
+          const isHabitual = glosasHabituales.some(g => g.glosa.toUpperCase() === header.glosa.toUpperCase());
+          if (!isHabitual) {
+            setGlosaModal({ show: true, glosa: header.glosa.toUpperCase(), lines: [...lines] });
+          }
+
+          handleLimpiar();
+          setTimeout(() => cuentaRef.current?.focus(), 100);
+        }
+      });
+    } else {
+      const newId = await saveAsiento({ asiento: header.asiento, fecEmi: header.fecEmi, glosa: header.glosa, anio: header.anio, mes: header.mes }, lines);
+      setToast({ type: 'success', message: `Asiento ${header.asiento} guardado ✓` });
+
+      // Check if glosa is new to suggest saving as habitual
+      const isHabitual = glosasHabituales.some(g => g.glosa.toUpperCase() === header.glosa.toUpperCase());
+      if (!isHabitual) {
+        setGlosaModal({ show: true, glosa: header.glosa.toUpperCase(), lines: [...lines] });
+      }
+
+      handleLimpiar();
+      setTimeout(() => cuentaRef.current?.focus(), 100);
     }
-
-    handleLimpiar();
-    // Ensure focus is returned to Cuenta after saving
-    setTimeout(() => cuentaRef.current?.focus(), 100);
   };
 
   const handleConfirmSaveGlosa = () => {
@@ -290,7 +319,18 @@ const AsientosView: React.FC = () => {
   };
 
   const handleEliminar = () => {
-    if (editingId) { deleteAsientoById(editingId); setToast({ type: 'success', message: 'Asiento eliminado.' }); handleLimpiar(); }
+    if (editingId) {
+      setAuditModal({
+        show: true,
+        type: 'delete',
+        id: editingId,
+        onConfirm: async (justificacion) => {
+          await deleteAsientoById(editingId, justificacion);
+          setToast({ type: 'success', message: 'Asiento eliminado.' });
+          handleLimpiar();
+        }
+      });
+    }
     else { setLines([]); setPendingLines([]); }
   };
 
@@ -766,7 +806,18 @@ const AsientosView: React.FC = () => {
                           <td className="p-2 text-right text-emerald-500">{formatCurrency(td)}</td>
                           <td className="p-2 text-right text-red-500">{formatCurrency(th)}</td>
                           <td className="p-2">
-                            <button onClick={e => { e.stopPropagation(); deleteAsientoById(a.id); if (editingId === a.id) handleLimpiar(); }} className="text-red-500/50 hover:text-red-500">
+                            <button onClick={e => {
+                              e.stopPropagation();
+                              setAuditModal({
+                                show: true,
+                                type: 'delete',
+                                id: a.id,
+                                onConfirm: async (justificacion) => {
+                                  await deleteAsientoById(a.id, justificacion);
+                                  if (editingId === a.id) handleLimpiar();
+                                }
+                              });
+                            }} className="text-red-500/50 hover:text-red-500">
                               <Trash2 size={12} />
                             </button>
                           </td>
@@ -854,6 +905,62 @@ const AsientosView: React.FC = () => {
               icon={<Plus size={14} />}
             >
               Sí, Guardar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Justificación de Auditoría */}
+      <Modal
+        open={!!auditModal?.show}
+        onClose={() => {
+          setAuditModal(null);
+          setJustificacionText('');
+          setTimeout(() => cuentaRef.current?.focus(), 50);
+        }}
+        title="JUSTIFICACIÓN DE AUDITORÍA REQUERIDA"
+        subtitle={auditModal?.type === 'delete' ? "Está eliminando un asiento contable manual." : "Está modificando un asiento contable manual."}
+        maxWidth="max-w-md"
+        accentColor="amber-500"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-app-muted leading-relaxed">
+            De acuerdo con las políticas de control interno y cumplimiento 2026, debe ingresar una justificación obligatoria detallando el motivo de este cambio para el registro inmutable en los logs de auditoría de los accionistas.
+          </p>
+          <textarea
+            className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-sm focus:outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all font-sans text-app-text min-h-[100px]"
+            placeholder="Ingrese el motivo detallado de la modificación/eliminación aquí..."
+            value={justificacionText}
+            onChange={e => setJustificacionText(e.target.value)}
+          />
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              size="md"
+              className="flex-1 border-app-border text-app-muted"
+              onClick={() => {
+                setAuditModal(null);
+                setJustificacionText('');
+                setTimeout(() => cuentaRef.current?.focus(), 50);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white border-none shadow-lg shadow-amber-600/20"
+              onClick={() => {
+                if (!justificacionText.trim()) {
+                  setToast({ type: 'error', message: 'La justificación es obligatoria.' });
+                  return;
+                }
+                auditModal?.onConfirm(justificacionText.trim());
+                setAuditModal(null);
+                setJustificacionText('');
+              }}
+            >
+              Confirmar Cambio
             </Button>
           </div>
         </div>

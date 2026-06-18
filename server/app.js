@@ -5,10 +5,18 @@ const fs = require('fs');
 const db = require('./databaseServer');
 const createLibroDiario52Service = require('./libroDiario52Service');
 const ld52Service = createLibroDiario52Service(db.rawDb);
+const createRetenciones41Service = require('./retenciones41Service');
+const retenciones41Service = createRetenciones41Service(db.rawDb);
+const createPle71Service = require('./ple71Service');
+const ple71Service = createPle71Service(db.rawDb);
+const createCosts101Service = require('./costs101Service');
+const costs101Service = createCosts101Service(db.rawDb);
+const createKardex121Service = require('./kardex121Service');
+const kardex121Service = createKardex121Service(db.rawDb);
 const sbsService = require('./sbsService');
 const buzonHandler = require('../main/buzonHandler');
 const sireHandler = require('../modulo/sireHandler');
-const { sireDir, buzonDir } = require('./storageConfig');
+const ublService = require('./ublService');
 
 const app = express();
 const authRoutes = require('./authRoutes');
@@ -1436,6 +1444,106 @@ app.get('/api/libro-diario-52/:ruc/exportar-txt-54', authMiddleware, inspectMidd
     }
 });
 
+app.get('/api/retenciones-41/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const data = retenciones41Service.obtenerRetenciones(ruc, userId, periodo);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('[API ERROR] Error en obtenerRetenciones 4.1:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/retenciones-41/:ruc/exportar-txt', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = retenciones41Service.generarTXT41(ruc, userId, periodo);
+        const tieneDatos = txt.length > 0;
+        const filename = retenciones41Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt 4.1:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/ple-71/:ruc/exportar-txt', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = ple71Service.generarTXT71(ruc, userId, periodo);
+        const tieneDatos = txt.length > 0;
+        const filename = ple71Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt 7.1:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/ple-101/:ruc/exportar-txt', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = costs101Service.generarTXT101(ruc, userId, periodo);
+        const tieneDatos = txt.length > 0;
+        const filename = costs101Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt 10.1:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/ple-121/:ruc/exportar-txt', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        const { periodo } = req.query;
+        const userId = req.targetUserId;
+        if (!periodo) {
+            return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
+        }
+        const txt = kardex121Service.generarTXT121(ruc, userId, periodo);
+        const tieneDatos = txt.length > 0;
+        const filename = kardex121Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
+        res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-type', 'text/plain; charset=utf-8');
+        res.charset = 'UTF-8';
+        res.send(txt);
+    } catch (error) {
+        console.error('[API ERROR] Error en exportar-txt 12.1:', error);
+        res.status(400).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/libro-diario-52/:ruc/sync-compra', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
@@ -1479,6 +1587,72 @@ app.post('/api/libro-diario-52/:ruc/delete-origen', authMiddleware, inspectMiddl
         res.json({ success: true });
     } catch (error) {
         console.error('[API ERROR] Error en delete-origen:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- API Endpoints: Facturación Electrónica UBL 2.1 ---
+app.post('/api/facturacion/configurar-certificado', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc, password, pfxBase64 } = req.body;
+        const userId = req.targetUserId;
+        if (!ruc || !password || !pfxBase64) {
+            return res.status(400).json({ success: false, error: 'Parámetros ruc, password y pfxBase64 son requeridos.' });
+        }
+        const pfxBuffer = Buffer.from(pfxBase64, 'base64');
+        db.saveCertificado(ruc, userId, pfxBuffer, password);
+        res.json({ success: true, message: 'Certificado digital (.pfx) configurado correctamente ✓' });
+    } catch (error) {
+        console.error('[API ERROR] Error en configurar-certificado:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/facturacion/emitir-comprobante', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc, comprobanteId } = req.body;
+        const userId = req.targetUserId;
+        if (!ruc || !comprobanteId) {
+            return res.status(400).json({ success: false, error: 'Parámetros ruc y comprobanteId son requeridos.' });
+        }
+        
+        // 1. Obtener datos de la empresa (emisor)
+        const wsData = await db.getWorkspaceData(ruc, userId);
+        if (!wsData || !wsData.currentCompany) {
+            return res.status(404).json({ success: false, error: 'No se encontró la empresa emisora.' });
+        }
+        const emisor = wsData.currentCompany;
+
+        // 2. Obtener comprobante de venta
+        const sale = wsData.sales.find(s => s.id === comprobanteId);
+        if (!sale) {
+            return res.status(404).json({ success: false, error: 'No se encontró la venta con el ID provisto.' });
+        }
+
+        // 3. Obtener certificado del contribuyente
+        const cert = db.getCertificado(ruc, userId);
+        if (!cert) {
+            return res.status(400).json({ success: false, error: '⚠️ Debe configurar un certificado digital para esta empresa antes de emitir comprobantes.' });
+        }
+
+        // 4. Generar XML UBL 2.1
+        const xmlSinFirma = ublService.generarXMLFactura(sale, emisor);
+
+        // 5. Firmar digitalmente con el certificado propio del contribuyente
+        const xmlFirmado = ublService.firmarXML(xmlSinFirma, cert.pfx, cert.pass, ruc);
+
+        // 6. Enviar a SUNAT/OSE
+        const response = await ublService.enviarSUNATOSE(ruc, sale.tipo_doc || '01', sale.serie, sale.numero, xmlFirmado, emisor.sol_user, emisor.sol_pass);
+
+        res.json({
+            success: true,
+            cdrXml: response.cdrXml,
+            status: response.status,
+            mensaje: response.mensaje,
+            xmlFirmado: Buffer.from(xmlFirmado).toString('base64')
+        });
+    } catch (error) {
+        console.error('[API ERROR] Error en emitir-comprobante:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

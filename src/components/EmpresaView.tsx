@@ -16,7 +16,7 @@ import { calcularObligacionesContables } from '../utils/tributarioRules';
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 
 const EmpresaView: React.FC = () => {
-  const { currentCompany: _currentCompany, updateCompany, sales, purchases, honorarios, journal, asientos, entities, setActiveTab, showCompanyConfig: showConfig, setShowCompanyConfig: setShowConfig } = useStore();
+  const { currentCompany: _currentCompany, updateCompany, sales, purchases, honorarios, journal, asientos, entities, setActiveTab, showCompanyConfig: showConfig, setShowCompanyConfig: setShowConfig, facturacionConfigurarCertificadoAction } = useStore();
   const currentCompany = _currentCompany || {};
   const [isSearchingRuc, setIsSearchingRuc] = useState(false);
   const [fetchSuccess, setFetchSuccess] = useState(false);
@@ -24,6 +24,60 @@ const EmpresaView: React.FC = () => {
   const [isSupportSaved, setIsSupportSaved] = useState(!!currentCompany.support);
   
   const [localUIT, setLocalUIT] = useState<string>('');
+
+  // Estados para Firma Digital / Facturación Electrónica
+  const [certPass, setCertPass] = useState('');
+  const [certBase64, setCertBase64] = useState('');
+  const [certName, setCertName] = useState('');
+  const [isSavingCert, setIsSavingCert] = useState(false);
+
+  // Estados para panel interactivo NRUS
+  const [nrusIngresos, setNrusIngresos] = useState<number>(0);
+  const [nrusCompras, setNrusCompras] = useState<number>(0);
+  const [nrusDeclaraciones, setNrusDeclaraciones] = useState<{ periodo: string; ingresos: number; compras: number; categoria: number; cuota: number }[]>([]);
+
+  // Categoría y cuota calculada NRUS
+  const nrusCalculo = useMemo(() => {
+    const maxVal = Math.max(nrusIngresos, nrusCompras);
+    if (maxVal <= 5000) {
+      return { categoria: 1, cuota: 20, mensaje: 'Categoría 1 (Hasta S/ 5,000)' };
+    } else if (maxVal <= 8000) {
+      return { categoria: 2, cuota: 50, mensaje: 'Categoría 2 (Hasta S/ 8,000)' };
+    } else {
+      return { categoria: 0, cuota: 0, mensaje: '⚠️ ¡Supera el límite de S/ 8,000 mensual del NRUS! Sugerimos migrar al Régimen Especial (RER) o MYPE.' };
+    }
+  }, [nrusIngresos, nrusCompras]);
+
+  // Cálculo de impuestos RER (Régimen Especial - Tasa Fija 1.5% Renta)
+  const rerCalculo = useMemo(() => {
+    const baseVentas = localSales.reduce((acc, s) => acc + s.bi, 0);
+    const igvVentas = localSales.reduce((acc, s) => acc + s.igv, 0);
+    const igvCompras = localPurchases.reduce((acc, p) => acc + p.igv, 0);
+    const rentaRer = baseVentas * 0.015;
+    const igvPagar = Math.max(0, igvVentas - igvCompras);
+    return {
+      renta: rentaRer,
+      igv: igvPagar,
+      total: rentaRer + igvPagar
+    };
+  }, [localSales, localPurchases]);
+
+  const handleConfigurarCertificado = async () => {
+    if (!certBase64 || !certPass) {
+      return;
+    }
+    setIsSavingCert(true);
+    try {
+      const res = await facturacionConfigurarCertificadoAction(certPass, certBase64);
+      if (res?.success) {
+        setCertPass('');
+        setCertBase64('');
+        setCertName('');
+      }
+    } finally {
+      setIsSavingCert(false);
+    }
+  };
 
   useEffect(() => {
     setLocalUIT(String(currentCompany.annualIncomeUIT || 0));
@@ -36,7 +90,13 @@ const EmpresaView: React.FC = () => {
   const totalSales = useMemo(() => localSales.reduce((acc, s) => acc + s.total, 0), [localSales]);
   const totalPurchases = useMemo(() => localPurchases.reduce((acc, p) => acc + p.total, 0), [localPurchases]);
   const igvSales = useMemo(() => localSales.reduce((acc, s) => acc + s.igv, 0), [localSales]);
-  const igvPurchases = useMemo(() => localPurchases.reduce((acc, p) => acc + p.igv, 0), [localPurchases]);
+  const igvPurchases = useMemo(() => localPurchases.reduce((acc, p) => {
+    // Suspend IGV Credit for purchases with SPOT but no deposit constancia/date
+    if (p.spot_monto && p.spot_monto > 0 && (!p.spot_constancia || !p.spot_fecha)) {
+      return acc;
+    }
+    return acc + p.igv;
+  }, 0), [localPurchases]);
   const estimatedIgv = igvSales - igvPurchases;
 
 
@@ -343,6 +403,15 @@ const EmpresaView: React.FC = () => {
                         <option key={r.code} value={r.code}>{r.label}</option>
                       ))}
                     </select>
+                    <label className="flex items-center gap-2 mt-1.5 cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={!!currentCompany.agente_retencion}
+                        onChange={(e) => updateCompany({ agente_retencion: e.target.checked })}
+                        className="rounded border-app-border text-pld-blue focus:ring-pld-blue h-3.5 w-3.5" 
+                      />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-app-muted">Agente de Retención</span>
+                    </label>
                   </div>
                   <div className="flex flex-col space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
@@ -414,9 +483,9 @@ const EmpresaView: React.FC = () => {
                     } else if (r === 'RER') {
                       message = "El Régimen Especial de Renta (RER) solo exige llevar 2 registros obligatorios (Ventas y Compras), sin distinción de ingresos.";
                     } else if (r === 'MYPE') {
-                      if (tramosUit <= 300) message = "Régimen MYPE (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
-                      else if (tramosUit <= 500) message = "Régimen MYPE (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
-                      else message = "Régimen MYPE (> 500 UIT): Contabilidad Completa (hasta 1,700 UIT).";
+                      if (tramosUit <= 300) message = "Régimen MYPE (≤ 300 UIT - Tramo 1): Pago a cuenta del Impuesto a la Renta de 1.0% sobre Ingresos Netos. Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
+                      else if (tramosUit <= 500) message = "Régimen MYPE (> 300 a ≤ 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Obligado a llevar Libro Diario Completo y Libro Mayor.";
+                      else message = "Régimen MYPE (> 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Contabilidad Completa (hasta 1,700 UIT).";
                     } else if (r === 'RG') {
                       if (tramosUit <= 300) message = "Régimen General (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
                       else if (tramosUit <= 500) message = "Régimen General (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
@@ -495,6 +564,76 @@ const EmpresaView: React.FC = () => {
                           ))}
                         </div>
                       </div>
+
+                      {/* Panel Interactivo NRUS */}
+                      {r === 'NRUS' && (
+                        <div className="bg-app-bg border border-app-border rounded-xl p-4 space-y-4 animate-fade-in">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-pld-blue flex items-center gap-2">
+                            <Calculator size={14} /> Calculadora de Cuota Fija NRUS
+                          </h4>
+                          <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
+                            El Nuevo RUS tributa mediante una cuota fija mensual determinada por el mayor valor entre tus ingresos brutos y compras mensuales.
+                          </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-app-muted">Ingresos Brutos del Mes (S/)</label>
+                              <input
+                                type="number"
+                                className="w-full text-sm font-mono font-bold bg-app-bg border border-app-border rounded-xl px-3 outline-none"
+                                value={nrusIngresos || ''}
+                                onChange={e => setNrusIngresos(Math.max(0, parseFloat(e.target.value) || 0))}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="flex flex-col space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-app-muted">Compras del Mes (S/)</label>
+                              <input
+                                type="number"
+                                className="w-full text-sm font-mono font-bold bg-app-bg border border-app-border rounded-xl px-3 outline-none"
+                                value={nrusCompras || ''}
+                                onChange={e => setNrusCompras(Math.max(0, parseFloat(e.target.value) || 0))}
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-between items-center bg-pld-blue/10 border border-pld-blue/20 p-3 rounded-lg">
+                            <div>
+                              <p className="text-[10px] text-app-muted uppercase font-bold">Cuota a Pagar</p>
+                              <p className="text-xs font-black text-app-text">{nrusCalculo.mensaje}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xl font-mono font-black text-pld-blue">S/ {nrusCalculo.cuota.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Panel Interactivo RER */}
+                      {r === 'RER' && (
+                        <div className="bg-app-bg border border-app-border rounded-xl p-4 space-y-4 animate-fade-in">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-pld-blue flex items-center gap-2">
+                            <Calculator size={14} /> Panel de Obligaciones RER (Simplificado)
+                          </h4>
+                          <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
+                            El Régimen Especial (RER) determina un impuesto a la renta de tasa única fija de 1.5% sobre la Base Imponible de las ventas, más el IGV del periodo.
+                          </p>
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="bg-app-surface border border-app-border p-3 rounded-lg">
+                              <p className="text-[9px] text-app-muted uppercase font-bold">Renta RER (1.5%)</p>
+                              <p className="text-base font-mono font-black text-pld-blue">S/ {rerCalculo.renta.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-app-surface border border-app-border p-3 rounded-lg">
+                              <p className="text-[9px] text-app-muted uppercase font-bold">IGV a Pagar</p>
+                              <p className="text-base font-mono font-black text-pld-magenta">S/ {rerCalculo.igv.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-pld-blue to-pld-magenta p-3 rounded-lg text-white">
+                              <p className="text-[9px] uppercase font-bold opacity-80">Total Tributo</p>
+                              <p className="text-base font-mono font-black">S/ {rerCalculo.total.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -528,6 +667,66 @@ const EmpresaView: React.FC = () => {
                       <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Client Secret (SIRE)</label>
                       <input type="password" value={currentCompany.sunatClientSecret || ''}
                         onChange={(e) => updateCompany({ sunatClientSecret: e.target.value })} placeholder="••••••••••••" />
+                    </div>
+                  </div>
+                  
+                  {/* Facturación Electrónica UBL 2.1 */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-pld-blue uppercase tracking-widest flex items-center gap-2">
+                      Facturación Electrónica (UBL 2.1)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Certificado Digital (.pfx)</label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('cert-upload-input')?.click()}
+                            className="px-3 py-2 bg-app-bg border border-app-border rounded-xl text-[10px] font-bold uppercase hover:border-pld-blue/50 transition-colors"
+                          >
+                            Seleccionar Certificado
+                          </button>
+                          <input
+                            id="cert-upload-input"
+                            type="file"
+                            accept=".pfx"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  const base64 = (ev.target?.result as string).split(',')[1];
+                                  setCertBase64(base64);
+                                  setCertName(file.name);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          {certName && <span className="text-[10px] text-emerald-500 font-mono truncate max-w-[150px]">{certName}</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            value={certPass}
+                            onChange={(e) => setCertPass(e.target.value)}
+                            placeholder="Contraseña del PFX..."
+                            className="flex-1 text-xs bg-app-bg border border-app-border rounded-xl px-3 outline-none"
+                          />
+                          <button
+                            type="button"
+                            disabled={!certBase64 || !certPass || isSavingCert}
+                            onClick={handleConfigurarCertificado}
+                            className="px-4 py-2 bg-pld-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-pld-blue/90 transition-colors"
+                          >
+                            {isSavingCert ? 'Guardando...' : 'Cargar'}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

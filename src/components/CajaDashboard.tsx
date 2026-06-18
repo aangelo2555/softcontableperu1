@@ -222,7 +222,9 @@ const CajaDashboard: React.FC = () => {
       // --- 3. EGRESOS EXTRAS Y TAXES ---
       const pdtIGV = Math.max(0, sIGV - pIGV);
       const rentaManual = movimientosData.find(m => m.month === monthNum && m.section === 'R' && m.key === 'VAL' && m.period === currentPeriod)?.value;
-      const calcRenta = rentaManual ?? (sBI * (currentCompany.regimenTributario === 'MYPE' ? 0.01 : 0.015));
+      const isMYPE = currentCompany.regimenTributario === 'MYPE';
+      const mypeRate = (currentCompany.annualIncomeUIT || 0) <= 300 ? 0.01 : 0.015;
+      const calcRenta = rentaManual ?? (sBI * (isMYPE ? mypeRate : 0.015));
 
       const extrasEgresos: Record<string, number> = {};
       extraEgresosKeys.forEach(k => {

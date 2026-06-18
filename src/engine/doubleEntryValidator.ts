@@ -137,13 +137,13 @@ export function validateDoubleEntry(lines: JournalLine[]): void {
     throw new LineaAmbiguaError(ambiguousLines[0].cta);
   }
 
-  // ─── Regla 4: Sumatoria DEBE = HABER (tolerancia S/ 0.01) ───
-  const totalDebe = accountingLines.reduce((sum, l) => sum + (l.debe || 0), 0);
-  const totalHaber = accountingLines.reduce((sum, l) => sum + (l.haber || 0), 0);
-  const diff = Math.abs(totalDebe - totalHaber);
+  // ─── Regla 4: Sumatoria DEBE = HABER (tolerancia S/ 0.01 / 1 céntimo entero) ───
+  const centsDebe = accountingLines.reduce((sum, l) => sum + Math.round((l.debe || 0) * 100), 0);
+  const centsHaber = accountingLines.reduce((sum, l) => sum + Math.round((l.haber || 0) * 100), 0);
+  const diffCents = Math.abs(centsDebe - centsHaber);
 
-  if (diff > TOLERANCIA_MATERIALIDAD) {
-    throw new PartidaDesbalanceadaError(totalDebe, totalHaber);
+  if (diffCents > 1) {
+    throw new PartidaDesbalanceadaError(centsDebe / 100, centsHaber / 100);
   }
 }
 
@@ -185,11 +185,13 @@ export function checkBalance(lines: JournalLine[]): {
     errors.push(`Líneas con DEBE y HABER simultáneos: ${ambiguous.map(l => l.cta).join(', ')}`);
   }
 
-  const totalDebe = accountingLines.reduce((s, l) => s + (l.debe || 0), 0);
-  const totalHaber = accountingLines.reduce((s, l) => s + (l.haber || 0), 0);
-  const diferencia = Math.abs(totalDebe - totalHaber);
+  const centsDebe = accountingLines.reduce((s, l) => s + Math.round((l.debe || 0) * 100), 0);
+  const centsHaber = accountingLines.reduce((s, l) => s + Math.round((l.haber || 0) * 100), 0);
+  const totalDebe = centsDebe / 100;
+  const totalHaber = centsHaber / 100;
+  const diferencia = Math.abs(centsDebe - centsHaber) / 100;
 
-  if (diferencia > TOLERANCIA_MATERIALIDAD) {
+  if (Math.abs(centsDebe - centsHaber) > 1) {
     errors.push(`Desbalance: DEBE S/ ${totalDebe.toFixed(2)} vs HABER S/ ${totalHaber.toFixed(2)} (diff: S/ ${diferencia.toFixed(2)})`);
   }
 

@@ -41,8 +41,14 @@ export interface ReconciliationSummary {
  * Genera el CAR (Código de Anotación de Registro) localmente
  * concatenando: RUC(11) + TipoDoc(2) + Serie(4) + Numero(10) = 27 chars
  */
-export function generateLocalCAR(record: PurchaseEntry | SaleEntry): string {
-  const ruc = (record.doc_num || '').trim().padStart(11, '0').substring(0, 11);
+export function generateLocalCAR(
+  record: PurchaseEntry | SaleEntry,
+  isSale: boolean = false,
+  companyRuc?: string
+): string {
+  const ruc = isSale && companyRuc 
+    ? companyRuc.trim().padStart(11, '0').substring(0, 11)
+    : (record.doc_num || '').trim().padStart(11, '0').substring(0, 11);
   const tipo = (record.tipo_doc || '01').trim().padStart(2, '0').substring(0, 2);
   const serie = (record.serie || '0000').trim().padStart(4, '0').substring(0, 4);
   const numero = (record.numero || '0').trim().padStart(10, '0').substring(0, 10);
@@ -61,14 +67,16 @@ const IGV_TOLERANCE = 0.50; // Umbral de discrepancia S/ 0.50
  */
 export function reconcileSireWithERP(
   sireRecords: SireRecord[],
-  erpRecords: (PurchaseEntry | SaleEntry)[]
+  erpRecords: (PurchaseEntry | SaleEntry)[],
+  isSale: boolean = false,
+  companyRuc?: string
 ): ReconciliationSummary {
   const results: ReconciliationResult[] = [];
 
   // Indexar ERP por CAR generado localmente
   const erpByCAR = new Map<string, PurchaseEntry | SaleEntry>();
   for (const erp of erpRecords) {
-    const car = generateLocalCAR(erp);
+    const car = generateLocalCAR(erp, isSale, companyRuc);
     erpByCAR.set(car, erp);
   }
 
@@ -121,7 +129,7 @@ export function reconcileSireWithERP(
 
   // ─── Registros ERP huérfanos (no encontrados en SIRE) ───
   for (const erp of erpRecords) {
-    const car = generateLocalCAR(erp);
+    const car = generateLocalCAR(erp, isSale, companyRuc);
     if (!processedERPKeys.has(car)) {
       results.push({
         identificador: car,

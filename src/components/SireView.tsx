@@ -353,7 +353,12 @@ const SireView: React.FC = () => {
       toast.success(`Parseados ${parsed.validRecords} registros de ${result.filename} (${parsed.errorRecords} con errores)`, { id: loadingToast });
       
       const erpRecords = proceso === 'Generar RCE' ? purchases : sales;
-      const recon = reconcileSireWithERP(parsed.records, erpRecords as any);
+      const recon = reconcileSireWithERP(
+        parsed.records,
+        erpRecords as any,
+        proceso === 'Generar RVIE',
+        currentCompany?.ruc
+      );
       setReconciliation(recon);
       setViewMode('auditoria');
     } catch (e: any) {

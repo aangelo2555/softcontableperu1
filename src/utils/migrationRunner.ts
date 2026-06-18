@@ -99,9 +99,9 @@ export async function runMigration() {
       // Migrar Diario
       for (const j of ws.journal) {
         await electron.dbExecute(`
-          INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [j.id, ruc, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc, j.debe, j.haber]);
+          INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [j.id, ruc, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc, j.debe, j.haber, j.medio_pago || null, j.nro_transaccion || null, j.razon_social || null]);
       }
 
       // Migrar Plan Contable
@@ -155,9 +155,9 @@ export async function runMigration() {
 
       for (const c of ws.costs) {
         await electron.dbExecute(`
-          INSERT OR REPLACE INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `, [c.id, ruc, c.codigo, c.descripcion, c.porcentaje, c.monto]);
+          INSERT OR REPLACE INTO costs (id, workspace_id, codigo, descripcion, porcentaje, monto, cuenta_debe, cuenta_haber)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [c.id, ruc, c.codigo, c.descripcion, c.porcentaje, c.monto, c.cuenta_debe || '94111', c.cuenta_haber || '79111']);
       }
     }
 

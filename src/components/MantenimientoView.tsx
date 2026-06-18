@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Trash2, Search, AlertTriangle, Edit2, X, Save } from 'lucide-react';
+import { Settings, Trash2, Search, AlertTriangle, Edit2, X, Save, Lock, Unlock, Calendar, ShieldCheck, CheckCircle, XCircle } from 'lucide-react';
 import { DataTable } from './DataTable';
 import { useStore } from '../store';
 import type { MaintenanceRecord } from '../store';
@@ -21,9 +21,13 @@ const ANEXOS = [
 ];
 
 const MantenimientoView: React.FC = () => {
-  const { currentCompany, maintenanceRecords, clearAllData, updateMaintenance } = useStore();
+  const { currentCompany, maintenanceRecords, clearAllData, updateMaintenance, loadPeriods, periodsList, closePeriodAction, reopenPeriodAction } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [editingRec, setEditingRec] = useState<MaintenanceRecord | null>(null);
+  const [activeSection, setActiveSection] = useState<'comprobantes' | 'periodos'>('comprobantes');
+  const [closingPeriodo, setClosingPeriodo] = useState<string | null>(null);
+  const [closeReport, setCloseReport] = useState<any>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Edit form state
   const [editDesc, setEditDesc] = useState('');
@@ -130,6 +134,43 @@ const MantenimientoView: React.FC = () => {
     alert("Base de datos limpiada con éxito.");
   };
 
+  // --- Period Management ---
+  useEffect(() => {
+    if (activeSection === 'periodos') {
+      loadPeriods();
+    }
+  }, [activeSection]);
+
+  const periodYear = parseInt(currentCompany.period) || new Date().getFullYear();
+  const allMonths = Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, '0');
+    return `${periodYear}-${mm}`;
+  });
+
+  const getPeriodStatus = (periodo: string) => {
+    const found = (periodsList || []).find((p: any) => p.periodo === periodo && p.tipo === 'MENSUAL');
+    return found ? found.estado : 'ABIERTO';
+  };
+
+  const handleClosePeriod = async (periodo: string) => {
+    setClosingPeriodo(periodo);
+    setIsClosing(true);
+    try {
+      const result = await closePeriodAction(periodo, 'MENSUAL');
+      setCloseReport(result?.report || result);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsClosing(false);
+  };
+
+  const handleReopenPeriod = async (periodo: string) => {
+    await reopenPeriodAction(periodo, 'MENSUAL');
+    await loadPeriods();
+  };
+
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
   return (
     <div className="h-full flex flex-col bg-app-bg overflow-hidden relative p-4">
       <div className="bg-app-surface border border-app-border rounded-xl shadow-2xl flex flex-col h-full overflow-hidden">
@@ -141,12 +182,31 @@ const MantenimientoView: React.FC = () => {
                 <Settings size={16} className="text-pld-blue" />
              </div>
              <div>
-                <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Mantenimiento</h2>
-                <p className="text-[9px] text-app-muted uppercase tracking-wider">Comprobantes {currentCompany.period}</p>
+                <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Configuración</h2>
+                <p className="text-[9px] text-app-muted uppercase tracking-wider">{currentCompany.period}</p>
              </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Section Tabs */}
+            <div className="flex items-center bg-app-bg rounded-lg border border-app-border overflow-hidden">
+              <button
+                onClick={() => setActiveSection('comprobantes')}
+                className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all ${
+                  activeSection === 'comprobantes' ? 'bg-pld-blue/20 text-pld-blue' : 'text-app-muted hover:text-app-text'
+                }`}
+              >
+                Comprobantes
+              </button>
+              <button
+                onClick={() => setActiveSection('periodos')}
+                className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all ${
+                  activeSection === 'periodos' ? 'bg-amber-500/20 text-amber-600' : 'text-app-muted hover:text-app-text'
+                }`}
+              >
+                <span className="flex items-center gap-1.5"><Calendar size={12} /> Períodos</span>
+              </button>
+            </div>
             <button
               onClick={() => setShowClearConfirm(true)}
               className="h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold px-4 rounded-lg flex items-center gap-2 border border-red-500/20 transition-all text-[10px] uppercase tracking-wider"
@@ -158,6 +218,80 @@ const MantenimientoView: React.FC = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden bg-gradient-to-br from-app-bg to-app-surface/10">
+
+        {activeSection === 'periodos' ? (
+          /* ─── Períodos Contables Panel ─── */
+          <div className="flex-1 overflow-auto custom-scrollbar space-y-4">
+            <div className="bg-app-surface p-6 rounded-2xl border border-app-border/40 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-600 flex items-center gap-2">
+                  <Lock size={14} /> Gestión de Períodos Contables {currentYear}
+                </h3>
+                <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 rounded-lg border border-amber-500/10">
+                  <ShieldCheck size={12} className="text-amber-600" />
+                  <span className="text-[8px] font-black uppercase tracking-wider text-amber-600">Un período cerrado bloquea compras, ventas, honorarios y asientos</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {allMonths.map((periodo, idx) => {
+                  const estado = getPeriodStatus(periodo);
+                  const isCerrado = estado === 'CERRADO';
+                  return (
+                    <div
+                      key={periodo}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isCerrado
+                          ? 'bg-gradient-to-br from-red-500/5 to-red-600/5 border-red-500/20'
+                          : 'bg-gradient-to-br from-emerald-500/5 to-teal-600/5 border-emerald-500/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-xs font-black text-app-text">{MONTH_NAMES[idx]}</p>
+                          <p className="text-[9px] font-mono text-app-muted">{periodo}</p>
+                        </div>
+                        {isCerrado ? (
+                          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <Lock size={14} className="text-red-500" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <Unlock size={14} className="text-emerald-500" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${
+                          isCerrado ? 'text-red-500' : 'text-emerald-500'
+                        }`}>
+                          {estado}
+                        </span>
+                        {isCerrado ? (
+                          <button
+                            onClick={() => handleReopenPeriod(periodo)}
+                            className="px-3 py-1.5 rounded-lg bg-app-bg border border-app-border text-[8px] font-black uppercase tracking-wider text-app-muted hover:text-amber-600 hover:border-amber-500/30 transition-all"
+                          >
+                            Reabrir
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleClosePeriod(periodo)}
+                            className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[8px] font-black uppercase tracking-wider text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                          >
+                            Cerrar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ─── Comprobantes Panel (Original) ─── */
+          <>
           <div className="bg-app-surface p-6 rounded-2xl border border-app-border/40 space-y-6 shadow-xl">
              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-pld-blue flex items-center gap-2">
                 <Search size={14} /> Búsqueda de Registros
@@ -202,8 +336,53 @@ const MantenimientoView: React.FC = () => {
                rowClassName="h-12 border-b border-app-border/30 hover:bg-app-hover transition-colors text-xs"
              />
           </div>
+          </>
+        )}
         </div>
       </div>
+
+      {/* Close Period Report Modal */}
+      {closingPeriodo && closeReport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+          <div className="bg-app-surface w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-app-border animate-in zoom-in duration-200">
+            <div className="p-5 border-b border-app-border bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+              <h3 className="text-sm font-black uppercase tracking-widest text-app-text flex items-center gap-2">
+                <ShieldCheck size={16} className="text-amber-600" /> Reporte de Cierre: {closingPeriodo}
+              </h3>
+            </div>
+            <div className="p-5 space-y-3 max-h-80 overflow-auto custom-scrollbar">
+              {(closeReport.checks || []).map((check: any) => (
+                <div key={check.id} className={`flex items-start gap-3 p-3 rounded-xl border ${
+                  check.ok ? 'bg-emerald-500/5 border-emerald-500/15' : check.bloqueante ? 'bg-red-500/5 border-red-500/15' : 'bg-amber-500/5 border-amber-500/15'
+                }`}>
+                  {check.ok ? (
+                    <CheckCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle size={16} className={`${check.bloqueante ? 'text-red-500' : 'text-amber-500'} shrink-0 mt-0.5`} />
+                  )}
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-app-text">{check.nombre}</p>
+                    <p className="text-[9px] text-app-muted">{check.detalle}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-5 border-t border-app-border">
+              {closeReport.canClose ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider">✅ Período cerrado exitosamente</span>
+                  <button onClick={() => { setClosingPeriodo(null); setCloseReport(null); }} className="px-4 py-2 rounded-xl bg-app-bg border border-app-border text-[10px] font-black uppercase hover:bg-app-hover transition-colors">Cerrar</button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">⛔ No se puede cerrar: {(closeReport.blockers || []).join(', ')}</span>
+                  <button onClick={() => { setClosingPeriodo(null); setCloseReport(null); }} className="px-4 py-2 rounded-xl bg-app-bg border border-app-border text-[10px] font-black uppercase hover:bg-app-hover transition-colors">Entendido</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Legacy Styled Confirmation Dialog */}
       {showClearConfirm && (

@@ -15,7 +15,7 @@ import { exportSingleSheet } from '../utils/excelExport';
 import { toast } from 'react-hot-toast';
 
 const ActivosFijosView: React.FC = () => {
-  const { fixedAssets, saveFixedAsset, deleteFixedAsset, currentCompany } = useStore();
+  const { fixedAssets, saveFixedAsset, deleteFixedAsset, currentCompany, exportarPle71TXT } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAssets = useMemo(() => {
@@ -50,6 +50,10 @@ const ActivosFijosView: React.FC = () => {
       deprec_otros: 0,
       deprec_acum_anterior: 0,
       depreciacion_acumulada: 0,
+      tasa_depreciacion_tributaria: 10,
+      deprec_ejercicio_tributaria: 0,
+      depreciacion_acumulada_tributaria: 0,
+      deprec_acum_anterior_tributaria: 0,
       metodo: 'LINEA RECTA',
       cuenta_activo: '33',
       cuenta_depreciacion: '39'
@@ -65,6 +69,13 @@ const ActivosFijosView: React.FC = () => {
   const calculateAjustado = (a: FixedAsset) => {
     return calculateHistorico(a) + (a.ajuste_inflacion || 0);
   };
+
+  const totalCosto = useMemo(() => fixedAssets.reduce((acc, a) => acc + calculateHistorico(a), 0), [fixedAssets]);
+  const totalDeprecContable = useMemo(() => fixedAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada || 0), 0), [fixedAssets]);
+  const totalDeprecTributaria = useMemo(() => fixedAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada_tributaria || 0), 0), [fixedAssets]);
+  
+  const diferenciaDiferida = totalDeprecContable - totalDeprecTributaria; // Carrying value vs Tax base
+  const efectoNic12 = Math.abs(diferenciaDiferida) * 0.295; // 29.5% tax rate
 
   const handleExport = () => {
     const rows = filteredAssets.map(a => ({
@@ -85,12 +96,15 @@ const ActivosFijosView: React.FC = () => {
       tasa_depreciacion: (a.tasa_depreciacion || 0) / 100,
       deprec_acum_anterior: a.deprec_acum_anterior || 0,
       deprec_ejercicio: a.deprec_ejercicio || 0,
-      depreciacion_acumulada: a.depreciacion_acumulada || 0
+      depreciacion_acumulada: a.depreciacion_acumulada || 0,
+      tasa_tributaria: (a.tasa_depreciacion_tributaria || 0) / 100,
+      deprec_ejercicio_trib: a.deprec_ejercicio_tributaria || 0,
+      deprec_acum_trib: a.depreciacion_acumulada_tributaria || 0
     }));
 
     exportSingleSheet({
-      sheetName: 'Formato 7.1',
-      title: 'FORMATO 7.1: REGISTRO DE ACTIVOS FIJOS - DETALLE DE LOS MOVIMIENTOS',
+      sheetName: 'Formato 7.1 Dual',
+      title: 'FORMATO 7.1: REGISTRO DE ACTIVOS FIJOS - DETALLE DE LOS MOVIMIENTOS (TASA DUAL)',
       columns: [
         { header: 'CÓDIGO', key: 'codigo', width: 12, alignment: 'center' },
         { header: 'CUENTA', key: 'cuenta_activo', width: 10, alignment: 'center' },
@@ -106,10 +120,10 @@ const ActivosFijosView: React.FC = () => {
         { header: 'VALOR HISTÓRICO', key: 'valor_historico', width: 18, style: 'currency' },
         { header: 'FECHA ADQ.', key: 'fecha_adquisicion', width: 14, alignment: 'center' },
         { header: 'FECHA USO', key: 'fecha_uso', width: 14, alignment: 'center' },
-        { header: 'TASA %', key: 'tasa_depreciacion', width: 12, style: 'percent', alignment: 'right' },
-        { header: 'DEP. ACUM. ANTERIOR', key: 'deprec_acum_anterior', width: 18, style: 'currency' },
-        { header: 'DEP. EJERCICIO', key: 'deprec_ejercicio', width: 18, style: 'currency' },
-        { header: 'DEP. ACUMULADA', key: 'depreciacion_acumulada', width: 18, style: 'currency' }
+        { header: 'TASA CONTABLE %', key: 'tasa_depreciacion', width: 15, style: 'percent', alignment: 'right' },
+        { header: 'DEP. ACUM. CONTABLE', key: 'depreciacion_acumulada', width: 18, style: 'currency' },
+        { header: 'TASA TRIBUTARIA %', key: 'tasa_tributaria', width: 15, style: 'percent', alignment: 'right' },
+        { header: 'DEP. ACUM. TRIBUTARIA', key: 'deprec_acum_trib', width: 18, style: 'currency' }
       ],
       rows,
       totals: {
@@ -120,16 +134,15 @@ const ActivosFijosView: React.FC = () => {
         retiros_bajas: filteredAssets.reduce((acc, a) => acc + (a.retiros_bajas || 0), 0),
         otros_ajustes: filteredAssets.reduce((acc, a) => acc + (a.otros_ajustes || 0), 0),
         valor_historico: filteredAssets.reduce((acc, a) => acc + calculateHistorico(a), 0),
-        deprec_acum_anterior: filteredAssets.reduce((acc, a) => acc + (a.deprec_acum_anterior || 0), 0),
-        deprec_ejercicio: filteredAssets.reduce((acc, a) => acc + (a.deprec_ejercicio || 0), 0),
-        depreciacion_acumulada: filteredAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada || 0), 0)
+        depreciacion_acumulada: filteredAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada || 0), 0),
+        deprec_acum_trib: filteredAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada_tributaria || 0), 0)
       },
       companyInfo: {
         ruc: currentCompany?.ruc || '',
         name: currentCompany?.name || 'EMPRESA',
         period: currentCompany?.period || String(new Date().getFullYear()),
       }
-    }, 'SUNAT_Formato_7.1_Activos_Fijos');
+    }, 'SUNAT_Formato_7.1_Tasa_Dual');
   };
 
   return (
@@ -143,11 +156,11 @@ const ActivosFijosView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight text-app-text flex items-center gap-3">
-              Activos Fijos <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[9px] text-amber-600 border border-amber-500/10 tracking-[0.2em] uppercase">Formato 7.1</span>
+              Activos Fijos <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[9px] text-amber-600 border border-amber-500/10 tracking-[0.2em] uppercase">Tasa Dual PLE 7.1</span>
             </h1>
             <p className="text-[10px] text-app-muted font-bold mt-1 flex items-center gap-2 uppercase tracking-wider">
               <Calculator size={12} className="text-amber-500" />
-              Detalle Integral (RT 234-2006)
+              Depreciación Paralela (NIIF vs LIR) y Libro SUNAT 7.1
             </p>
           </div>
         </div>
@@ -160,33 +173,49 @@ const ActivosFijosView: React.FC = () => {
             <Plus size={14} /> Nuevo Activo
           </button>
           <button onClick={() => window.print()} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><Printer size={14} /> Imprimir</button>
-          <button onClick={() => exportSingleSheet({ sheetName: 'Activos Fijos', title: 'REGISTRO DE ACTIVOS FIJOS - DETALLE DE LOS ACTIVOS FIJOS REVALORIZADOS Y NO REVALORIZADOS (SUNAT 7.1)', columns: [{ header: 'CÓDIGO', key: 'codigo', width: 14 }, { header: 'CUENTA', key: 'cuenta_activo', width: 10, alignment: 'center' }, { header: 'DESCRIPCIÓN', key: 'descripcion', width: 45 }, { header: 'MARCA', key: 'marca', width: 15 }, { header: 'MODELO', key: 'modelo', width: 15 }, { header: 'SERIE', key: 'serie_placa', width: 18 }, { header: 'SALDO INICIAL', key: 'saldo_inicial', width: 14, style: 'currency' }, { header: 'ADQUISICIONES', key: 'adquisiciones', width: 14, style: 'currency' }, { header: 'MEJORAS', key: 'mejoras', width: 14, style: 'currency' }, { header: 'RET/BAJAS', key: 'retiros_bajas', width: 14, style: 'currency' }, { header: 'HISTÓRICO', key: 'historico', width: 14, style: 'currency' }, { header: 'TASA %', key: 'tasa_depreciacion', width: 10, alignment: 'center' }, { header: 'DEP. EJERCICIO', key: 'deprec_ejercicio', width: 14, style: 'currency' }, { header: 'DEP. ACUMULADA', key: 'depreciacion_acumulada', width: 14, style: 'currency' }], rows: filteredAssets.map(a => ({ ...a, historico: calculateHistorico(a) })), companyInfo: { ruc: currentCompany?.ruc || '', name: currentCompany?.name || 'EMPRESA', period: currentCompany?.period || String(new Date().getFullYear()) } }, 'Activos_Fijos')} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
+          <button onClick={handleExport} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
+          <button 
+            onClick={() => {
+              const p = currentCompany?.period ? (currentCompany.period.length === 4 ? `${currentCompany.period}1200` : `${currentCompany.period}00`) : `${new Date().getFullYear()}1200`;
+              exportarPle71TXT(p);
+            }} 
+            className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          >
+            <FileDown size={14} /> PLE 7.1 (TXT)
+          </button>
         </div>
       </div>
 
       {/* Stats Summary Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 shrink-0">
          <div className="card-elevated !p-4 bg-gradient-to-br from-amber-500/10 to-orange-600/10 border-amber-500/20 relative overflow-hidden group">
-            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Valor Histórico</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Valor Histórico Total</p>
             <h3 className="text-xl font-black text-app-text italic">
-               S/ {fixedAssets.reduce((acc, a) => acc + calculateHistorico(a), 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+               S/ {totalCosto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </h3>
          </div>
          <div className="card-elevated !p-4 bg-gradient-to-br from-rose-500/10 to-pink-600/10 border-rose-500/20">
-            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Deprec. Acumulada</p>
-            <h3 className="text-xl font-black text-rose-500 italic">
-               S/ {fixedAssets.reduce((acc, a) => acc + (a.depreciacion_acumulada || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Deprec. Contable vs Tributaria</p>
+            <h3 className="text-base font-black text-rose-500 italic">
+               C: S/ {totalDeprecContable.toLocaleString('es-PE', { minimumFractionDigits: 2 })} <br/>
+               T: S/ {totalDeprecTributaria.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </h3>
          </div>
          <div className="card-elevated !p-4 bg-gradient-to-br from-emerald-500/10 to-teal-600/10 border-emerald-500/20">
-            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Valor Neto</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Diferencia Temporaria PPE</p>
             <h3 className="text-xl font-black text-emerald-600 italic">
-               S/ {fixedAssets.reduce((acc, a) => acc + (calculateAjustado(a) - (a.depreciacion_acumulada || 0)), 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+               S/ {diferenciaDiferida.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </h3>
+            <span className="text-[8px] font-bold text-app-muted">
+              {diferenciaDiferida < 0 ? 'Deducible (Activo Diferido)' : diferenciaDiferida > 0 ? 'Gravable (Pasivo Diferido)' : 'Sin diferencia'}
+            </span>
          </div>
-         <div className="card-elevated !p-4 flex flex-col justify-center items-center bg-app-surface/50 border-app-border/40">
-            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted">Unidades</p>
-            <p className="text-2xl font-black text-app-text tracking-tighter italic">{fixedAssets.length}</p>
+         <div className="card-elevated !p-4 flex flex-col justify-center bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border-indigo-500/20">
+            <p className="text-[9px] font-black uppercase tracking-widest text-app-muted mb-1">Efecto NIC 12 IR Diferido</p>
+            <p className="text-xl font-black text-indigo-500 tracking-tighter italic">
+              S/ {efectoNic12.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+            </p>
+            <span className="text-[8px] font-bold text-app-muted">Tasa aplicada: 29.5%</span>
          </div>
       </div>
 
@@ -213,7 +242,7 @@ const ActivosFijosView: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar bg-app-surface/20">
-          <table className="w-full text-left border-collapse min-w-[2200px]">
+          <table className="w-full text-left border-collapse min-w-[2800px]">
              <thead className="sticky top-0 z-20 shadow-md">
                 <tr className="bg-app-bg text-[8px] font-black uppercase tracking-widest text-app-muted border-b border-app-border">
                   <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sticky left-0 z-30 min-w-[120px]">Código</th>
@@ -229,10 +258,19 @@ const ActivosFijosView: React.FC = () => {
                   <th className="px-3 py-3 bg-blue-500/5 text-blue-600 min-w-[120px] text-right italic">Valor Histórico</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[130px]">Fecha Adq.</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[130px]">F. Inicio Uso</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[100px] text-right">Tasa %</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right">Acum. Anterior</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right font-bold">Ejercicio</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[130px] text-right font-black">Deprec. Total</th>
+                  
+                  {/* Contable Section */}
+                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[100px] text-right border-l border-app-border">Tasa C. %</th>
+                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right">Acum. Ant. C.</th>
+                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right font-bold">Ejerc. C.</th>
+                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[130px] text-right font-black">Deprec. Tot. C.</th>
+
+                  {/* Tributaria Section */}
+                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[100px] text-right border-l border-app-border">Tasa T. %</th>
+                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[120px] text-right">Acum. Ant. T.</th>
+                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[120px] text-right font-bold">Ejerc. T.</th>
+                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[130px] text-right font-black">Deprec. Tot. T.</th>
+                  
                   <th className="px-4 py-3 bg-app-bg text-right pr-6 min-w-[100px]">Acciones</th>
                 </tr>
              </thead>
@@ -345,7 +383,9 @@ const ActivosFijosView: React.FC = () => {
                         className="bg-transparent border-none p-0 text-app-muted font-mono focus:ring-0 w-full"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    
+                    {/* Contable Values */}
+                    <td className="px-3 py-2 text-right border-l border-app-border/40">
                         <input 
                         type="number" 
                         value={asset.tasa_depreciacion} 
@@ -381,6 +421,45 @@ const ActivosFijosView: React.FC = () => {
                         className="bg-transparent border-none p-0 text-right focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
+
+                    {/* Tributaria Values */}
+                    <td className="px-3 py-2 text-right border-l border-app-border/40">
+                        <input 
+                        type="number" 
+                        value={asset.tasa_depreciacion_tributaria || 0} 
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => saveFixedAsset({...asset, tasa_depreciacion_tributaria: parseFloat(e.target.value) || 0})}
+                        className="bg-transparent border-none p-0 text-right text-emerald-500 font-black focus:ring-0 w-full [appearance:textfield]"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                        <input 
+                        type="number" 
+                        value={asset.deprec_acum_anterior_tributaria || 0} 
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => saveFixedAsset({...asset, deprec_acum_anterior_tributaria: parseFloat(e.target.value) || 0})}
+                        className="bg-transparent border-none p-0 text-right text-app-muted font-bold focus:ring-0 w-full [appearance:textfield]"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                        <input 
+                        type="number" 
+                        value={asset.deprec_ejercicio_tributaria || 0} 
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => saveFixedAsset({...asset, deprec_ejercicio_tributaria: parseFloat(e.target.value) || 0})}
+                        className="bg-transparent border-none p-0 text-right text-rose-400 font-black focus:ring-0 w-full [appearance:textfield]"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right bg-emerald-500/5 text-emerald-600 font-black text-[11px] italic">
+                        <input 
+                        type="number" 
+                        value={asset.depreciacion_acumulada_tributaria || 0} 
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => saveFixedAsset({...asset, depreciacion_acumulada_tributaria: parseFloat(e.target.value) || 0})}
+                        className="bg-transparent border-none p-0 text-right focus:ring-0 w-full [appearance:textfield]"
+                      />
+                    </td>
+
                     <td className="px-4 py-2 text-right pr-6">
                       <button 
                         onClick={() => deleteFixedAsset(asset.id)}

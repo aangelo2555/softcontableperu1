@@ -26,6 +26,7 @@ const fmt = (n: number) => n !== 0 ? fmtAlways(n) : '';
 const FinanceSecondaryView: React.FC = () => {
   const { journal, currentCompany } = useStore();
   const [reportType, setReportType] = useState<'3.18' | '3.19'>('3.18');
+  const [flowMethod, setFlowMethod] = useState<'DIRECT' | 'INDIRECT'>('DIRECT');
   const [periodoAnio, setPeriodoAnio] = useState(parseInt(currentCompany.period) || new Date().getFullYear());
 
   // ═══════════════════════════════════════════
@@ -93,12 +94,75 @@ const FinanceSecondaryView: React.FC = () => {
 
     const priorEntries = journal.filter(j => j.fecha < `${periodoAnio}-01-01` && j.cta.startsWith('10'));
     const saldoInicial = priorEntries.reduce((s, e) => s + e.debe - e.haber, 0);
-    const totalOperacion = cobranzaVentas + cobranzaHonorarios + cobranzaIntereses + otrosCobrosOp - (pagoProveedores + pagoRemuneraciones + pagoTributos + pagoIntereses + otrosPagosOp);
+    const totalOperacionDirecto = cobranzaVentas + cobranzaHonorarios + cobranzaIntereses + otrosCobrosOp - (pagoProveedores + pagoRemuneraciones + pagoTributos + pagoIntereses + otrosPagosOp);
     const totalInversion = ventaValores + ventaIME + ventaIntangibles + otrosCobrosInv - (compraValores + compraIME + compraIntangibles + otrosPagosInv);
     const totalFinanciamiento = cobranzaEmision + cobranzaObligLP + otrosCobrosFinanc - (pagoAmortizacion + pagoDividendos + otrosPagosFinanc);
-    const netoCashFlow = totalOperacion + totalInversion + totalFinanciamiento;
+    const netoCashFlow = (flowMethod === 'DIRECT' ? totalOperacionDirecto : totalOperacionDirecto) + totalInversion + totalFinanciamiento; // Keep totals consistent
+
+    // --- INDIRECT METHOD CALCULATIONS ---
+    const getBalanceAtDate = (prefix: string, beforeDate: string) => {
+      return journal
+        .filter(j => j.fecha < beforeDate && j.cta.startsWith(prefix) && j.cta.toUpperCase() !== 'GLOSA')
+        .reduce((sum, j) => sum + (j.debe - j.haber), 0);
+    };
+
+    const getBalanceFinal = (prefix: string) => {
+      return journal
+        .filter(j => j.fecha.startsWith(String(periodoAnio)) || j.fecha < `${periodoAnio}-01-01`)
+        .filter(j => j.cta.startsWith(prefix) && j.cta.toUpperCase() !== 'GLOSA')
+        .reduce((sum, j) => sum + (j.debe - j.haber), 0);
+    };
+
+    // 1. Utilidad Neta
+    const yearRevenue = journal.filter(j => j.fecha.startsWith(String(periodoAnio)) && j.cta.startsWith('7')).reduce((s, j) => s + j.haber - j.debe, 0);
+    const yearExpense = journal.filter(j => j.fecha.startsWith(String(periodoAnio)) && j.cta.startsWith('6')).reduce((s, j) => s + j.debe - j.haber, 0);
+    const utilidadNeta = yearRevenue - yearExpense;
+
+    // 2. Depreciación y Amortización (gastos no efectivos)
+    const depreciacionEjercicio = journal
+      .filter(j => j.fecha.startsWith(String(periodoAnio)) && (j.cta.startsWith('68') || j.cta.startsWith('39')))
+      .reduce((s, j) => s + (j.debe > 0 && j.cta.startsWith('68') ? j.debe : 0), 0);
+
+    // 3. Cambios en Capital de Trabajo
+    const startDate = `${periodoAnio}-01-01`;
+    // Cuentas por Cobrar (Cta 12)
+    const cxC_inicial = getBalanceAtDate('12', startDate);
+    const cxC_final = getBalanceFinal('12');
+    const varCuentasCobrar = cxC_final - cxC_inicial; // Incremento = salida de efectivo (resta)
+
+    // Inventarios (Cta 20/21/24/25/26)
+    const inv_inicial = ['20', '21', '24', '25', '26'].reduce((sum, pref) => sum + getBalanceAtDate(pref, startDate), 0);
+    const inv_final = ['20', '21', '24', '25', '26'].reduce((sum, pref) => sum + getBalanceFinal(pref), 0);
+    const varInventarios = inv_final - inv_inicial; // Incremento = salida de efectivo (resta)
+
+    // Cuentas por Pagar Comerciales (Cta 42/43) - Liabilities, credit balance increase is cash positive
+    const cxP_inicial = ['42', '43'].reduce((sum, pref) => sum + getBalanceAtDate(pref, startDate), 0);
+    const cxP_final = ['42', '43'].reduce((sum, pref) => sum + getBalanceFinal(pref), 0);
+    const varCuentasPagar = cxP_final - cxP_inicial; // Disminución de pasivo = salida de efectivo (resta)
+
+    // Obligaciones Laborales (Cta 41)
+    const lab_inicial = getBalanceAtDate('41', startDate);
+    const lab_final = getBalanceFinal('41');
+    const varObligLaborales = lab_final - lab_inicial;
+
+    // Tributos por Pagar (Cta 40)
+    const trib_inicial = getBalanceAtDate('40', startDate);
+    const trib_final = getBalanceFinal('40');
+    const varTributosPagar = trib_final - trib_inicial;
+
+    // Ajuste total actividades de operación método indirecto
+    // Net Income + Non-Cash adjustments + Working Capital Changes (Liabilities are subtracted when debit balance increases, so we multiply by -1)
+    const totalOperacionIndirecto = utilidadNeta + depreciacionEjercicio + (-varCuentasCobrar) + (-varInventarios) + (-varCuentasPagar) + (-varObligLaborales) + (-varTributosPagar);
 
     return {
+      flowMethod,
+      utilidadNeta,
+      depreciacionEjercicio,
+      varCuentasCobrar,
+      varInventarios,
+      varCuentasPagar,
+      varObligLaborales,
+      varTributosPagar,
       operacion: {
         items: [
           { label: 'Cobranza de venta de bienes o servicios', monto: cobranzaVentas },
@@ -113,7 +177,7 @@ const FinanceSecondaryView: React.FC = () => {
           { label: 'Pago de intereses y rendimientos', monto: pagoIntereses },
           { label: 'Otros pagos de efectivo operacionales', monto: otrosPagosOp },
         ],
-        total: totalOperacion,
+        total: flowMethod === 'DIRECT' ? totalOperacionDirecto : totalOperacionIndirecto,
       },
       inversion: {
         items: [
@@ -143,9 +207,9 @@ const FinanceSecondaryView: React.FC = () => {
         ],
         total: totalFinanciamiento,
       },
-      netoCashFlow,
+      netoCashFlow: (flowMethod === 'DIRECT' ? totalOperacionDirecto : totalOperacionIndirecto) + totalInversion + totalFinanciamiento,
       saldoInicial,
-      saldoFinal: saldoInicial + netoCashFlow,
+      saldoFinal: saldoInicial + ((flowMethod === 'DIRECT' ? totalOperacionDirecto : totalOperacionIndirecto) + totalInversion + totalFinanciamiento),
     };
   }, [journal, periodoAnio, reportType]);
 
@@ -206,13 +270,24 @@ const FinanceSecondaryView: React.FC = () => {
     if (reportType === '3.18' && cashFlowData) {
       const rows: any[] = [];
       rows.push({ concepto: 'ACTIVIDADES DE OPERACIÓN', importe: null });
-      cashFlowData.operacion.items.forEach(it => {
-        rows.push({ concepto: `  ${it.label}`, importe: it.monto });
-      });
-      rows.push({ concepto: '  MENOS:', importe: null });
-      cashFlowData.operacion.menos.forEach(it => {
-        rows.push({ concepto: `    ${it.label}`, importe: -it.monto });
-      });
+      if (cashFlowData.flowMethod === 'DIRECT') {
+        cashFlowData.operacion.items.forEach(it => {
+          rows.push({ concepto: `  ${it.label}`, importe: it.monto });
+        });
+        rows.push({ concepto: '  MENOS:', importe: null });
+        cashFlowData.operacion.menos.forEach(it => {
+          rows.push({ concepto: `    ${it.label}`, importe: -it.monto });
+        });
+      } else {
+        rows.push({ concepto: '  Utilidad contable antes de participaciones e impuestos', importe: cashFlowData.utilidadNeta });
+        rows.push({ concepto: '  Ajustes: Depreciación y Amortización del Ejercicio', importe: cashFlowData.depreciacionEjercicio });
+        rows.push({ concepto: '  Variaciones en Activos y Pasivos Operativos:', importe: null });
+        rows.push({ concepto: '    Disminución (Aumento) en Cuentas por Cobrar Comerciales', importe: -cashFlowData.varCuentasCobrar });
+        rows.push({ concepto: '    Disminución (Aumento) en Existencias / Inventarios', importe: -cashFlowData.varInventarios });
+        rows.push({ concepto: '    Aumento (Disminución) en Cuentas por Pagar Comerciales', importe: -cashFlowData.varCuentasPagar });
+        rows.push({ concepto: '    Aumento (Disminución) en Remuneraciones y Obligaciones Laborales', importe: -cashFlowData.varObligLaborales });
+        rows.push({ concepto: '    Aumento (Disminución) en Tributos por Pagar', importe: -cashFlowData.varTributosPagar });
+      }
       rows.push({ concepto: 'NETO ACTIVIDADES DE OPERACIÓN', importe: cashFlowData.operacion.total });
       rows.push({ concepto: '', importe: null });
 
@@ -337,6 +412,12 @@ const FinanceSecondaryView: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          {reportType === '3.18' && (
+            <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
+               <button onClick={() => setFlowMethod('DIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'DIRECT' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>Directo</button>
+               <button onClick={() => setFlowMethod('INDIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'INDIRECT' ? 'bg-indigo-600 text-white' : 'text-app-muted hover:text-app-text'}`}>Indirecto</button>
+            </div>
+          )}
           <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
              <button onClick={() => setReportType('3.18')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.18' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>3.18 Flujo</button>
              <button onClick={() => setReportType('3.19')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.19' ? 'bg-pld-magenta text-white' : 'text-app-muted hover:text-app-text'}`}>3.19 Patr.</button>
@@ -369,21 +450,59 @@ const FinanceSecondaryView: React.FC = () => {
                   <tr className="bg-app-surface/60 font-bold uppercase border-b border-app-border text-pld-blue text-[10px]">
                     <td className="p-2.5 pl-4" colSpan={2}>Actividades de Operación</td>
                   </tr>
-                  {cashFlowData.operacion.items.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
-                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
-                      <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-red-500">
-                    <td className="p-2.5 pl-6 text-xs" colSpan={2}>MENOS:</td>
-                  </tr>
-                  {cashFlowData.operacion.menos.map((it, i) => (
-                    <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
-                      <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
-                      <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
-                    </tr>
-                  ))}
+                  {cashFlowData.flowMethod === 'DIRECT' ? (
+                    <>
+                      {cashFlowData.operacion.items.map((it, i) => (
+                        <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                          <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                          <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-red-500">
+                        <td className="p-2.5 pl-6 text-xs" colSpan={2}>MENOS:</td>
+                      </tr>
+                      {cashFlowData.operacion.menos.map((it, i) => (
+                        <tr key={i} className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                          <td className="p-2.5 pl-6 font-sans text-xs">{it.label}</td>
+                          <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{fmt(it.monto)}</td>
+                        </tr>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-6 font-sans text-xs">Utilidad contable antes de participaciones e impuestos</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.utilidadNeta)}</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-6 font-sans text-xs">Ajustes: Depreciación y Amortización del Ejercicio</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.depreciacionEjercicio)}</td>
+                      </tr>
+                      <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-emerald-500 text-[9px] uppercase">
+                        <td className="p-2.5 pl-6" colSpan={2">Variaciones en Activos y Pasivos Operativos (Capital de Trabajo):</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-8 font-sans text-xs">Disminución (Aumento) en Cuentas por Cobrar Comerciales</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{-cashFlowData.varCuentasCobrar >= 0 ? '+' : ''}{fmtAlways(-cashFlowData.varCuentasCobrar)}</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-8 font-sans text-xs">Disminución (Aumento) en Existencias / Inventarios</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{-cashFlowData.varInventarios >= 0 ? '+' : ''}{fmtAlways(-cashFlowData.varInventarios)}</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-8 font-sans text-xs">Aumento (Disminución) en Cuentas por Pagar Comerciales</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{-cashFlowData.varCuentasPagar >= 0 ? '+' : ''}{fmtAlways(-cashFlowData.varCuentasPagar)}</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-8 font-sans text-xs">Aumento (Disminución) en Remuneraciones y Obligaciones Laborales</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{-cashFlowData.varObligLaborales >= 0 ? '+' : ''}{fmtAlways(-cashFlowData.varObligLaborales)}</td>
+                      </tr>
+                      <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
+                        <td className="p-2.5 pl-8 font-sans text-xs">Aumento (Disminución) en Tributos por Pagar</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-xs border-l border-app-border/20">{-cashFlowData.varTributosPagar >= 0 ? '+' : ''}{fmtAlways(-cashFlowData.varTributosPagar)}</td>
+                      </tr>
+                    </>
+                  )}
                   <tr className="bg-pld-blue/[0.08] font-bold border-b border-app-border">
                     <td className="p-2.5 pl-4 text-xs font-black">Neto Actividades de Operación</td>
                     <td className="p-2.5 text-right font-mono font-black text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.operacion.total)}</td>

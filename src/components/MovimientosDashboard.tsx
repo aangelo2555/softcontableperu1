@@ -264,7 +264,9 @@ const MovimientosView: React.FC = () => {
       const pdtV = movimientosData.find(m => m.month === monthNum && m.section === 'PDT' && m.key === 'V' && m.period === currentPeriod)?.value ?? 0;
       const pdtC = movimientosData.find(m => m.month === monthNum && m.section === 'PDT' && m.key === 'C' && m.period === currentPeriod)?.value ?? 0;
       const rentaManual = movimientosData.find(m => m.month === monthNum && m.section === 'R' && m.key === 'VAL' && m.period === currentPeriod)?.value;
-      const renta = rentaManual ?? (sBI * (currentCompany.regimenTributario === 'MYPE' ? 0.01 : 0.015));
+      const isMYPE = currentCompany.regimenTributario === 'MYPE';
+      const mypeRate = (currentCompany.annualIncomeUIT || 0) <= 300 ? 0.01 : 0.015;
+      const renta = rentaManual ?? (sBI * (isMYPE ? mypeRate : 0.015));
 
       return {
         monthNum, name,

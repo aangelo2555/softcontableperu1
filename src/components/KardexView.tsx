@@ -13,7 +13,7 @@ const KardexView: React.FC = () => {
   const { 
     products, inventoryMovements, currentCompany, recordInventoryMovement, 
     deleteInventoryMovement, setActiveTab, setDraftCompra, setDraftVenta,
-    purchases, sales
+    purchases, sales, exportarPle121TXT
   } = useStore();
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [productSearch, setProductSearch] = useState('');
@@ -156,6 +156,15 @@ const KardexView: React.FC = () => {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg ${!selectedProductId ? 'bg-app-muted/20 text-app-muted cursor-not-allowed' : 'bg-pld-blue hover:bg-pld-blue/80 text-white shadow-pld-blue/20'}`}
             >
               <PlusCircle size={14} /> SALDO INICIAL
+            </button>
+            <button 
+              onClick={() => {
+                const per = currentCompany.period ? `${currentCompany.period.replace('-', '')}00` : '20260100';
+                exportarPle121TXT(per);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-purple-600/20"
+            >
+              <Download size={14} /> PLE 12.1 (TXT)
             </button>
             <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-emerald-600/20">
               <Download size={14} /> EXPORTAR PDF (13.1)

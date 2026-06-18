@@ -109,18 +109,38 @@ export function calculateDeferredTaxSchedule(
     });
   }
 
-  // 3. Provisiones Laborales / Vacaciones (Cta 4115, 415)
-  // These accounts are liabilities, so balances are negative (credit).
-  const provLaboralesBal = getSumOfPrefix('4115') + getSumOfPrefix('415');
-  if (provLaboralesBal !== 0) {
-    const override = savedComputationOverrides?.['provisiones_laborales'];
-    const accountingBase = provLaboralesBal;
-    const taxBase = override ? override.taxBase : 0; // default tax base is 0 (deductible when paid)
+  // 3a. Vacaciones provistas pero no pagadas (Cuenta 4115)
+  const vacProvBal = getSumOfPrefix('4115');
+  if (vacProvBal !== 0) {
+    const override = savedComputationOverrides?.['vacaciones_no_pagadas'];
+    const accountingBase = vacProvBal;
+    const taxBase = override ? override.taxBase : 0; // deductible when paid
     const difference = Math.abs(accountingBase - taxBase);
     
     rows.push({
-      key: 'provisiones_laborales',
-      concepto: 'Provisiones de Beneficios Sociales y Vacaciones (Cuentas 4115/415)',
+      key: 'vacaciones_no_pagadas',
+      concepto: 'Vacaciones provistas pero no pagadas (Cuenta 4115)',
+      cuenta: '4115',
+      accountingBase: Number(accountingBase.toFixed(2)),
+      taxBase: Number(taxBase.toFixed(2)),
+      diferencia: Number(difference.toFixed(2)),
+      tipo: 'DEDUCIBLE',
+      activoDiferido: Number((difference * (taxRate / 100)).toFixed(2)),
+      pasivoDiferido: 0
+    });
+  }
+
+  // 3b. CTS provista pero no pagada (Cuenta 4151 / 415)
+  const ctsProvBal = getSumOfPrefix('415');
+  if (ctsProvBal !== 0) {
+    const override = savedComputationOverrides?.['cts_no_pagada'];
+    const accountingBase = ctsProvBal;
+    const taxBase = override ? override.taxBase : 0; // deductible when paid
+    const difference = Math.abs(accountingBase - taxBase);
+    
+    rows.push({
+      key: 'cts_no_pagada',
+      concepto: 'Compensación por Tiempo de Servicios - CTS (Cuenta 415)',
       cuenta: '415',
       accountingBase: Number(accountingBase.toFixed(2)),
       taxBase: Number(taxBase.toFixed(2)),
@@ -131,21 +151,81 @@ export function calculateDeferredTaxSchedule(
     });
   }
 
+  // 3c. Arrendamientos Financieros - Leasing (Cuenta 32 vs 395/396)
+  const leasingAssetsBal = getSumOfPrefix('32');
+  const leasingDeprecBal = getSumOfPrefix('395') || getSumOfPrefix('396'); // Depreciation of leased assets
+  if (leasingAssetsBal !== 0 || leasingDeprecBal !== 0) {
+    const override = savedComputationOverrides?.['leasing_acelerado'];
+    const accountingBase = leasingAssetsBal + leasingDeprecBal;
+    // Tributariamente, con depreciación acelerada leasing, la base es menor
+    const taxBase = override ? override.taxBase : Number((accountingBase * 0.5).toFixed(2)); // default half due to acceleration
+    const diff = accountingBase - taxBase;
+    const tipo = diff < 0 ? 'DEDUCIBLE' : 'GRAVABLE';
+    const difference = Math.abs(diff);
+
+    rows.push({
+      key: 'leasing_acelerado',
+      concepto: 'Arrendamiento Financiero - Leasing (Cuenta 32 vs 395)',
+      cuenta: '32',
+      accountingBase: Number(accountingBase.toFixed(2)),
+      taxBase: Number(taxBase.toFixed(2)),
+      diferencia: Number(difference.toFixed(2)),
+      tipo,
+      activoDiferido: tipo === 'DEDUCIBLE' ? Number((difference * (taxRate / 100)).toFixed(2)) : 0,
+      pasivoDiferido: tipo === 'GRAVABLE' ? Number((difference * (taxRate / 100)).toFixed(2)) : 0
+    });
+  }
+
   // 4. Activos Fijos (Depreciación)
   // Let's sum accounting cost vs depreciation.
   // Cost: Cta 33, Deprec: Cta 39
   const costPPE = getSumOfPrefix('33');
   const deprecPPE = getSumOfPrefix('39');
   
-  if (costPPE !== 0 || deprecPPE !== 0) {
+  if (costPPE !== 0 || deprecPPE !== 0 || (fixedAssets && fixedAssets.length > 0)) {
     const override = savedComputationOverrides?.['activos_fijos_depreciacion'];
-    const accountingBase = costPPE + deprecPPE; // Carrying value
     
-    // Default tax base suggestion:
-    // If no override, let's assume tax depreciation matches accounting depreciation unless specified
-    const taxBase = override ? override.taxBase : accountingBase;
+    let accountingBase = costPPE + deprecPPE; // Default to ledger net value
+    let taxBase = override ? override.taxBase : accountingBase; // Default tax base
+
+    if (fixedAssets && fixedAssets.length > 0) {
+      let totalAccountingBase = 0;
+      let totalTaxBase = 0;
+
+      fixedAssets.forEach(a => {
+        const saldoInicial = Number(a.saldo_inicial) || 0;
+        const adquisiciones = Number(a.adquisiciones) || 0;
+        const mejoras = Number(a.mejoras) || 0;
+        const retirosBajas = Number(a.retiros_bajas) || 0;
+        const otrosAjustes = Number(a.otros_ajustes) || 0;
+        const ajusteInflacion = Number(a.ajuste_inflacion) || 0;
+        const costoAdq = Number(a.costo_adquisicion) || Number(a.costo) || 0;
+        
+        const valorAjustado = costoAdq + saldoInicial + adquisiciones + mejoras - retirosBajas + otrosAjustes + ajusteInflacion;
+
+        // Contable
+        const deprecAcumAnt = Number(a.deprec_acum_anterior) || 0;
+        const deprecEjec = Number(a.deprec_ejercicio) || 0;
+        const deprecBajas = Number(a.deprec_bajas) || 0;
+        const deprecOtros = Number(a.deprec_otros) || 0;
+        const deprecAcumTotal = deprecAcumAnt + deprecEjec - deprecBajas + deprecOtros;
+        const carryingValue = valorAjustado - deprecAcumTotal;
+
+        // Tributaria
+        const deprecAcumAntTrib = Number(a.deprec_acum_anterior_tributaria) || deprecAcumAnt;
+        const deprecEjecTrib = Number(a.deprec_ejercicio_tributaria) || deprecEjec;
+        const deprecAcumTotalTrib = deprecAcumAntTrib + deprecEjecTrib - deprecBajas + deprecOtros;
+        const taxValue = valorAjustado - deprecAcumTotalTrib;
+
+        totalAccountingBase += carryingValue;
+        totalTaxBase += taxValue;
+      });
+
+      accountingBase = totalAccountingBase;
+      taxBase = override ? override.taxBase : totalTaxBase;
+    }
+
     const diff = accountingBase - taxBase;
-    
     const tipo = diff < 0 ? 'DEDUCIBLE' : 'GRAVABLE';
     const difference = Math.abs(diff);
     
@@ -165,6 +245,28 @@ export function calculateDeferredTaxSchedule(
   // 5. Inyectar custom rows (p. ej. Pérdidas tributarias arrastrables o adiciones manuales del usuario)
   if (savedComputationOverrides) {
     Object.entries(savedComputationOverrides).forEach(([key, override]) => {
+      // 5a. Pérdidas Tributarias Arrastrables (Sistema A o Sistema B)
+      if (key === 'perdida_arrastrable_a' || key === 'perdida_arrastrable_b') {
+        const isA = key === 'perdida_arrastrable_a';
+        const accountingBase = 0; // Contablemente no hay base de activo físico en libros para pérdidas
+        const taxBase = override.taxBase || 0; // Pérdida imponible a compensar
+        const difference = Math.abs(taxBase);
+        
+        rows.push({
+          key,
+          concepto: `Pérdida Tributaria Arrastrable - ${isA ? 'Sistema A (Límite 4 años)' : 'Sistema B (Límite 50% Renta Neta)'}`,
+          cuenta: '3712',
+          accountingBase,
+          taxBase: Number(taxBase.toFixed(2)),
+          diferencia: Number(difference.toFixed(2)),
+          tipo: 'DEDUCIBLE',
+          activoDiferido: Number((difference * (taxRate / 100)).toFixed(2)),
+          pasivoDiferido: 0,
+          isCustom: false
+        });
+        return;
+      }
+
       if (override.isCustom) {
         const accountingBase = override.accountingBase || 0;
         const taxBase = override.taxBase || 0;
