@@ -123,12 +123,12 @@ app.post('/api/db/execute', async (req, res) => {
                 if (hasUserId && !sql.toLowerCase().includes('user_id')) {
                     const colParenCloseIndex = sql.indexOf(')');
                     const valuesIndex = sql.toUpperCase().indexOf('VALUES');
-                    const valParenCloseIndex = sql.lastIndexOf(')');
+                    const valuesCloseParenIndex = valuesIndex !== -1 ? sql.indexOf(')', valuesIndex) : -1;
                     
-                    if (colParenCloseIndex !== -1 && valuesIndex !== -1 && valParenCloseIndex !== -1) {
+                    if (colParenCloseIndex !== -1 && valuesIndex !== -1 && valuesCloseParenIndex !== -1) {
                         const beforeCols = sql.slice(0, colParenCloseIndex);
-                        const afterCols = sql.slice(colParenCloseIndex, valParenCloseIndex);
-                        const endStr = sql.slice(valParenCloseIndex);
+                        const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
+                        const endStr = sql.slice(valuesCloseParenIndex);
                         
                         sql = `${beforeCols}, user_id${afterCols}, ?${endStr}`;
                         params.push(req.targetUserId);
