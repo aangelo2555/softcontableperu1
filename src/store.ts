@@ -356,6 +356,9 @@ export interface CompanyData {
   annualIncomeUIT?: number;
   agente_retencion?: boolean;
   regimen?: RegimenCode;
+  ciiuCode?: string;
+  fixedAssetsValue?: number;
+  employeeCount?: number;
 }
 
 export interface BuzonMensaje {

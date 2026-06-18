@@ -7,10 +7,11 @@ import {
   ArrowRight, Clock, FileText, Users, ChevronRight, Wallet, Scale,
   AlertCircle, Calculator
 } from 'lucide-react';
-import { useStore, type RegimenCode } from '../store';
+import { useStore, type CompanyData, type RegimenCode } from '../store';
 import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
+import { evaluateRegime } from '../engine/regimeEngine';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -22,8 +23,92 @@ const EmpresaView: React.FC = () => {
   const [fetchSuccess, setFetchSuccess] = useState(false);
   const [supportLinkDraft, setSupportLinkDraft] = useState('');
   const [isSupportSaved, setIsSupportSaved] = useState(!!currentCompany.support);
-  
+
   const [localUIT, setLocalUIT] = useState<string>('');
+
+  // ─── Computed Metrics (Excluyendo Propuestas SIRE) ───
+  const localSales = useMemo(() => sales.filter(s => s.estado_sire !== 'Propuesta'), [sales]);
+  const localPurchases = useMemo(() => purchases.filter(p => p.estado_sire !== 'Propuesta'), [purchases]);
+
+  // active period calculations
+  const activePeriodYear = currentCompany.period || new Date().getFullYear().toString();
+
+  const isInActivePeriod = (dateStr: string) => {
+    if (!dateStr) return false;
+    if (dateStr.includes('/')) {
+      return dateStr.endsWith('/' + activePeriodYear);
+    }
+    if (dateStr.includes('-')) {
+      return dateStr.startsWith(activePeriodYear + '-');
+    }
+    return false;
+  };
+
+  const getMonthFromDate = (dateStr: string): number => {
+    if (!dateStr) return 0;
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      return parseInt(parts[1]) || 0;
+    }
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      return parseInt(parts[1]) || 0;
+    }
+    return 0;
+  };
+
+  const periodSales = useMemo(() => localSales.filter(s => isInActivePeriod(s.fecha)), [localSales, activePeriodYear]);
+  const periodPurchases = useMemo(() => localPurchases.filter(p => isInActivePeriod(p.fecha)), [localPurchases, activePeriodYear]);
+
+  const compiledFinancials = useMemo(() => {
+    const annualRevenue = periodSales.reduce((acc, s) => acc + (s.bi || 0), 0);
+    const annualPurchases = periodPurchases.reduce((acc, p) => acc + (p.bi || 0), 0);
+
+    const salesByMonth: Record<number, number> = {};
+    const purchasesByMonth: Record<number, number> = {};
+
+    periodSales.forEach(s => {
+      const m = getMonthFromDate(s.fecha);
+      if (m >= 1 && m <= 12) {
+        salesByMonth[m] = (salesByMonth[m] || 0) + (s.bi || 0);
+      }
+    });
+
+    periodPurchases.forEach(p => {
+      const m = getMonthFromDate(p.fecha);
+      if (m >= 1 && m <= 12) {
+        purchasesByMonth[m] = (purchasesByMonth[m] || 0) + (p.bi || 0);
+      }
+    });
+
+    const monthlyRevenue = Math.max(0, ...Object.values(salesByMonth));
+    const monthlyPurchases = Math.max(0, ...Object.values(purchasesByMonth));
+
+    return {
+      annualRevenue,
+      monthlyRevenue,
+      annualPurchases,
+      monthlyPurchases
+    };
+  }, [periodSales, periodPurchases]);
+
+  const evaluation = useMemo(() => {
+    const regimeInput = currentCompany.regimenTributario || 'RG';
+    const regime = (regimeInput === 'MYPE' ? 'RMT' : regimeInput) as any;
+    const ciiuCode = currentCompany.ciiuCode || '';
+    const fixedAssetsValue = Number(currentCompany.fixedAssetsValue || 0);
+    const employeeCount = Number(currentCompany.employeeCount || 0);
+
+    return evaluateRegime(regime, {
+      annualRevenue: compiledFinancials.annualRevenue,
+      monthlyRevenue: compiledFinancials.monthlyRevenue,
+      annualPurchases: compiledFinancials.annualPurchases,
+      monthlyPurchases: compiledFinancials.monthlyPurchases,
+      fixedAssetsValue,
+      employeeCount,
+      ciiuCode
+    });
+  }, [currentCompany.regimenTributario, currentCompany.ciiuCode, currentCompany.fixedAssetsValue, currentCompany.employeeCount, compiledFinancials]);
 
   // Estados para Firma Digital / Facturación Electrónica
   const [certPass, setCertPass] = useState('');
@@ -35,6 +120,11 @@ const EmpresaView: React.FC = () => {
   const [nrusIngresos, setNrusIngresos] = useState<number>(0);
   const [nrusCompras, setNrusCompras] = useState<number>(0);
   const [nrusDeclaraciones, setNrusDeclaraciones] = useState<{ periodo: string; ingresos: number; compras: number; categoria: number; cuota: number }[]>([]);
+
+  useEffect(() => {
+    setNrusIngresos(compiledFinancials.monthlyRevenue);
+    setNrusCompras(compiledFinancials.monthlyPurchases);
+  }, [compiledFinancials.monthlyRevenue, compiledFinancials.monthlyPurchases]);
 
   // Categoría y cuota calculada NRUS
   const nrusCalculo = useMemo(() => {
@@ -50,9 +140,9 @@ const EmpresaView: React.FC = () => {
 
   // Cálculo de impuestos RER (Régimen Especial - Tasa Fija 1.5% Renta)
   const rerCalculo = useMemo(() => {
-    const baseVentas = localSales.reduce((acc, s) => acc + s.bi, 0);
-    const igvVentas = localSales.reduce((acc, s) => acc + s.igv, 0);
-    const igvCompras = localPurchases.reduce((acc, p) => acc + p.igv, 0);
+    const baseVentas = periodSales.reduce((acc, s) => acc + (s.bi || 0), 0);
+    const igvVentas = periodSales.reduce((acc, s) => acc + (s.igv || 0), 0);
+    const igvCompras = periodPurchases.reduce((acc, p) => acc + (p.igv || 0), 0);
     const rentaRer = baseVentas * 0.015;
     const igvPagar = Math.max(0, igvVentas - igvCompras);
     return {
@@ -60,7 +150,7 @@ const EmpresaView: React.FC = () => {
       igv: igvPagar,
       total: rentaRer + igvPagar
     };
-  }, [localSales, localPurchases]);
+  }, [periodSales, periodPurchases]);
 
   const handleConfigurarCertificado = async () => {
     if (!certBase64 || !certPass) {
@@ -82,10 +172,6 @@ const EmpresaView: React.FC = () => {
   useEffect(() => {
     setLocalUIT(String(currentCompany.annualIncomeUIT || 0));
   }, [currentCompany.ruc, currentCompany.annualIncomeUIT]);
-
-  // ─── Computed Metrics (Excluyendo Propuestas SIRE) ───
-  const localSales = useMemo(() => sales.filter(s => s.estado_sire !== 'Propuesta'), [sales]);
-  const localPurchases = useMemo(() => purchases.filter(p => p.estado_sire !== 'Propuesta'), [purchases]);
 
   const totalSales = useMemo(() => localSales.reduce((acc, s) => acc + s.total, 0), [localSales]);
   const totalPurchases = useMemo(() => localPurchases.reduce((acc, p) => acc + p.total, 0), [localPurchases]);
@@ -255,12 +341,11 @@ const EmpresaView: React.FC = () => {
             <div className="divide-y divide-app-border/50">
               {recentOps.map((op, i) => (
                 <div key={i} className="flex items-center gap-4 px-5 py-3 hover:bg-app-hover transition-colors">
-                  <div className={`p-2 rounded-lg shrink-0 ${
-                    op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-500' :
+                  <div className={`p-2 rounded-lg shrink-0 ${op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-500' :
                     op.type === 'compra' ? 'bg-violet-500/10 text-violet-500' :
-                    op.type === 'honorario' ? 'bg-amber-500/10 text-amber-500' :
-                    'bg-blue-500/10 text-blue-500'
-                  }`}>
+                      op.type === 'honorario' ? 'bg-amber-500/10 text-amber-500' :
+                        'bg-blue-500/10 text-blue-500'
+                    }`}>
                     <op.icon size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -404,11 +489,11 @@ const EmpresaView: React.FC = () => {
                       ))}
                     </select>
                     <label className="flex items-center gap-2 mt-1.5 cursor-pointer select-none">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={!!currentCompany.agente_retencion}
                         onChange={(e) => updateCompany({ agente_retencion: e.target.checked })}
-                        className="rounded border-app-border text-pld-blue focus:ring-pld-blue h-3.5 w-3.5" 
+                        className="rounded border-app-border text-pld-blue focus:ring-pld-blue h-3.5 w-3.5"
                       />
                       <span className="text-[10px] font-black uppercase tracking-wider text-app-muted">Agente de Retención</span>
                     </label>
@@ -430,8 +515,8 @@ const EmpresaView: React.FC = () => {
                       <Calculator size={12} className="text-pld-blue" /> Ingresos Anuales (UIT)
                     </label>
                     <div className="relative flex items-center">
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         min="0"
                         step="0.1"
                         value={localUIT}
@@ -450,7 +535,7 @@ const EmpresaView: React.FC = () => {
                             }
                           }
                         }}
-                        className="w-full text-sm font-bold pr-12" 
+                        className="w-full text-sm font-bold pr-12"
                       />
                       <span className="absolute right-3 text-[10px] font-bold text-app-muted select-none">
                         UIT
@@ -459,6 +544,49 @@ const EmpresaView: React.FC = () => {
                     <span className="text-[10px] text-app-muted">
                       Equiv: S/ {((parseFloat(localUIT) || 0) * getUIT(currentCompany.period || '2026')).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </span>
+                  </div>
+                </div>
+
+                {/* Row 4: CIIU Code, Fixed Assets & Employee Count */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                      <Hash size={12} className="text-pld-blue" /> Código CIIU
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={currentCompany.ciiuCode || ''}
+                      onChange={(e) => updateCompany({ ciiuCode: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                      placeholder="Ej: 6920"
+                      className="w-full text-sm font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                      <Wallet size={12} className="text-pld-blue" /> Activos Fijos (S/)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={currentCompany.fixedAssetsValue === undefined ? '' : currentCompany.fixedAssetsValue}
+                      onChange={(e) => updateCompany({ fixedAssetsValue: e.target.value === '' ? undefined : Math.max(0, parseFloat(e.target.value) || 0) })}
+                      placeholder="0.00"
+                      className="w-full text-sm font-bold"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                      <Users size={12} className="text-pld-blue" /> Número de Trabajadores
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={currentCompany.employeeCount === undefined ? '' : currentCompany.employeeCount}
+                      onChange={(e) => updateCompany({ employeeCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })}
+                      placeholder="0"
+                      className="w-full text-sm font-bold"
+                    />
                   </div>
                 </div>
 
@@ -473,7 +601,7 @@ const EmpresaView: React.FC = () => {
                     const ingresosSoles = i * valorUIT;
                     const tramosUit = i;
                     const obligaciones = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
-                    
+
                     let message = '';
                     let isRed = false;
 
@@ -524,16 +652,37 @@ const EmpresaView: React.FC = () => {
                   return (
                     <div className="flex flex-col gap-4">
                       {/* Banner de Mensaje de Obligación */}
-                      <div className={`flex items-start gap-3 p-4 rounded-xl border ${
-                        currentRules.isRed 
-                          ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400' 
-                          : 'bg-pld-blue/5 border-pld-blue/15 text-app-text'
-                      }`}>
+                      <div className={`flex items-start gap-3 p-4 rounded-xl border ${currentRules.isRed
+                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
+                        : 'bg-pld-blue/5 border-pld-blue/15 text-app-text'
+                        }`}>
                         <AlertCircle size={18} className="shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-semibold leading-relaxed">{currentRules.message}</p>
                         </div>
                       </div>
+
+                      {/* Alerts from Regime Evaluation Engine */}
+                      {evaluation.alerts.length > 0 && (
+                        <div className="flex flex-col gap-2.5">
+                          {evaluation.alerts.map((alert, idx) => (
+                            <div key={idx} className={`flex items-start gap-3 p-4 rounded-xl border ${alert.level === 'CRITICAL'
+                              ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
+                              : alert.level === 'WARNING'
+                                ? 'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400'
+                                : 'bg-blue-500/10 border-blue-500/25 text-blue-700 dark:text-blue-400'
+                              }`}>
+                              <AlertCircle size={18} className="shrink-0 mt-0.5 text-current" />
+                              <div>
+                                <p className="text-xs font-bold leading-relaxed">{alert.message}</p>
+                                {alert.recommendation && (
+                                  <p className="text-[10px] font-medium opacity-85 mt-1">Recomendación: {alert.recommendation}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Lista Detallada de Libros y Estados */}
                       <div className="bg-app-bg border border-app-border rounded-xl p-4">
@@ -596,7 +745,7 @@ const EmpresaView: React.FC = () => {
                               />
                             </div>
                           </div>
-                          
+
                           <div className="flex justify-between items-center bg-pld-blue/10 border border-pld-blue/20 p-3 rounded-lg">
                             <div>
                               <p className="text-[10px] text-app-muted uppercase font-bold">Cuota a Pagar</p>
@@ -669,7 +818,7 @@ const EmpresaView: React.FC = () => {
                         onChange={(e) => updateCompany({ sunatClientSecret: e.target.value })} placeholder="••••••••••••" />
                     </div>
                   </div>
-                  
+
                   {/* Facturación Electrónica UBL 2.1 */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold text-pld-blue uppercase tracking-widest flex items-center gap-2">
@@ -752,7 +901,7 @@ const EmpresaView: React.FC = () => {
                     <div className="relative w-full h-full flex flex-col items-center justify-center p-2">
                       <img src={currentCompany.logoBase64} alt="Logo" className="max-w-full max-h-[140px] object-contain" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                        <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2"><Upload size={14}/> Cambiar</span>
+                        <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2"><Upload size={14} /> Cambiar</span>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); updateCompany({ logoBase64: undefined }); }}
                         className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-lg z-10">

@@ -197,6 +197,9 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
     retencion_fecha: '',
     percepcion_monto: 0,
     percepcion_comprobante: '',
+    ref_tipo_doc: '',
+    ref_serie: '',
+    ref_numero: '',
   });
 
   const handleEmitirCPE = async (comprobanteId: string) => {

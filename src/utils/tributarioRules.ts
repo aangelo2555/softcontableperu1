@@ -51,6 +51,8 @@ export function calcularObligacionesContables(
 
   // 2. Control de caso base: Nuevo RUS no lleva contabilidad
   if (regimen === 'NRUS') {
+    libros.registroVentas = true;
+    libros.registroCompras = true;
     return libros;
   }
 

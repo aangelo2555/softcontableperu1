@@ -38,7 +38,10 @@ db.exec(`
         sol_pass BLOB,
         sunatClientId BLOB,
         sunatClientSecret BLOB,
-        user_id TEXT
+        user_id TEXT,
+        ciiuCode TEXT DEFAULT '',
+        fixedAssetsValue REAL DEFAULT 0,
+        employeeCount INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS purchases (
@@ -628,6 +631,9 @@ function ensureColumnExists(tableName, colName, colType) {
 // Migraciones generales para sincronizar la base de datos de Railway con todos los campos del sistema local
 ensureColumnExists('workspaces', 'businessType', "TEXT DEFAULT 'COMERCIAL'");
 ensureColumnExists('workspaces', 'annualIncomeUIT', 'REAL DEFAULT 0');
+ensureColumnExists('workspaces', 'ciiuCode', "TEXT DEFAULT ''");
+ensureColumnExists('workspaces', 'fixedAssetsValue', 'REAL DEFAULT 0');
+ensureColumnExists('workspaces', 'employeeCount', 'INTEGER DEFAULT 0');
 
 ensureColumnExists('products', 'type_existence', 'TEXT');
 ensureColumnExists('products', 'sale_price', 'REAL DEFAULT 0');
@@ -863,8 +869,8 @@ const dbManager = {
     saveWorkspace: (w, userId) => {
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO workspaces 
-            (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, user_id, annualIncomeUIT, agente_retencion)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (ruc, name, regimenTributario, location, address, support, period, logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret, user_id, annualIncomeUIT, agente_retencion, ciiuCode, fixedAssetsValue, employeeCount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         stmt.run(
             w.ruc, w.name, w.regimenTributario, w.location, w.address,
@@ -873,7 +879,10 @@ const dbManager = {
             encrypt(w.sunatClientId), encrypt(w.sunatClientSecret),
             userId,
             Number(w.annualIncomeUIT || 0),
-            w.agente_retencion ? 1 : 0
+            w.agente_retencion ? 1 : 0,
+            w.ciiuCode || '',
+            Number(w.fixedAssetsValue || 0),
+            Number(w.employeeCount || 0)
         );
     },
 

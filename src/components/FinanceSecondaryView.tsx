@@ -479,7 +479,7 @@ const FinanceSecondaryView: React.FC = () => {
                         <td className="p-2.5 text-right font-mono font-bold text-pld-blue text-xs border-l border-app-border/20">{fmtAlways(cashFlowData.depreciacionEjercicio)}</td>
                       </tr>
                       <tr className="bg-app-surface/20 border-b border-app-border/30 font-bold text-emerald-500 text-[9px] uppercase">
-                        <td className="p-2.5 pl-6" colSpan={2">Variaciones en Activos y Pasivos Operativos (Capital de Trabajo):</td>
+                        <td className="p-2.5 pl-6" colSpan={2}>Variaciones en Activos y Pasivos Operativos (Capital de Trabajo):</td>
                       </tr>
                       <tr className="border-b border-app-border/30 hover:bg-pld-blue/[0.04] transition-colors">
                         <td className="p-2.5 pl-8 font-sans text-xs">Disminución (Aumento) en Cuentas por Cobrar Comerciales</td>
