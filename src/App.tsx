@@ -453,7 +453,7 @@ const App: React.FC = () => {
       )}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64`}>
+      <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
         {/* Brand Header */}
         <div className="h-16 flex items-center px-5 bg-app-surface shrink-0 border-b border-app-border overflow-hidden" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
             <div className="flex items-center gap-3 w-full">
@@ -629,7 +629,7 @@ const App: React.FC = () => {
         )}
 
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative">
+        <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
           
           {/* Left: Hamburger + Search Bar */}
           <div className="flex items-center gap-2 sm:gap-4">

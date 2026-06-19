@@ -138,12 +138,13 @@ const KardexView: React.FC = () => {
           </button>
         </div>
       ),
-      className: 'w-16 border-l border-app-border/30'
+      className: 'w-16 border-l border-app-border/30 print:hidden'
     }
   ];
 
   return (
-    <div className="h-full flex flex-col bg-app-bg overflow-hidden relative">
+    <div className="h-full flex flex-col bg-app-bg overflow-hidden relative print:bg-white print:p-0">
+      <div className="print:hidden">
       <PageHeader 
         icon={<BookOpen size={18} />} 
         title="Registro de Inventario Permanente Valorizado" 
@@ -201,12 +202,13 @@ const KardexView: React.FC = () => {
           </div>
         }
       />
+      </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 print:p-0 print:overflow-visible">
         <div className="max-w-[1450px] mx-auto space-y-6">
           
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-4 section-card h-fit">
+          <div className="grid grid-cols-12 gap-6 print:flex print:flex-col print:gap-4">
+            <div className="col-span-4 section-card h-fit print:hidden">
               <div className="section-card-header">
                 <Search size={15} />
                 <span>Búsqueda de Existencia</span>
@@ -239,7 +241,7 @@ const KardexView: React.FC = () => {
               </div>
             </div>
 
-            <div className="col-span-8 section-card">
+            <div className="col-span-8 section-card print:col-span-12 print:border-none print:shadow-none print:p-0">
                <div className="section-card-header">
                  <FileText size={15} />
                  <span>Información del Registro (SUNAT)</span>
@@ -324,7 +326,7 @@ const KardexView: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-6 print:hidden">
             <div className="card-elevated group hover:border-emerald-500/50 transition-all">
               <Package className="text-emerald-500 mb-2 group-hover:scale-110 transition-transform" size={20} />
               <p className="text-[10px] font-black uppercase text-app-muted">Stock Disponible</p>

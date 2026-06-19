@@ -989,6 +989,75 @@ const EMPTY_WORKSPACE: WorkspaceState = {
   bankStatements: []
 };
 
+const employeeSaveTimeouts = new Map<string, any>();
+const fixedAssetSaveTimeouts = new Map<string, any>();
+
+const debouncedSaveEmployee = (ruc: string, e: any) => {
+  if (employeeSaveTimeouts.has(e.id)) {
+    clearTimeout(employeeSaveTimeouts.get(e.id));
+  }
+  const timeout = setTimeout(async () => {
+    employeeSaveTimeouts.delete(e.id);
+    try {
+      await electron.dbExecute(`
+        INSERT OR REPLACE INTO employees (
+          id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
+          fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
+          cussp, dias_trabajados, jornal_diario, sueldo_basico, 
+          asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
+          horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
+          impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
+          afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `, [
+        e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
+        e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
+        e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
+        e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
+        e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
+        e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
+        e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
+      ]);
+    } catch (err) {
+      console.error('[STORE] debouncedSaveEmployee failed:', err);
+    }
+  }, 500);
+  employeeSaveTimeouts.set(e.id, timeout);
+};
+
+const debouncedSaveFixedAsset = (ruc: string, a: any) => {
+  if (fixedAssetSaveTimeouts.has(a.id)) {
+    clearTimeout(fixedAssetSaveTimeouts.get(a.id));
+  }
+  const timeout = setTimeout(async () => {
+    fixedAssetSaveTimeouts.delete(a.id);
+    try {
+      await electron.dbExecute(`
+        INSERT OR REPLACE INTO fixed_assets (
+          id, workspace_id, codigo, descripcion, marca, modelo, serie_placa,
+          fecha_adquisicion, fecha_uso, costo_adquisicion, saldo_inicial, adquisiciones,
+          mejoras, retiros_bajas, otros_ajustes, ajuste_inflacion, tasa_depreciacion,
+          deprec_ejercicio, deprec_bajas, deprec_otros, deprec_acum_anterior, 
+          depreciacion_acumulada, metodo, cuenta_activo, cuenta_depreciacion,
+          tasa_depreciacion_tributaria, deprec_ejercicio_tributaria,
+          depreciacion_acumulada_tributaria, deprec_acum_anterior_tributaria
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `, [
+        a.id, ruc, a.codigo, a.descripcion, a.marca || '', a.modelo || '', a.serie_placa || '',
+        a.fecha_adquisicion, a.fecha_uso, a.costo_adquisicion, a.saldo_inicial || 0, a.adquisiciones || 0,
+        a.mejoras || 0, a.retiros_bajas || 0, a.otros_ajustes || 0, a.ajuste_inflacion || 0, a.tasa_depreciacion,
+        a.deprec_ejercicio || 0, a.deprec_bajas || 0, a.deprec_otros || 0, a.deprec_acum_anterior || 0,
+        a.depreciacion_acumulada, a.metodo, a.cuenta_activo, a.cuenta_depreciacion,
+        a.tasa_depreciacion_tributaria || 0, a.deprec_ejercicio_tributaria || 0,
+        a.depreciacion_acumulada_tributaria || 0, a.deprec_acum_anterior_tributaria || 0
+      ]);
+    } catch (err) {
+      console.error('[STORE] debouncedSaveFixedAsset failed:', err);
+    }
+  }, 500);
+  fixedAssetSaveTimeouts.set(a.id, timeout);
+};
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -2061,9 +2130,8 @@ export const useStore = create<AppState>()(
         const fullData: MovimientoData = { ...data, workspace_id: ruc, period };
         
         await electron.dbExecute(`
-          INSERT INTO movimientos_data (workspace_id, period, month, section, key, value)
+          INSERT OR REPLACE INTO movimientos_data (workspace_id, period, month, section, key, value)
           VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(workspace_id, period, month, section, key) DO UPDATE SET value = excluded.value
         `, [fullData.workspace_id, fullData.period, fullData.month, fullData.section, fullData.key, fullData.value]);
         
         const currentList = get().movimientosData;
@@ -2085,56 +2153,34 @@ export const useStore = create<AppState>()(
 
       saveFixedAsset: async (a) => {
         const ruc = get().currentCompany?.ruc || '';
-        await electron.dbExecute(`
-          INSERT OR REPLACE INTO fixed_assets (
-            id, workspace_id, codigo, descripcion, marca, modelo, serie_placa,
-            fecha_adquisicion, fecha_uso, costo_adquisicion, saldo_inicial, adquisiciones,
-            mejoras, retiros_bajas, otros_ajustes, ajuste_inflacion, tasa_depreciacion,
-            deprec_ejercicio, deprec_bajas, deprec_otros, deprec_acum_anterior, 
-            depreciacion_acumulada, metodo, cuenta_activo, cuenta_depreciacion,
-            tasa_depreciacion_tributaria, deprec_ejercicio_tributaria,
-            depreciacion_acumulada_tributaria, deprec_acum_anterior_tributaria
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        `, [
-          a.id, ruc, a.codigo, a.descripcion, a.marca || '', a.modelo || '', a.serie_placa || '',
-          a.fecha_adquisicion, a.fecha_uso, a.costo_adquisicion, a.saldo_inicial || 0, a.adquisiciones || 0,
-          a.mejoras || 0, a.retiros_bajas || 0, a.otros_ajustes || 0, a.ajuste_inflacion || 0, a.tasa_depreciacion,
-          a.deprec_ejercicio || 0, a.deprec_bajas || 0, a.deprec_otros || 0, a.deprec_acum_anterior || 0,
-          a.depreciacion_acumulada, a.metodo, a.cuenta_activo, a.cuenta_depreciacion,
-          a.tasa_depreciacion_tributaria || 0, a.deprec_ejercicio_tributaria || 0,
-          a.depreciacion_acumulada_tributaria || 0, a.deprec_acum_anterior_tributaria || 0
-        ]);
+        // Update local React state instantly (0ms latency)
         set({ fixedAssets: [...get().fixedAssets.filter(x => x.id !== a.id), a] });
+        
+        // Debounce database write
+        debouncedSaveFixedAsset(ruc, a);
       },
       deleteFixedAsset: async (id) => {
+        if (fixedAssetSaveTimeouts.has(id)) {
+          clearTimeout(fixedAssetSaveTimeouts.get(id));
+          fixedAssetSaveTimeouts.delete(id);
+        }
         await electron.dbExecute('DELETE FROM fixed_assets WHERE id = ?', [id]);
         set({ fixedAssets: get().fixedAssets.filter(x => x.id !== id) });
       },
 
       saveEmployee: async (e) => {
         const ruc = get().currentCompany?.ruc || '';
-        await electron.dbExecute(`
-          INSERT OR REPLACE INTO employees (
-            id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
-            fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
-            cussp, dias_trabajados, jornal_diario, sueldo_basico, 
-            asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
-            horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
-            impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
-            afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        `, [
-          e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
-          e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
-          e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
-          e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
-          e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
-          e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
-          e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
-        ]);
+        // Update local React state instantly (0ms latency)
         set({ employees: [...get().employees.filter(x => x.id !== e.id), e] });
+        
+        // Debounce database write
+        debouncedSaveEmployee(ruc, e);
       },
       deleteEmployee: async (id) => {
+        if (employeeSaveTimeouts.has(id)) {
+          clearTimeout(employeeSaveTimeouts.get(id));
+          employeeSaveTimeouts.delete(id);
+        }
         await electron.dbExecute('DELETE FROM employees WHERE id = ?', [id]);
         set({ employees: get().employees.filter(x => x.id !== id) });
       },
