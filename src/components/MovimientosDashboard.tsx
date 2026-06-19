@@ -716,12 +716,20 @@ const MovimientosView: React.FC = () => {
                   </tr>
                   <tr className="bg-amber-500/10">
                     <td className="p-3 pl-6 text-left font-black text-amber-500 sticky left-0 bg-amber-500/10 z-10 border-r border-amber-500/20">4011 (IGV)</td>
-                    {monthlyData.map(m => <td key={m.name} className="p-3 font-bold text-amber-500"><EditableCell value={m.sales.igv} onSave={v => handleSave(m.monthNum, 'V', 'IGV', v)} isOverride={m.sales.ov.igv} onReset={() => handleReset(m.monthNum, 'V', 'IGV')} /></td>)}
+                    {monthlyData.map(m => (
+                      <td key={m.name} className="p-3 font-bold text-amber-500 text-right font-mono">
+                        {format(m.sales.igv)}
+                      </td>
+                    ))}
                     <td className="p-3 pr-6 font-black bg-amber-500/20 text-amber-600">{format(totals.s.igv)}</td>
                   </tr>
                   <tr className="bg-app-bg border-t-2 border-app-border">
                     <td className="p-3 pl-6 text-left font-black text-app-text sticky left-0 bg-app-bg z-10 border-r border-app-border">1212 (TOTAL)</td>
-                    {monthlyData.map(m => <td key={m.name} className="p-3 font-black"><EditableCell value={m.sales.total} onSave={v => handleSave(m.monthNum, 'V', 'TOT', v)} isOverride={m.sales.ov.tot} onReset={() => handleReset(m.monthNum, 'V', 'TOT')} /></td>)}
+                    {monthlyData.map(m => (
+                      <td key={m.name} className="p-3 font-black text-right font-mono text-app-text">
+                        {format(m.sales.total)}
+                      </td>
+                    ))}
                     <td className="p-3 pr-6 font-black text-app-text">{format(totals.s.tot)}</td>
                   </tr>
                 </tbody>
@@ -814,12 +822,20 @@ const MovimientosView: React.FC = () => {
                   </tr>
                   <tr className="bg-amber-500/10">
                     <td className="p-3 pl-6 text-left font-black text-amber-500 sticky left-0 bg-amber-500/10 z-10 border-r border-amber-500/20">4011 (IGV)</td>
-                    {monthlyData.map(m => <td key={m.name} className="p-3 font-bold text-amber-500"><EditableCell value={m.purchases.igv} onSave={v => handleSave(m.monthNum, 'C', 'IGV', v)} isOverride={m.purchases.ov.igv} onReset={() => handleReset(m.monthNum, 'C', 'IGV')} /></td>)}
+                    {monthlyData.map(m => (
+                      <td key={m.name} className="p-3 font-bold text-amber-500 text-right font-mono">
+                        {format(m.purchases.igv)}
+                      </td>
+                    ))}
                     <td className="p-3 pr-6 font-black bg-amber-500/20 text-amber-600">{format(totals.p.igv)}</td>
                   </tr>
                   <tr className="bg-app-bg border-t-2 border-app-border">
                     <td className="p-3 pl-6 text-left font-black text-app-text sticky left-0 bg-app-bg z-10 border-r border-app-border">4212 (TOTAL)</td>
-                    {monthlyData.map(m => <td key={m.name} className="p-3 font-black"><EditableCell value={m.purchases.total} onSave={v => handleSave(m.monthNum, 'C', 'TOT', v)} isOverride={m.purchases.ov.tot} onReset={() => handleReset(m.monthNum, 'C', 'TOT')} /></td>)}
+                    {monthlyData.map(m => (
+                      <td key={m.name} className="p-3 font-black text-right font-mono text-app-text">
+                        {format(m.purchases.total)}
+                      </td>
+                    ))}
                     <td className="p-3 pr-6 font-black text-app-text">{format(totals.p.tot)}</td>
                   </tr>
                 </tbody>

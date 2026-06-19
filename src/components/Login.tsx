@@ -121,11 +121,12 @@ export const Login: React.FC = () => {
                             <div className="relative group">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
                                 <input 
-                                    type="password"
+                                    type="text"
                                     required
+                                    autoComplete="off"
                                     placeholder="••••••••"
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                    style={{ paddingLeft: '2.75rem' }}
+                                    style={{ paddingLeft: '2.75rem', WebkitTextSecurity: 'disc' } as any}
                                     value={formData.password}
                                     onChange={e => setFormData({...formData, password: e.target.value})}
                                 />
