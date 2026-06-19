@@ -219,6 +219,11 @@ db.exec(`
         workspace_id TEXT,
         code TEXT,
         name TEXT,
+        unit_measure TEXT,
+        type_existence TEXT,
+        account_id TEXT,
+        stock_min REAL DEFAULT 0,
+        sale_price REAL DEFAULT 0,
         user_id TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
@@ -663,7 +668,10 @@ ensureColumnExists('workspaces', 'ciiuCode', "TEXT DEFAULT ''");
 ensureColumnExists('workspaces', 'fixedAssetsValue', 'REAL DEFAULT 0');
 ensureColumnExists('workspaces', 'employeeCount', 'INTEGER DEFAULT 0');
 
+ensureColumnExists('products', 'unit_measure', 'TEXT');
 ensureColumnExists('products', 'type_existence', 'TEXT');
+ensureColumnExists('products', 'account_id', 'TEXT');
+ensureColumnExists('products', 'stock_min', 'REAL DEFAULT 0');
 ensureColumnExists('products', 'sale_price', 'REAL DEFAULT 0');
 
 const sireColsDef = [
