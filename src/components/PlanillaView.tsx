@@ -610,6 +610,7 @@ const PlanillaView: React.FC = () => {
                     <td className="px-4 py-2 border-r border-app-border sticky left-[50px] z-10 bg-app-surface group-hover:bg-app-hover">
                         <input 
                         type="text" 
+                        autoComplete="new-password"
                         value={emp.nombre} 
                         onChange={(e) => saveEmployee({...emp, nombre: e.target.value.toUpperCase()})}
                         className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-app-text font-black focus:ring-0 w-full outline-none"
@@ -618,6 +619,7 @@ const PlanillaView: React.FC = () => {
                     <td className="px-3 py-2">
                         <input 
                         type="text" 
+                        autoComplete="new-password"
                         value={emp.dni} 
                         onChange={(e) => saveEmployee({...emp, dni: e.target.value})}
                         className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-app-muted font-bold focus:ring-0 w-full font-mono outline-none"

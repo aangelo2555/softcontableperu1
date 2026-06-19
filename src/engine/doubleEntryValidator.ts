@@ -54,7 +54,7 @@ export class CuentaPCGEInvalidaError extends Error {
   public readonly cuentasInvalidas: string[];
 
   constructor(cuentas: string[]) {
-    super(`Cuentas PCGE inválidas: ${cuentas.join(', ')}. Se requieren al menos 4 dígitos numéricos.`);
+    super(`Cuentas PCGE inválidas: ${cuentas.join(', ')}. Se requieren al menos 3 dígitos numéricos.`);
     this.name = 'CuentaPCGEInvalidaError';
     this.cuentasInvalidas = cuentas;
   }
@@ -85,9 +85,9 @@ export class LineaAmbiguaError extends Error {
 const TOLERANCIA_MATERIALIDAD = 0.01;
 
 /**
- * Regex para validar formato de cuenta PCGE: mínimo 4 dígitos.
+ * Regex para validar formato de cuenta PCGE: mínimo 3 dígitos.
  */
-const PCGE_PATTERN = /^\d{4,}$/;
+const PCGE_PATTERN = /^\d{3,}$/;
 
 /**
  * Valida que un conjunto de líneas de asiento cumpla las 4 reglas

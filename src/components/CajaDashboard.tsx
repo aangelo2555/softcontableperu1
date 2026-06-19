@@ -220,7 +220,9 @@ const CajaDashboard: React.FC = () => {
       const saldoDisponible = saldoInicial + totalIngresos;
 
       // --- 3. EGRESOS EXTRAS Y TAXES ---
-      const pdtIGV = Math.max(0, sIGV - pIGV);
+      const pdtV = movimientosData.find(m => m.month === monthNum && m.section === 'PDT' && m.key === 'V' && m.period === currentPeriod)?.value ?? 0;
+      const pdtC = movimientosData.find(m => m.month === monthNum && m.section === 'PDT' && m.key === 'C' && m.period === currentPeriod)?.value ?? 0;
+      const pdtIGV = (pdtV !== 0 || pdtC !== 0) ? Math.max(0, pdtV - pdtC) : Math.max(0, sIGV - pIGV);
       const rentaManual = movimientosData.find(m => m.month === monthNum && m.section === 'R' && m.key === 'VAL' && m.period === currentPeriod)?.value;
       const isMYPE = currentCompany.regimenTributario === 'MYPE';
       const mypeRate = (currentCompany.annualIncomeUIT || 0) <= 300 ? 0.01 : 0.015;

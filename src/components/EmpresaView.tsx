@@ -802,7 +802,7 @@ const EmpresaView: React.FC = () => {
                     </div>
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
-                      <input type="password" value={currentCompany.sol_pass || ''}
+                      <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sol_pass || ''}
                         onChange={(e) => updateCompany({ sol_pass: e.target.value })} placeholder="••••••••••••" />
                     </div>
                   </div>
@@ -814,7 +814,7 @@ const EmpresaView: React.FC = () => {
                     </div>
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Client Secret (SIRE)</label>
-                      <input type="password" value={currentCompany.sunatClientSecret || ''}
+                      <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sunatClientSecret || ''}
                         onChange={(e) => updateCompany({ sunatClientSecret: e.target.value })} placeholder="••••••••••••" />
                     </div>
                   </div>
@@ -860,7 +860,9 @@ const EmpresaView: React.FC = () => {
                         <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
                         <div className="flex gap-2">
                           <input
-                            type="password"
+                            type="text"
+                            style={{ WebkitTextSecurity: 'disc' } as any}
+                            autoComplete="new-password"
                             value={certPass}
                             onChange={(e) => setCertPass(e.target.value)}
                             placeholder="Contraseña del PFX..."

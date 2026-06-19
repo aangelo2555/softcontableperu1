@@ -798,8 +798,18 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                       <option value={0.10}>10.0% (Especiales)</option>
                     </select>
                   </FormField>
-                  <FormField label="IGV Calculado" accent>
-                    <input type="number" className="w-full text-sm font-mono font-bold text-right text-pld-blue bg-pld-blue/5 border-pld-blue/20" readOnly value={form.igv.toFixed(2)} />
+                  <FormField label="IGV (Modificable)" accent>
+                    <DecimalInput 
+                      className="w-full text-sm font-mono font-bold text-right text-pld-blue bg-pld-blue/5 border-pld-blue/20" 
+                      value={form.igv} 
+                      onChange={v => {
+                        setForm(prev => ({
+                          ...prev,
+                          igv: v,
+                          total: prev.bi + v + prev.noGravada + prev.isc
+                        }));
+                      }} 
+                    />
                   </FormField>
                 </div>
 
