@@ -162,6 +162,49 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
   const getNextNumber = () => mode === 'compra' ? getNextPurchaseNumber() : getNextSaleNumber();
   const draft = mode === 'compra' ? draftCompra : draftVenta;
 
+  const getYearAndMonth = (dateStr: string) => {
+    if (!dateStr) return { year: '', month: '' };
+    try {
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const [d, m, y] = parts;
+          const fullYear = y.length === 2 ? '20' + y : y;
+          return { year: fullYear, month: m.padStart(2, '0') };
+        }
+      }
+      if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const [y, m, d] = parts;
+          const fullYear = y.length === 2 ? '20' + y : y;
+          return { year: fullYear, month: m.padStart(2, '0') };
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return { year: '', month: '' };
+  };
+
+  const getNextNumberForDate = (dateStr: string) => {
+    const { year, month } = getYearAndMonth(dateStr);
+    if (!year || !month) return getNextNumber();
+
+    const count = mode === 'compra'
+      ? purchases.filter(p => {
+          const { year: py, month: pm } = getYearAndMonth(p.fecha);
+          return py === year && pm === month;
+        }).length
+      : sales.filter(s => {
+          const { year: sy, month: sm } = getYearAndMonth(s.fecha);
+          return sy === year && sm === month;
+        }).length;
+
+    const prefix = mode === 'compra' ? '02' : '01';
+    return `${prefix}-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
+  };
+
   const emptyForm = (): FormData => ({
     id: `${mode}-${Date.now()}`,
     registro: getNextNumber(),
@@ -473,7 +516,7 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
 
     setToast({ type: 'success', message: `${mode === 'compra' ? 'Compra' : 'Venta'} ${form.serie}-${form.numero} guardada ✓ Registro N° ${form.registro}` });
 
-    const nextRegistro = getNextNumber();
+    const nextRegistro = getNextNumberForDate(form.fecha);
     setFormLocal({
       ...emptyForm(),
       registro: nextRegistro,
@@ -612,7 +655,19 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                 </FormField>
 
                 <FormField label="Fecha Emisión" required className="col-span-6">
-                  <DateInput className="w-full text-sm font-mono" placeholder="DD/MM/YYYY" value={form.fecha} onChange={v => setForm({ ...form, fecha: v })} />
+                  <DateInput 
+                    className="w-full text-sm font-mono" 
+                    placeholder="DD/MM/YYYY" 
+                    value={form.fecha} 
+                    onChange={v => {
+                      if (!draft) {
+                        const nextReg = getNextNumberForDate(v);
+                        setForm(prev => ({ ...prev, fecha: v, registro: nextReg }));
+                      } else {
+                        setForm(prev => ({ ...prev, fecha: v }));
+                      }
+                    }} 
+                  />
                 </FormField>
                 <FormField label="Fecha Vcto." className="col-span-6">
                   <DateInput className="w-full text-sm font-mono" placeholder="DD/MM/YYYY" value={form.fecVcto} onChange={v => setForm({ ...form, fecVcto: v })} />

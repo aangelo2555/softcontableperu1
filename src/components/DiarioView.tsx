@@ -31,16 +31,46 @@ const DiarioView: React.FC = () => {
   const [selectedAnio, setSelectedAnio] = React.useState(initialYear);
   const [selectedMes, setSelectedMes] = React.useState(initialMonth);
 
+  const getYearAndMonth = (dateStr: string) => {
+    if (!dateStr) return { year: '', month: '' };
+    try {
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          const [d, m, y] = parts;
+          const fullYear = y.length === 2 ? '20' + y : y;
+          return { year: fullYear, month: m.padStart(2, '0') };
+        }
+      }
+      if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const [y, m, d] = parts;
+          const fullYear = y.length === 2 ? '20' + y : y;
+          return { year: fullYear, month: m.padStart(2, '0') };
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return { year: '', month: '' };
+  };
+
   const filterPeriodo = React.useMemo(() => {
     return `${selectedAnio}${selectedMes}`;
   }, [selectedAnio, selectedMes]);
 
   const journal = store.journal.filter(entry => {
     if (entry.cta.trim().toUpperCase() === 'GLOSA') return false;
-    if (!filterPeriodo) return true;
     
-    // El periodo en journal suele estar en la fecha (YYYY-MM-DD o DD/MM/YY)
-    // Pero el asiento tiene el formato XX-YYYYMM-XXXX
+    // Filtrar usando la fecha real del asiento/documento (más robusto)
+    const { year, month } = getYearAndMonth(entry.fecha);
+    if (year && month) {
+      return year === selectedAnio && month === selectedMes;
+    }
+    
+    // Fallback si la fecha no se pudo parsear
+    if (!filterPeriodo) return true;
     return entry.asiento.includes(filterPeriodo);
   });
 
