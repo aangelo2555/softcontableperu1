@@ -205,7 +205,24 @@ const App: React.FC = () => {
     isInspectingUser,
     stopInspectingWorkspace
   } = useStore();
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('softcontable_token'));
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const token = localStorage.getItem('softcontable_token');
+    if (!token) return false;
+    const lastActivity = localStorage.getItem('softcontable_last_activity');
+    if (lastActivity) {
+      const diff = Date.now() - parseInt(lastActivity, 10);
+      if (diff > 20 * 60 * 1000) {
+        localStorage.removeItem('softcontable_token');
+        localStorage.removeItem('softcontable_last_activity');
+        return false;
+      }
+    }
+    // Update activity
+    localStorage.setItem('softcontable_last_activity', Date.now().toString());
+    return true;
+  });
+
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
   const handleOpenCompanyConfig = () => {
     setActiveTab('EMPRESA');
@@ -313,6 +330,38 @@ const App: React.FC = () => {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  // --- Inactivity Timeout watch ---
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const updateActivity = () => {
+      localStorage.setItem('softcontable_last_activity', Date.now().toString());
+    };
+
+    const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'];
+    events.forEach(event => window.addEventListener(event, updateActivity));
+
+    const interval = setInterval(() => {
+      const last = localStorage.getItem('softcontable_last_activity');
+      if (last) {
+        const diff = Date.now() - parseInt(last, 10);
+        if (diff > 20 * 60 * 1000) {
+          localStorage.removeItem('softcontable_token');
+          localStorage.removeItem('softcontable_last_activity');
+          toast.error('Sesión cerrada por inactividad de 20 minutos.');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      }
+    }, 10000);
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, updateActivity));
+      clearInterval(interval);
+    };
+  }, [isLoggedIn]);
 
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -425,11 +474,12 @@ const App: React.FC = () => {
 
   if (isInitializing) {
     return (
-      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center">
+      <div className={`h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center transition-opacity duration-500 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}>
         <img 
           src="assets/logo.png" 
           alt="Logo" 
-          className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)] animate-fade-in" 
+          onLoad={() => setLogoLoaded(true)}
+          className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)]" 
         />
         <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE ERP</h1>
         <p className="text-sm text-slate-400 animate-pulse">Iniciando motor de base de datos...</p>

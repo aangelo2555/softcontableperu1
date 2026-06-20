@@ -17,6 +17,17 @@ export const SuggestionBox: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || window.matchMedia('(hover: none)').matches);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const dragStart = useRef({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const clickTime = useRef(0);
@@ -205,7 +216,7 @@ export const SuggestionBox: React.FC = () => {
   };
 
   const isLeftSide = hasDragged ? (position.x < (typeof window !== 'undefined' ? window.innerWidth / 2 : 500)) : false;
-  const isExpanded = isHovered && !isDragging;
+  const isExpanded = isHovered && !isDragging && !isMobile;
   const leftOffset = isExpanded ? (isLeftSide ? 0 : 132) : 0;
 
   return (
@@ -221,16 +232,16 @@ export const SuggestionBox: React.FC = () => {
           right: 'auto',
           bottom: 'auto'
         } : {}}
-        className={`fixed z-[999] group flex items-center justify-start overflow-hidden select-none cursor-grab active:cursor-grabbing h-11 ${
-          isExpanded ? 'w-44' : 'w-11'
+        className={`fixed z-[999] group flex items-center justify-start overflow-hidden select-none cursor-grab active:cursor-grabbing md:h-11 h-9 ${
+          isExpanded ? 'w-44' : 'w-9 md:w-11'
         } ${
-          !hasDragged ? 'right-6 bottom-36' : ''
+          !hasDragged ? 'right-3 bottom-20 md:right-6 md:bottom-36' : ''
         } ${
           isDragging ? 'transition-none' : 'transition-all duration-300 ease-in-out'
         } ${
           isExpanded 
-            ? 'bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-sm border border-slate-300 dark:border-slate-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-md' 
-            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-2 border-blue-500 dark:border-blue-400 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.25)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] rounded-full'
+            ? 'bg-slate-200/20 border border-white/20 backdrop-blur-md text-white rounded-xl shadow-lg shadow-white/[0.02]' 
+            : 'bg-slate-200/15 hover:bg-slate-200/25 border border-white/20 backdrop-blur-md text-slate-100 hover:text-white shadow-[0_4px_12px_rgba(255,255,255,0.06)] rounded-full'
         }`}
         title="Arrastra para mover. Clic para reportar."
       >
@@ -240,10 +251,10 @@ export const SuggestionBox: React.FC = () => {
             : (isLeftSide ? 'flex-row justify-start gap-2 px-3.5' : 'flex-row-reverse justify-start gap-2 px-3.5')
         }`}>
           <div className="relative flex shrink-0">
-            <Lightbulb size={16} className="text-yellow-500 dark:text-yellow-400 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
+            <Lightbulb size={isMobile ? 14 : 16} className="text-yellow-400 dark:text-yellow-300 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
             <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-yellow-500"></span>
             </span>
           </div>
           {isExpanded && (

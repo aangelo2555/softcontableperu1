@@ -357,10 +357,24 @@ export const Login: React.FC = () => {
         password: '',
         name: ''
     });
+    const [rememberMe, setRememberMe] = useState(false);
 
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
     const [activeSlide, setActiveSlide] = useState(0);
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('softcontable_rem_email');
+        const savedPass = localStorage.getItem('softcontable_rem_pass');
+        if (savedEmail || savedPass) {
+            setFormData(prev => ({
+                ...prev,
+                email: savedEmail || '',
+                password: savedPass || ''
+            }));
+            setRememberMe(true);
+        }
+    }, []);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -403,6 +417,13 @@ export const Login: React.FC = () => {
 
                 if (res.success) {
                     localStorage.setItem('softcontable_token', res.token);
+                    if (rememberMe) {
+                        localStorage.setItem('softcontable_rem_email', formData.email);
+                        localStorage.setItem('softcontable_rem_pass', formData.password);
+                    } else {
+                        localStorage.removeItem('softcontable_rem_email');
+                        localStorage.removeItem('softcontable_rem_pass');
+                    }
                     window.location.reload();
                 } else {
                     toast.error(res.error || 'Error al iniciar sesión');
@@ -527,6 +548,20 @@ export const Login: React.FC = () => {
                                    />
                                </div>
                            </div>
+
+                            {isLogin && (
+                                <div className="flex items-center justify-between px-1 py-1">
+                                    <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                                        <input 
+                                            type="checkbox"
+                                            checked={rememberMe}
+                                            onChange={e => setRememberMe(e.target.checked)}
+                                            className="w-4 h-4 rounded border border-white/10 bg-slate-900/50 checked:bg-white text-slate-950 focus:ring-0 focus:ring-offset-0 accent-slate-300"
+                                        />
+                                        <span>Recordar mis credenciales</span>
+                                    </label>
+                                </div>
+                            )}
 
                             <button 
                                 type="submit"
