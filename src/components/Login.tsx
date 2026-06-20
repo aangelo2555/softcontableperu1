@@ -10,9 +10,7 @@ import {
     Building2, 
     Layers,
     PieChart,
-    FileText,
-    TrendingUp,
-    Scale
+    FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -194,31 +192,54 @@ const showcaseViews = [
         activeColor: 'text-sky-400',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
-                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">Cartera de Empresas Activas</span>
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 flex flex-col justify-between">
+                <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Cartera de Empresas Activas</span>
+                    <span className="text-[9px] text-slate-500 font-bold">Total: 4 Registradas</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 flex-1 overflow-y-auto max-h-[340px] pr-1">
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col justify-between hover:border-sky-500/30 transition-colors">
                         <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">RUC 20601234567</span>
-                            <h4 className="text-sm font-black text-white mt-3 leading-snug">AGROINDUSTRIA DEL SUR S.A.C.</h4>
+                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20601234567</span>
+                            <h4 className="text-[11px] font-black text-white mt-2 leading-snug">AGROINDUSTRIA DEL SUR S.A.C.</h4>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 border-t border-white/[0.04] pt-3 mt-3">
-                            <span>Regimen: RMT</span>
-                            <span className="text-emerald-400 font-bold">● ACTIVO SUNAT</span>
+                        <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/[0.04] pt-2 mt-2">
+                            <span>Régimen: RMT</span>
+                            <span className="text-emerald-400 font-bold">● ACTIVO</span>
                         </div>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 flex flex-col justify-between">
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col justify-between hover:border-sky-500/30 transition-colors">
                         <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">RUC 20459876543</span>
-                            <h4 className="text-sm font-black text-white mt-3 leading-snug">CONSTRUCTORA HERMANOS SERNA E.I.R.L.</h4>
+                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20459876543</span>
+                            <h4 className="text-[11px] font-black text-white mt-2 leading-snug">CONSTRUCTORA HERMANOS SERNA E.I.R.L.</h4>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 border-t border-white/[0.04] pt-3 mt-3">
-                            <span>Regimen: GENERAL</span>
-                            <span className="text-emerald-400 font-bold">● ACTIVO SUNAT</span>
+                        <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/[0.04] pt-2 mt-2">
+                            <span>Régimen: GENERAL</span>
+                            <span className="text-emerald-400 font-bold">● ACTIVO</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col justify-between hover:border-sky-500/30 transition-colors">
+                        <div>
+                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20123456789</span>
+                            <h4 className="text-[11px] font-black text-white mt-2 leading-snug">COMERCIAL SANTA FE S.R.L.</h4>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/[0.04] pt-2 mt-2">
+                            <span>Régimen: MYPE</span>
+                            <span className="text-emerald-400 font-bold">● ACTIVO</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col justify-between hover:border-sky-500/30 transition-colors">
+                        <div>
+                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20555666777</span>
+                            <h4 className="text-[11px] font-black text-white mt-2 leading-snug">SERVICIOS LOGÍSTICOS LIMA S.A.</h4>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/[0.04] pt-2 mt-2">
+                            <span>Régimen: GENERAL</span>
+                            <span className="text-emerald-400 font-bold">● ACTIVO</span>
                         </div>
                     </div>
                 </div>
-                <div className="bg-white/[0.01] border border-dashed border-white/10 rounded-2xl p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.02] transition-colors">
-                    <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">+ Registrar Nueva Empresa / RUC</span>
+                <div className="bg-white/[0.01] border border-dashed border-white/10 rounded-xl py-2 flex items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.02] transition-colors shrink-0">
+                    <span className="text-[9px] text-sky-400 font-bold uppercase tracking-wider">+ Registrar Nueva Empresa / RUC</span>
                 </div>
             </div>
         )
@@ -230,51 +251,96 @@ const showcaseViews = [
         activeColor: 'text-indigo-400',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
-                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">Estado de Situación Financiera (ESF)</span>
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 space-y-4 flex flex-col justify-center">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Liquidez y Activos</span>
-                        <div className="space-y-3">
-                            <div>
-                                <div className="flex justify-between text-[9px] text-slate-300 mb-1 font-bold">
-                                    <span>Activo Corriente</span>
-                                    <span>72%</span>
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Estado de Situación Financiera (ESF) - Clasificado</span>
+                    <span className="text-[9px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full font-bold">NIIF / NIC 1</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 flex-1 text-[9.5px]">
+                    {/* Columna Izquierda: Activos */}
+                    <div className="bg-white/[0.01] border border-white/[0.05] rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block border-b border-white/5 pb-1 mb-2">1. ACTIVOS</span>
+                            
+                            <div className="space-y-1">
+                                <span className="text-[8px] text-slate-500 font-bold uppercase block">Activo Corriente</span>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Efectivo y Equiv. Efectivo</span>
+                                    <span className="text-white font-mono">S/ 48,250.00</span>
                                 </div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-indigo-400 h-full" style={{ width: '72%' }}></div>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Cuentas por Cobrar Com.</span>
+                                    <span className="text-white font-mono">S/ 36,500.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Inventarios (Mercaderías)</span>
+                                    <span className="text-white font-mono">S/ 25,000.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2 font-bold text-slate-300 border-t border-white/5 pt-0.5">
+                                    <span>Total Activo Corriente</span>
+                                    <span className="font-mono">S/ 109,750.00</span>
                                 </div>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-[9px] text-slate-300 mb-1 font-bold">
-                                    <span>Activo No Corriente</span>
-                                    <span>28%</span>
+
+                            <div className="space-y-1 mt-3">
+                                <span className="text-[8px] text-slate-500 font-bold uppercase block">Activo No Corriente</span>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Propiedad, Planta y Equip.</span>
+                                    <span className="text-white font-mono">S/ 42,680.00</span>
                                 </div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-slate-600 h-full" style={{ width: '28%' }}></div>
+                                <div className="flex justify-between pl-2 font-bold text-slate-300 border-t border-white/5 pt-0.5">
+                                    <span>Total Activo No Corriente</span>
+                                    <span className="font-mono">S/ 42,680.00</span>
                                 </div>
                             </div>
                         </div>
+
+                        <div className="flex justify-between font-black text-white text-xs border-t border-white/10 pt-2 mt-2">
+                            <span>TOTAL ACTIVOS</span>
+                            <span className="font-mono border-b-2 border-double border-white/40">S/ 152,430.00</span>
+                        </div>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 flex flex-col justify-between">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Balance General Resumido</span>
-                        <div className="space-y-1.5 text-[10px] mt-2">
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Total Activos:</span>
-                                <span className="font-bold text-white">S/ 152,430.00</span>
+
+                    {/* Columna Derecha: Pasivos y Patrimonio */}
+                    <div className="bg-white/[0.01] border border-white/[0.05] rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block border-b border-white/5 pb-1 mb-2">2. PASIVO Y PATRIMONIO</span>
+                            
+                            <div className="space-y-1">
+                                <span className="text-[8px] text-slate-500 font-bold uppercase block">Pasivo Corriente</span>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Tributos por Pagar (IGV)</span>
+                                    <span className="text-white font-mono">S/ 11,800.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Cuentas por Pagar Com.</span>
+                                    <span className="text-white font-mono">S/ 16,350.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2 font-bold text-slate-300 border-t border-white/5 pt-0.5">
+                                    <span>Total Pasivo Corriente</span>
+                                    <span className="font-mono">S/ 28,150.00</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Total Pasivos:</span>
-                                <span className="font-bold text-white">S/ 42,150.00</span>
+
+                            <div className="space-y-1 mt-2.5">
+                                <span className="text-[8px] text-slate-500 font-bold uppercase block">Patrimonio Neto</span>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Capital Social</span>
+                                    <span className="text-white font-mono">S/ 80,000.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2">
+                                    <span className="text-slate-400">Resultados Acumulados</span>
+                                    <span className="text-white font-mono">S/ 30,280.00</span>
+                                </div>
+                                <div className="flex justify-between pl-2 font-bold text-slate-300 border-t border-white/5 pt-0.5">
+                                    <span>Total Patrimonio Neto</span>
+                                    <span className="font-mono">S/ 110,280.00</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Patrimonio Neto:</span>
-                                <span className="font-bold text-white">S/ 110,280.00</span>
-                            </div>
-                            <div className="h-[1px] bg-white/10 my-2"></div>
-                            <div className="flex justify-between font-black text-indigo-400 text-xs">
-                                <span>Pasivo + Patrim.:</span>
-                                <span>S/ 152,430.00</span>
-                            </div>
+                        </div>
+
+                        <div className="flex justify-between font-black text-indigo-400 text-xs border-t border-white/10 pt-2 mt-2">
+                            <span>PASIVO + PATRIMONIO</span>
+                            <span className="font-mono border-b-2 border-double border-indigo-400/40">S/ 152,430.00</span>
                         </div>
                     </div>
                 </div>
@@ -381,8 +447,8 @@ export const Login: React.FC = () => {
                 >
                     {/* Logo / Título */}
                     <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center p-3.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
-                            <Layers className="w-8 h-8 text-slate-200" strokeWidth={1.5} />
+                        <div className="inline-flex items-center justify-center p-2 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
+                            <img src="/logo.png" alt="Softcontable Logo" className="w-14 h-14 object-contain" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 uppercase notranslate mb-2" translate="no">
                             Soft<span className="text-white font-black">contable</span>
