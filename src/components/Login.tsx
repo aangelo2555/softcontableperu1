@@ -448,7 +448,7 @@ export const Login: React.FC = () => {
                     {/* Logo / Título */}
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center p-2 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
-                            <img src="/logo.png" alt="Softcontable Logo" className="w-14 h-14 object-contain" />
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-14 h-14 object-contain" />
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 uppercase notranslate mb-2" translate="no">
                             Soft<span className="text-white font-black">contable</span>
