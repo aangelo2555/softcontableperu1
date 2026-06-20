@@ -358,14 +358,14 @@ export const Login: React.FC = () => {
 
     return (
         <div 
-            className="min-h-screen flex flex-col md:flex-row bg-[#09090b] font-sans selection:bg-white/10 overflow-hidden"
+            className="min-h-screen flex flex-col md:flex-row bg-[#09090b] font-sans selection:bg-white/10 overflow-hidden relative"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
             <style>{glassStyles}</style>
 
             {/* Panel de Login (Izquierda, toma el 100% en móvil y ~40% en escritorio) */}
-            <div className="w-full md:w-[42%] lg:w-[38%] xl:w-[35%] shrink-0 min-h-screen flex items-center justify-center p-6 md:p-10 bg-[#09090b] md:border-r md:border-white/[0.04] relative z-10 overflow-y-auto">
+            <div className="w-full md:w-[42%] lg:w-[38%] xl:w-[35%] shrink-0 min-h-screen flex items-center justify-center p-6 md:p-10 relative z-20 overflow-y-auto">
                 {/* Luces de Fondo para móvil */}
                 <div className="absolute inset-0 md:hidden overflow-hidden pointer-events-none z-0">
                     <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[#d4af37]/3 blur-[140px] rounded-full"></div>
@@ -486,7 +486,7 @@ export const Login: React.FC = () => {
             </div>
 
             {/* Panel de Showcase (Derecha, visible solo en escritorio) */}
-            <div className="hidden md:flex flex-1 min-h-screen bg-[#070709] items-center justify-center p-8 lg:p-16 relative overflow-hidden">
+            <div className="hidden md:flex flex-1 min-h-screen items-center justify-center p-8 lg:p-16 relative overflow-hidden z-10">
                 {/* Luces de Fondo muy tenues y elegantes */}
                 <div 
                     className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-[#d4af37]/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
@@ -497,76 +497,85 @@ export const Login: React.FC = () => {
                     style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` }}
                 ></div>
 
-                {/* Ventana de previsualización (Showcase Mockup) */}
-                <div 
-                    className="w-full max-w-4xl h-[560px] lg:h-[620px] bg-[#0c0c0e]/95 border border-white/[0.06] rounded-3xl overflow-hidden flex flex-col shadow-2xl relative z-10 transition-transform duration-500"
-                    style={{
-                        transform: `perspective(1000px) rotateX(${mousePos.y * -4}deg) rotateY(${mousePos.x * 4}deg) translateZ(10px)`,
-                    }}
-                >
-                    {/* Barra de título macOS */}
-                    <div className="h-11 border-b border-white/[0.04] bg-black/25 flex items-center justify-between px-5 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.15em]">SOFTCONTABLE ERP PREVIEW</div>
-                        <div className="w-12"></div>
-                    </div>
+                {/* Contenedor del Simulador con degradados de desvanecimiento en bordes */}
+                <div className="relative w-full max-w-4xl h-[560px] lg:h-[620px] opacity-40 hover:opacity-60 transition-opacity duration-500">
+                    {/* Vignette Overlays para fundir la ventana con el fondo negro */}
+                    <div className="absolute inset-y-0 -left-1 w-48 bg-gradient-to-r from-[#09090b] via-[#09090b]/80 to-transparent z-20 pointer-events-none"></div>
+                    <div className="absolute inset-y-0 -right-1 w-20 bg-gradient-to-l from-[#09090b] to-transparent z-20 pointer-events-none"></div>
+                    <div className="absolute -top-1 inset-x-0 h-20 bg-gradient-to-b from-[#09090b] to-transparent z-20 pointer-events-none"></div>
+                    <div className="absolute -bottom-1 inset-x-0 h-20 bg-gradient-to-t from-[#09090b] to-transparent z-20 pointer-events-none"></div>
 
-                    {/* Cuerpo de la ventana */}
-                    <div className="flex-1 flex overflow-hidden">
-                        {/* Barra lateral simulada (Sidebar) */}
-                        <div className="w-48 border-r border-white/[0.04] p-4 flex flex-col gap-1.5 shrink-0 bg-[#0a0a0c]/60">
-                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest block mb-2 px-3">Módulos ERP</span>
-                            {showcaseViews.map((view, idx) => {
-                                const Icon = view.icon;
-                                const isActive = idx === activeSlide;
-                                return (
-                                    <div
-                                        key={view.id}
-                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
-                                            isActive 
-                                                ? 'bg-white/[0.03] text-white font-bold' 
-                                                : 'text-slate-500'
-                                        }`}
-                                    >
-                                        <Icon size={14} />
-                                        <span className="text-[10px] tracking-wider uppercase">{view.title}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Área de trabajo simulada (Workspace) */}
-                        <div className="flex-1 p-6 flex flex-col overflow-hidden relative bg-black/5">
-                            {/* Cabecera del espacio de trabajo */}
-                            <div className="flex justify-between items-center border-b border-white/[0.03] pb-4 mb-4 shrink-0">
-                                <div className="h-6 w-32 bg-white/[0.02] border border-white/[0.04] rounded-lg"></div>
-                                <div className="flex items-center gap-3">
-                                    <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-400">AC</div>
-                                    <div className="h-4 w-16 bg-white/[0.02] rounded"></div>
-                                </div>
+                    {/* Ventana de previsualización (Showcase Mockup) */}
+                    <div 
+                        className="w-full h-full bg-[#0c0c0e]/95 border border-white/[0.05] rounded-3xl overflow-hidden flex flex-col shadow-2xl relative z-10 transition-transform duration-500"
+                        style={{
+                            transform: `perspective(1000px) rotateX(${mousePos.y * -4}deg) rotateY(${mousePos.x * 4}deg) translateZ(10px)`,
+                        }}
+                    >
+                        {/* Barra de título macOS */}
+                        <div className="h-11 border-b border-white/[0.04] bg-black/25 flex items-center justify-between px-5 shrink-0">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
                             </div>
+                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.15em]">SOFTCONTABLE ERP PREVIEW</div>
+                            <div className="w-12"></div>
+                        </div>
 
-                            {/* Contenido dinámico del carrusel */}
-                            <div className="flex-1 relative">
+                        {/* Cuerpo de la ventana */}
+                        <div className="flex-1 flex overflow-hidden">
+                            {/* Barra lateral simulada (Sidebar) */}
+                            <div className="w-48 border-r border-white/[0.04] p-4 flex flex-col gap-1.5 shrink-0 bg-[#0a0a0c]/60">
+                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest block mb-2 px-3">Módulos ERP</span>
                                 {showcaseViews.map((view, idx) => {
+                                    const Icon = view.icon;
                                     const isActive = idx === activeSlide;
                                     return (
                                         <div
                                             key={view.id}
-                                            className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
                                                 isActive 
-                                                    ? 'opacity-100 translate-x-0 pointer-events-auto scale-100' 
-                                                    : 'opacity-0 translate-x-12 pointer-events-none scale-95'
+                                                    ? 'bg-white/[0.03] text-white font-bold' 
+                                                    : 'text-slate-500'
                                             }`}
                                         >
-                                            {view.content}
+                                            <Icon size={14} />
+                                            <span className="text-[10px] tracking-wider uppercase">{view.title}</span>
                                         </div>
                                     );
                                 })}
+                            </div>
+
+                            {/* Área de trabajo simulada (Workspace) */}
+                            <div className="flex-1 p-6 flex flex-col overflow-hidden relative bg-black/5">
+                                {/* Cabecera del espacio de trabajo */}
+                                <div className="flex justify-between items-center border-b border-white/[0.03] pb-4 mb-4 shrink-0">
+                                    <div className="h-6 w-32 bg-white/[0.02] border border-white/[0.04] rounded-lg"></div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-400">AC</div>
+                                        <div className="h-4 w-16 bg-white/[0.02] rounded"></div>
+                                    </div>
+                                </div>
+
+                                {/* Contenido dinámico del carrusel */}
+                                <div className="flex-1 relative">
+                                    {showcaseViews.map((view, idx) => {
+                                        const isActive = idx === activeSlide;
+                                        return (
+                                            <div
+                                                key={view.id}
+                                                className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                                                    isActive 
+                                                        ? 'opacity-100 translate-x-0 pointer-events-auto scale-100' 
+                                                        : 'opacity-0 translate-x-12 pointer-events-none scale-95'
+                                                }`}
+                                            >
+                                                {view.content}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
