@@ -12,7 +12,8 @@ import {
     Coins, 
     Scale, 
     Building2, 
-    Briefcase 
+    Briefcase,
+    Layers
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,39 +33,38 @@ const glassStyles = `
     animation: float-reverse 9s ease-in-out infinite;
   }
   .glass-card {
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.015);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: 
-      0 4px 30px rgba(0, 0, 0, 0.4),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1),
-      0 0 80px rgba(37, 99, 235, 0.03);
+      0 30px 70px rgba(0, 0, 0, 0.65),
+      inset 0 1px 1px rgba(255, 255, 255, 0.05);
   }
   .glass-input {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.012);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     color: #ffffff;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .glass-input:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.12);
   }
   .glass-input:focus {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.03);
   }
 `;
 
 const floatingItems = [
-    { Icon: Calculator, size: 48, top: '12%', left: '10%', factor: -0.06, color: 'text-blue-500/20', delay: '0s', reverse: false },
-    { Icon: TrendingUp, size: 56, top: '22%', left: '82%', factor: 0.08, color: 'text-indigo-500/20', delay: '1s', reverse: true },
-    { Icon: Coins, size: 40, top: '78%', left: '12%', factor: -0.07, color: 'text-violet-500/25', delay: '2s', reverse: false },
-    { Icon: Scale, size: 48, top: '72%', left: '78%', factor: 0.09, color: 'text-sky-500/20', delay: '1.5s', reverse: true },
-    { Icon: Building2, size: 60, top: '8%', left: '62%', factor: -0.05, color: 'text-blue-600/15', delay: '3s', reverse: false },
-    { Icon: Briefcase, size: 42, top: '50%', left: '6%', factor: 0.06, color: 'text-indigo-600/20', delay: '2.5s', reverse: true },
+    { Icon: Calculator, size: 20, label: 'Contabilidad', top: '15%', left: '10%', factor: -0.05, delay: '0s', reverse: false },
+    { Icon: TrendingUp, size: 20, label: 'Finanzas', top: '22%', left: '80%', factor: 0.07, delay: '1.2s', reverse: true },
+    { Icon: Coins, size: 20, label: 'Tesorería', top: '78%', left: '12%', factor: -0.06, delay: '2.4s', reverse: false },
+    { Icon: Scale, size: 20, label: 'Tributación', top: '70%', left: '76%', factor: 0.08, delay: '1.8s', reverse: true },
+    { Icon: Building2, size: 20, label: 'Empresas', top: '10%', left: '62%', factor: -0.04, delay: '3.6s', reverse: false },
+    { Icon: Briefcase, size: 20, label: 'Auditoría', top: '48%', left: '8%', factor: 0.05, delay: '3.0s', reverse: true },
 ];
 
 export const Login: React.FC = () => {
@@ -135,7 +135,7 @@ export const Login: React.FC = () => {
 
     return (
         <div 
-            className="min-h-screen flex items-center justify-center bg-[#060608] p-4 font-sans selection:bg-blue-500/30 overflow-hidden relative"
+            className="min-h-screen flex items-center justify-center bg-[#09090b] p-4 font-sans selection:bg-white/10 overflow-hidden relative"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
@@ -143,19 +143,19 @@ export const Login: React.FC = () => {
 
             {/* Fondo decorativo Parallax */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                {/* Luces de Fondo (Blobs) */}
+                {/* Luces de Fondo muy tenues y elegantes */}
                 <div 
-                    className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-600/10 blur-[130px] rounded-full transition-transform duration-500 ease-out"
-                    style={!isMobile ? { transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px)` } : {}}
+                    className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[#d4af37]/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
+                    style={!isMobile ? { transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)` } : {}}
                 ></div>
                 <div 
-                    className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[130px] rounded-full transition-transform duration-500 ease-out"
-                    style={!isMobile ? { transform: `translate(${mousePos.x * 25}px, ${mousePos.y * 25}px)` } : {}}
+                    className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-slate-100/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
+                    style={!isMobile ? { transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` } : {}}
                 ></div>
 
                 {/* Iconos Flotantes Parallax */}
                 {floatingItems.map((item, index) => {
-                    const { Icon, size, top, left, factor, color, delay, reverse } = item;
+                    const { Icon, size, label, top, left, factor, delay, reverse } = item;
                     const transformStyle = !isMobile 
                         ? {
                             transform: `translate(${mousePos.x * factor * window.innerWidth}px, ${mousePos.y * factor * window.innerHeight}px)`,
@@ -165,7 +165,7 @@ export const Login: React.FC = () => {
                     return (
                         <div
                             key={index}
-                            className={`absolute ${color} ${reverse ? 'animate-float-reverse' : 'animate-float-slow'} transition-all`}
+                            className={`absolute ${reverse ? 'animate-float-reverse' : 'animate-float-slow'} transition-all`}
                             style={{
                                 top,
                                 left,
@@ -173,7 +173,10 @@ export const Login: React.FC = () => {
                                 ...transformStyle
                             }}
                         >
-                            <Icon size={size} strokeWidth={1.2} />
+                            <div className="flex items-center gap-2.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-2xl px-4 py-2.5 shadow-xl shadow-black/25">
+                                <Icon size={size} className="text-slate-300" strokeWidth={1.5} />
+                                <span className="text-[10px] font-bold text-slate-300 tracking-wider uppercase">{label}</span>
+                            </div>
                         </div>
                     );
                 })}
@@ -188,27 +191,30 @@ export const Login: React.FC = () => {
             >
                 {/* Logo / Título */}
                 <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 notranslate" translate="no">
-                        SOFT<span className="text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">CONTABLE</span>
+                    <div className="inline-flex items-center justify-center p-3.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
+                        <Layers className="w-8 h-8 text-slate-200" strokeWidth={1.5} />
+                    </div>
+                    <h1 className="text-3xl font-extrabold tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 uppercase notranslate mb-2" translate="no">
+                        Soft<span className="text-white font-black">contable</span>
                     </h1>
-                    <p className="text-slate-400 text-sm font-medium tracking-wide notranslate" translate="no">Sistema Contable en la Nube v2.0</p>
+                    <p className="text-slate-500 text-xs font-semibold tracking-[0.1em] uppercase notranslate" translate="no">Sistema Contable en la Nube v2.0</p>
                 </div>
 
                 {/* Card de Login (Glassmorphic) */}
                 <div className="glass-card p-8 rounded-[32px] shadow-2xl animate-in zoom-in-95 duration-500 relative overflow-hidden group">
                     {/* Brillo de reflejo superior */}
-                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     
-                    <div className="flex mb-8 bg-black/30 p-1 rounded-2xl border border-white/[0.05]">
+                    <div className="flex mb-8 bg-white/[0.02] p-1 rounded-2xl border border-white/[0.04]">
                         <button 
                             onClick={() => setIsLogin(true)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${isLogin ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-white'}`}
+                            className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${isLogin ? 'bg-white text-slate-950 shadow-lg font-black' : 'text-slate-400 hover:text-slate-200'}`}
                         >
                             Ingresar
                         </button>
                         <button 
                             onClick={() => setIsLogin(false)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${!isLogin ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:text-white'}`}
+                            className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${!isLogin ? 'bg-white text-slate-950 shadow-lg font-black' : 'text-slate-400 hover:text-slate-200'}`}
                         >
                             Registrarse
                         </button>
@@ -219,7 +225,7 @@ export const Login: React.FC = () => {
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider">Nombre Completo</label>
                                 <div className="relative group">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" />
                                     <input 
                                         type="text"
                                         required
@@ -236,7 +242,7 @@ export const Login: React.FC = () => {
                         <div className="space-y-1">
                            <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider">Correo Electrónico</label>
                            <div className="relative group">
-                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" />
                                <input 
                                    type="email"
                                    required
@@ -252,7 +258,7 @@ export const Login: React.FC = () => {
                        <div className="space-y-1">
                            <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider">Contraseña</label>
                            <div className="relative group">
-                               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" />
                                <input 
                                    type="text"
                                    required
@@ -269,14 +275,14 @@ export const Login: React.FC = () => {
                         <button 
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-bold py-4 rounded-xl shadow-xl shadow-blue-500/10 border border-blue-500/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:pointer-events-none mt-4 cursor-pointer"
+                            className="w-full bg-white hover:bg-slate-200 active:scale-[0.98] text-slate-950 font-bold py-4 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:pointer-events-none mt-4 cursor-pointer text-sm tracking-wider uppercase font-black"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
                                 <>
-                                    {isLogin ? 'Entrar al Sistema' : 'Crear Cuenta Ahora'}
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    {isLogin ? 'Entrar al Sistema' : 'Crear Cuenta'}
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
@@ -284,7 +290,7 @@ export const Login: React.FC = () => {
 
                     {isLogin && (
                         <div className="mt-6 text-center">
-                            <a href="#" className="text-sm text-slate-500 hover:text-blue-400 transition-colors font-medium">¿Olvidaste tu contraseña?</a>
+                            <a href="#" className="text-sm text-slate-500 hover:text-slate-300 transition-colors font-medium">¿Olvidaste tu contraseña?</a>
                         </div>
                     )}
                 </div>
