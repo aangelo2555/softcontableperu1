@@ -13,7 +13,9 @@ import {
     Scale, 
     Building2, 
     Briefcase,
-    Layers
+    Layers,
+    PieChart,
+    FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,7 +35,7 @@ const glassStyles = `
     animation: float-reverse 9s ease-in-out infinite;
   }
   .glass-card {
-    background: rgba(255, 255, 255, 0.015);
+    background: rgba(15, 23, 42, 0.5);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -58,13 +60,134 @@ const glassStyles = `
   }
 `;
 
-const floatingItems = [
-    { Icon: Calculator, size: 20, label: 'Contabilidad', top: '15%', left: '10%', factor: -0.05, delay: '0s', reverse: false },
-    { Icon: TrendingUp, size: 20, label: 'Finanzas', top: '22%', left: '80%', factor: 0.07, delay: '1.2s', reverse: true },
-    { Icon: Coins, size: 20, label: 'Tesorería', top: '78%', left: '12%', factor: -0.06, delay: '2.4s', reverse: false },
-    { Icon: Scale, size: 20, label: 'Tributación', top: '70%', left: '76%', factor: 0.08, delay: '1.8s', reverse: true },
-    { Icon: Building2, size: 20, label: 'Empresas', top: '10%', left: '62%', factor: -0.04, delay: '3.6s', reverse: false },
-    { Icon: Briefcase, size: 20, label: 'Auditoría', top: '48%', left: '8%', factor: 0.05, delay: '3.0s', reverse: true },
+const showcaseViews = [
+    {
+        id: 'dashboard',
+        title: 'Panel Principal',
+        icon: Layers,
+        leftContent: (
+            <div className="space-y-3">
+                <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
+                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mb-0.5">Ventas Mensuales</span>
+                    <span className="text-xs font-black text-white">S/ 48,250.00</span>
+                    <span className="text-[8px] text-emerald-400 font-bold block mt-0.5">+12.4% vs mes anterior</span>
+                </div>
+                <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
+                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block mb-0.5">Compras Mensuales</span>
+                    <span className="text-xs font-black text-white">S/ 24,180.00</span>
+                    <span className="text-[8px] text-slate-400 font-bold block mt-0.5">142 comprobantes</span>
+                </div>
+            </div>
+        ),
+        rightContent: (
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3.5 h-full flex flex-col justify-between">
+                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider block mb-2">Resumen de Caja</span>
+                <div className="flex items-end justify-between h-20 pt-2 px-1">
+                    {[35, 55, 40, 70, 48, 85, 60, 75].map((h, i) => (
+                        <div key={i} className="w-[8%] bg-slate-700/50 rounded-t" style={{ height: `${h}%` }}></div>
+                    ))}
+                </div>
+                <span className="text-[8px] text-slate-500 text-center block mt-2">Promedio: S/ 36,215</span>
+            </div>
+        )
+    },
+    {
+        id: 'diario',
+        title: 'Libro Diario',
+        icon: FileText,
+        leftContent: (
+            <div className="space-y-2 text-[9px] text-slate-400">
+                <span className="text-[8px] text-slate-300 font-bold uppercase tracking-wider block mb-1">Cuentas Contables</span>
+                <div className="p-2.5 bg-white/[0.02] border border-white/[0.05] rounded-xl space-y-1.5">
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                        <span className="font-bold text-white">10411</span>
+                        <span>BCP MN</span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                        <span className="font-bold text-white">40111</span>
+                        <span>IGV Cuenta Propia</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="font-bold text-white">70121</span>
+                        <span>Mercaderías</span>
+                    </div>
+                </div>
+            </div>
+        ),
+        rightContent: (
+            <div className="space-y-2 text-[9px] text-slate-400">
+                <span className="text-[8px] text-slate-300 font-bold uppercase tracking-wider block mb-1">Importes de Cierre</span>
+                <div className="p-2.5 bg-white/[0.02] border border-white/[0.05] rounded-xl space-y-1.5">
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                        <span>Debe</span>
+                        <span className="text-emerald-400 font-bold">S/ 11,800.00</span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                        <span>Haber</span>
+                        <span className="text-amber-500/80 font-bold">S/ 11,800.00</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-white">
+                        <span>Diferencia</span>
+                        <span>S/ 0.00</span>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: 'empresas',
+        title: 'Mis Empresas',
+        icon: Building2,
+        leftContent: (
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3 flex flex-col justify-between h-full">
+                <div>
+                    <span className="text-[7px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20601234567</span>
+                    <h4 className="text-[10px] font-black text-white mt-1.5 leading-tight">AGROINDUSTRIA DEL SUR S.A.C.</h4>
+                </div>
+                <span className="text-[8px] text-emerald-400 font-bold mt-2">● ACTIVO SUNAT</span>
+            </div>
+        ),
+        rightContent: (
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3 flex flex-col justify-between h-full">
+                <div>
+                    <span className="text-[7px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">RUC 20459876543</span>
+                    <h4 className="text-[10px] font-black text-white mt-1.5 leading-tight">CONSTRUCTORA HERMANOS SERNA</h4>
+                </div>
+                <span className="text-[8px] text-emerald-400 font-bold mt-2">● ACTIVO SUNAT</span>
+            </div>
+        )
+    },
+    {
+        id: 'reportes',
+        title: 'Reportes NIIF',
+        icon: PieChart,
+        leftContent: (
+            <div className="p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl space-y-2">
+                <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block">Activos Corrientes</span>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="bg-white h-full" style={{ width: '75%' }}></div>
+                </div>
+                <span className="text-[8px] text-slate-400 block">75% Disponibilidad inmediata</span>
+            </div>
+        ),
+        rightContent: (
+            <div className="p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl space-y-1.5 text-[9.5px]">
+                <div className="flex justify-between">
+                    <span className="text-slate-400">Patrimonio:</span>
+                    <span className="font-bold text-white">S/ 110,280</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-slate-400">Pasivos:</span>
+                    <span className="font-bold text-white">S/ 42,150</span>
+                </div>
+                <div className="h-[1px] bg-white/10 my-0.5"></div>
+                <div className="flex justify-between font-black text-white text-[10px]">
+                    <span>Total P+P:</span>
+                    <span>S/ 152,430</span>
+                </div>
+            </div>
+        )
+    }
 ];
 
 export const Login: React.FC = () => {
@@ -78,6 +201,7 @@ export const Login: React.FC = () => {
 
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
+    const [activeSlide, setActiveSlide] = useState(0);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -86,6 +210,13 @@ export const Login: React.FC = () => {
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActiveSlide(prev => (prev + 1) % showcaseViews.length);
+        }, 4500);
+        return () => clearInterval(timer);
     }, []);
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -152,45 +283,106 @@ export const Login: React.FC = () => {
                     className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-slate-100/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
                     style={!isMobile ? { transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` } : {}}
                 ></div>
+            </div>
 
-                {/* Iconos Flotantes Parallax */}
-                {floatingItems.map((item, index) => {
-                    const { Icon, size, label, top, left, factor, delay, reverse } = item;
-                    const transformStyle = !isMobile 
-                        ? {
-                            transform: `translate(${mousePos.x * factor * window.innerWidth}px, ${mousePos.y * factor * window.innerHeight}px)`,
-                            transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)'
-                          }
-                        : {};
-                    return (
-                        <div
-                            key={index}
-                            className={`absolute ${reverse ? 'animate-float-reverse' : 'animate-float-slow'} transition-all`}
-                            style={{
-                                top,
-                                left,
-                                animationDelay: delay,
-                                ...transformStyle
-                            }}
-                        >
-                            <div className="flex items-center gap-2.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-2xl px-4 py-2.5 shadow-xl shadow-black/25">
-                                <Icon size={size} className="text-slate-300" strokeWidth={1.5} />
-                                <span className="text-[10px] font-bold text-slate-300 tracking-wider uppercase">{label}</span>
+            {/* Ventana de previsualización (Showcase Mockup) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                <div 
+                    className="w-[95%] max-w-5xl h-[540px] md:h-[600px] bg-[#0c0c0e]/60 border border-white/[0.04] rounded-3xl overflow-hidden flex flex-col opacity-[0.08] md:opacity-[0.25] transition-opacity duration-300"
+                    style={!isMobile ? {
+                        transform: `translate(${mousePos.x * -10}px, ${mousePos.y * -10}px)`,
+                        transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'
+                    } : {}}
+                >
+                    {/* Barra de título macOS */}
+                    <div className="h-10 border-b border-white/[0.04] bg-black/25 flex items-center justify-between px-5 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em]">SOFTCONTABLE PREVIEW</div>
+                        <div className="w-12"></div>
+                    </div>
+
+                    {/* Cuerpo de la ventana */}
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Barra lateral simulada (Sidebar) */}
+                        <div className="w-48 border-r border-white/[0.04] p-4 flex flex-col gap-1.5 shrink-0 hidden md:flex bg-black/10">
+                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest block mb-2 px-3">Módulos ERP</span>
+                            {showcaseViews.map((view, idx) => {
+                                const Icon = view.icon;
+                                const isActive = idx === activeSlide;
+                                return (
+                                    <div
+                                        key={view.id}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
+                                            isActive 
+                                                ? 'bg-white/[0.03] text-white font-bold' 
+                                                : 'text-slate-500'
+                                        }`}
+                                    >
+                                        <Icon size={14} />
+                                        <span className="text-[10px] tracking-wider uppercase">{view.title}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Área de trabajo simulada (Workspace) */}
+                        <div className="flex-1 p-5 flex flex-col overflow-hidden relative">
+                            {/* Cabecera del espacio de trabajo */}
+                            <div className="flex justify-between items-center border-b border-white/[0.03] pb-3 mb-4 shrink-0">
+                                <div className="h-6 w-32 bg-white/[0.02] border border-white/[0.04] rounded-lg"></div>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-5 w-5 rounded-full bg-slate-800"></div>
+                                    <div className="h-4 w-12 bg-white/[0.02] rounded"></div>
+                                </div>
+                            </div>
+
+                            {/* Contenido dinámico del carrusel */}
+                            <div className="flex-1 relative">
+                                {showcaseViews.map((view, idx) => {
+                                    const isActive = idx === activeSlide;
+                                    return (
+                                        <div
+                                            key={view.id}
+                                            className={`absolute inset-0 transition-all duration-700 ease-in-out transform grid grid-cols-1 md:grid-cols-3 gap-6 ${
+                                                isActive 
+                                                    ? 'opacity-100 translate-x-0 pointer-events-auto scale-100' 
+                                                    : 'opacity-0 translate-x-12 pointer-events-none scale-95'
+                                            }`}
+                                        >
+                                            {/* Columna Izquierda (Visible) */}
+                                            <div className="flex flex-col justify-center">
+                                                {view.leftContent}
+                                            </div>
+
+                                            {/* Columna Central Spacer (Bajo la tarjeta de Login) */}
+                                            <div className="hidden md:block"></div>
+
+                                            {/* Columna Derecha (Visible) */}
+                                            <div className="flex flex-col justify-center">
+                                                {view.rightContent}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
-                    );
-                })}
+                    </div>
+                </div>
             </div>
 
             {/* Contenido principal */}
             <div 
-                className="w-full max-w-md relative z-10 transition-transform duration-300 ease-out"
+                className="w-full max-w-md relative z-10 transition-transform duration-300 ease-out animate-in fade-in zoom-in-95 duration-500"
                 style={!isMobile ? {
                     transform: `perspective(1000px) rotateX(${mousePos.y * -8}deg) rotateY(${mousePos.x * 8}deg) translateZ(10px)`,
                 } : {}}
             >
                 {/* Logo / Título */}
-                <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center p-3.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
                         <Layers className="w-8 h-8 text-slate-200" strokeWidth={1.5} />
                     </div>
@@ -201,7 +393,7 @@ export const Login: React.FC = () => {
                 </div>
 
                 {/* Card de Login (Glassmorphic) */}
-                <div className="glass-card p-8 rounded-[32px] shadow-2xl animate-in zoom-in-95 duration-500 relative overflow-hidden group">
+                <div className="glass-card p-8 rounded-[32px] shadow-2xl relative overflow-hidden group">
                     {/* Brillo de reflejo superior */}
                     <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     
