@@ -7,15 +7,12 @@ import {
     Mail, 
     ArrowRight, 
     Loader2, 
-    Calculator, 
-    TrendingUp, 
-    Coins, 
-    Scale, 
     Building2, 
-    Briefcase,
     Layers,
     PieChart,
-    FileText
+    FileText,
+    TrendingUp,
+    Scale
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -35,10 +32,10 @@ const glassStyles = `
     animation: float-reverse 9s ease-in-out infinite;
   }
   .glass-card {
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(15, 23, 42, 0.55);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 
       0 30px 70px rgba(0, 0, 0, 0.65),
       inset 0 1px 1px rgba(255, 255, 255, 0.05);
@@ -65,21 +62,22 @@ const showcaseViews = [
         id: 'dashboard',
         title: 'Panel Principal',
         icon: Layers,
+        activeColor: 'text-[#d4af37]',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
                 <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Ventas del Mes</span>
+                    <div className="bg-amber-500/[0.01] border border-[#d4af37]/20 rounded-2xl p-4">
+                        <span className="text-[9px] text-[#d4af37] font-bold uppercase tracking-wider block mb-1">Ventas del Mes</span>
                         <span className="text-lg font-black text-white">S/ 48,250.00</span>
                         <span className="text-[9px] text-emerald-400 font-bold block mt-1.5">+12.4% vs mes ant.</span>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Compras del Mes</span>
+                    <div className="bg-emerald-500/[0.01] border border-emerald-500/20 rounded-2xl p-4">
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider block mb-1">Compras del Mes</span>
                         <span className="text-lg font-black text-white">S/ 24,180.00</span>
                         <span className="text-[9px] text-slate-400 font-bold block mt-1.5">142 comprobantes</span>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Impuesto RMT</span>
+                    <div className="bg-sky-500/[0.01] border border-sky-500/20 rounded-2xl p-4">
+                        <span className="text-[9px] text-sky-400 font-bold uppercase tracking-wider block mb-1">Impuesto RMT</span>
                         <span className="text-lg font-black text-white">S/ 4,342.00</span>
                         <span className="text-[9px] text-amber-500/80 font-bold block mt-1.5">IGV / Renta SUNAT</span>
                     </div>
@@ -90,7 +88,7 @@ const showcaseViews = [
                         <div className="flex items-end justify-between h-36 pt-2 px-1">
                             {[40, 60, 45, 75, 50, 90, 65, 80, 55, 70, 85, 95].map((h, i) => (
                                 <div key={i} className="w-[6%] flex flex-col items-center gap-1.5">
-                                    <div className="w-full bg-gradient-to-t from-slate-800 to-slate-400 rounded-t" style={{ height: `${h}%` }}></div>
+                                    <div className="w-full bg-gradient-to-t from-slate-800 to-[#d4af37]/60 rounded-t" style={{ height: `${h}%` }}></div>
                                     <span className="text-[9px] text-slate-600 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
                                 </div>
                             ))}
@@ -105,7 +103,7 @@ const showcaseViews = [
                                     <span className="text-white font-bold">49.8%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-white h-full" style={{ width: '49.8%' }}></div>
+                                    <div className="bg-[#d4af37] h-full" style={{ width: '49.8%' }}></div>
                                 </div>
                             </div>
                             <div>
@@ -114,7 +112,7 @@ const showcaseViews = [
                                     <span className="text-white font-bold">82.4%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-slate-400 h-full" style={{ width: '82.4%' }}></div>
+                                    <div className="bg-emerald-500 h-full" style={{ width: '82.4%' }}></div>
                                 </div>
                             </div>
                         </div>
@@ -130,11 +128,12 @@ const showcaseViews = [
         id: 'diario',
         title: 'Libro Diario',
         icon: FileText,
+        activeColor: 'text-emerald-400',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
                 <div className="flex justify-between items-center mb-1">
                     <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
-                    <span className="text-[9px] bg-white/5 border border-white/10 text-slate-300 px-3 py-1 rounded-full font-bold">Folio: 0048</span>
+                    <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold">Folio: 0048</span>
                 </div>
                 <div className="border border-white/[0.05] rounded-2xl overflow-hidden bg-white/[0.01] flex-1 flex flex-col">
                     <table className="w-full text-left border-collapse flex-1">
@@ -179,8 +178,8 @@ const showcaseViews = [
                             </tr>
                             <tr className="bg-white/[0.02] font-bold">
                                 <td className="p-3 text-[9px] text-slate-500 uppercase tracking-wider" colSpan={2}>Suma de Operaciones del Folio</td>
-                                <td className="p-3 text-right text-white font-black border-t border-white/10">16,800.00</td>
-                                <td className="p-3 text-right text-white font-black border-t border-white/10">16,800.00</td>
+                                <td className="p-3 text-right text-emerald-400 font-black border-t border-white/10">16,800.00</td>
+                                <td className="p-3 text-right text-amber-500/80 font-black border-t border-white/10">16,800.00</td>
                             </tr>
                         </tbody>
                     </table>
@@ -192,6 +191,7 @@ const showcaseViews = [
         id: 'empresas',
         title: 'Mis Empresas',
         icon: Building2,
+        activeColor: 'text-sky-400',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
                 <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">Cartera de Empresas Activas</span>
@@ -218,7 +218,7 @@ const showcaseViews = [
                     </div>
                 </div>
                 <div className="bg-white/[0.01] border border-dashed border-white/10 rounded-2xl p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.02] transition-colors">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Registrar Nueva Empresa / RUC en el ERP</span>
+                    <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">+ Registrar Nueva Empresa / RUC</span>
                 </div>
             </div>
         )
@@ -227,6 +227,7 @@ const showcaseViews = [
         id: 'reportes',
         title: 'Reportes NIIF',
         icon: PieChart,
+        activeColor: 'text-indigo-400',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-500">
                 <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">Estado de Situación Financiera (ESF)</span>
@@ -240,7 +241,7 @@ const showcaseViews = [
                                     <span>72%</span>
                                 </div>
                                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-white h-full" style={{ width: '72%' }}></div>
+                                    <div className="bg-indigo-400 h-full" style={{ width: '72%' }}></div>
                                 </div>
                             </div>
                             <div>
@@ -249,7 +250,7 @@ const showcaseViews = [
                                     <span>28%</span>
                                 </div>
                                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-slate-500 h-full" style={{ width: '28%' }}></div>
+                                    <div className="bg-slate-600 h-full" style={{ width: '28%' }}></div>
                                 </div>
                             </div>
                         </div>
@@ -270,7 +271,7 @@ const showcaseViews = [
                                 <span className="font-bold text-white">S/ 110,280.00</span>
                             </div>
                             <div className="h-[1px] bg-white/10 my-2"></div>
-                            <div className="flex justify-between font-black text-white text-xs">
+                            <div className="flex justify-between font-black text-indigo-400 text-xs">
                                 <span>Pasivo + Patrim.:</span>
                                 <span>S/ 152,430.00</span>
                             </div>
@@ -358,21 +359,26 @@ export const Login: React.FC = () => {
 
     return (
         <div 
-            className="min-h-screen flex flex-col md:flex-row bg-[#09090b] font-sans selection:bg-white/10 overflow-hidden relative"
+            className="min-h-screen flex items-center bg-[#09090b] font-sans selection:bg-white/10 overflow-hidden relative"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
             <style>{glassStyles}</style>
 
-            {/* Panel de Login (Izquierda, toma el 100% en móvil y ~40% en escritorio) */}
-            <div className="w-full md:w-[42%] lg:w-[38%] xl:w-[35%] shrink-0 min-h-screen flex items-center justify-center p-6 md:p-10 relative z-20 overflow-y-auto">
+            {/* Panel de Login (Ubicado centralizado a la izquierda, z-30 para prioridad) */}
+            <div className="w-full md:w-[48%] lg:w-[44%] xl:w-[40%] shrink-0 flex items-center justify-center p-6 md:p-12 relative z-30 md:ml-[6%] lg:ml-[10%] select-none">
                 {/* Luces de Fondo para móvil */}
                 <div className="absolute inset-0 md:hidden overflow-hidden pointer-events-none z-0">
                     <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[#d4af37]/3 blur-[140px] rounded-full"></div>
                     <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-slate-100/3 blur-[140px] rounded-full"></div>
                 </div>
 
-                <div className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in-95 duration-500">
+                <div 
+                    className="w-full max-w-sm relative z-10 animate-in fade-in zoom-in-95 duration-500"
+                    style={!isMobile ? {
+                        transform: `perspective(1000px) rotateX(${mousePos.y * -8}deg) rotateY(${mousePos.x * 8}deg) translateZ(15px)`,
+                    } : {}}
+                >
                     {/* Logo / Título */}
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center p-3.5 bg-white/[0.02] backdrop-blur-md border border-white/[0.06] rounded-[20px] shadow-lg mb-4">
@@ -385,7 +391,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Card de Login (Glassmorphic) */}
-                    <div className="glass-card p-8 rounded-[32px] shadow-2xl relative overflow-hidden group">
+                    <div className="glass-card p-8 rounded-[32px] shadow-2xl relative overflow-hidden group select-text">
                         {/* Brillo de reflejo superior */}
                         <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                         
@@ -485,8 +491,8 @@ export const Login: React.FC = () => {
                 </div>
             </div>
 
-            {/* Panel de Showcase (Derecha, visible solo en escritorio) */}
-            <div className="hidden md:flex flex-1 min-h-screen items-center justify-center p-8 lg:p-16 relative overflow-hidden z-10">
+            {/* Panel de Showcase (Ubicado a la derecha, en perspectiva 3D, z-10) */}
+            <div className="absolute right-[-10%] lg:right-[-5%] xl:right-[0%] top-1/2 -translate-y-1/2 w-[60%] h-[580px] lg:h-[640px] hidden md:flex items-center justify-center z-10 pointer-events-none">
                 {/* Luces de Fondo muy tenues y elegantes */}
                 <div 
                     className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-[#d4af37]/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
@@ -497,8 +503,54 @@ export const Login: React.FC = () => {
                     style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px)` }}
                 ></div>
 
-                {/* Contenedor del Simulador con degradados de desvanecimiento en bordes */}
-                <div className="relative w-full max-w-4xl h-[560px] lg:h-[620px] opacity-40 hover:opacity-60 transition-opacity duration-500">
+                {/* Cajones / Botones con Parallax Avanzado en primer plano (z-20) */}
+                <div 
+                    className="absolute glass-card px-4 py-3 rounded-2xl border border-emerald-500/20 shadow-xl flex items-center gap-2.5 z-20 text-[10px] font-black uppercase tracking-wider text-white select-none"
+                    style={{
+                        top: '12%',
+                        left: '0%',
+                        transform: `translate(${mousePos.x * -55}px, ${mousePos.y * -55}px)`,
+                        transition: 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
+                    }}
+                >
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-emerald-400">Asiento Cuadrado ✓</span>
+                </div>
+
+                <div 
+                    className="absolute glass-card px-4 py-3 rounded-2xl border border-indigo-500/20 shadow-xl flex items-center gap-2.5 z-20 text-[10px] font-black uppercase tracking-wider text-white select-none"
+                    style={{
+                        bottom: '10%',
+                        right: '8%',
+                        transform: `translate(${mousePos.x * -75}px, ${mousePos.y * -75}px)`,
+                        transition: 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
+                    }}
+                >
+                    <PieChart className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="text-indigo-400">Estados Financieros NIIF</span>
+                </div>
+
+                <div 
+                    className="absolute glass-card px-4 py-3 rounded-2xl border border-amber-500/20 shadow-xl flex items-center gap-2.5 z-20 text-[10px] font-black uppercase tracking-wider text-white select-none"
+                    style={{
+                        top: '42%',
+                        right: '-2%',
+                        transform: `translate(${mousePos.x * -65}px, ${mousePos.y * -65}px)`,
+                        transition: 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
+                    }}
+                >
+                    <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-amber-400">RUC SUNAT VALIDADO</span>
+                </div>
+
+                {/* Contenedor del Simulador con perspectiva 3D e inclinación isométrica */}
+                <div 
+                    className="relative w-full h-full opacity-90 hover:opacity-100 transition-all duration-500"
+                    style={{
+                        transform: `perspective(1600px) rotateY(-28deg) rotateX(10deg) rotateZ(2deg)`,
+                        transformStyle: 'preserve-3d',
+                    }}
+                >
                     {/* Vignette Overlays para fundir la ventana con el fondo negro */}
                     <div className="absolute inset-y-0 -left-1 w-48 bg-gradient-to-r from-[#09090b] via-[#09090b]/80 to-transparent z-20 pointer-events-none"></div>
                     <div className="absolute inset-y-0 -right-1 w-20 bg-gradient-to-l from-[#09090b] to-transparent z-20 pointer-events-none"></div>
@@ -506,18 +558,13 @@ export const Login: React.FC = () => {
                     <div className="absolute -bottom-1 inset-x-0 h-20 bg-gradient-to-t from-[#09090b] to-transparent z-20 pointer-events-none"></div>
 
                     {/* Ventana de previsualización (Showcase Mockup) */}
-                    <div 
-                        className="w-full h-full bg-[#0c0c0e]/95 border border-white/[0.05] rounded-3xl overflow-hidden flex flex-col shadow-2xl relative z-10 transition-transform duration-500"
-                        style={{
-                            transform: `perspective(1000px) rotateX(${mousePos.y * -4}deg) rotateY(${mousePos.x * 4}deg) translateZ(10px)`,
-                        }}
-                    >
+                    <div className="w-full h-full bg-[#0c0c0e]/95 border border-white/[0.08] rounded-3xl overflow-hidden flex flex-col shadow-[0_50px_100px_rgba(0,0,0,0.8)] relative z-10">
                         {/* Barra de título macOS */}
-                        <div className="h-11 border-b border-white/[0.04] bg-black/25 flex items-center justify-between px-5 shrink-0">
+                        <div className="h-11 border-b border-white/[0.06] bg-black/35 flex items-center justify-between px-5 shrink-0">
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></span>
                             </div>
                             <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.15em]">SOFTCONTABLE ERP PREVIEW</div>
                             <div className="w-12"></div>
@@ -536,11 +583,11 @@ export const Login: React.FC = () => {
                                             key={view.id}
                                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
                                                 isActive 
-                                                    ? 'bg-white/[0.03] text-white font-bold' 
-                                                    : 'text-slate-500'
+                                                    ? 'bg-white/[0.04] text-white font-bold' 
+                                                    : 'text-slate-500 hover:text-slate-300'
                                             }`}
                                         >
-                                            <Icon size={14} />
+                                            <Icon size={14} className={isActive ? view.activeColor : 'text-slate-500'} />
                                             <span className="text-[10px] tracking-wider uppercase">{view.title}</span>
                                         </div>
                                     );
@@ -567,8 +614,8 @@ export const Login: React.FC = () => {
                                                 key={view.id}
                                                 className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
                                                     isActive 
-                                                        ? 'opacity-100 translate-x-0 pointer-events-auto scale-100' 
-                                                        : 'opacity-0 translate-x-12 pointer-events-none scale-95'
+                                                        ? 'opacity-100 translate-x-0 scale-100' 
+                                                        : 'opacity-0 translate-x-12 scale-95 pointer-events-none'
                                                 }`}
                                             >
                                                 {view.content}
