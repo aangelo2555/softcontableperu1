@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, Building2, Download, Loader2, LogOut } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 // Cache global persistente que sobrevive al desmontaje del componente (navegación por pestañas)
 const globalBuzonCache: Record<string, string> = {};
@@ -364,73 +365,78 @@ const BuzonView: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-full p-3 space-y-4">
-      {!isElectron && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
-          <AlertCircle size={20} className="shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-xs font-black uppercase tracking-wider">Modo Web Limitado</h4>
-            <p className="text-[11px] font-bold mt-1 text-red-500/80">
-              La sincronización en vivo del buzón tributario SUNAT, extracción de notificaciones y descargas directas de constancias requieren la instalación del cliente de escritorio de SoftContable. En este entorno web SaaS, estas funciones automatizadas están restringidas.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {/* Top Banner: Multi-client Selector */}
-      <div className="bg-app-surface/50 border border-app-border rounded-xl p-3 shadow-xl flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-pld-blue/10 flex items-center justify-center text-pld-blue">
-            <Building2 size={20} />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-[9px] font-black uppercase text-pld-blue/70 tracking-widest mb-0.5">
-              Seleccionar Cliente
-            </label>
-            <select 
-              value={selectedRuc} 
-              onChange={(e) => setSelectedRuc(e.target.value)}
-              className="bg-transparent border-none text-app-text font-bold text-sm focus:ring-0 p-0 cursor-pointer"
-            >
-              {workspaces.map(ws => (
-                <option key={ws.ruc} value={ws.ruc}>
-                  {ws.name} ({ws.ruc})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Mail size={18} />}
+        title="Buzón Electrónico SUNAT"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            Buzón SOL
+          </span>
+        }
+        subtitle={`${companyToUse.name} • RUC: ${selectedRuc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-app-muted uppercase">Cliente:</span>
+              <select 
+                value={selectedRuc} 
+                onChange={(e) => setSelectedRuc(e.target.value)}
+                className="bg-app-bg border border-app-border rounded-xl px-3 py-1.5 text-xs text-app-text font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                {workspaces.map(ws => (
+                  <option key={ws.ruc} value={ws.ruc}>
+                    {ws.name} ({ws.ruc})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="flex items-center gap-3">
-          {(statusText || downloadingText) && (
-            <div className="hidden lg:flex items-center gap-2 text-[9px] font-bold text-pld-blue animate-pulse uppercase tracking-widest bg-pld-blue/5 px-3 py-1.5 rounded-full">
-              <Loader2 size={10} className="animate-spin" />
-              {statusText || downloadingText}
+            {(statusText || downloadingText) && (
+              <div className="flex items-center gap-2 text-[9px] font-bold text-pld-blue animate-pulse uppercase tracking-widest bg-pld-blue/5 px-2.5 py-1.5 rounded-xl border border-pld-blue/10">
+                <Loader2 size={10} className="animate-spin" />
+                {statusText || downloadingText}
+              </div>
+            )}
+
+            <button 
+              onClick={handleCerrarSesion}
+              className="flex items-center gap-1.5 h-8 px-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500 hover:text-white transition-all"
+            >
+              <LogOut size={12} />
+              Salir
+            </button>
+            <button 
+              onClick={handleVerConstancias}
+              className="flex items-center gap-1.5 h-8 px-3 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-wider text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all"
+            >
+              Constancias
+            </button>
+            <button 
+              onClick={handleConsultar}
+              disabled={loading}
+              className="flex items-center gap-1.5 h-8 px-4 bg-pld-blue text-white rounded-xl font-black uppercase tracking-wider text-[10px] hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-pld-blue/20"
+            >
+              {loading ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
+              Sincronizar
+            </button>
+          </div>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
+          {!isElectron && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
+              <AlertCircle size={20} className="shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider">Modo Web Limitado</h4>
+                <p className="text-[11px] font-bold mt-1 text-red-500/80">
+                  La sincronización en vivo del buzón tributario SUNAT, extracción de notificaciones y descargas directas de constancias requieren la instalación del cliente de escritorio de SoftContable. En este entorno web SaaS, estas funciones automatizadas están restringidas.
+                </p>
+              </div>
             </div>
           )}
-          <button 
-            onClick={handleCerrarSesion}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition-all active:scale-95"
-          >
-            <LogOut size={14} />
-            Cerrar Sesión
-          </button>
-          <button 
-            onClick={handleVerConstancias}
-            className="flex items-center gap-2 px-4 py-2.5 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-widest text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all"
-          >
-            Ver Constancias
-          </button>
-          <button 
-            onClick={handleConsultar}
-            disabled={loading}
-            className="group relative flex items-center gap-2 px-5 py-2.5 bg-pld-blue text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-pld-blue/20"
-          >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-            Sincronizar Buzón
-          </button>
-        </div>
-      </div>
 
       {error && (
         <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl animate-in slide-in-from-top duration-300">
@@ -648,6 +654,8 @@ const BuzonView: React.FC = () => {
         </div>
       )}
 
+        </div>
+      </div>
     </div>
   );
 };

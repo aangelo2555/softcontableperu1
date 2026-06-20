@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
@@ -308,26 +309,25 @@ const CajaDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-10 h-full overflow-y-auto bg-app-bg custom-scrollbar animate-fade-in print:bg-white print:p-0">
-      
-      {/* Header */}
-      <div className="flex justify-between items-center print:hidden">
-        <div>
-          <h1 className="text-2xl font-black italic uppercase text-app-text flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20 text-white"><Wallet size={24} /></div>
-            Flujo de Caja Fiscal (Cash Flow)
-          </h1>
-          <p className="text-xs font-bold text-app-muted mt-1 uppercase tracking-widest">{currentCompany.name} • {currentPeriod}</p>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={handleExportExcel} className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
-            <FileSpreadsheet size={16} /> Exportar Caja
-          </button>
-          <button onClick={() => window.print()} className="p-2.5 bg-app-surface border border-app-border text-app-text rounded-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
-            <FileText size={16} /> Imprimir
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Wallet size={18} />}
+        title="Flujo de Caja Fiscal (Cash Flow)"
+        subtitle={`${currentCompany.name} • ${currentPeriod}`}
+        actions={
+          <>
+            <button onClick={handleExportExcel} className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
+              <FileSpreadsheet size={16} /> Exportar Caja
+            </button>
+            <button onClick={() => window.print()} className="p-2.5 bg-app-surface border border-app-border text-app-text rounded-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
+              <FileText size={16} /> Imprimir
+            </button>
+          </>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-6">
 
       <div className="grid grid-cols-1 gap-8">
         
@@ -542,12 +542,12 @@ const CajaDashboard: React.FC = () => {
         </div>
       </div>
 
-      </div>
-
       <div className="mt-8 pt-8 border-t border-app-border text-center opacity-40">
         <p className="text-[9px] font-black uppercase tracking-[0.6em] text-app-muted">SoftContable Cashflow Intelligence • Referencia Movimientos Fiscales</p>
       </div>
 
+        </div>
+      </div>
     </div>
   );
 };

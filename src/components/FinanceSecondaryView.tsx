@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 /**
  * ESTADOS FINANCIEROS SECUNDARIOS (Standardized Design)
@@ -391,48 +392,41 @@ const FinanceSecondaryView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative print:bg-white print:p-0">
-
-      {/* Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            {reportType === '3.18' ? <TrendingUp size={16} className="text-pld-blue" /> : <BarChart size={16} className="text-pld-magenta" />}
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">
-              {reportType === '3.18' ? 'Estado de Flujos de Efectivo' : 'Estado de Cambios en el Patrimonio'}
-            </h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span>FORMATO {reportType}</span>
-               <span>AÑO {periodoAnio}</span>
-               <span>RUC: {currentCompany.ruc}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {reportType === '3.18' && (
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative print:bg-white print:p-0">
+      <PageHeader
+        icon={reportType === '3.18' ? <TrendingUp size={18} /> : <BarChart size={18} />}
+        title={reportType === '3.18' ? 'Flujos de Efectivo' : 'Cambios en Patrimonio'}
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            Formato {reportType}
+          </span>
+        }
+        subtitle={`Periodo: AÑO ${periodoAnio} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap print:hidden">
+            {reportType === '3.18' && (
+              <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
+                 <button onClick={() => setFlowMethod('DIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'DIRECT' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>Directo</button>
+                 <button onClick={() => setFlowMethod('INDIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'INDIRECT' ? 'bg-indigo-600 text-white' : 'text-app-muted hover:text-app-text'}`}>Indirecto</button>
+              </div>
+            )}
             <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
-               <button onClick={() => setFlowMethod('DIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'DIRECT' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>Directo</button>
-               <button onClick={() => setFlowMethod('INDIRECT')} className={`px-2.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMethod === 'INDIRECT' ? 'bg-indigo-600 text-white' : 'text-app-muted hover:text-app-text'}`}>Indirecto</button>
+               <button onClick={() => setReportType('3.18')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.18' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>3.18 Flujo</button>
+               <button onClick={() => setReportType('3.19')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.19' ? 'bg-pld-magenta text-white' : 'text-app-muted hover:text-app-text'}`}>3.19 Patr.</button>
             </div>
-          )}
-          <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
-             <button onClick={() => setReportType('3.18')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.18' ? 'bg-pld-blue text-white' : 'text-app-muted hover:text-app-text'}`}>3.18 Flujo</button>
-             <button onClick={() => setReportType('3.19')} className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${reportType === '3.19' ? 'bg-pld-magenta text-white' : 'text-app-muted hover:text-app-text'}`}>3.19 Patr.</button>
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
+               <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-pld-blue transition-colors"><ChevronLeft size={14} /></button>
+               <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
+               <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-pld-blue transition-colors"><ChevronRight size={14} /></button>
+            </div>
+            <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Download size={14} /> Excel</button>
+            <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
           </div>
-          <div className="h-4 w-px bg-app-border mx-1" />
-          <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
-             <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-pld-blue transition-colors"><ChevronLeft size={14} /></button>
-             <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
-             <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-pld-blue transition-colors"><ChevronRight size={14} /></button>
-          </div>
-          <div className="h-4 w-px bg-app-border mx-1" />
-          <button onClick={handleExport} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Download size={14} /> Excel</button>
-          <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
-        </div>
-      </div>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       <div className="flex-1 overflow-auto p-4 custom-scrollbar">
         <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-lg overflow-hidden bg-app-surface">
@@ -605,6 +599,9 @@ const FinanceSecondaryView: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      </div>
+
         </div>
       </div>
     </div>

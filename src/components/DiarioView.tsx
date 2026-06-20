@@ -2,6 +2,7 @@ import React from 'react';
 import { Book, Printer, FileDown, Trash2, Edit } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const DiarioView: React.FC = () => {
   const store = useStore();
@@ -220,27 +221,15 @@ const DiarioView: React.FC = () => {
         period: `${selectedAnio}-${selectedMes}`,
       }
     }, `Libro_Diario_${selectedAnio}_${selectedMes}`);
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative">
-
-      {/* Header / Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <Book size={16} className="text-pld-blue" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Libro Diario (5.1)</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span>FORMATO: 5.1</span>
-               <span>PERIODO: {currentCompany.period || '2025'}</span>
-               <span>RUC: {currentCompany.ruc}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2 items-center">
+   return (
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Book size={18} />}
+        title="Libro Diario (5.1)"
+        badge={<span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">Formato 5.1</span>}
+        subtitle={`Periodo: ${currentCompany.period || '2025'} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center bg-app-bg border border-app-border rounded-lg px-2 mr-2 gap-1 h-8">
               <span className="text-[9px] font-bold text-app-muted uppercase mr-1">Periodo:</span>
               <select
@@ -266,13 +255,14 @@ const DiarioView: React.FC = () => {
                 ))}
               </select>
             </div>
-           <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-           <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Exportar a Excel"><FileDown size={14} /> Excel</button>
-        </div>
-      </div>
+            <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
+            <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Exportar a Excel"><FileDown size={14} /> Excel</button>
+          </div>
+        }
+      />
 
-      {/* Table Content */}
-      <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
         <div className="min-w-[1250px] border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
           <table id="diario-table" className="w-full text-left border-collapse">
             <thead>
@@ -373,6 +363,8 @@ const DiarioView: React.FC = () => {
                </tr>
             </tfoot>
           </table>
+        </div>
+
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { exportSingleSheet } from '../utils/excelExport';
 import { DataTable } from './DataTable';
 import { useStore, type Entity } from '../store';
 import Modal from './shared/Modal';
+import PageHeader from './ui/PageHeader';
 
 const CliProView: React.FC = () => {
   const { entities, addEntity, updateEntity, deleteEntity, currentCompany, sales, purchases } = useStore();
@@ -120,20 +121,13 @@ const CliProView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-app-bg overflow-hidden relative">
-      <div className="flex flex-col h-full overflow-hidden">
-
-        {/* Header */}
-        <div className="h-14 px-5 border-b border-app-border bg-app-surface flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-pld-blue/10 rounded-xl"><Users size={16} className="text-pld-blue" /></div>
-            <div>
-              <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Directorio</h2>
-              <p className="text-[9px] text-app-muted">{entities.length} entidades registradas</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 flex-1 justify-end">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Users size={18} />}
+        title="Directorio"
+        subtitle={`${entities.length} entidades registradas`}
+        actions={
+          <>
             <div className="relative flex-1 max-w-sm group">
               <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
               <input type="text" placeholder="Buscar cliente o proveedor (RUC/Nombre)..."
@@ -162,11 +156,12 @@ const CliProView: React.FC = () => {
                 period: currentCompany?.period || String(new Date().getFullYear()),
               }
             }, 'Directorio')} className="h-9 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Table */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-5">
           {filteredData.length > 0 ? (
             <DataTable
               columns={columns}

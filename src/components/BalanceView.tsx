@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import StaleWarningBanner from './shared/StaleWarningBanner';
 import toast from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 const ReportLine: React.FC<{ label: string; value: number; indent?: boolean; subtract?: boolean }> = ({ label, value, indent, subtract }) => {
   const formattedValue = value !== 0 ? Math.abs(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
@@ -204,28 +205,26 @@ const BalanceView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Landmark size={18} />}
+        title="Situación Financiera"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            Balance General
+          </span>
+        }
+        subtitle={`AL 31 DE DICIEMBRE DEL ${currentCompany.period || '2025'} (Nuevos Soles) • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex gap-2">
+             <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
+             <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
+          </div>
+        }
+      />
 
-      {/* Header Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <Landmark size={16} className="text-pld-blue" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Estado de Situación Financiera</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span>AL 31 DE DICIEMBRE DEL {currentCompany.period || '2025'}</span>
-               <span>(Nuevos Soles)</span>
-               <span>RUC: {currentCompany.ruc}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-           <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-           <button onClick={handleExport} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* Main Content Area */}
       <StaleWarningBanner
@@ -359,6 +358,8 @@ const BalanceView: React.FC = () => {
               {Math.abs(totalActivo - (totalPasivo + totalPatrimonio)).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
              </span>
           </div>
+
+        </div>
 
         </div>
       </div>

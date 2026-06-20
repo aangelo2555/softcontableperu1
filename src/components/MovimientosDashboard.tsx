@@ -28,6 +28,7 @@ import { exportMultipleSheets } from '../utils/excelExport';
 import { parseBankStatement } from '../utils/bankImporter';
 import { getMatchSuggestions } from '../engine/bankReconciliation';
 import { validateCrossBook } from '../engine/crossBookValidator';
+import PageHeader from './ui/PageHeader';
 
 const MONTHS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
 
@@ -566,38 +567,33 @@ const MovimientosView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-10 h-full overflow-y-auto bg-app-bg custom-scrollbar animate-fade-in print:bg-white print:p-0">
-      
-      {/* Header */}
-      <div className="flex justify-between items-center print:hidden">
-        <div>
-          <h1 className="text-2xl font-black italic uppercase text-app-text flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/20 text-white">
-              <ArrowRightLeft size={24} />
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<ArrowRightLeft size={18} />}
+        title={activeSubTab === 'fiscal' ? 'Movimientos Fiscales' : 'Conciliación Bancaria'}
+        subtitle={`${currentCompany.name} • ${currentCompany.period}`}
+        actions={
+          <div className="flex items-center gap-3">
+            {activeSubTab === 'fiscal' && (
+              <>
+                <button onClick={exportExcel} className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
+                  <FileSpreadsheet size={16} /> Excel
+                </button>
+                <button onClick={exportPDF} className="p-2.5 bg-app-surface border border-app-border text-app-text rounded-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
+                  <FileText size={16} /> Imprimir
+                </button>
+              </>
+            )}
+            <div className="bg-app-surface px-4 py-2 rounded-xl shadow-sm border border-app-border flex items-center gap-2">
+              <Unlock size={14} className="text-amber-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Edición Activa</span>
             </div>
-            {activeSubTab === 'fiscal' ? 'Movimientos Fiscales' : 'Conciliación Bancaria'}
-          </h1>
-          <p className="text-xs font-bold text-app-muted mt-1 uppercase tracking-widest">
-            {currentCompany.name} • {currentCompany.period}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {activeSubTab === 'fiscal' && (
-            <>
-              <button onClick={exportExcel} className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
-                <FileSpreadsheet size={16} /> Excel
-              </button>
-              <button onClick={exportPDF} className="p-2.5 bg-app-surface border border-app-border text-app-text rounded-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 text-[10px] font-black uppercase">
-                <FileText size={16} /> Imprimir
-              </button>
-            </>
-          )}
-          <div className="bg-app-surface px-4 py-2 rounded-xl shadow-sm border border-app-border flex items-center gap-2 ml-4">
-            <Unlock size={14} className="text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Edición Activa</span>
           </div>
-        </div>
-      </div>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-6">
 
       {/* Tabs de Sub-Módulo */}
       <div className="flex gap-4 border-b border-app-border pb-2 print:hidden">
@@ -1446,6 +1442,9 @@ const MovimientosView: React.FC = () => {
 
         </div>
       )}
+
+        </div>
+      </div>
 
       <div className="mt-8 pt-8 border-t border-app-border text-center opacity-40">
         <p className="text-[9px] font-black uppercase tracking-[0.6em] text-app-muted">SoftContable Intelligence Division • Movimientos Dashboard</p>

@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import StaleWarningBanner from './shared/StaleWarningBanner';
 import toast from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?: boolean; isTotal?: boolean; isNet?: boolean }> = ({ label, value, indent, bold, isTotal, isNet }) => (
   <div className={`flex justify-between text-[11px] py-1 border-b border-app-border/50 ${indent ? 'pl-8' : ''} ${isTotal ? 'border-t-2 border-app-border pt-2' : ''} ${isNet ? 'bg-pld-blue/10 p-2 rounded border-none mt-4 ring-1 ring-pld-blue/20' : ''}`}>
@@ -167,49 +168,44 @@ const EgypView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<TrendingUp size={18} />}
+        title="Estado de Resultados"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            ER Integrales
+          </span>
+        }
+        subtitle={`Periodo: AL 31 DE DICIEMBRE DEL ${currentCompany.period || '2025'} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+             {/* View Selector Toggle */}
+             <div className="flex bg-app-bg border border-app-border p-0.5 rounded-lg">
+               <button 
+                 onClick={() => setViewMode('FUNCION')}
+                 className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'FUNCION' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-pld-blue'}`}
+               >
+                 Función
+               </button>
+               <button 
+                 onClick={() => setViewMode('NATURALEZA')}
+                 className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'NATURALEZA' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-pld-blue'}`}
+               >
+                 Naturaleza
+               </button>
+             </div>
 
-      {/* Header Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <TrendingUp size={16} className="text-pld-blue" />
+             <div className="flex gap-2">
+                <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
+                <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
+             </div>
           </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Estado de Resultados Integrales</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span>AL 31 DE DICIEMBRE DEL {currentCompany.period || '2025'}</span>
-               <span>(Nuevos Soles)</span>
-               <span>RUC: {currentCompany.ruc}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-           {/* View Selector Toggle */}
-           <div className="flex bg-app-bg border border-app-border p-1 rounded-xl shadow-inner">
-             <button 
-               onClick={() => setViewMode('FUNCION')}
-               className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'FUNCION' ? 'bg-pld-blue text-white shadow-md' : 'text-app-muted hover:text-pld-blue'}`}
-             >
-               <Layout size={12} /> Función
-             </button>
-             <button 
-               onClick={() => setViewMode('NATURALEZA')}
-               className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'NATURALEZA' ? 'bg-pld-blue text-white shadow-md' : 'text-app-muted hover:text-pld-blue'}`}
-             >
-               <Layers size={12} /> Naturaleza
-             </button>
-           </div>
+        }
+      />
 
-           <div className="h-6 w-px bg-app-border" />
-
-           <div className="flex gap-2">
-              <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-              <button onClick={handleExport} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
-           </div>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* Content Area */}
       <StaleWarningBanner
@@ -290,6 +286,8 @@ const EgypView: React.FC = () => {
              <EgypLine label="IMPUESTO A LA RENTA (CTA 88)" value={impuestoRenta} />
              <EgypLine label="UTILIDAD (PERDIDA) NETA DEL EJERCICIO" value={currentUtilidadNeta} isNet bold />
           </div>
+
+        </div>
 
         </div>
       </div>

@@ -4,6 +4,7 @@ import { DataTable } from './DataTable';
 import { useStore } from '../store';
 import type { Account } from '../logic/plan';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const PlanView: React.FC = () => {
   const { plan, addAccount, updateAccount, deleteAccount, currentCompany } = useStore();
@@ -105,58 +106,54 @@ const PlanView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg overflow-hidden">
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <Files size={16} className="text-pld-blue" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Plan Contable</h2>
-            <p className="text-[9px] text-app-muted uppercase tracking-wider">PCGE {plan.length} cuentas</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative group">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Buscar cuenta contable (Código/Nombre)..." 
-              className="h-10 pl-11 pr-4 w-64 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
-              style={{ paddingLeft: '2.75rem' }}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <button 
-            onClick={() => { resetForm(); setShowAddModal(true); }}
-            className="h-8 bg-pld-blue hover:bg-blue-700 text-white font-bold px-4 rounded-lg flex items-center gap-2 transition-all text-[10px] uppercase tracking-wider shadow-sm"
-          >
-            <Plus size={14} /> Nuevo
-          </button>
-          <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
-          <button onClick={() => exportSingleSheet({
-            sheetName: 'Plan Contable',
-            title: 'PLAN CONTABLE GENERAL EMPRESARIAL',
-            columns: [
-              { header: 'CUENTA', key: 'cta', width: 12, alignment: 'center' },
-              { header: 'DENOMINACIÓN', key: 'description', width: 50 },
-              { header: 'TIPO', key: 'type', width: 15, alignment: 'center' },
-              { header: 'AMARRE DEBE', key: 'amarreDebe', width: 14, alignment: 'center' },
-              { header: 'AMARRE HABER', key: 'amarreHaber', width: 14, alignment: 'center' }
-            ],
-            rows: plan,
-            companyInfo: {
-              ruc: currentCompany?.ruc || '',
-              name: currentCompany?.name || 'EMPRESA',
-              period: currentCompany?.period || String(new Date().getFullYear()),
-            }
-          }, 'Plan_Contable')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
-        </div>
-      </div>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Files size={18} />}
+        title="Plan Contable"
+        subtitle={`PCGE ${plan.length} cuentas`}
+        actions={
+          <>
+            <div className="relative group">
+              <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Buscar cuenta contable (Código/Nombre)..." 
+                className="h-10 pl-11 pr-4 w-64 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
+                style={{ paddingLeft: '2.75rem' }}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <button 
+              onClick={() => { resetForm(); setShowAddModal(true); }}
+              className="h-8 bg-pld-blue hover:bg-blue-700 text-white font-bold px-4 rounded-lg flex items-center gap-2 transition-all text-[10px] uppercase tracking-wider shadow-sm"
+            >
+              <Plus size={14} /> Nuevo
+            </button>
+            <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
+            <button onClick={() => exportSingleSheet({
+              sheetName: 'Plan Contable',
+              title: 'PLAN CONTABLE GENERAL EMPRESARIAL',
+              columns: [
+                { header: 'CUENTA', key: 'cta', width: 12, alignment: 'center' },
+                { header: 'DENOMINACIÓN', key: 'description', width: 50 },
+                { header: 'TIPO', key: 'type', width: 15, alignment: 'center' },
+                { header: 'AMARRE DEBE', key: 'amarreDebe', width: 14, alignment: 'center' },
+                { header: 'AMARRE HABER', key: 'amarreHaber', width: 14, alignment: 'center' }
+              ],
+              rows: plan,
+              companyInfo: {
+                ruc: currentCompany?.ruc || '',
+                name: currentCompany?.name || 'EMPRESA',
+                period: currentCompany?.period || String(new Date().getFullYear()),
+              }
+            }, 'Plan_Contable')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-hidden bg-app-surface border-t border-app-border flex flex-col">
-        <div className="flex-1 overflow-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-5">
           <DataTable 
             columns={columns} 
             data={filteredData} 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Trash2, Search, AlertTriangle, Edit2, X, Save, Lock, Unlock, Calendar, ShieldCheck, CheckCircle, XCircle } from 'lucide-react';
 import { DataTable } from './DataTable';
 import { useStore } from '../store';
+import PageHeader from './ui/PageHeader';
 import type { MaintenanceRecord } from '../store';
 import toast from 'react-hot-toast';
 
@@ -172,27 +173,22 @@ const MantenimientoView: React.FC = () => {
   const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   return (
-    <div className="h-full flex flex-col bg-app-bg overflow-hidden relative p-4">
-      <div className="bg-app-surface border border-app-border rounded-xl shadow-2xl flex flex-col h-full overflow-hidden">
-
-        {/* Header */}
-        <div className="h-12 px-5 border-b border-app-border bg-app-surface flex items-center justify-between">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Settings size={18} />}
+        title="Configuración y Mantenimiento"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            SISTEMA
+          </span>
+        }
+        subtitle={`${currentCompany.name} • Período: ${currentCompany.period}`}
+        actions={
           <div className="flex items-center gap-3">
-             <div className="p-2 bg-pld-blue/10 rounded-lg">
-                <Settings size={16} className="text-pld-blue" />
-             </div>
-             <div>
-                <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Configuración</h2>
-                <p className="text-[9px] text-app-muted uppercase tracking-wider">{currentCompany.period}</p>
-             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Section Tabs */}
-            <div className="flex items-center bg-app-bg rounded-lg border border-app-border overflow-hidden">
+            <div className="flex items-center bg-app-bg rounded-lg border border-app-border overflow-hidden p-0.5">
               <button
                 onClick={() => setActiveSection('comprobantes')}
-                className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
                   activeSection === 'comprobantes' ? 'bg-pld-blue/20 text-pld-blue' : 'text-app-muted hover:text-app-text'
                 }`}
               >
@@ -200,24 +196,25 @@ const MantenimientoView: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveSection('periodos')}
-                className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
                   activeSection === 'periodos' ? 'bg-amber-500/20 text-amber-600' : 'text-app-muted hover:text-app-text'
                 }`}
               >
-                <span className="flex items-center gap-1.5"><Calendar size={12} /> Períodos</span>
+                Períodos
               </button>
             </div>
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold px-4 rounded-lg flex items-center gap-2 border border-red-500/20 transition-all text-[10px] uppercase tracking-wider"
+              className="h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold px-3 rounded-xl flex items-center gap-1.5 border border-red-500/20 transition-all text-[10px] uppercase tracking-wider"
             >
-              <Trash2 size={14} /> Limpiar Base
+              <Trash2 size={12} /> Limpiar Base
             </button>
           </div>
-        </div>
+        }
+      />
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden bg-gradient-to-br from-app-bg to-app-surface/10">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
         {activeSection === 'periodos' ? (
           /* ─── Períodos Contables Panel ─── */

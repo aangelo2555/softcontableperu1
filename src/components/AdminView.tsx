@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
+import PageHeader from './ui/PageHeader';
 import { 
   Users, 
   MessageSquare, 
@@ -83,50 +84,51 @@ export const AdminView: React.FC = () => {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden p-4 md:p-6 bg-app-bg text-app-text flex flex-col gap-4">
-      
-      {/* Encabezado Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-app-border pb-3 shrink-0 gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">
-            <ShieldCheck size={12} />
-            Entorno de Control Admin
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<ShieldCheck size={18} />}
+        title="Panel de Administración"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[9px] text-blue-500 border border-blue-500/20 tracking-[0.2em] uppercase">
+            CONTROL ADMIN
+          </span>
+        }
+        subtitle="Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables."
+        actions={
+          <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0 w-full sm:w-auto justify-between sm:justify-start">
+            <button
+              onClick={() => setActiveSubTab('BUZON')}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                activeSubTab === 'BUZON' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'text-app-muted hover:text-app-text'
+              }`}
+            >
+              <MessageSquare size={12} />
+              Buzón Inteligente
+              {pendingSuggestionsCount > 0 && (
+                <span className="bg-rose-500 text-white font-bold text-[9px] h-3.5 min-w-3.5 px-1 rounded-full flex items-center justify-center">
+                  {pendingSuggestionsCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveSubTab('USUARIOS')}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                activeSubTab === 'USUARIOS' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'text-app-muted hover:text-app-text'
+              }`}
+            >
+              <Users size={12} />
+              Usuarios & Auditoría
+            </button>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-app-text">Panel de Administración</h1>
-          <p className="text-[11px] font-semibold text-app-muted mt-0.5">Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables.</p>
-        </div>
- 
-        {/* Interruptor de Pestañas */}
-        <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0 w-full sm:w-auto justify-between sm:justify-start">
-          <button
-            onClick={() => setActiveSubTab('BUZON')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeSubTab === 'BUZON' 
-                ? 'bg-blue-600 text-white shadow-md' 
-                : 'text-app-muted hover:text-app-text'
-            }`}
-          >
-            <MessageSquare size={12} />
-            Buzón Inteligente
-            {pendingSuggestionsCount > 0 && (
-              <span className="bg-rose-500 text-white font-bold text-[9px] h-3.5 min-w-3.5 px-1 rounded-full flex items-center justify-center">
-                {pendingSuggestionsCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveSubTab('USUARIOS')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeSubTab === 'USUARIOS' 
-                ? 'bg-blue-600 text-white shadow-md' 
-                : 'text-app-muted hover:text-app-text'
-            }`}
-          >
-            <Users size={12} />
-            Usuarios & Auditoría
-          </button>
-        </div>
-      </div>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
  
       {/* Tarjetas de Estadísticas Globales (Ocultas al expandir un reporte para maximizar el espacio vertical) */}
       {!selectedSuggestion && (
@@ -448,6 +450,8 @@ export const AdminView: React.FC = () => {
         </div>
       )}
 
+        </div>
+      </div>
     </div>
   );
 };

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 /**
  * LIBRO CAJA Y BANCOS
@@ -285,98 +286,84 @@ const LibroCajaBancosView: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative print:bg-white print:p-0">
-
-      {/* ═══ HEADER / CONTROL BAR (Toolbar Estándar) ═══ */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-600/10 rounded-lg">
-            {formato === '1.1' ? <Wallet size={16} className="text-indigo-600" /> : <Building2 size={16} className="text-violet-600" />}
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Libro Caja y Bancos ({formato})</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span className="truncate max-w-[200px]">{formatoLabel}</span>
-               <span>{MONTHS[periodoMes]} {periodoAnio}</span>
-               <span>RUC: {currentCompany.ruc}</span>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative print:bg-white print:p-0">
+      <PageHeader
+        icon={formato === '1.1' ? <Wallet size={18} /> : <Building2 size={18} />}
+        title={`Libro Caja y Bancos (${formato})`}
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-[9px] text-indigo-600 border border-indigo-500/10 tracking-[0.2em] uppercase">
+            {formato === '1.1' ? 'Formato 1.1' : 'Formato 1.2'}
+          </span>
+        }
+        subtitle={`${formatoLabel} • ${MONTHS[periodoMes]} ${periodoAnio} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Format Switcher */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
+               <button
+                 onClick={() => setFormato('1.1')}
+                 className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${formato === '1.1' ? 'bg-indigo-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
+               >
+                 1.1 Efec.
+               </button>
+               <button
+                 onClick={() => setFormato('1.2')}
+                 className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${formato === '1.2' ? 'bg-violet-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
+               >
+                 1.2 Bancos
+               </button>
             </div>
+
+            {/* Mes Selector */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-1">
+               <button onClick={() => setPeriodoMes(prev => prev === 0 ? 11 : prev - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
+               <select
+                 value={periodoMes}
+                 onChange={e => setPeriodoMes(parseInt(e.target.value))}
+                 className="bg-transparent border-none text-[9px] font-black uppercase text-app-text focus:ring-0 cursor-pointer py-0 w-20 appearance-none text-center"
+               >
+                 {MONTHS.map((m, i) => <option key={m} value={i} className="bg-app-surface">{m}</option>)}
+               </select>
+               <button onClick={() => setPeriodoMes(prev => prev === 11 ? 0 : prev + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
+            </div>
+
+            {/* Año Selector */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
+               <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
+               <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
+               <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
+            </div>
+
+            {/* Buscador */}
+            <div className="relative group">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-indigo-600 transition-colors" size={12} />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                className="bg-app-bg border border-app-border rounded-lg pl-7 pr-3 h-8 text-[10px] w-36 focus:ring-1 focus:ring-indigo-600 outline-none transition-all font-bold"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <button
+              onClick={handleExportExcel}
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Download size={14} /> Excel
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Format Switcher */}
-          <div className="bg-app-bg border border-app-border rounded-lg flex p-0.5 h-8">
-             <button
-               onClick={() => setFormato('1.1')}
-               className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${formato === '1.1' ? 'bg-indigo-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
-             >
-               1.1 Efec.
-             </button>
-             <button
-               onClick={() => setFormato('1.2')}
-               className={`px-3 rounded-md text-[8px] font-black uppercase transition-all ${formato === '1.2' ? 'bg-violet-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
-             >
-               1.2 Bancos
-             </button>
-          </div>
+        }
+      />
 
-          <div className="h-4 w-px bg-app-border mx-1" />
-
-          {/* Mes Selector */}
-          <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-1">
-             <button onClick={() => setPeriodoMes(prev => prev === 0 ? 11 : prev - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
-             <select
-               value={periodoMes}
-               onChange={e => setPeriodoMes(parseInt(e.target.value))}
-               className="bg-transparent border-none text-[9px] font-black uppercase text-app-text focus:ring-0 cursor-pointer py-0 w-20 appearance-none text-center"
-             >
-               {MONTHS.map((m, i) => <option key={m} value={i} className="bg-app-surface">{m}</option>)}
-             </select>
-             <button onClick={() => setPeriodoMes(prev => prev === 11 ? 0 : prev + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
-          </div>
-
-          <div className="h-4 w-px bg-app-border mx-1" />
-
-          {/* Año Selector */}
-          <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
-             <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
-             <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
-             <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
-          </div>
-
-          <div className="h-4 w-px bg-app-border mx-1" />
-
-          {/* Buscador */}
-          <div className="relative group">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-indigo-600 transition-colors" size={12} />
-            <input
-              type="text"
-              placeholder="Buscar..."
-              className="bg-app-bg border border-app-border rounded-lg pl-7 pr-3 h-8 text-[10px] w-36 focus:ring-1 focus:ring-indigo-600 outline-none transition-all font-bold"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="h-4 w-px bg-app-border mx-1" />
-
-          <button
-            onClick={handleExportExcel}
-            className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-          >
-            <Download size={14} /> Excel
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-          >
-            <Printer size={14} /> Imprimir
-          </button>
-        </div>
-      </div>
-
-      {/* ═══ MAIN TABLE ═══ */}
-      <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
         <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
         <table id="libro-caja-table" className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface shadow-xl">
 
@@ -555,6 +542,9 @@ const LibroCajaBancosView: React.FC = () => {
         </div>
         <div>
           Saldo: S/ {fmtAlways(totals.saldo)}
+        </div>
+      </div>
+
         </div>
       </div>
     </div>

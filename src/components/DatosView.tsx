@@ -3,6 +3,7 @@ import { Database, Search, FileDown, Printer } from 'lucide-react';
 import { DataTable } from './DataTable';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const DatosView: React.FC = () => {
   const { currentCompany, journal } = useStore();
@@ -101,55 +102,49 @@ const DatosView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-app-bg">
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-           <div className="p-2 bg-pld-blue/10 rounded-lg">
-              <Database size={16} className="text-pld-blue" />
-           </div>
-           <div>
-              <h2 className="text-xs font-black uppercase tracking-widest text-app-text">SQL Data Explorer</h2>
-              <p className="text-[9px] text-app-muted uppercase tracking-wider">
-                Transacciones — {filteredJournal.length} registros
-              </p>
-           </div>
-        </div>
-
-        <div className="flex-1 max-w-xl relative group mx-4">
-          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
-          <input
-            type="text"
-            placeholder="Filtrar por glosa, cuenta, asiento o RUC..."
-            className="w-full pl-11 h-10 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
-            style={{ paddingLeft: '2.75rem' }}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-           <select
-             value={sourceFilter}
-             onChange={e => setSourceFilter(e.target.value)}
-             className="h-8 text-xs bg-app-bg border border-app-border rounded-lg px-2"
-           >
-             <option value="ALL">Todos</option>
-             <option value="COMPRA">Compras</option>
-             <option value="VENTA">Ventas</option>
-             <option value="HONORARIO">Honorarios</option>
-             <option value="ASIENTO">Asientos</option>
-           </select>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Database size={18} />}
+        title="SQL Data Explorer"
+        subtitle={`Transacciones — ${filteredJournal.length} registros`}
+        actions={
+          <>
+            <div className="relative group w-64 md:w-80">
+              <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
+              <input
+                type="text"
+                placeholder="Filtrar por glosa, cuenta, asiento o RUC..."
+                className="w-full pl-11 h-10 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
+                style={{ paddingLeft: '2.75rem' }}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+            </div>
+            <select
+              value={sourceFilter}
+              onChange={e => setSourceFilter(e.target.value)}
+              className="h-8 text-xs bg-app-bg border border-app-border rounded-lg px-2"
+            >
+              <option value="ALL">Todos</option>
+              <option value="COMPRA">Compras</option>
+              <option value="VENTA">Ventas</option>
+              <option value="HONORARIO">Honorarios</option>
+              <option value="ASIENTO">Asientos</option>
+            </select>
             <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
             <button onClick={handleExport} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto custom-scrollbar p-4">
-        <DataTable
-          columns={columns}
-          data={filteredJournal}
-          emptyMessage="No hay datos técnicos disponibles. Registre Compras, Ventas u Honorarios primero."
-        />
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-5">
+          <DataTable
+            columns={columns}
+            data={filteredJournal}
+            emptyMessage="No hay datos técnicos disponibles. Registre Compras, Ventas u Honorarios primero."
+          />
+        </div>
       </div>
     </div>
   );

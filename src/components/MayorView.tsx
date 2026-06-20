@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import StaleWarningBanner from './shared/StaleWarningBanner';
 import toast from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 /**
  * LIBRO MAYOR (Formato 6.1)
@@ -169,41 +170,34 @@ const MayorView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative">
-
-      {/* Header / Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <Printer size={16} className="text-pld-blue" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Libro Mayor (6.1)</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span>PERIODO: {monthName} {currentYear}</span>
-               <span>RUC: {currentCompany.ruc}</span>
-               <span className="text-pld-blue font-bold">{accounts.length} CUENTAS</span>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Printer size={18} />}
+        title="Libro Mayor (6.1)"
+        badge={<span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">Formato 6.1</span>}
+        subtitle={`Periodo: ${monthName} ${currentYear} • RUC: ${currentCompany.ruc} • ${accounts.length} Cuentas`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative group">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
+              <input
+                type="text"
+                placeholder="Buscar cuenta..."
+                className="h-8 pl-9 pr-3 w-48 text-[10px] bg-app-bg border border-app-border rounded-lg outline-none focus:border-pld-blue transition-all font-bold"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
             </div>
+            <button onClick={collapseAll} className="h-8 text-[9px] font-black uppercase bg-app-surface border border-app-border px-3 rounded-xl hover:text-pld-blue transition-colors">Colapsar</button>
+            <button onClick={expandAll} className="h-8 text-[9px] font-black uppercase bg-app-surface border border-app-border px-3 rounded-xl hover:text-pld-blue transition-colors">Expandir</button>
+            <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors text-app-muted" title="Imprimir"><Printer size={14} /></button>
+            <button onClick={handleExportExcel} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-           <div className="relative group">
-             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
-             <input
-               type="text"
-               placeholder="Buscar cuenta..."
-               className="h-10 pl-11 pr-4 w-56 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue transition-all shadow-sm"
-               style={{ paddingLeft: '2.75rem' }}
-               value={searchQuery}
-               onChange={e => setSearchQuery(e.target.value)}
-             />
-           </div>
-           <button onClick={collapseAll} className="h-8 text-[9px] font-bold uppercase bg-app-bg border border-app-border px-3 rounded-lg hover:text-pld-blue transition-colors">Colapsar</button>
-           <button onClick={expandAll} className="h-8 text-[9px] font-bold uppercase bg-app-bg border border-app-border px-3 rounded-lg hover:text-pld-blue transition-colors">Expandir</button>
-           <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Imprimir"><Printer size={14} /></button>
-           <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
-        </div>
-      </div>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       <StaleWarningBanner
         moduleName="mayor"
@@ -301,6 +295,8 @@ const MayorView: React.FC = () => {
               </div>
             );
           })}
+        </div>
+
         </div>
       </div>
     </div>

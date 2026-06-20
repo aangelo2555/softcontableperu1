@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import StaleWarningBanner from './shared/StaleWarningBanner';
 import toast from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 /**
  * HHTT — BALANCE DE COMPROBACIÓN
@@ -419,59 +420,53 @@ const HHTTView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Scale size={18} />}
+        title="Balance de Comprobación"
+        badge={<span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">{currentCompany.businessType || 'COMERCIAL'}</span>}
+        subtitle={`Periodo: ${currentCompany.period || '2025'} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+             {/* Validation Badges */}
+             <div className="flex items-center gap-1.5">
+               <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${sumasBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                 {sumasBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
+                 Sumas
+               </div>
+               <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${saldosBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                 {saldosBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
+                 Saldos
+               </div>
+               <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${adjSaldosBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                 {adjSaldosBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
+                 Ajustado
+               </div>
+             </div>
 
-      {/* Header / Toolbar */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-lg">
-            <Scale size={16} className="text-pld-blue" />
+             <div className="flex items-center gap-2">
+               <label className="text-[9px] font-bold text-app-muted uppercase">Nivel</label>
+               <select
+                 className="bg-app-bg border border-app-border rounded-lg px-2 py-1 text-[10px] font-bold h-8"
+                 value={digits}
+                 onChange={(e) => setDigits(Number(e.target.value))}
+               >
+                 <option value={100}>Todas Analíticas</option>
+                 <option value={8}>8 Dígitos</option>
+                 <option value={6}>6 Dígitos</option>
+                 <option value={4}>4 Dígitos</option>
+                 <option value={2}>2 Dígitos</option>
+                 <option value={1}>1 Dígito (Clase)</option>
+               </select>
+             </div>
+             <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors text-app-muted" title="Imprimir"><Printer size={14} /></button>
+             <button onClick={handleExportExcel} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
           </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Balance de Comprobación</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span className="bg-pld-blue text-white px-2 py-0.5 rounded-full font-black text-[8px]">{currentCompany.businessType || 'COMERCIAL'}</span>
-               <span>PERIODO: {currentCompany.period || '2025'}</span>
-               <span>RUC: {currentCompany.ruc}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-           {/* Validation Badges */}
-           <div className="flex items-center gap-1.5">
-             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${sumasBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-               {sumasBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
-               Sumas
-             </div>
-             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${saldosBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-               {saldosBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
-               Saldos
-             </div>
-             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase ${adjSaldosBalanced ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-               {adjSaldosBalanced ? <CheckCircle size={10} /> : <AlertTriangle size={10} />}
-               Ajustado
-             </div>
-           </div>
+        }
+      />
 
-           <div className="flex items-center gap-2">
-             <label className="text-[9px] font-bold text-app-muted uppercase">Nivel</label>
-             <select
-               className="bg-app-bg border border-app-border rounded-lg px-2 py-1 text-xs h-8"
-               value={digits}
-               onChange={(e) => setDigits(Number(e.target.value))}
-             >
-               <option value={100}>Todas Analíticas</option>
-               <option value={8}>8 Dígitos</option>
-               <option value={6}>6 Dígitos</option>
-               <option value={4}>4 Dígitos</option>
-               <option value={2}>2 Dígitos</option>
-               <option value={1}>1 Dígito (Clase)</option>
-             </select>
-           </div>
-           <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Imprimir"><Printer size={14} /></button>
-           <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors text-app-muted" title="Excel"><FileDown size={14} /></button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       <StaleWarningBanner
         moduleName="hhtt"
@@ -675,6 +670,8 @@ const HHTTView: React.FC = () => {
                )}
             </tfoot>
           </table>
+        </div>
+
         </div>
       </div>
     </div>

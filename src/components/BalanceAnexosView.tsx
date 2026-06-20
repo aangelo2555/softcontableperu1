@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 /**
  * LIBRO DE INVENTARIOS Y BALANCES — ANEXOS
@@ -637,47 +638,42 @@ const BalanceAnexosView: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-slide-up relative print:bg-white print:p-0">
-
-      {/* ═══ HEADER / CONTROL BAR (Toolbar Estándar) ═══ */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 toolbar print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-cyan-600/10 rounded-lg">
-            <FileSearch size={16} className="text-cyan-600" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Anexos del Balance</h2>
-            <div className="flex gap-3 text-[9px] items-center text-app-muted">
-               <span className="truncate max-w-[250px]">{config.label} - {periodoAnio}</span>
-               <span>RUC: {currentCompany.ruc}</span>
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative print:bg-white print:p-0">
+      <PageHeader
+        icon={<FileSearch size={18} />}
+        title="Anexos del Balance"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            Inventarios y Balances
+          </span>
+        }
+        subtitle={`${config.label} - ${periodoAnio} • RUC: ${currentCompany.ruc}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap print:hidden">
+            {/* Año Selector */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
+               <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-cyan-600 transition-colors"><ChevronLeft size={14} /></button>
+               <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
+               <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-cyan-600 transition-colors"><ChevronRight size={14} /></button>
             </div>
+            <button
+              onClick={handleExport}
+              className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-cyan-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Download size={14} /> Excel
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-cyan-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Año Selector */}
-          <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
-             <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-cyan-600 transition-colors"><ChevronLeft size={14} /></button>
-             <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
-             <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-cyan-600 transition-colors"><ChevronRight size={14} /></button>
-          </div>
+        }
+      />
 
-          <div className="h-4 w-px bg-app-border mx-1" />
-
-          <button
-            onClick={handleExport}
-            className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-cyan-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-          >
-            <Download size={14} /> Excel
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-cyan-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-          >
-            <Printer size={14} /> Imprimir
-          </button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* ═══ TABS AREA ═══ */}
       <div className="px-5 py-2 bg-app-surface border-b border-app-border flex gap-1 flex-wrap print:hidden">
@@ -700,6 +696,9 @@ const BalanceAnexosView: React.FC = () => {
       <div className="flex-1 overflow-auto p-4 custom-scrollbar">
         <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
         {renderTable()}
+        </div>
+      </div>
+
         </div>
       </div>
     </div>

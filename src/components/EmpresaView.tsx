@@ -12,6 +12,7 @@ import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
 import { evaluateRegime } from '../engine/regimeEngine';
+import PageHeader from './ui/PageHeader';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -218,38 +219,33 @@ const EmpresaView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 overflow-y-auto animate-fade-in custom-scrollbar pb-24 h-full">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<img src="assets/logo.png" alt="Logo" className="w-6 h-6 object-contain" />}
+        title="Panel de Control"
+        subtitle={`${currentCompany.name || 'Empresa'} — Periodo ${currentCompany.period || new Date().getFullYear()}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { label: 'Compra', icon: ShoppingCart, tab: 'COMPRAS', color: 'text-violet-500 bg-violet-500/10 hover:bg-violet-500/20' },
+              { label: 'Venta', icon: Tag, tab: 'VENTAS', color: 'text-pld-blue bg-pld-blue/10 hover:bg-pld-blue/20' },
+              { label: 'Asiento', icon: BookText, tab: 'ASIENTOS', color: 'text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20' },
+            ].map(q => (
+              <button
+                key={q.tab}
+                onClick={() => setActiveTab(q.tab)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${q.color}`}
+              >
+                <q.icon size={14} />
+                + {q.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-      {/* ═══ HEADER ═══ */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3">
-            <img src="assets/logo.png" alt="Logo" className="w-9 h-9 object-contain" />
-            <span className="text-gradient">Panel de Control</span>
-          </h1>
-          <p className="text-sm text-app-muted mt-1 font-medium">
-            {currentCompany.name || 'Empresa'} — Periodo {currentCompany.period || new Date().getFullYear()}
-          </p>
-        </div>
-
-        {/* Quick action pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
-            { label: 'Compra', icon: ShoppingCart, tab: 'COMPRAS', color: 'text-violet-500 bg-violet-500/10 hover:bg-violet-500/20' },
-            { label: 'Venta', icon: Tag, tab: 'VENTAS', color: 'text-pld-blue bg-pld-blue/10 hover:bg-pld-blue/20' },
-            { label: 'Asiento', icon: BookText, tab: 'ASIENTOS', color: 'text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20' },
-          ].map(q => (
-            <button
-              key={q.tab}
-              onClick={() => setActiveTab(q.tab)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${q.color}`}
-            >
-              <q.icon size={14} />
-              + {q.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-6">
 
       {/* ═══ KPI CARDS ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -957,6 +953,8 @@ const EmpresaView: React.FC = () => {
         )}
       </div>
     </div>
+  </div>
+</div>
   );
 };
 

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const DEFAULT_STRUCTURE: { cta: string; desc: string; section: SectionType }[] = [
   { cta: '101', desc: 'Caja y Bancos', section: 'ACTIVO_CORRIENTE' },
@@ -284,68 +285,67 @@ export default function BalanceInicialView() {
         </div>
       )}
 
-      <header className="h-16 px-6 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 shadow-sm z-20">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20"><Calculator size={24} strokeWidth={2.5} /></div>
-          <div>
-            <h1 className="text-base font-black uppercase tracking-tighter text-app-text">Balance Inicial</h1>
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-bold uppercase flex items-center gap-1 ${totals.diff < 0.01 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {totals.diff < 0.01 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                {totals.diff < 0.01 ? 'Balance Cuadrado' : `Descuadre: S/ ${totals.diff.toLocaleString()}`}
-              </span>
+      <PageHeader
+        icon={<Calculator size={18} />}
+        title="Balance Inicial"
+        subtitle={
+          <span className={`text-[10px] font-bold uppercase flex items-center gap-1 ${totals.diff < 0.01 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {totals.diff < 0.01 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+            {totals.diff < 0.01 ? 'Balance Cuadrado' : `Descuadre: S/ ${totals.diff.toLocaleString()}`}
+          </span>
+        }
+        actions={
+          <>
+            <button onClick={handleInitialize} className="h-10 px-4 text-app-muted hover:text-app-text text-[10px] font-black uppercase flex items-center gap-2 transition-colors">{isInitializing ? '...' : 'Reiniciar Formato'}</button>
+            <button onClick={handleExportExcel} className="h-10 px-4 bg-app-surface text-app-text border border-app-border rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-app-hover transition-colors shadow-sm"><FileSpreadsheet size={16} className="text-emerald-500" /> Excel</button>
+            <button onClick={() => window.print()} className="h-10 px-4 bg-app-surface text-app-text border border-app-border rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-app-hover transition-colors shadow-sm"><Printer size={16} /> Imprimir</button>
+            <button onClick={() => {
+                const journalLines = items.filter(i => (i.debe || 0) > 0 || (i.haber || 0) > 0).map((i, index) => {
+                    let d = i.debe || 0; let h = i.haber || 0;
+                    if (i.cta.startsWith('19') || i.cta.startsWith('29') || i.cta.startsWith('39')) { if (d > 0) { h = d; d = 0; } }
+                    return { id: index + 1, cuenta: i.cta, detalle: i.desc, debe: d, haber: h };
+                  });
+                if (journalLines.length === 0) { toast.error('No hay montos para generar el asiento'); return; }
+                if (totals.diff > 0.01) { toast.error('El balance debe estar cuadrado'); return; }
+                setDraftAsiento({
+                  header: { asiento: '000000', fecEmi: `${currentCompany?.period}-01-01`, glosa: `ASIENTO DE APERTURA - ${currentCompany?.period}`, anio: String(currentCompany?.period), mes: '00' },
+                  lines: journalLines, editingId: null
+                } as any);
+                setActiveTab('ASIENTOS');
+                toast.success('Asiento cargado en borradores');
+              }}
+              className="h-10 px-6 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-blue-600/20 flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
+            ><CheckCircle2 size={18} /> Generar Asiento</button>
+          </>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-app-bg">
+        <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10">
+          <div className="bg-app-surface border border-app-border shadow-2xl rounded-xl p-6 md:p-12 min-h-[1000px] transition-all duration-500">
+            <div className="mb-10 text-center border-b border-app-border pb-6">
+              <h2 className="text-lg font-black uppercase tracking-tighter text-app-text mb-2">Libro de Inventarios y Balances</h2>
+              <p className="text-xs font-bold text-app-muted uppercase tracking-widest">Formato 3.1 - Estado de Situación Financiera</p>
             </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button onClick={handleInitialize} className="h-10 px-4 text-app-muted hover:text-app-text text-[10px] font-black uppercase flex items-center gap-2 transition-colors">{isInitializing ? '...' : 'Reiniciar Formato'}</button>
-          <button onClick={handleExportExcel} className="h-10 px-4 bg-app-surface text-app-text border border-app-border rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-app-hover transition-colors shadow-sm"><FileSpreadsheet size={16} className="text-emerald-500" /> Excel</button>
-          <button onClick={() => window.print()} className="h-10 px-4 bg-app-surface text-app-text border border-app-border rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-app-hover transition-colors shadow-sm"><Printer size={16} /> Imprimir</button>
-          <button onClick={() => {
-              const journalLines = items.filter(i => (i.debe || 0) > 0 || (i.haber || 0) > 0).map((i, index) => {
-                  let d = i.debe || 0; let h = i.haber || 0;
-                  if (i.cta.startsWith('19') || i.cta.startsWith('29') || i.cta.startsWith('39')) { if (d > 0) { h = d; d = 0; } }
-                  return { id: index + 1, cuenta: i.cta, detalle: i.desc, debe: d, haber: h };
-                });
-              if (journalLines.length === 0) { toast.error('No hay montos para generar el asiento'); return; }
-              if (totals.diff > 0.01) { toast.error('El balance debe estar cuadrado'); return; }
-              setDraftAsiento({
-                header: { asiento: '000000', fecEmi: `${currentCompany?.period}-01-01`, glosa: `ASIENTO DE APERTURA - ${currentCompany?.period}`, anio: String(currentCompany?.period), mes: '00' },
-                lines: journalLines, editingId: null
-              } as any);
-              setActiveTab('ASIENTOS');
-              toast.success('Asiento cargado en borradores');
-            }}
-            className="h-10 px-6 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase shadow-lg shadow-blue-600/20 flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
-          ><CheckCircle2 size={18} /> Generar Asiento</button>
-        </div>
-      </header>
-
-      <div className="flex-1 overflow-auto custom-scrollbar p-6 lg:p-10 bg-app-bg">
-        <div className="max-w-6xl mx-auto bg-app-surface border border-app-border shadow-2xl rounded-xl p-12 min-h-[1000px] transition-all duration-500">
-          <div className="mb-10 text-center border-b border-app-border pb-6">
-            <h2 className="text-lg font-black uppercase tracking-tighter text-app-text mb-2">Libro de Inventarios y Balances</h2>
-            <p className="text-xs font-bold text-app-muted uppercase tracking-widest">Formato 3.1 - Estado de Situación Financiera</p>
-          </div>
-          <div className="grid grid-cols-2 gap-12">
-            <div>
-              <div className="flex bg-app-text text-app-surface p-3 rounded-t-lg font-black text-[11px] uppercase items-center gap-2"><TrendingUp size={14} /> ACTIVO</div>
-              {renderSection('Activo Corriente', 'ACTIVO_CORRIENTE')}
-              {renderSection('Activo No Corriente', 'ACTIVO_NO_CORRIENTE')}
-              <div className="flex justify-between items-center p-4 bg-blue-600/5 border-2 border-blue-600/20 rounded-xl mt-4">
-                <span className="text-xs font-black uppercase text-app-text">Total Activo</span>
-                <span className="text-sm font-mono font-black text-blue-600">S/ {totals.activo.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
+              <div>
+                <div className="flex bg-app-text text-app-surface p-3 rounded-t-lg font-black text-[11px] uppercase items-center gap-2"><TrendingUp size={14} /> ACTIVO</div>
+                {renderSection('Activo Corriente', 'ACTIVO_CORRIENTE')}
+                {renderSection('Activo No Corriente', 'ACTIVO_NO_CORRIENTE')}
+                <div className="flex justify-between items-center p-4 bg-blue-600/5 border-2 border-blue-600/20 rounded-xl mt-4">
+                  <span className="text-xs font-black uppercase text-app-text">Total Activo</span>
+                  <span className="text-sm font-mono font-black text-blue-600">S/ {totals.activo.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex bg-app-text text-app-surface p-3 rounded-t-lg font-black text-[11px] uppercase items-center gap-2"><PiggyBank size={14} /> PASIVO Y PATRIMONIO</div>
-              {renderSection('Pasivo Corriente', 'PASIVO_CORRIENTE')}
-              {renderSection('Pasivo No Corriente', 'PASIVO_NO_CORRIENTE')}
-              {renderSection('Patrimonio Neto', 'PATRIMONIO')}
-              <div className="flex justify-between items-center p-4 bg-emerald-600/5 border-2 border-emerald-600/20 rounded-xl mt-4">
-                <span className="text-xs font-black uppercase text-app-text">Total Pasivo y Pat.</span>
-                <span className="text-sm font-mono font-black text-emerald-600">S/ {totals.pasivoPat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <div>
+                <div className="flex bg-app-text text-app-surface p-3 rounded-t-lg font-black text-[11px] uppercase items-center gap-2"><PiggyBank size={14} /> PASIVO Y PATRIMONIO</div>
+                {renderSection('Pasivo Corriente', 'PASIVO_CORRIENTE')}
+                {renderSection('Pasivo No Corriente', 'PASIVO_NO_CORRIENTE')}
+                {renderSection('Patrimonio Neto', 'PATRIMONIO')}
+                <div className="flex justify-between items-center p-4 bg-emerald-600/5 border-2 border-emerald-600/20 rounded-xl mt-4">
+                  <span className="text-xs font-black uppercase text-app-text">Total Pasivo y Pat.</span>
+                  <span className="text-sm font-mono font-black text-emerald-600">S/ {totals.pasivoPat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
               </div>
             </div>
           </div>

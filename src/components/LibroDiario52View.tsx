@@ -19,6 +19,7 @@ import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
 import { exportTableToXLSX } from '../utils/export';
 import { exportLd52FisicoToXLSX } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 
 const MONTHS = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -381,60 +382,58 @@ const LibroDiario52View: React.FC = () => {
   }, [columnTotals]);
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text select-none">
-      {/* ═══ HEADER TOOLBAR ═══ */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-app-border bg-app-surface">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-magenta/10 rounded-lg text-pld-magenta">
-            <BookOpen size={20} />
-          </div>
-          <div>
-            <h1 className="text-sm font-black tracking-tight text-app-text">
-              LIBRO DIARIO SIMPLIFICADO - FORMATO 5.2
-            </h1>
-            <p className="text-[10px] text-app-muted font-bold uppercase">
-              PLE Sunat · RS 286-2009 | Periodo de Ingreso: ≤300 UIT
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col h-full bg-app-bg text-app-text select-none animate-fade-in relative">
+      <PageHeader
+        icon={<BookOpen size={18} />}
+        title="Libro Diario Simplificado"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-magenta/10 text-[9px] text-pld-magenta border border-pld-magenta/10 tracking-[0.2em] uppercase">
+            Formato 5.2
+          </span>
+        }
+        subtitle="PLE Sunat · RS 286-2009 | Periodo de Ingreso: ≤300 UIT"
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* ── Period Selector ── */}
+            <div className="flex items-center bg-app-bg border border-app-border rounded-lg p-0.5">
+              <select
+                value={periodoMes}
+                onChange={(e) => setPeriodoMes(parseInt(e.target.value))}
+                className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 px-2 py-1 cursor-pointer"
+              >
+                {MONTHS.map((m, idx) => (
+                  <option key={idx} value={idx}>{m}</option>
+                ))}
+              </select>
+              <div className="w-[1px] h-4 bg-app-border" />
+              <input
+                type="number"
+                value={periodoAnio}
+                onChange={(e) => setPeriodoAnio(parseInt(e.target.value))}
+                className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 w-16 text-center py-1 font-mono"
+              />
+            </div>
 
-        {/* ── Period Selector ── */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-app-bg border border-app-border rounded-lg p-0.5">
-            <select
-              value={periodoMes}
-              onChange={(e) => setPeriodoMes(parseInt(e.target.value))}
-              className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 px-2 py-1 cursor-pointer"
+            <button
+              onClick={handleGenerarMasivo}
+              title="Sincroniza y regenera todos los asientos del Registro de Compras y Ventas del período seleccionado"
+              className="h-8 px-3 bg-pld-magenta/10 border border-pld-magenta/20 text-pld-magenta rounded-lg hover:bg-pld-magenta hover:text-white transition-all flex items-center gap-1.5 text-[10px] font-bold"
             >
-              {MONTHS.map((m, idx) => (
-                <option key={idx} value={idx}>{m}</option>
-              ))}
-            </select>
-            <div className="w-[1px] h-4 bg-app-border" />
-            <input
-              type="number"
-              value={periodoAnio}
-              onChange={(e) => setPeriodoAnio(parseInt(e.target.value))}
-              className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 w-16 text-center py-1 font-mono"
-            />
+              <Sparkles size={14} /> Generar Asientos
+            </button>
+
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="h-8 px-3 bg-pld-blue/10 border border-pld-blue/20 text-pld-blue rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center gap-1.5 text-[10px] font-bold"
+            >
+              <Plus size={14} /> Nuevo Asiento
+            </button>
           </div>
+        }
+      />
 
-          <button
-            onClick={handleGenerarMasivo}
-            title="Sincroniza y regenera todos los asientos del Registro de Compras y Ventas del período seleccionado"
-            className="h-8 px-3 bg-pld-magenta/10 border border-pld-magenta/20 text-pld-magenta rounded-lg hover:bg-pld-magenta hover:text-white transition-all flex items-center gap-1.5 text-[10px] font-bold"
-          >
-            <Sparkles size={14} /> Generar Asientos
-          </button>
-
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="h-8 px-3 bg-pld-blue/10 border border-pld-blue/20 text-pld-blue rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center gap-1.5 text-[10px] font-bold"
-          >
-            <Plus size={14} /> Nuevo Asiento
-          </button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* ═══ VALIDATION AND EXPORTS BAR ═══ */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-app-surface/50 border-b border-app-border">
@@ -1344,6 +1343,10 @@ const LibroDiario52View: React.FC = () => {
           <option key={p.cta} value={p.cta}>{p.cta} - {p.description}</option>
         ))}
       </datalist>
+    </div>
+
+        </div>
+      </div>
     </div>
   );
 };

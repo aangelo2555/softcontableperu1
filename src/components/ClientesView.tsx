@@ -6,6 +6,7 @@ import {
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import ConfirmModal from './shared/ConfirmModal';
+import PageHeader from './ui/PageHeader';
 
 const ClientesView: React.FC = () => {
   const {
@@ -96,62 +97,55 @@ const ClientesView: React.FC = () => {
     : workspaceList;
 
   return (
-    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative overflow-hidden">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Building2 size={18} />}
+        title="Mis Empresas"
+        subtitle={`${workspaceList.length} empresa${workspaceList.length !== 1 ? 's' : ''} registrada${workspaceList.length !== 1 ? 's' : ''}`}
+        actions={
+          <>
+            <div className="relative hidden md:block group">
+              <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
+              <input type="text" placeholder="Buscar empresa o RUC..."
+                className="w-64 pl-11 h-10 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
+                style={{ paddingLeft: '2.75rem' }}
+                value={searchFilter} onChange={e => setSearchFilter(e.target.value)} />
+            </div>
 
-      {/* Toolbar */}
-      <div className="h-14 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pld-blue/10 rounded-xl">
-            <Building2 size={16} className="text-pld-blue" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-widest text-app-text">Mis Empresas</h2>
-            <p className="text-[9px] text-app-muted">{workspaceList.length} empresa{workspaceList.length !== 1 ? 's' : ''} registrada{workspaceList.length !== 1 ? 's' : ''}</p>
-          </div>
-        </div>
+            <input type="file" accept=".json" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+            <button onClick={handleImportClick}
+              className="h-8 bg-app-bg border border-app-border hover:border-pld-blue hover:text-pld-blue transition-all rounded-xl text-[10px] font-bold uppercase flex items-center gap-1.5 px-3">
+              <Upload size={13} /> Importar
+            </button>
+            <button onClick={handleExport}
+              className="h-8 bg-pld-blue hover:bg-blue-700 text-white transition-all rounded-xl text-[10px] font-bold uppercase flex items-center gap-1.5 px-3 shadow-sm shadow-pld-blue/20">
+              <Download size={13} /> Exportar
+            </button>
+            <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={13} /> Imprimir</button>
+            <button onClick={() => exportSingleSheet({
+              sheetName: 'Empresas',
+              title: 'LISTADO DE EMPRESAS REGISTRADAS',
+              columns: [
+                { header: 'RUC', key: 'ruc', width: 15 },
+                { header: 'RAZÓN SOCIAL', key: 'name', width: 45 },
+                { header: 'DIRECCIÓN', key: 'address', width: 40 },
+                { header: 'UBICACIÓN', key: 'location', width: 35 },
+                { header: 'PERIODO', key: 'period', width: 10, alignment: 'center' }
+              ],
+              rows: workspaceList,
+              companyInfo: {
+                ruc: currentCompany?.ruc || '',
+                name: currentCompany?.name || 'EMPRESA',
+                period: currentCompany?.period || String(new Date().getFullYear()),
+              }
+            }, 'Empresas')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={13} /> Excel</button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <div className="relative hidden md:block group">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
-            <input type="text" placeholder="Buscar empresa o RUC..."
-              className="w-64 pl-11 h-10 text-[11px] bg-app-bg border border-app-border rounded-xl outline-none focus:border-pld-blue focus:ring-4 focus:ring-pld-blue/5 transition-all shadow-sm"
-              style={{ paddingLeft: '2.75rem' }}
-              value={searchFilter} onChange={e => setSearchFilter(e.target.value)} />
-          </div>
-
-          <input type="file" accept=".json" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-          <button onClick={handleImportClick}
-            className="h-8 bg-app-bg border border-app-border hover:border-pld-blue hover:text-pld-blue transition-all rounded-xl text-[10px] font-bold uppercase flex items-center gap-1.5 px-3">
-            <Upload size={13} /> Importar
-          </button>
-          <button onClick={handleExport}
-            className="h-8 bg-pld-blue hover:bg-blue-700 text-white transition-all rounded-xl text-[10px] font-bold uppercase flex items-center gap-1.5 px-3 shadow-sm shadow-pld-blue/20">
-            <Download size={13} /> Exportar
-          </button>
-          <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={13} /> Imprimir</button>
-          <button onClick={() => exportSingleSheet({
-            sheetName: 'Empresas',
-            title: 'LISTADO DE EMPRESAS REGISTRADAS',
-            columns: [
-              { header: 'RUC', key: 'ruc', width: 15 },
-              { header: 'RAZÓN SOCIAL', key: 'name', width: 45 },
-              { header: 'DIRECCIÓN', key: 'address', width: 40 },
-              { header: 'UBICACIÓN', key: 'location', width: 35 },
-              { header: 'PERIODO', key: 'period', width: 10, alignment: 'center' }
-            ],
-            rows: workspaceList,
-            companyInfo: {
-              ruc: currentCompany?.ruc || '',
-              name: currentCompany?.name || 'EMPRESA',
-              period: currentCompany?.period || String(new Date().getFullYear()),
-            }
-          }, 'Empresas')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={13} /> Excel</button>
-        </div>
-      </div>
-
-      <div className="flex-1 p-6 overflow-auto custom-scrollbar">
-        <div className="grid lg:grid-cols-3 xl:grid-cols-4 gap-5 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-6 max-w-6xl mx-auto flex flex-col gap-5">
+          <div className="grid lg:grid-cols-3 xl:grid-cols-4 gap-5">
 
           {/* ═══ ADD NEW CLIENT CARD ═══ */}
           <div className="border border-dashed border-app-border hover:border-pld-blue/40 transition-all rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-4 group bg-app-surface/30">
@@ -256,6 +250,7 @@ const ClientesView: React.FC = () => {
           })}
         </div>
       </div>
+    </div>
 
       <ConfirmModal 
         isOpen={!!confirmDeleteWS}

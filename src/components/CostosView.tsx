@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Scale, ArrowLeftRight, PieChart, Plus, Trash2, FileDown, Printer } from 'lucide-react';
 import { exportSingleSheet } from '../utils/excelExport';
+import PageHeader from './ui/PageHeader';
 import { DataTable } from './DataTable';
 import { useStore  } from '../store';
 import type { CostEntry } from '../store';
@@ -85,36 +86,27 @@ const CostosView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-app-bg overflow-hidden">
-      {/* Header */}
-      <div className="h-12 px-5 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-           <div className="p-2 bg-pld-blue/10 rounded-lg">
-              <Scale size={16} className="text-pld-blue" />
-           </div>
-           <div>
-              <h2 className="text-xs font-black uppercase tracking-widest text-app-text">
-                {view === 'TRANSFERENCIA' ? 'Transferencia de Costos' : 'Detalle de Transferencia'}
-              </h2>
-              <p className="text-[9px] text-app-muted uppercase tracking-wider">Centros de Costo</p>
-           </div>
-        </div>
-
-        <div className="flex bg-app-bg p-1 rounded-lg border border-app-border/50">
-           <button
-             onClick={() => setView('TRANSFERENCIA')}
-             className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${view === 'TRANSFERENCIA' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
-           >
-             <ArrowLeftRight size={12} /> Transferencia
-           </button>
-           <button
-             onClick={() => setView('DETALLE')}
-             className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${view === 'DETALLE' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
-           >
-             <PieChart size={12} /> Detalle
-           </button>
-        </div>
-         <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<Scale size={18} />}
+        title={view === 'TRANSFERENCIA' ? 'Transferencia de Costos' : 'Detalle de Transferencia'}
+        subtitle="Centros de Costo"
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex bg-app-bg p-1 rounded-lg border border-app-border/50">
+               <button
+                 onClick={() => setView('TRANSFERENCIA')}
+                 className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${view === 'TRANSFERENCIA' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
+               >
+                 <ArrowLeftRight size={12} /> Transferencia
+               </button>
+               <button
+                 onClick={() => setView('DETALLE')}
+                 className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${view === 'DETALLE' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-app-text'}`}
+               >
+                 <PieChart size={12} /> Detalle
+               </button>
+            </div>
             <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
             <button 
               onClick={() => {
@@ -142,21 +134,23 @@ const CostosView: React.FC = () => {
                 period: currentCompany?.period || String(new Date().getFullYear()),
               }
             }, 'Centros_Costo')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
-         </div>
-      </div>
+          </div>
+        }
+      />
 
-      {/* Main Table Area */}
-      <div className="flex-1 overflow-auto custom-scrollbar p-4">
-        <DataTable
-          columns={view === 'TRANSFERENCIA' ? transferColumns : detailColumns}
-          data={costs}
-          headerClassName="bg-gray-200 dark:bg-app-surface text-black dark:text-app-text uppercase text-[10px] font-black h-8 border-b-2 border-gray-400 dark:border-app-border"
-          rowClassName="h-8 border-b border-app-border/50 hover:bg-app-hover text-[11px]"
-        />
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-5">
+          <div className="section-card !p-0 overflow-hidden">
+            <DataTable
+              columns={view === 'TRANSFERENCIA' ? transferColumns : detailColumns}
+              data={costs}
+              headerClassName="bg-gray-200 dark:bg-app-surface text-black dark:text-app-text uppercase text-[10px] font-black h-8 border-b-2 border-gray-400 dark:border-app-border"
+              rowClassName="h-8 border-b border-app-border/50 hover:bg-app-hover text-[11px]"
+            />
+          </div>
 
       {/* Entry Footer */}
-      <div className="p-4 bg-app-surface border-t border-app-border flex flex-wrap items-end gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
+      <div className="section-card flex flex-wrap items-end gap-4 shadow-sm">
         {view === 'TRANSFERENCIA' ? (
           <>
             <div className="flex-none w-20">
@@ -218,6 +212,8 @@ const CostosView: React.FC = () => {
         >
           <Plus size={14} /> Agregar
         </button>
+      </div>
+        </div>
       </div>
     </div>
   );

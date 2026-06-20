@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { exportSingleSheet } from '../utils/excelExport';
 import { toast } from 'react-hot-toast';
+import PageHeader from './ui/PageHeader';
 
 const ActivosFijosView: React.FC = () => {
   const { fixedAssets, saveFixedAsset, deleteFixedAsset, currentCompany, exportarPle71TXT } = useStore();
@@ -146,45 +147,42 @@ const ActivosFijosView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-6 h-full overflow-hidden animate-fade-in bg-app-bg/50">
-      
-      {/* Header Compacto */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
-            <HardDrive size={24} strokeWidth={2} />
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<HardDrive size={18} />}
+        title="Activos Fijos"
+        badge={<span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[9px] text-amber-600 border border-amber-500/10 tracking-[0.2em] uppercase">Tasa Dual PLE 7.1</span>}
+        subtitle={
+          <span className="flex items-center gap-2">
+            <Calculator size={12} className="text-amber-500" />
+            Depreciación Paralela (NIIF vs LIR) y Libro SUNAT 7.1
+          </span>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAddAsset}
+              className="px-5 py-2.5 bg-amber-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Plus size={14} /> Nuevo Activo
+            </button>
+            <button onClick={() => window.print()} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><Printer size={14} /> Imprimir</button>
+            <button onClick={handleExport} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
+            <button 
+              onClick={() => {
+                const p = currentCompany?.period ? (currentCompany.period.length === 4 ? `${currentCompany.period}1200` : `${currentCompany.period}00`) : `${new Date().getFullYear()}1200`;
+                exportarPle71TXT(p);
+              }} 
+              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <FileDown size={14} /> PLE 7.1 (TXT)
+            </button>
           </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-app-text flex items-center gap-3">
-              Activos Fijos <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[9px] text-amber-600 border border-amber-500/10 tracking-[0.2em] uppercase">Tasa Dual PLE 7.1</span>
-            </h1>
-            <p className="text-[10px] text-app-muted font-bold mt-1 flex items-center gap-2 uppercase tracking-wider">
-              <Calculator size={12} className="text-amber-500" />
-              Depreciación Paralela (NIIF vs LIR) y Libro SUNAT 7.1
-            </p>
-          </div>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleAddAsset}
-            className="px-5 py-2.5 bg-amber-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-          >
-            <Plus size={14} /> Nuevo Activo
-          </button>
-          <button onClick={() => window.print()} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><Printer size={14} /> Imprimir</button>
-          <button onClick={handleExport} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
-          <button 
-            onClick={() => {
-              const p = currentCompany?.period ? (currentCompany.period.length === 4 ? `${currentCompany.period}1200` : `${currentCompany.period}00`) : `${new Date().getFullYear()}1200`;
-              exportarPle71TXT(p);
-            }} 
-            className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-          >
-            <FileDown size={14} /> PLE 7.1 (TXT)
-          </button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* Stats Summary Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 shrink-0">
@@ -504,6 +502,8 @@ const ActivosFijosView: React.FC = () => {
         </div>
       </div>
 
+        </div>
+      </div>
     </div>
   );
 };

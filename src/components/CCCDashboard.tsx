@@ -93,19 +93,19 @@ const CCCDashboard: React.FC = () => {
         }
       />
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <div className="max-w-[1200px] mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
           {/* ═══ HERO KPI ═══ */}
-          <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${cccBg} border border-app-border p-8`}>
-            <div className="relative z-10 flex items-center justify-between">
+          <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${cccBg} border border-app-border p-6 md:p-8`}>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-app-muted mb-2">Ciclo de Conversión de Efectivo</p>
                 <div className="flex items-baseline gap-3">
-                  <span className={`text-6xl font-black font-mono ${cccColor}`}>{metrics.ccc}</span>
-                  <span className="text-2xl font-bold text-app-muted">días</span>
+                  <span className={`text-5xl md:text-6xl font-black font-mono ${cccColor}`}>{metrics.ccc}</span>
+                  <span className="text-xl md:text-2xl font-bold text-app-muted">días</span>
                 </div>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${cccColor} bg-app-surface/50 border border-app-border`}>
                     {cccHealth}
                   </span>
@@ -114,10 +114,10 @@ const CCCDashboard: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left md:text-right">
                 <div className="text-[10px] font-black uppercase tracking-widest text-app-muted mb-2">Fórmula</div>
-                <div className="bg-app-surface/60 backdrop-blur-sm rounded-xl px-6 py-4 border border-app-border">
-                  <div className="flex items-center gap-2 text-lg font-mono font-bold">
+                <div className="bg-app-surface/60 backdrop-blur-sm rounded-xl px-4 py-3 md:px-6 md:py-4 border border-app-border">
+                  <div className="flex items-center gap-2 text-base md:text-lg font-mono font-bold flex-wrap">
                     <span className="text-blue-500">{metrics.dio}</span>
                     <span className="text-app-muted">+</span>
                     <span className="text-amber-500">{metrics.dso}</span>
@@ -132,11 +132,11 @@ const CCCDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Activity size={200} className="absolute -right-10 -bottom-10 text-app-border/20" strokeWidth={0.5} />
+            <Activity size={200} className="absolute -right-10 -bottom-10 text-app-border/20 hidden md:block" strokeWidth={0.5} />
           </div>
 
           {/* ═══ KPI CARDS ═══ */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* DIO */}
             <div className="section-card group hover:border-blue-500/50 transition-all">
               <div className="section-card-header !border-0">

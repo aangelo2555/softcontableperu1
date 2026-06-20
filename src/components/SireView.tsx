@@ -24,6 +24,7 @@ import type { PurchaseEntry, SaleEntry } from '../store';
 import { toast } from 'react-hot-toast';
 import { parseSireTxt } from '../engine/sireParser';
 import { reconcileSireWithERP, type ReconciliationSummary, type DiagnosticLevel } from '../engine/sireReconciliation';
+import PageHeader from './ui/PageHeader';
 
 const SireView: React.FC = () => {
   const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, setActiveTab } = useStore();
@@ -375,46 +376,42 @@ const SireView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3 p-4 h-full overflow-hidden animate-fade-in bg-app-bg/20">
-      
-      {/* ═══ COMPACT HEADER ═══ */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-600/10">
-            <CloudDownload size={20} strokeWidth={2.5} />
+    <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      <PageHeader
+        icon={<CloudDownload size={18} />}
+        title="Módulo SIRE"
+        badge={
+          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+            SUNAT SIRE
+          </span>
+        }
+        subtitle={`${currentCompany?.name || ''} • RUC: ${currentCompany?.ruc || ''}`}
+        actions={
+          <div className="flex items-center gap-2 bg-app-surface p-1 rounded-xl border border-app-border shadow-sm">
+            <button
+              onClick={() => setViewMode('comparacion')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'comparacion' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-app-muted hover:text-app-text'}`}
+            >
+              Conciliación
+            </button>
+            <button
+              onClick={() => setViewMode('archivos')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'archivos' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-app-muted hover:text-app-text'}`}
+            >
+              Historial ZIP
+            </button>
+            <button
+              onClick={() => setViewMode('auditoria')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'auditoria' ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20' : 'text-app-muted hover:text-app-text'}`}
+            >
+              Auditoría CAR
+            </button>
           </div>
-          <div>
-            <h1 className="text-lg md:text-xl font-black tracking-tight text-app-text flex items-center gap-2">
-              Módulo SIRE <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-[8px] text-blue-500 border border-blue-500/20 tracking-widest uppercase">Enterprise</span>
-            </h1>
-            <p className="text-[10px] text-app-muted font-bold flex items-center gap-1.5 leading-none mt-0.5">
-              <Database size={10} className="text-blue-500" />
-              Sincronización SUNAT
-            </p>
-          </div>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2 bg-app-surface p-1 rounded-xl border border-app-border shadow-sm">
-          <button
-            onClick={() => setViewMode('comparacion')}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'comparacion' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-app-muted hover:text-app-text'}`}
-          >
-            Conciliación
-          </button>
-          <button
-            onClick={() => setViewMode('archivos')}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'archivos' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-app-muted hover:text-app-text'}`}
-          >
-            Historial ZIP
-          </button>
-          <button
-            onClick={() => setViewMode('auditoria')}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'auditoria' ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20' : 'text-app-muted hover:text-app-text'}`}
-          >
-            Auditoría CAR
-          </button>
-        </div>
-      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
 
       {/* ═══ ULTRA-COMPACT CONTROLS & STATS ═══ */}
       {/* ═══ ULTRA-COMPACT CONTROLS & STATS ═══ */}
@@ -835,6 +832,8 @@ const SireView: React.FC = () => {
         )}
       </div>
 
+        </div>
+      </div>
     </div>
   );
 };
