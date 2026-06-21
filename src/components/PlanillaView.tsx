@@ -347,7 +347,7 @@ const PlanillaView: React.FC = () => {
         icon={<Users size={18} />}
         title="Libro Planilla"
         badge={<span className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-[9px] text-indigo-500 border border-indigo-500/10 tracking-[0.2em] uppercase">Estructura PLAME</span>}
-        subtitle={`Empresa: ${currentCompany.name || 'Sin Especificar'} | RUC: ${currentCompany.ruc || '-'}`}
+        subtitle={`Periodo: ${MONTHS[periodoMes]} ${periodoAnio} • RUC: ${currentCompany?.ruc || ''}`}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {/* Mes Selector */}

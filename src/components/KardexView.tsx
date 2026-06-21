@@ -147,33 +147,32 @@ const KardexView: React.FC = () => {
       <div className="print:hidden">
       <PageHeader 
         icon={<BookOpen size={18} />} 
-        title="Registro de Inventario Permanente Valorizado" 
-        subtitle="Formato 13.1 - Detalle del Inventario Valorizado"
+        title="Inventario Permanente Valorizado" 
+        subtitle={`Formato 13.1 • Periodo: ${currentCompany?.period || ''} • RUC: ${currentCompany?.ruc || ''}`}
         actions={
           <div className="flex gap-2">
             <button 
               onClick={() => setIsModalOpen(true)}
               disabled={!selectedProductId}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg ${!selectedProductId ? 'bg-app-muted/20 text-app-muted cursor-not-allowed' : 'bg-pld-blue hover:bg-pld-blue/80 text-white shadow-pld-blue/20'}`}
+              className={`h-8 px-3 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 shadow-sm ${!selectedProductId ? 'bg-app-muted/20 text-app-muted cursor-not-allowed border border-app-border/50' : 'bg-pld-blue hover:bg-pld-blue/80 text-white'}`}
             >
-              <PlusCircle size={14} /> SALDO INICIAL
+              <PlusCircle size={14} /> Saldo Inicial
             </button>
             <button 
               onClick={() => {
                 const per = currentCompany.period ? `${currentCompany.period.replace('-', '')}00` : '20260100';
                 exportarPle121TXT(per);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-purple-600/20"
+              className="h-8 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 shadow-sm"
             >
-              <Download size={14} /> PLE 12.1 (TXT)
+              <Download size={14} /> PLE 12.1
             </button>
             <button 
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-emerald-600/20"
+              onClick={() => window.print()} 
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
             >
-              <Download size={14} /> EXPORTAR PDF (13.1)
+              <Printer size={14} /> Imprimir (PDF)
             </button>
-            <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><Printer size={14} /> Imprimir</button>
             <button onClick={() => {
               if (!selectedProduct || movements.length === 0) return;
               exportSingleSheet({
