@@ -292,6 +292,7 @@ const EgypView: React.FC = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

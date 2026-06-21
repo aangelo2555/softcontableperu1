@@ -1347,7 +1347,6 @@ const LibroDiario52View: React.FC = () => {
 
         </div>
       </div>
-    </div>
   );
 };
 

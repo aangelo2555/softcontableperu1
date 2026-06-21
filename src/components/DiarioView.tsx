@@ -221,6 +221,8 @@ const DiarioView: React.FC = () => {
         period: `${selectedAnio}-${selectedMes}`,
       }
     }, `Libro_Diario_${selectedAnio}_${selectedMes}`);
+  };
+
    return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
       <PageHeader

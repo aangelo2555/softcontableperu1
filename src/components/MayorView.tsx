@@ -300,6 +300,7 @@ const MayorView: React.FC = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

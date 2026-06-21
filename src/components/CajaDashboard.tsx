@@ -549,6 +549,7 @@ const CajaDashboard: React.FC = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

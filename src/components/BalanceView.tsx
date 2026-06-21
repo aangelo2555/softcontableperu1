@@ -364,6 +364,7 @@ const BalanceView: React.FC = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

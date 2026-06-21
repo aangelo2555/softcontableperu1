@@ -675,6 +675,7 @@ const HHTTView: React.FC = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
