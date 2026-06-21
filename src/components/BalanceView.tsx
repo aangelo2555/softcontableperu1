@@ -235,10 +235,10 @@ const BalanceView: React.FC = () => {
         isRecalculating={isRecalculating}
       />
 
-      <div className="flex-1 overflow-auto p-8 custom-scrollbar bg-app-bg/50">
-        <div className="max-w-6xl mx-auto bg-app-surface border border-app-border shadow-2xl p-10 rounded-lg print:shadow-none print:border-none">
+      <div className="flex-1 overflow-auto p-4 sm:p-8 custom-scrollbar bg-app-bg/50">
+        <div className="max-w-6xl mx-auto bg-app-surface border border-app-border shadow-2xl p-4 sm:p-10 rounded-lg print:shadow-none print:border-none">
           
-          <div className="grid grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             
             {/* LEFT COLUMN: ACTIVO */}
             <div className="space-y-6">

@@ -364,7 +364,7 @@ const LibroCajaBancosView: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
-        <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
+        <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-x-auto bg-app-surface custom-scrollbar">
         <table id="libro-caja-table" className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface shadow-xl">
 
           {/* ──── THEAD ──── */}

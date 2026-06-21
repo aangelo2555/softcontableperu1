@@ -168,23 +168,23 @@ const HonorariosView: React.FC = () => {
               <span>1. Datos del Profesional</span>
             </div>
             <div className="grid grid-cols-12 gap-3">
-              <FormField label="Registro" className="col-span-2">
+              <FormField label="Registro" className="col-span-6 sm:col-span-2">
                 <input className="w-full text-sm font-mono font-bold text-pld-blue text-center bg-app-bg/50" readOnly value={form.registro} />
               </FormField>
-              <FormField label="Fecha" className="col-span-2">
+              <FormField label="Fecha" className="col-span-6 sm:col-span-2">
                 <DateInput className="w-full text-sm font-mono" value={form.fecha} onChange={v => setForm({ ...form, fecha: v })} />
               </FormField>
-              <FormField label="Tipo" className="col-span-2">
+              <FormField label="Tipo" className="col-span-12 sm:col-span-2">
                 <select className="w-full text-sm" value={form.doc_tipo} onChange={e => setForm({ ...form, doc_tipo: e.target.value })}>
                   {TIPO_DOC_IDENTIDAD.filter(t => ['6', '1', '4', '7'].includes(t.code)).map(t => (
                     <option key={t.code} value={t.code}>{t.code} - {t.label}</option>
                   ))}
                 </select>
               </FormField>
-              <FormField label="RUC / DNI" accent required className="col-span-3">
+              <FormField label="RUC / DNI" accent required className="col-span-12 sm:col-span-3">
                 <input className="w-full text-sm font-mono font-bold" placeholder="10XXXXXXXXX" value={form.doc_num} onChange={e => setForm({ ...form, doc_num: e.target.value })} />
               </FormField>
-              <FormField label="Serie-Número" className="col-span-3">
+              <FormField label="Serie-Número" className="col-span-12 sm:col-span-3">
                 <div className="flex gap-2">
                   <input className="w-20 text-sm font-mono" value={form.serie} onChange={e => setForm({ ...form, serie: e.target.value })} />
                   <input className="flex-1 text-sm font-mono font-bold" placeholder="0001" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} />
@@ -201,7 +201,7 @@ const HonorariosView: React.FC = () => {
             <div className="section-card-header">
               <span>2. Cuentas Contables</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cta Gasto / Servicio (Naturaleza)" accent>
                 <input className="w-full text-sm font-mono uppercase" placeholder="6322, 634..." value={form.ctaGasto} onChange={e => setForm({ ...form, ctaGasto: e.target.value })} />
                 <p className="text-[10px] text-app-muted italic mt-0.5">{lookupAccount(form.ctaGasto)?.description}</p>
@@ -218,7 +218,7 @@ const HonorariosView: React.FC = () => {
             <div className="section-card-header">
               <span>3. Importes y Retención</span>
             </div>
-            <div className="grid grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <FormField label="Total Honorarios" accent>
                 <DecimalInput className="w-full text-lg font-mono font-bold text-right text-pld-blue" value={form.bi} onChange={v => setForm({ ...form, bi: v })} />
               </FormField>

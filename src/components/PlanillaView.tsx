@@ -569,8 +569,8 @@ const PlanillaView: React.FC = () => {
                 </tr>
                 <tr className="bg-app-bg/95 text-[8px] font-black uppercase tracking-widest text-app-muted border-b border-app-border italic">
                   {/* Trabajador */}
-                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sticky left-0 z-30 min-w-[50px]">N°</th>
-                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sticky left-[50px] z-30 min-w-[280px]">Apellidos y Nombres</th>
+                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sm:sticky sm:left-0 sm:z-30 min-w-[50px]">N°</th>
+                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sm:sticky sm:left-[50px] sm:z-30 min-w-[280px]">Apellidos y Nombres</th>
                   <th className="px-3 py-3 min-w-[100px]">DNI</th>
                   <th className="px-3 py-3 min-w-[125px]">F. Nac</th>
                   <th className="px-3 py-3 min-w-[50px] text-center">Edad</th>
@@ -605,10 +605,10 @@ const PlanillaView: React.FC = () => {
                 {filteredEmployees.map((emp, idx) => (
                   <tr key={emp.id} className="text-[9px] hover:bg-app-text/[0.03] transition-colors group">
                     {/* Trabajador */}
-                    <td className="px-4 py-2 border-r border-app-border sticky left-0 z-10 bg-app-surface font-mono font-black text-indigo-500 group-hover:bg-app-hover">
+                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-indigo-500 group-hover:bg-app-hover">
                       {(idx + 1).toString().padStart(3, '0')}
                     </td>
-                    <td className="px-4 py-2 border-r border-app-border sticky left-[50px] z-10 bg-app-surface group-hover:bg-app-hover">
+                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-[50px] sm:z-10 bg-app-surface group-hover:bg-app-hover">
                         <input 
                         type="text" 
                         autoComplete="new-password"

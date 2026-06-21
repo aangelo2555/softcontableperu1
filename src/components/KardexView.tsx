@@ -259,7 +259,7 @@ const KardexView: React.FC = () => {
                     <p className="font-bold text-app-text uppercase truncate">{currentCompany.name || '—'}</p>
                   </div>
                   
-                  <div className="col-span-3 h-px bg-app-border my-1" />
+                  <div className="col-span-full h-px bg-app-border my-1" />
 
                   <div>
                     <p className="text-app-muted font-bold uppercase tracking-widest mb-1">Código Existencia:</p>

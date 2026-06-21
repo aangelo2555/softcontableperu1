@@ -384,8 +384,8 @@ export default function FinanceNotesView() {
               <p className="text-xs text-app-muted mt-0.5">Base Contable NIIF vs Base Tributaria</p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-app-bg/60 text-app-muted text-xs font-bold uppercase border-b border-app-border">
                     <th className="p-4">Concepto</th>
@@ -720,7 +720,7 @@ export default function FinanceNotesView() {
               </h4>
               <div className="space-y-2">
                 {adicDedItems.filter(i => i.tipo === 'ADICION').map(item => (
-                  <div key={item.id} className="flex items-center gap-4 p-3 rounded-xl bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors">
+                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-bold text-app-text">{item.concepto}</p>
                       <p className="text-[9px] text-app-muted">{item.base} • {item.permanente ? 'Permanente' : 'Temporal'}</p>
@@ -731,7 +731,7 @@ export default function FinanceNotesView() {
                       value={item.monto}
                       disabled={isClosed}
                       onChange={(e) => setAdicDedItems(prev => prev.map(p => p.id === item.id ? { ...p, monto: Number(e.target.value) } : p))}
-                      className="w-36 bg-app-bg border border-app-border rounded-lg px-3 py-2 text-right text-sm font-bold text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500"
+                      className="w-full sm:w-36 bg-app-bg border border-app-border rounded-lg px-3 py-2 text-right text-sm font-bold text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500"
                     />
                   </div>
                 ))}
@@ -745,7 +745,7 @@ export default function FinanceNotesView() {
               </h4>
               <div className="space-y-2">
                 {adicDedItems.filter(i => i.tipo === 'DEDUCCION').map(item => (
-                  <div key={item.id} className="flex items-center gap-4 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors">
+                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-bold text-app-text">{item.concepto}</p>
                       <p className="text-[9px] text-app-muted">{item.base} • {item.permanente ? 'Permanente' : 'Temporal'}</p>
@@ -756,7 +756,7 @@ export default function FinanceNotesView() {
                       value={item.monto}
                       disabled={isClosed}
                       onChange={(e) => setAdicDedItems(prev => prev.map(p => p.id === item.id ? { ...p, monto: Number(e.target.value) } : p))}
-                      className="w-36 bg-app-bg border border-app-border rounded-lg px-3 py-2 text-right text-sm font-bold text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full sm:w-36 bg-app-bg border border-app-border rounded-lg px-3 py-2 text-right text-sm font-bold text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
                 ))}
@@ -892,8 +892,8 @@ export default function FinanceNotesView() {
                 <span className="text-[10px] text-purple-400 font-bold bg-purple-500/10 px-2.5 py-0.5 rounded-full">Marzo a Noviembre</span>
               </h4>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-[10px]">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse text-[10px] min-w-[600px]">
                   <thead>
                     <tr className="border-b border-app-border text-app-muted uppercase font-black tracking-widest text-[8px]">
                       <th className="py-2">Cuota</th>

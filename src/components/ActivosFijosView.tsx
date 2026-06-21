@@ -253,7 +253,7 @@ const ActivosFijosView: React.FC = () => {
           <table className="w-full text-left border-collapse min-w-[2800px]">
              <thead className="sticky top-0 z-20 shadow-md">
                 <tr className="bg-app-bg text-[8px] font-black uppercase tracking-widest text-app-muted border-b border-app-border">
-                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sticky left-0 z-30 min-w-[120px]">Código</th>
+                  <th className="px-4 py-3 bg-app-bg border-r border-app-border shadow-sm sm:sticky sm:left-0 sm:z-30 min-w-[120px]">Código</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[70px]">Cta</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[300px]">Descripción Activo</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[110px]">Marca</th>
@@ -285,7 +285,7 @@ const ActivosFijosView: React.FC = () => {
              <tbody className="divide-y divide-app-border/40">
                 {filteredAssets.map((asset) => (
                   <tr key={asset.id} className="text-[9px] hover:bg-app-text/[0.03] transition-colors group">
-                    <td className="px-4 py-2 border-r border-app-border sticky left-0 z-10 bg-app-surface font-mono font-black text-amber-600 group-hover:bg-app-hover">
+                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-amber-600 group-hover:bg-app-hover">
                         <input 
                         type="text" 
                         value={asset.codigo} 
