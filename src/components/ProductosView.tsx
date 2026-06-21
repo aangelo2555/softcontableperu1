@@ -112,13 +112,13 @@ const ProductosView: React.FC = () => {
               <span>{editingId ? 'Editar Producto' : 'Nuevo Producto'}</span>
             </div>
             <div className="grid grid-cols-12 gap-4">
-              <FormField label="Código" required className="col-span-3">
+              <FormField label="Código" required className="col-span-6 sm:col-span-3">
                 <input className="w-full text-sm font-mono uppercase" placeholder="P001" value={form.code} onChange={e => setForm({...form, code: e.target.value})} />
               </FormField>
-              <FormField label="Nombre / Descripción" required className="col-span-4">
+              <FormField label="Nombre / Descripción" required className="col-span-12 sm:col-span-4">
                 <input className="w-full text-sm uppercase" placeholder="MERCADERIA TIPO A..." value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
               </FormField>
-              <FormField label="T. Existencia (T5)" className="col-span-2">
+              <FormField label="T. Existencia (T5)" className="col-span-6 sm:col-span-2">
                 <select className="w-full text-sm" value={form.type_existence} onChange={e => setForm({...form, type_existence: e.target.value})}>
                   <option value="01">01 - MERCADERÍA</option>
                   <option value="02">02 - PRODUCTO TERM.</option>
@@ -127,7 +127,7 @@ const ProductosView: React.FC = () => {
                   <option value="05">05 - SUMINISTROS</option>
                 </select>
               </FormField>
-              <FormField label="U. Medida" className="col-span-3">
+              <FormField label="U. Medida" className="col-span-6 sm:col-span-3">
                 <select className="w-full text-sm" value={form.unit_measure} onChange={e => setForm({...form, unit_measure: e.target.value})}>
                   <option value="NIU">NIU - UNIDADES</option>
                   <option value="KG">KG - KILOGRAMOS</option>
@@ -135,13 +135,13 @@ const ProductosView: React.FC = () => {
                   <option value="GLI">GLI - GALONES</option>
                 </select>
               </FormField>
-              <FormField label="Precio Venta Sugerido" className="col-span-3">
+              <FormField label="Precio Venta Sugerido" className="col-span-6 sm:col-span-3">
                 <DecimalInput className="w-full text-sm font-bold text-pld-blue" value={form.sale_price} onChange={v => setForm({...form, sale_price: v})} />
               </FormField>
-              <FormField label="Cuenta Contable" className="col-span-3">
+              <FormField label="Cuenta Contable" className="col-span-6 sm:col-span-3">
                 <input className="w-full text-sm font-mono" placeholder="20111" value={form.account_id} onChange={e => setForm({...form, account_id: e.target.value})} />
               </FormField>
-              <FormField label="Stock Mínimo" className="col-span-3">
+              <FormField label="Stock Mínimo" className="col-span-6 sm:col-span-3">
                 <input type="number" className="w-full text-sm text-right" value={form.stock_min} onChange={e => setForm({...form, stock_min: Number(e.target.value)})} />
               </FormField>
             </div>

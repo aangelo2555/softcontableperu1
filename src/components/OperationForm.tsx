@@ -642,15 +642,15 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                 <span>1. Datos del Documento</span>
               </div>
               <div className="grid grid-cols-12 gap-3">
-                <FormField label="Tipo Doc" className="col-span-5">
+                <FormField label="Tipo Doc" className="col-span-12 sm:col-span-5">
                   <select className="w-full text-sm" value={form.tipo_doc} onChange={e => setForm({ ...form, tipo_doc: e.target.value })}>
                     {cfg.tipoDocs.map(t => <option key={t.code} value={t.code}>{t.code} - {t.label}</option>)}
                   </select>
                 </FormField>
-                <FormField label="Serie" className="col-span-3">
+                <FormField label="Serie" className="col-span-6 sm:col-span-3">
                   <input className="w-full text-sm font-mono uppercase" value={form.serie} onChange={e => setForm({ ...form, serie: e.target.value })} />
                 </FormField>
-                <FormField label="Número" required className="col-span-4">
+                <FormField label="Número" required className="col-span-6 sm:col-span-4">
                   <input className="w-full text-sm font-mono font-bold" placeholder="0001234" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} />
                 </FormField>
 
@@ -703,7 +703,7 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                   </div>
                 )}
                 <div className="grid grid-cols-12 gap-3">
-                  <FormField label="Tipo Doc Original" className="col-span-4">
+                  <FormField label="Tipo Doc Original" className="col-span-12 sm:col-span-4">
                     <select className="w-full text-sm" value={form.ref_tipo_doc} onChange={e => setForm({ ...form, ref_tipo_doc: e.target.value })}>
                       <option value="">Seleccionar...</option>
                       <option value="01">01 - Factura</option>
@@ -711,10 +711,10 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                       <option value="12">12 - Ticket</option>
                     </select>
                   </FormField>
-                  <FormField label="Serie Original" className="col-span-4">
+                  <FormField label="Serie Original" className="col-span-6 sm:col-span-4">
                     <input className="w-full text-sm font-mono uppercase" placeholder="F001" value={form.ref_serie} onChange={e => setForm({ ...form, ref_serie: e.target.value })} />
                   </FormField>
-                  <FormField label="Número Original" className="col-span-4">
+                  <FormField label="Número Original" className="col-span-6 sm:col-span-4">
                     <input className="w-full text-sm font-mono font-bold" placeholder="0001234" value={form.ref_numero} onChange={e => setForm({ ...form, ref_numero: e.target.value })} />
                   </FormField>
                 </div>
@@ -728,14 +728,14 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                 <span>2. Datos del {cfg.partnerLabel}</span>
               </div>
               <div className="grid grid-cols-12 gap-3">
-                <FormField label="Identidad" className="col-span-4">
+                <FormField label="Identidad" className="col-span-12 sm:col-span-4">
                   <select className="w-full text-sm" value={form.doc_tipo} onChange={e => setForm({ ...form, doc_tipo: e.target.value })}>
                     {TIPO_DOC_IDENTIDAD.filter(t => ['6', '1', '4', '0'].includes(t.code)).map(t => (
                       <option key={t.code} value={t.code}>{t.code} - {t.label}</option>
                     ))}
                   </select>
                 </FormField>
-                <FormField label="RUC/DNI (Buscar)" accent required className="col-span-8">
+                <FormField label="RUC/DNI (Buscar)" accent required className="col-span-12 sm:col-span-8">
                   <input className="w-full text-sm font-mono font-bold" placeholder="20XXXXXXXXX" value={form.doc_num} onChange={e => setForm({ ...form, doc_num: e.target.value })} />
                 </FormField>
                 <FormField label="Razón Social o Nombre" required className="col-span-12">
@@ -755,13 +755,13 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                 <span>3. Configuración del Asiento</span>
               </div>
               <div className="grid grid-cols-12 gap-3">
-                <FormField label="Moneda" className="col-span-4">
+                <FormField label="Moneda" className="col-span-12 sm:col-span-4">
                   <select className="w-full text-sm" value={form.moneda} onChange={e => setForm({ ...form, moneda: e.target.value })}>
                     <option value="SOLES">Soles (PEN)</option>
                     <option value="DOLARES">Dólares (USD)</option>
                   </select>
                 </FormField>
-                <FormField label="Tipo Operación" className="col-span-8">
+                <FormField label="Tipo Operación" className="col-span-12 sm:col-span-8">
                   <select className="w-full text-sm" value={form.tipOperCode} onChange={e => {
                     const op = cfg.tipoOps.find(o => o.code === e.target.value);
                     setForm({ ...form, tipOperCode: e.target.value, tipOper: op?.label || form.tipOper });
@@ -804,7 +804,7 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                 <span>4. Asociación de Inventario (Opcional)</span>
               </div>
               <div className="grid grid-cols-12 gap-3">
-                <FormField label="Producto" className="col-span-8">
+                <FormField label="Producto" className="col-span-12 sm:col-span-8">
                    <select 
                      className="w-full text-sm" 
                      value={form.productId} 
@@ -816,7 +816,7 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                      ))}
                    </select>
                 </FormField>
-                <FormField label="Cantidad" className="col-span-4">
+                <FormField label="Cantidad" className="col-span-12 sm:col-span-4">
                    <input 
                      type="number" 
                      className="w-full text-sm font-mono text-right font-bold" 

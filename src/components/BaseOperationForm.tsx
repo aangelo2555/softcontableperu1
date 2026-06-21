@@ -119,7 +119,7 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
           {/* Header Section */}
           <div className="glass p-4 rounded-lg border border-app-border/50 space-y-4">
             <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-4 space-y-2">
+              <div className="col-span-12 sm:col-span-6 md:col-span-4 space-y-2">
                 <div className="flex flex-col">
                   <label>Cta cargo :</label>
                   <div className="flex gap-1">
@@ -137,9 +137,9 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
                 </div>
               </div>
 
-              <div className="col-span-4 space-y-2 text-right">
+              <div className="col-span-12 sm:col-span-6 md:col-span-8 space-y-2 text-left sm:text-right">
                  {/* Period can go here */}
-                 <div className="flex flex-col items-end">
+                 <div className="flex flex-col items-start sm:items-end">
                     <label>Periodo :</label>
                     <input type="text" className="w-24 text-center" value={header.periodo} readOnly />
                  </div>
@@ -147,55 +147,55 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
             </div>
 
             <div className="grid grid-cols-12 gap-2">
-              <div className="col-span-3">
+              <div className="col-span-12 sm:col-span-4">
                  <label>Proveedor :</label>
                  <div className="flex gap-1">
                     <input type="text" className="w-full font-mono" placeholder="RUC..." />
                     <button className="bg-app-surface p-1 rounded border border-app-border hover:text-pld-blue"><UserPlus size={14} /></button>
                  </div>
               </div>
-              <div className="col-span-6 mt-5">
+              <div className="col-span-12 sm:col-span-8 mt-0 sm:mt-5">
                  <input type="text" className="w-full bg-app-surface/30 border-none" placeholder="RAZÓN SOCIAL / NOMBRE" readOnly />
               </div>
             </div>
 
             <div className="grid grid-cols-12 gap-2">
-               <div className="col-span-3">
+               <div className="col-span-12 sm:col-span-4">
                   <label>Tipo Doc. :</label>
                   <select className="w-full">
                     <option>01 - FACTURA</option>
                     <option>03 - BOLETA</option>
                   </select>
                </div>
-               <div className="col-span-2">
+               <div className="col-span-8 sm:col-span-6">
                   <label>Documento :</label>
                   <div className="flex gap-1">
                     <input type="text" placeholder="SERIE" className="w-16" />
                     <input type="text" placeholder="NÚMERO" className="flex-1" />
                   </div>
                </div>
-               <div className="col-span-1 mt-5 flex justify-center">
-                  <button className="p-1 glass rounded border-app-border text-pld-blue"><FileText size={16} /></button>
+               <div className="col-span-4 sm:col-span-2 mt-5 flex justify-center">
+                  <button className="p-1 glass rounded border-app-border text-pld-blue w-full h-8 flex items-center justify-center"><FileText size={16} /></button>
                </div>
             </div>
 
-            <div className="grid grid-cols-10 gap-2">
-               <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-10 gap-2">
+               <div className="col-span-1 sm:col-span-2">
                   <label>Moneda :</label>
                   <select className="w-full">
                     <option>SOLES (S)</option>
                     <option>DOLARES ($)</option>
                   </select>
                </div>
-               <div className="col-span-2">
+               <div className="col-span-1 sm:col-span-2">
                   <label>Fec. Emisión :</label>
                   <DateInput className="w-full" placeholder="DD/MM/AAAA" value={header.fecEmi} onChange={v => setHeader({...header, fecEmi: v})} />
                </div>
-               <div className="col-span-2">
+               <div className="col-span-1 sm:col-span-2">
                   <label>{type === 'HONORARIOS' ? 'Fec. Pago' : 'Fec. Vcto'} :</label>
                   <DateInput className="w-full" placeholder="DD/MM/AAAA" value={header.fecVto} onChange={v => setHeader({...header, fecVto: v})} />
                </div>
-               <div className="col-span-2 flex items-end">
+               <div className="col-span-1 sm:col-span-4 flex items-end">
                   <div className="flex items-center gap-1 bg-app-bg border border-app-border px-3 py-1.5 rounded w-full">
                     <span className="text-[10px] text-app-muted font-bold">T.C.=</span>
                     <input type="text" className="border-none p-0 w-full text-right" value={header.tc} readOnly />
@@ -207,44 +207,44 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
             <div className="grid grid-cols-12 gap-2 bg-app-bg/40 p-3 rounded border border-app-border/50">
                {type !== 'HONORARIOS' ? (
                  <>
-                  <div className="col-span-3">
+                  <div className="col-span-6 sm:col-span-3">
                     <label>Sub total :</label>
                     <input type="number" className="w-full text-right font-mono" defaultValue={0} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-6 sm:col-span-3">
                     <label>IGV :</label>
                     <input type="number" className="w-full text-right font-mono" defaultValue={0} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-6 sm:col-span-3">
                     <label>No Gravada :</label>
                     <input type="number" className="w-full text-right font-mono" defaultValue={0} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-6 sm:col-span-3">
                     <label>I.S.C :</label>
                     <input type="number" className="w-full text-right font-mono" defaultValue={0} />
                   </div>
                  </>
                ) : (
                  <>
-                  <div className="col-span-3">
+                  <div className="col-span-4 sm:col-span-3">
                     <label>Importe :</label>
                     <input type="number" className="w-full text-right font-mono" defaultValue={0} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-4 sm:col-span-3">
                     <label>Rent. 4ta C. :</label>
                     <input type="number" className="w-full text-right font-mono text-red-400" defaultValue={0} />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-4 sm:col-span-3">
                     <label>Ret. Solidari. :</label>
                     <input type="number" className="w-full text-right font-mono text-red-400" defaultValue={0} />
                   </div>
                  </>
                )}
-               <div className="col-span-3">
+               <div className="col-span-12 sm:col-span-3">
                   <label>Total S/. :</label>
                   <input type="number" className="w-full text-right font-mono font-bold text-pld-blue" defaultValue={0} />
                </div>
-               <div className="col-span-9 mt-1">
+               <div className="col-span-12 mt-1">
                   <label>Glosa :</label>
                   <input type="text" className="w-full" placeholder="DESCRIPCIÓN DE LA OPERACIÓN" />
                </div>
@@ -271,7 +271,7 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
           {/* Lower Section Logic */}
           <div className="flex flex-col flex-1 gap-2 min-h-0">
              <div className="grid grid-cols-12 gap-2 p-2 bg-app-surface/50 rounded-t-lg border border-app-border border-b-0">
-                <div className="col-span-2">
+                <div className="col-span-6 sm:col-span-2">
                    <label>N° Cuenta</label>
                    <input 
                     type="text" 
@@ -280,11 +280,11 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
                     onChange={e => setCurrentLine({...currentLine, cuenta: e.target.value})}
                    />
                 </div>
-                <div className="col-span-4">
+                <div className="col-span-12 sm:col-span-4">
                    <label>Descripción de Cuenta</label>
                    <input type="text" className="w-full text-xs bg-app-bg/50" readOnly />
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-6 sm:col-span-2 md:col-span-1">
                    <label>D/H</label>
                    <select 
                     className="w-full py-1 text-xs"
@@ -295,7 +295,7 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
                      <option value="H">H</option>
                    </select>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-6 sm:col-span-2">
                    <label>Importe</label>
                    <input 
                     type="number" 
@@ -304,7 +304,7 @@ const BaseOperationForm: React.FC<BaseOperationFormProps> = ({
                     onChange={e => setCurrentLine({...currentLine, importe: Number(e.target.value)})}
                    />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-12 sm:col-span-3">
                    <label>Centro de costos</label>
                    <div className="flex gap-1">
                       <select className="w-full text-xs py-1">

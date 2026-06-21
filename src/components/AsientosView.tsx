@@ -470,13 +470,13 @@ const AsientosView: React.FC = () => {
           {/* Header Data */}
           <div className="section-card">
             <div className="grid grid-cols-12 gap-4">
-              <FormField label="Asiento" accent className="col-span-2">
+              <FormField label="Asiento" accent className="col-span-6 md:col-span-2">
                 <input className="w-full text-center font-mono text-base font-bold" value={header.asiento} onChange={e => setHeader({ ...header, asiento: e.target.value })} />
               </FormField>
-              <FormField label="Fec. Emisión" className="col-span-3">
+              <FormField label="Fec. Emisión" className="col-span-6 md:col-span-3">
                 <DateInput className="w-full text-sm" placeholder="DD/MM/YYYY" value={header.fecEmi} onChange={v => setHeader({ ...header, fecEmi: v })} />
               </FormField>
-              <FormField label="Glosa" required className="col-span-5 relative">
+              <FormField label="Glosa" required className="col-span-12 md:col-span-5 relative">
                   <input 
                     className="w-full text-sm font-bold text-pld-blue uppercase" 
                     placeholder="Descripción del asiento o busque sector..." 
@@ -630,10 +630,10 @@ const AsientosView: React.FC = () => {
                     </div>
                   )}
               </FormField>
-              <FormField label="Año" className="col-span-1">
+              <FormField label="Año" className="col-span-6 md:col-span-1">
                 <input className="w-full text-center font-bold text-pld-blue bg-app-bg/50 border-none text-sm" value={header.anio} readOnly />
               </FormField>
-              <FormField label="Mes" className="col-span-1">
+              <FormField label="Mes" className="col-span-6 md:col-span-1">
                 <input className="w-full text-center font-bold text-pld-blue bg-app-bg/50 border-none text-sm" value={header.mes} readOnly />
               </FormField>
             </div>
@@ -641,26 +641,26 @@ const AsientosView: React.FC = () => {
 
           {/* Line Input */}
           <div className="grid grid-cols-12 gap-3 items-end bg-app-surface p-4 rounded-lg border border-app-border">
-            <FormField label="Cuenta" className="col-span-2">
-              <input 
-                ref={cuentaRef}
-                className="w-full text-sm font-mono tracking-wider" 
-                value={currentInput.cuenta} 
-                onChange={e => setCurrentInput({ ...currentInput, cuenta: e.target.value })} 
-                placeholder="Ej: 1041" 
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    const acc = lookupAccount(currentInput.cuenta.trim());
-                    if (acc) {
-                      debeRef.current?.focus();
-                    } else {
-                      detalleRef.current?.focus();
-                    }
-                  }
-                }} 
-              />
+            <FormField label="Cuenta" className="col-span-12 sm:col-span-2">
+               <input 
+                 ref={cuentaRef}
+                 className="w-full text-sm font-mono tracking-wider" 
+                 value={currentInput.cuenta} 
+                 onChange={e => setCurrentInput({ ...currentInput, cuenta: e.target.value })} 
+                 placeholder="Ej: 1041" 
+                 onKeyDown={e => {
+                   if (e.key === 'Enter') {
+                     const acc = lookupAccount(currentInput.cuenta.trim());
+                     if (acc) {
+                       debeRef.current?.focus();
+                     } else {
+                       detalleRef.current?.focus();
+                     }
+                   }
+                 }} 
+               />
             </FormField>
-            <FormField label="Detalle" className="col-span-4">
+            <FormField label="Detalle" className="col-span-12 sm:col-span-4">
               <input 
                 ref={detalleRef}
                 className={`w-full text-sm ${lookupAccount(currentInput.cuenta.trim()) ? 'italic bg-app-bg/30 text-app-muted' : 'border-blue-400 focus:ring-blue-500/20'}`} 
@@ -675,7 +675,7 @@ const AsientosView: React.FC = () => {
                 }}
               />
             </FormField>
-            <FormField label="Debe" accent className="col-span-2">
+            <FormField label="Debe" accent className="col-span-6 sm:col-span-2">
               <input 
                 type="text" 
                 className="w-full text-sm font-mono text-right font-bold text-emerald-500" 
@@ -701,7 +701,7 @@ const AsientosView: React.FC = () => {
                 }} 
              />
             </FormField>
-            <FormField label="Haber" className="col-span-2">
+            <FormField label="Haber" className="col-span-6 sm:col-span-2">
               <input 
                 type="text" 
                 className="w-full text-sm font-mono text-right font-bold text-red-500" 
@@ -727,7 +727,7 @@ const AsientosView: React.FC = () => {
                 }} 
              />
             </FormField>
-            <div className="col-span-2 flex gap-2">
+            <div className="col-span-12 sm:col-span-2 flex gap-2">
               <Button variant="primary" size="md" icon={<Plus size={15} />} onClick={() => addLine()} className="flex-1">
                 Agregar
               </Button>

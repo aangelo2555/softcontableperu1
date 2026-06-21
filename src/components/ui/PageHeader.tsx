@@ -17,22 +17,26 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   actions,
   accentColor = 'text-pld-blue',
 }) => (
-  <div className="h-14 px-6 bg-app-surface border-b border-app-border flex items-center justify-between shrink-0 z-10">
+  <div className="min-h-14 md:h-14 py-3 md:py-0 px-4 md:px-6 bg-app-surface border-b border-app-border flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0 shrink-0 z-10">
     <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-lg bg-pld-blue/10 ${accentColor}`}>
+      <div className={`p-2 rounded-lg bg-pld-blue/10 shrink-0 ${accentColor}`}>
         {icon}
       </div>
-      <div>
-        <h2 className="font-bold text-sm uppercase tracking-wide text-app-text flex items-center gap-2">
+      <div className="min-w-0">
+        <h2 className="font-bold text-xs md:text-sm uppercase tracking-wide text-app-text flex flex-wrap items-center gap-1.5 leading-snug">
           {title}
           {badge}
         </h2>
         {subtitle && (
-          <p className="text-[11px] text-app-muted font-medium">{subtitle}</p>
+          <p className="text-[10px] md:text-[11px] text-app-muted font-medium mt-0.5 break-words md:whitespace-normal">{subtitle}</p>
         )}
       </div>
     </div>
-    {actions && <div className="flex items-center gap-2">{actions}</div>}
+    {actions && (
+      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap md:flex-nowrap w-full md:w-auto overflow-x-auto md:overflow-visible pb-1 md:pb-0 custom-scrollbar">
+        {actions}
+      </div>
+    )}
   </div>
 );
 

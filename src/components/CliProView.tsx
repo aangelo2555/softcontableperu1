@@ -194,7 +194,7 @@ const CliProView: React.FC = () => {
       <Modal open={showModal} onClose={resetForm} title={editingId ? 'Editar Entidad' : 'Nueva Entidad'} subtitle="Directorio de Clientes y Proveedores">
         <form onSubmit={handleSave} className="space-y-5">
           <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-4 space-y-1.5">
+            <div className="col-span-12 sm:col-span-4 space-y-1.5">
               <label className="block text-[10px] font-black uppercase tracking-widest text-app-muted">Tipo Doc</label>
               <select value={tipo} onChange={e => setTipo(e.target.value)}
                 className="w-full h-11 bg-app-bg border border-app-border rounded-xl px-3 text-xs font-bold outline-none focus:border-pld-blue">
@@ -204,7 +204,7 @@ const CliProView: React.FC = () => {
                 <option value="0">OTROS (0)</option>
               </select>
             </div>
-            <div className="col-span-8 space-y-1.5">
+            <div className="col-span-12 sm:col-span-8 space-y-1.5">
               <label className="block text-[10px] font-black uppercase tracking-widest text-app-muted">N° Identificación</label>
               <div className="flex gap-2">
                 <input type="text" maxLength={11} required placeholder="20XXXXXXXXX" value={ruc}

@@ -207,7 +207,7 @@ const KardexView: React.FC = () => {
         <div className="max-w-[1450px] mx-auto space-y-6">
           
           <div className="grid grid-cols-12 gap-6 print:flex print:flex-col print:gap-4">
-            <div className="col-span-4 section-card h-fit print:hidden">
+            <div className="col-span-12 md:col-span-4 section-card h-fit print:hidden">
               <div className="section-card-header">
                 <Search size={15} />
                 <span>Búsqueda de Existencia</span>
@@ -240,12 +240,12 @@ const KardexView: React.FC = () => {
               </div>
             </div>
 
-            <div className="col-span-8 section-card print:col-span-12 print:border-none print:shadow-none print:p-0">
+            <div className="col-span-12 md:col-span-8 section-card print:col-span-12 print:border-none print:shadow-none print:p-0">
                <div className="section-card-header">
                  <FileText size={15} />
                  <span>Información del Registro (SUNAT)</span>
                </div>
-               <div className="grid grid-cols-3 gap-y-4 gap-x-6 text-[11px]">
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-6 text-[11px]">
                   <div>
                     <p className="text-app-muted font-bold uppercase tracking-widest mb-1">Período:</p>
                     <p className="font-mono font-bold text-pld-blue">{currentCompany.period || '2026'}</p>

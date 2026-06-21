@@ -719,7 +719,7 @@ const EmpresaView: React.FC = () => {
                           <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
                             El Nuevo RUS tributa mediante una cuota fija mensual determinada por el mayor valor entre tus ingresos brutos y compras mensuales.
                           </p>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col space-y-1.5">
                               <label className="text-[10px] uppercase font-bold text-app-muted">Ingresos Brutos del Mes (S/)</label>
                               <input
@@ -763,7 +763,7 @@ const EmpresaView: React.FC = () => {
                           <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
                             El Régimen Especial (RER) determina un impuesto a la renta de tasa única fija de 1.5% sobre la Base Imponible de las ventas, más el IGV del periodo.
                           </p>
-                          <div className="grid grid-cols-3 gap-3 text-center">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                             <div className="bg-app-surface border border-app-border p-3 rounded-lg">
                               <p className="text-[9px] text-app-muted uppercase font-bold">Renta RER (1.5%)</p>
                               <p className="text-base font-mono font-black text-pld-blue">S/ {rerCalculo.renta.toFixed(2)}</p>
