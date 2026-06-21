@@ -350,66 +350,76 @@ const PlanillaView: React.FC = () => {
         subtitle={`Empresa: ${currentCompany.name || 'Sin Especificar'} | RUC: ${currentCompany.ruc || '-'}`}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Selector de Periodo */}
-            <div className="flex items-center gap-1 bg-app-surface/50 border border-app-border rounded-xl px-2 py-1 mr-2 shadow-inner">
-               <button 
-                  onClick={() => setPeriodoMes(prev => prev === 0 ? 11 : prev - 1)}
-                  className="p-1.5 hover:bg-app-bg rounded-lg text-app-muted transition-colors"
+            {/* Mes Selector */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-1">
+               <button onClick={() => setPeriodoMes(prev => prev === 0 ? 11 : prev - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
+               <select
+                 value={periodoMes}
+                 onChange={e => setPeriodoMes(parseInt(e.target.value))}
+                 className="bg-transparent border-none text-[9px] font-black uppercase text-app-text focus:ring-0 cursor-pointer py-0 w-20 appearance-none text-center"
                >
-                  <ChevronLeft size={14} />
-               </button>
-               <div className="px-3 py-1 flex flex-col items-center min-w-[100px]">
-                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter leading-none">{MONTHS[periodoMes]}</span>
-                  <span className="text-[8px] font-black text-app-muted/50 tracking-[0.2em]">{periodoAnio}</span>
-               </div>
-               <button 
-                  onClick={() => setPeriodoMes(prev => prev === 11 ? 0 : prev + 1)}
-                  className="p-1.5 hover:bg-app-bg rounded-lg text-app-muted transition-colors"
-               >
-                  <ChevronRight size={14} />
-               </button>
+                 {MONTHS.map((m, i) => <option key={m} value={i} className="bg-app-surface">{m}</option>)}
+               </select>
+               <button onClick={() => setPeriodoMes(prev => prev === 11 ? 0 : prev + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
+            </div>
+
+            {/* Año Selector */}
+            <div className="bg-app-bg border border-app-border rounded-lg flex items-center h-8 px-2 gap-2">
+               <button onClick={() => setPeriodoAnio(p => p - 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronLeft size={14} /></button>
+               <span className="text-[10px] font-black w-8 text-center">{periodoAnio}</span>
+               <button onClick={() => setPeriodoAnio(p => p + 1)} className="p-1 hover:text-indigo-600 transition-colors"><ChevronRight size={14} /></button>
             </div>
 
             <button
               onClick={handleGenerarAsiento}
-              className="px-5 py-2.5 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/10"
+              className="h-8 px-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-sm"
             >
               <Calculator size={14} /> Generar Asiento
             </button>
             <button
               onClick={handleAddEmployee}
-              className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg hover:bg-app-hover transition-all flex items-center gap-2"
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
             >
               <Plus size={14} /> Alta Trabajador
             </button>
             <button
               onClick={handleExportPLAME}
-              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-sm"
             >
               <Download size={14} /> Generar PLAME
             </button>
-            <button onClick={() => window.print()} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg hover:bg-app-hover transition-all flex items-center gap-2"><Printer size={14} /> Imprimir</button>
-            <button onClick={() => exportSingleSheet({
-              sheetName: 'Planilla',
-              title: `PLANILLA DE SUELDOS Y SALARIOS - ${MONTHS[periodoMes]} ${periodoAnio}`,
-              columns: [
-                { header: 'TRABAJADOR', key: 'nombre', width: 30 },
-                { header: 'DNI', key: 'dni', width: 14 },
-                { header: 'PUESTO', key: 'puesto', width: 20 },
-                { header: 'R. PENSIÓN', key: 'regimen_pensionario', width: 15 },
-                { header: 'SUELDO BÁSICO', key: 'sueldo_basico', width: 14, style: 'currency' },
-                { header: 'NETO', key: 'neto', width: 14, style: 'currency' }
-              ],
-              rows: employees.map(e => ({
-                ...e,
-                neto: calculateTotalRemuneracion(e) - calculateDescuentos(e)
-              })),
-              companyInfo: {
-                ruc: currentCompany?.ruc || '',
-                name: currentCompany?.name || 'EMPRESA',
-                period: `${periodoAnio}-${String(periodoMes + 1).padStart(2, '0')}`,
-              }
-            }, `Planilla_${MONTHS[periodoMes]}_${periodoAnio}`)} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
+            <button 
+              onClick={() => window.print()} 
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
+            <button 
+              onClick={() => exportSingleSheet({
+                sheetName: 'Planilla',
+                title: `PLANILLA DE SUELDOS Y SALARIOS - ${MONTHS[periodoMes]} ${periodoAnio}`,
+                columns: [
+                  { header: 'TRABAJADOR', key: 'nombre', width: 30 },
+                  { header: 'DNI', key: 'dni', width: 14 },
+                  { header: 'PUESTO', key: 'puesto', width: 20 },
+                  { header: 'R. PENSIÓN', key: 'regimen_pensionario', width: 15 },
+                  { header: 'SUELDO BÁSICO', key: 'sueldo_basico', width: 14, style: 'currency' },
+                  { header: 'NETO', key: 'neto', width: 14, style: 'currency' }
+                ],
+                rows: employees.map(e => ({
+                  ...e,
+                  neto: calculateTotalRemuneracion(e) - calculateDescuentos(e)
+                })),
+                companyInfo: {
+                  ruc: currentCompany?.ruc || '',
+                  name: currentCompany?.name || 'EMPRESA',
+                  period: `${periodoAnio}-${String(periodoMes + 1).padStart(2, '0')}`,
+                }
+              }, `Planilla_${MONTHS[periodoMes]}_${periodoAnio}`)} 
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <FileDown size={14} /> Excel
+            </button>
           </div>
         }
       />

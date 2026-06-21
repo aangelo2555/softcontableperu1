@@ -159,21 +159,31 @@ const ActivosFijosView: React.FC = () => {
           </span>
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleAddAsset}
-              className="px-5 py-2.5 bg-amber-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-amber-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              className="h-8 px-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-sm"
             >
               <Plus size={14} /> Nuevo Activo
             </button>
-            <button onClick={() => window.print()} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><Printer size={14} /> Imprimir</button>
-            <button onClick={handleExport} className="px-5 py-2.5 bg-app-surface text-app-text border border-app-border rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-app-hover transition-all flex items-center gap-2"><FileDown size={14} /> Excel</button>
+            <button 
+              onClick={() => window.print()} 
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-amber-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
+            <button 
+              onClick={handleExport} 
+              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-amber-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
+            >
+              <FileDown size={14} /> Excel
+            </button>
             <button 
               onClick={() => {
                 const p = currentCompany?.period ? (currentCompany.period.length === 4 ? `${currentCompany.period}1200` : `${currentCompany.period}00`) : `${new Date().getFullYear()}1200`;
                 exportarPle71TXT(p);
               }} 
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              className="h-8 px-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-sm"
             >
               <FileDown size={14} /> PLE 7.1 (TXT)
             </button>
