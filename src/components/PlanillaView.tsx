@@ -377,48 +377,10 @@ const PlanillaView: React.FC = () => {
               <Calculator size={14} /> Generar Asiento
             </button>
             <button
-              onClick={handleAddEmployee}
-              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-            >
-              <Plus size={14} /> Alta Trabajador
-            </button>
-            <button
               onClick={handleExportPLAME}
               className="h-8 px-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-sm"
             >
               <Download size={14} /> Generar PLAME
-            </button>
-            <button 
-              onClick={() => window.print()} 
-              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-            >
-              <Printer size={14} /> Imprimir
-            </button>
-            <button 
-              onClick={() => exportSingleSheet({
-                sheetName: 'Planilla',
-                title: `PLANILLA DE SUELDOS Y SALARIOS - ${MONTHS[periodoMes]} ${periodoAnio}`,
-                columns: [
-                  { header: 'TRABAJADOR', key: 'nombre', width: 30 },
-                  { header: 'DNI', key: 'dni', width: 14 },
-                  { header: 'PUESTO', key: 'puesto', width: 20 },
-                  { header: 'R. PENSIÓN', key: 'regimen_pensionario', width: 15 },
-                  { header: 'SUELDO BÁSICO', key: 'sueldo_basico', width: 14, style: 'currency' },
-                  { header: 'NETO', key: 'neto', width: 14, style: 'currency' }
-                ],
-                rows: employees.map(e => ({
-                  ...e,
-                  neto: calculateTotalRemuneracion(e) - calculateDescuentos(e)
-                })),
-                companyInfo: {
-                  ruc: currentCompany?.ruc || '',
-                  name: currentCompany?.name || 'EMPRESA',
-                  period: `${periodoAnio}-${String(periodoMes + 1).padStart(2, '0')}`,
-                }
-              }, `Planilla_${MONTHS[periodoMes]}_${periodoAnio}`)} 
-              className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"
-            >
-              <FileDown size={14} /> Excel
             </button>
           </div>
         }
@@ -535,7 +497,7 @@ const PlanillaView: React.FC = () => {
 
       {/* Main Table Container */}
       <div className="card-elevated !p-0 flex flex-col overflow-hidden shadow-2xl border-app-border/40">
-        <div className="px-4 py-2 border-b border-app-border flex items-center justify-between bg-app-surface/30 shrink-0">
+        <div className="px-4 py-2 border-b border-app-border flex flex-col sm:flex-row sm:items-center sm:justify-between bg-app-surface/30 gap-2 shrink-0">
            <div className="flex items-center gap-3">
               <div className="p-1.5 bg-app-bg rounded-lg border border-app-border">
                 <Search size={14} className="text-app-muted" />
@@ -545,11 +507,49 @@ const PlanillaView: React.FC = () => {
                 placeholder="BUSCAR TRABAJADOR POR NOMBRE O DNI..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none text-[9px] font-black uppercase tracking-[0.2em] w-80 focus:ring-0 text-app-text placeholder-app-muted/30"
+                className="bg-transparent border-none text-[9px] font-black uppercase tracking-[0.2em] w-64 focus:ring-0 text-app-text placeholder-app-muted/30"
               />
            </div>
-           <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 rounded-lg text-blue-500 border border-blue-500/10">
+           <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleAddEmployee}
+                className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted shadow-sm"
+              >
+                <Plus size={14} /> Alta Trabajador
+              </button>
+              <button 
+                onClick={() => window.print()} 
+                className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted shadow-sm"
+              >
+                <Printer size={14} /> Imprimir
+              </button>
+              <button 
+                onClick={() => exportSingleSheet({
+                  sheetName: 'Planilla',
+                  title: `PLANILLA DE SUELDOS Y SALARIOS - ${MONTHS[periodoMes]} ${periodoAnio}`,
+                  columns: [
+                    { header: 'TRABAJADOR', key: 'nombre', width: 30 },
+                    { header: 'DNI', key: 'dni', width: 14 },
+                    { header: 'PUESTO', key: 'puesto', width: 20 },
+                    { header: 'R. PENSIÓN', key: 'regimen_pensionario', width: 15 },
+                    { header: 'SUELDO BÁSICO', key: 'sueldo_basico', width: 14, style: 'currency' },
+                    { header: 'NETO', key: 'neto', width: 14, style: 'currency' }
+                  ],
+                  rows: employees.map(e => ({
+                    ...e,
+                    neto: calculateTotalRemuneracion(e) - calculateDescuentos(e)
+                  })),
+                  companyInfo: {
+                    ruc: currentCompany?.ruc || '',
+                    name: currentCompany?.name || 'EMPRESA',
+                    period: `${periodoAnio}-${String(periodoMes + 1).padStart(2, '0')}`,
+                  }
+                }, `Planilla_${MONTHS[periodoMes]}_${periodoAnio}`)} 
+                className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-indigo-600 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted shadow-sm"
+              >
+                <FileDown size={14} /> Excel
+              </button>
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 rounded-lg text-blue-500 border border-blue-500/10 h-8">
                 <Calculator size={12} />
                 <span className="text-[8px] font-black uppercase tracking-wider">Cálculos en Tiempo Real (PLAME)</span>
               </div>
