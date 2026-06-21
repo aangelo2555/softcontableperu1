@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { calculateDeferredTaxSchedule, type DeferredTaxRow } from '../engine/deferredTax';
 import { generateNotesTemplates, type FinanceNote } from '../engine/notesGenerator';
 import { Plus, Trash2, Save, FileText, CheckCircle2, AlertTriangle, Printer } from 'lucide-react';
+import PageHeader from './ui/PageHeader';
 import toast from 'react-hot-toast';
 
 export default function FinanceNotesView() {
