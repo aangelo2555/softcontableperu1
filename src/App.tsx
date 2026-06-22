@@ -488,7 +488,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`h-screen w-screen flex flex-col overflow-hidden bg-app-bg text-app-text font-sans selection:bg-blue-600 selection:text-white transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`h-screen w-screen flex flex-col overflow-hidden bg-app-bg text-app-text font-sans selection:bg-blue-600 selection:text-white ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="flex-1 flex overflow-hidden">
         <Toaster position="top-right" reverseOrder={false} />
 

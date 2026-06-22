@@ -30,12 +30,14 @@ const PlanView: React.FC = () => {
   const [niif18Category, setNiif18Category] = useState<string>('');
 
   // Filter accounts
-  const filteredData = plan.filter(acc => 
-    acc.cta.includes(query) || 
-    acc.description.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredData = React.useMemo(() => {
+    return plan.filter(acc => 
+      acc.cta.includes(query) || 
+      acc.description.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [plan, query]);
 
-  const columns = [
+  const columns = React.useMemo(() => [
     { header: 'Cuenta', accessor: (row: Account) => <span className="font-mono font-bold text-pld-blue">{row.cta}</span> },
     { header: 'Descripción', accessor: 'description' as keyof Account },
     { header: 'Tipo', accessor: 'type' as keyof Account, className: 'text-app-muted italic' },
@@ -43,8 +45,8 @@ const PlanView: React.FC = () => {
       header: 'Detalle', 
       accessor: (row: Account) => (
         row.div === 0 ? 
-        <span className="px-2 py-0.5 text-[10px] bg-red-950/40 text-red-400 rounded-full font-semibold border border-red-900/30">Agrupadora</span> : 
-        <span className="px-2 py-0.5 text-[10px] bg-green-950/40 text-green-400 rounded-full font-semibold border border-green-900/30">Registro</span>
+        <span className="px-2 py-0.5 text-[10px] bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/30 rounded-full font-semibold">Agrupadora</span> : 
+        <span className="px-2 py-0.5 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/30 rounded-full font-semibold">Registro</span>
       ), 
       className: 'text-center' 
     },
@@ -68,7 +70,7 @@ const PlanView: React.FC = () => {
       header: 'NIIF 18', 
       accessor: (row: Account) => (
         row.niif18_category ? 
-        <span className="text-[10px] bg-blue-950/40 text-blue-300 px-1.5 py-0.5 rounded font-semibold uppercase border border-blue-900/20">{row.niif18_category}</span> : 
+        <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 px-1.5 py-0.5 rounded font-semibold uppercase">{row.niif18_category}</span> : 
         <span className="text-app-muted text-[10px]">-</span>
       ), 
       className: 'text-center' 
@@ -93,7 +95,7 @@ const PlanView: React.FC = () => {
       ),
       className: 'w-24 text-center'
     }
-  ];
+  ], [deleteAccount]);
 
   const handleStartEdit = (acc: Account) => {
     setEditingAcc(acc);
