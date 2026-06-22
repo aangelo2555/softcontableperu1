@@ -643,12 +643,63 @@ function buildJournalEntries(
     if (p.total > 0) entries.push({ id: `${base}-total`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: (p.ctaAbono || '4212').trim(), desc: 'EMITIDAS', debe: 0, haber: totalPEN });
 
     // Destino (Amarre)
-    if (totalGastoPEN > 0) {
+    if (totalGastoPEN > 0 && ctaGasto.startsWith('6')) {
       const acc = plan.find(a => a.cta === ctaGasto);
-      if (acc?.amarreDebe && acc?.amarreHaber) {
-        const destinationGlosa = 'POR EL INGRESO FISICO MERCADERIA AL ALMACEN';
-        entries.push({ id: `${base}-amd`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreDebe.trim(), desc: 'DESTINO DEBE', debe: totalGastoPEN, haber: 0 });
-        entries.push({ id: `${base}-amh`, source, asiento: p.registro, fecha: p.fecha, glosa: destinationGlosa, cta: acc.amarreHaber.trim(), desc: 'DESTINO HABER', debe: 0, haber: totalGastoPEN });
+      if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
+        const destHaber = acc.destino_haber.trim();
+        const ccList = [];
+        if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) {
+          ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
+        }
+        if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) {
+          ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
+        }
+        if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) {
+          ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
+        }
+
+        if (ccList.length > 0) {
+          const destinationGlosa = 'POR EL INGRESO FISICO MERCADERIA AL ALMACEN';
+          let totalAsignado = 0;
+          
+          for (let i = 0; i < ccList.length; i++) {
+            const cc = ccList[i];
+            let montoCc = Number((totalGastoPEN * (cc.pct / 100.0)).toFixed(2));
+            
+            // Si es el último, absorber diferencia para cuadrar exacto
+            if (i === ccList.length - 1) {
+              montoCc = Number((totalGastoPEN - totalAsignado).toFixed(2));
+            } else {
+              totalAsignado = Number((totalAsignado + montoCc).toFixed(2));
+            }
+
+            if (montoCc > 0) {
+              entries.push({
+                id: `${base}-amd-${i}`,
+                source,
+                asiento: p.registro,
+                fecha: p.fecha,
+                glosa: destinationGlosa,
+                cta: cc.cta,
+                desc: `DESTINO DEBE (${cc.pct}%)`,
+                debe: montoCc,
+                haber: 0
+              });
+            }
+          }
+
+          entries.push({
+            id: `${base}-amh`,
+            source,
+            asiento: p.registro,
+            fecha: p.fecha,
+            glosa: destinationGlosa,
+            cta: destHaber,
+            desc: 'DESTINO HABER',
+            debe: 0,
+            haber: totalGastoPEN
+          });
+        }
       }
     }
 
@@ -932,10 +983,64 @@ function buildJournalEntries(
     if (h.total > 0) entries.push({ id: `${base}-neto`, source, asiento: h.registro, fecha: h.fecha, glosa, cta: h.ctaAbono || '424', desc: 'HONORARIOS POR PAGAR', debe: 0, haber: h.total });
 
     // Destino (Amarre)
-    const acc = plan.find(a => a.cta === h.ctaGasto);
-    if (acc?.amarreDebe && acc?.amarreHaber) {
-      entries.push({ id: `${base}-amd`, source, asiento: h.registro, fecha: h.fecha, glosa: 'POR EL DESTINO DEL GASTO', cta: acc.amarreDebe, desc: 'GASTO ADMIN', debe: h.bi, haber: 0 });
-      entries.push({ id: `${base}-amh`, source, asiento: h.registro, fecha: h.fecha, glosa: 'POR EL DESTINO DEL GASTO', cta: acc.amarreHaber, desc: 'CARGAS IMPUTABLES', debe: 0, haber: h.bi });
+    if (h.bi > 0 && h.ctaGasto.startsWith('6')) {
+      const acc = plan.find(a => a.cta === h.ctaGasto);
+      if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
+        const destHaber = acc.destino_haber.trim();
+        const ccList = [];
+        if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) {
+          ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
+        }
+        if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) {
+          ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
+        }
+        if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) {
+          ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
+        }
+
+        if (ccList.length > 0) {
+          const destinationGlosa = 'POR EL DESTINO DEL GASTO';
+          let totalAsignado = 0;
+          
+          for (let i = 0; i < ccList.length; i++) {
+            const cc = ccList[i];
+            let montoCc = Number((h.bi * (cc.pct / 100.0)).toFixed(2));
+            
+            // Si es el último, absorber diferencia para cuadrar exacto
+            if (i === ccList.length - 1) {
+              montoCc = Number((h.bi - totalAsignado).toFixed(2));
+            } else {
+              totalAsignado = Number((totalAsignado + montoCc).toFixed(2));
+            }
+
+            if (montoCc > 0) {
+              entries.push({
+                id: `${base}-amd-${i}`,
+                source,
+                asiento: h.registro,
+                fecha: h.fecha,
+                glosa: destinationGlosa,
+                cta: cc.cta,
+                desc: `DESTINO DEBE (${cc.pct}%)`,
+                debe: montoCc,
+                haber: 0
+              });
+            }
+          }
+
+          entries.push({
+            id: `${base}-amh`,
+            source,
+            asiento: h.registro,
+            fecha: h.fecha,
+            glosa: destinationGlosa,
+            cta: destHaber,
+            desc: 'DESTINO HABER',
+            debe: 0,
+            haber: h.bi
+          });
+        }
+      }
     }
 
     return entries;
@@ -1948,13 +2053,36 @@ export const useStore = create<AppState>()(
         const acc = get().plan.find(a => a.cta === cta);
         if (acc) {
           const next = { ...acc, ...data };
-          await electron.dbExecute(`UPDATE plan_global SET description=?, type=?, reqCenCos=?, amarreDebe=?, amarreHaber=? WHERE cta=?`, [next.description, next.type, next.reqCenCos ? 1 : 0, next.amarreDebe, next.amarreHaber, cta]);
+          await electron.dbExecute(
+            `UPDATE plan_global SET description=?, type=?, reqCenCos=?, amarreDebe=?, amarreHaber=?, div=?, cta_cc1=?, pct_cc1=?, cta_cc2=?, pct_cc2=?, cta_cc3=?, pct_cc3=?, destino_haber=?, niif18_category=? WHERE cta=?`,
+            [
+              next.description, next.type, next.reqCenCos ? 1 : 0,
+              next.cta_cc1 || null, next.destino_haber || null,
+              next.div !== undefined ? next.div : 1,
+              next.cta_cc1 || null, next.pct_cc1 || 0.0,
+              next.cta_cc2 || null, next.pct_cc2 || 0.0,
+              next.cta_cc3 || null, next.pct_cc3 || 0.0,
+              next.destino_haber || null, next.niif18_category || null,
+              cta
+            ]
+          );
           set({ plan: sortPlan(get().plan.map(a => a.cta === cta ? next : a)) });
         }
       },
 
       addAccount: async (a) => {
-        await electron.dbExecute(`INSERT INTO plan_global (cta, description, type, reqCenCos, amarreDebe, amarreHaber) VALUES (?,?,?,?,?,?)`, [a.cta, a.description, a.type, a.reqCenCos ? 1 : 0, a.amarreDebe, a.amarreHaber]);
+        await electron.dbExecute(
+          `INSERT INTO plan_global (cta, description, type, reqCenCos, amarreDebe, amarreHaber, div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            a.cta, a.description, a.type, a.reqCenCos ? 1 : 0,
+            a.cta_cc1 || null, a.destino_haber || null,
+            a.div !== undefined ? a.div : 1,
+            a.cta_cc1 || null, a.pct_cc1 || 0.0,
+            a.cta_cc2 || null, a.pct_cc2 || 0.0,
+            a.cta_cc3 || null, a.pct_cc3 || 0.0,
+            a.destino_haber || null, a.niif18_category || null
+          ]
+        );
         set({ plan: sortPlan([...get().plan, a]) });
       },
 

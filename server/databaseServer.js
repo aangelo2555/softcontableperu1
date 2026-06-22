@@ -116,6 +116,15 @@ db.exec(`
         reqCenCos INTEGER,
         amarreDebe TEXT,
         amarreHaber TEXT,
+        div INTEGER DEFAULT 1,
+        cta_cc1 TEXT,
+        pct_cc1 REAL DEFAULT 0,
+        cta_cc2 TEXT,
+        pct_cc2 REAL DEFAULT 0,
+        cta_cc3 TEXT,
+        pct_cc3 REAL DEFAULT 0,
+        destino_haber TEXT,
+        niif18_category TEXT,
         PRIMARY KEY (cta, user_id)
     );
 
@@ -374,6 +383,15 @@ try {
                 reqCenCos INTEGER,
                 amarreDebe TEXT,
                 amarreHaber TEXT,
+                div INTEGER DEFAULT 1,
+                cta_cc1 TEXT,
+                pct_cc1 REAL DEFAULT 0,
+                cta_cc2 TEXT,
+                pct_cc2 REAL DEFAULT 0,
+                cta_cc3 TEXT,
+                pct_cc3 REAL DEFAULT 0,
+                destino_haber TEXT,
+                niif18_category TEXT,
                 PRIMARY KEY (cta, user_id)
             );
         `);
@@ -384,8 +402,11 @@ try {
         
         db.transaction(() => {
             const insertStmt = db.prepare(`
-                INSERT INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO plan_global (
+                    cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
+                    div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
             
             const oldAccounts = db.prepare('SELECT * FROM plan_global_old').all();
@@ -393,13 +414,19 @@ try {
             // Si hay usuarios, copiar para cada uno
             for (const user of users) {
                 for (const acc of oldAccounts) {
-                    insertStmt.run(acc.cta, user.id, acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber);
+                    insertStmt.run(
+                        acc.cta, user.id, acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber,
+                        1, acc.amarreDebe, acc.amarreDebe ? 100.0 : 0.0, null, 0.0, null, 0.0, acc.amarreHaber, null
+                    );
                 }
             }
             
             // También guardar una plantilla con user_id = 'system'
             for (const acc of oldAccounts) {
-                insertStmt.run(acc.cta, 'system', acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber);
+                insertStmt.run(
+                    acc.cta, 'system', acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber,
+                    1, acc.amarreDebe, acc.amarreDebe ? 100.0 : 0.0, null, 0.0, null, 0.0, acc.amarreHaber, null
+                );
             }
         })();
         
@@ -408,6 +435,39 @@ try {
     }
 } catch (e) {
     console.error('[MIGRATION ERROR] Error migrando plan_global:', e.message);
+}
+
+// --- MIGRACIÓN PLAN_GLOBAL MÚLTIPLES CENTROS DE COSTOS Y NIIF 18 ---
+try {
+    const columns = db.prepare("PRAGMA table_info(plan_global)").all();
+    const hasDiv = columns.some(c => c.name === 'div');
+    if (columns.length > 0 && !hasDiv) {
+        console.log('[MIGRATION] Agregando columnas de Centros de Costo y NIIF 18 a plan_global...');
+        db.exec(`
+            ALTER TABLE plan_global ADD COLUMN div INTEGER DEFAULT 1;
+            ALTER TABLE plan_global ADD COLUMN cta_cc1 TEXT;
+            ALTER TABLE plan_global ADD COLUMN pct_cc1 REAL DEFAULT 0;
+            ALTER TABLE plan_global ADD COLUMN cta_cc2 TEXT;
+            ALTER TABLE plan_global ADD COLUMN pct_cc2 REAL DEFAULT 0;
+            ALTER TABLE plan_global ADD COLUMN cta_cc3 TEXT;
+            ALTER TABLE plan_global ADD COLUMN pct_cc3 REAL DEFAULT 0;
+            ALTER TABLE plan_global ADD COLUMN destino_haber TEXT;
+            ALTER TABLE plan_global ADD COLUMN niif18_category TEXT;
+        `);
+        
+        // Backfill de datos existentes: copiar amarreDebe a cta_cc1 (100%) y amarreHaber a destino_haber
+        db.exec(`
+            UPDATE plan_global
+            SET 
+                cta_cc1 = amarreDebe,
+                pct_cc1 = CASE WHEN amarreDebe IS NOT NULL AND amarreDebe != '' THEN 100.0 ELSE 0.0 END,
+                destino_haber = amarreHaber
+            WHERE amarreDebe IS NOT NULL OR amarreHaber IS NOT NULL;
+        `);
+        console.log('[MIGRATION] Backfill de plan_global para CCs y NIIF 18 completado con éxito.');
+    }
+} catch (e) {
+    console.error('[MIGRATION ERROR] Error migrando plan_global para CCs y NIIF 18:', e.message);
 }
 
 // --- Tabla de Sugerencias y Reportes Inteligentes ---
@@ -1018,8 +1078,11 @@ const dbManager = {
                 db.transaction(() => {
                     const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
                     const insertStmt = db.prepare(`
-                        INSERT OR IGNORE INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT OR IGNORE INTO plan_global (
+                            cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
+                            div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `);
                     
                     if (systemPlan.length === 0) {
@@ -1034,13 +1097,26 @@ const dbManager = {
                                     p.type,
                                     p.reqCenCos ? 1 : 0,
                                     p.amarreDebe || null,
-                                    p.amarreHaber || null
+                                    p.amarreHaber || null,
+                                    p.div !== undefined ? p.div : 1,
+                                    p.cta_cc1 || p.amarreDebe || null,
+                                    p.pct_cc1 !== undefined ? p.pct_cc1 : (p.amarreDebe ? 100.0 : 0.0),
+                                    p.cta_cc2 || null,
+                                    p.pct_cc2 || 0.0,
+                                    p.cta_cc3 || null,
+                                    p.pct_cc3 || 0.0,
+                                    p.destino_haber || p.amarreHaber || null,
+                                    p.niif18_category || null
                                 );
                             }
                         }
                     } else {
                         for (const p of systemPlan) {
-                            insertStmt.run(p.cta, userId, p.description, p.type, p.reqCenCos, p.amarreDebe, p.amarreHaber);
+                            insertStmt.run(
+                                p.cta, userId, p.description, p.type, p.reqCenCos, p.amarreDebe, p.amarreHaber,
+                                p.div !== undefined ? p.div : 1,
+                                p.cta_cc1, p.pct_cc1, p.cta_cc2, p.pct_cc2, p.cta_cc3, p.pct_cc3, p.destino_haber, p.niif18_category
+                            );
                         }
                     }
                 })();
@@ -1289,8 +1365,11 @@ if (planCount === 0) {
             console.log(`[DB] Inicializando Plan Contable del Sistema con ${fullPlan.length} cuentas...`);
             
             const insertPlan = db.prepare(`
-                INSERT OR IGNORE INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber) 
-                VALUES (?, 'system', ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO plan_global (
+                    cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
+                    div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                ) 
+                VALUES (?, 'system', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
             
             db.transaction(() => {
@@ -1301,7 +1380,16 @@ if (planCount === 0) {
                         p.type, 
                         p.reqCenCos ? 1 : 0, 
                         p.amarreDebe || null, 
-                        p.amarreHaber || null
+                        p.amarreHaber || null,
+                        p.div !== undefined ? p.div : 1,
+                        p.cta_cc1 || p.amarreDebe || null,
+                        p.pct_cc1 !== undefined ? p.pct_cc1 : (p.amarreDebe ? 100.0 : 0.0),
+                        p.cta_cc2 || null,
+                        p.pct_cc2 || 0.0,
+                        p.cta_cc3 || null,
+                        p.pct_cc3 || 0.0,
+                        p.destino_haber || p.amarreHaber || null,
+                        p.niif18_category || null
                     );
                 }
             })();

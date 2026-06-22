@@ -5,6 +5,15 @@ export interface Account {
   reqCenCos?: boolean;
   amarreDebe?: string;
   amarreHaber?: string;
+  div?: number;
+  cta_cc1?: string;
+  pct_cc1?: number;
+  cta_cc2?: string;
+  pct_cc2?: number;
+  cta_cc3?: string;
+  pct_cc3?: number;
+  destino_haber?: string;
+  niif18_category?: 'Operacion' | 'Inversion' | 'Financiamiento' | 'Impuestos' | 'Discontinuadas';
 }
 
 export const INITIAL_PLAN: Account[] = [

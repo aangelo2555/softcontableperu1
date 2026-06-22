@@ -65,11 +65,12 @@ function createLibroDiario52Service(db) {
 
   // ── Validar cuenta existe en plan ──
   const validarCuenta = (codigoCuenta, userId) => {
-    let row = db.prepare(`SELECT cta FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
+    let row = db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
     if (!row) {
-      row = db.prepare(`SELECT cta FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+      row = db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
     }
-    return !!row;
+    if (!row) return false;
+    return row.div !== 0;
   };
 
   // ── Verificar período abierto ──
@@ -118,11 +119,14 @@ function createLibroDiario52Service(db) {
       throw new Error(`El período ${periodo} está cerrado o bloqueado`);
     }
 
-    // Validar partida doble
+    // Validar partida doble y validez de las cuentas (no agrupadoras)
     let totalDebe = 0, totalHaber = 0;
     for (const l of lineas) {
       if (l.monto_debe > 0 && l.monto_haber > 0) {
         throw new Error(`Línea ${l.correlativo_asiento}: no puede tener DEBE y HABER simultáneamente`);
+      }
+      if (!validarCuenta(l.codigo_cuenta, userId)) {
+        throw new Error(`Línea ${l.correlativo_asiento}: la cuenta ${l.codigo_cuenta} no existe o es una cuenta de cabecera/agrupadora (no permite movimientos).`);
       }
       totalDebe += l.monto_debe;
       totalHaber += l.monto_haber;
@@ -210,15 +214,74 @@ function createLibroDiario52Service(db) {
     // Destino Clase 9 (si la cuenta es gasto Clase 6)
     const gastoCentimos = biCentimos + noGravadaCentimos;
     if (gastoCentimos > 0 && ctaGasto.startsWith('6')) {
-      let acc = db.prepare(`SELECT amarreDebe, amarreHaber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
+      let acc = db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
       if (!acc) {
-        acc = db.prepare(`SELECT amarreDebe, amarreHaber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
+        acc = db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
       }
-      if (acc && acc.amarreDebe && acc.amarreHaber) {
-        lineNum++;
-        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreDebe.trim(), denominacion_cuenta: getDenominacion(acc.amarreDebe.trim(), userId), monto_debe: gastoCentimos, monto_haber: 0, glosa: 'POR EL DESTINO DEL GASTO' });
-        lineNum++;
-        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreHaber.trim(), denominacion_cuenta: getDenominacion(acc.amarreHaber.trim(), userId), monto_debe: 0, monto_haber: gastoCentimos, glosa: 'POR EL DESTINO DEL GASTO' });
+      if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
+        const destHaber = acc.destino_haber.trim();
+        
+        // Determinar centros de costo activos
+        const ccList = [];
+        if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) {
+          ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
+        }
+        if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) {
+          ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
+        }
+        if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) {
+          ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
+        }
+
+        if (ccList.length > 0) {
+          // Generar los cargos (Debe) prorrateados
+          let totalAsignado = 0;
+          const lineasCc = [];
+          
+          for (let i = 0; i < ccList.length; i++) {
+            const cc = ccList[i];
+            let montoCc = Math.round(gastoCentimos * (cc.pct / 100.0));
+            
+            // Si es el último, absorber diferencia para cuadrar exacto los céntimos
+            if (i === ccList.length - 1) {
+              montoCc = gastoCentimos - totalAsignado;
+            } else {
+              totalAsignado += montoCc;
+            }
+
+            if (montoCc > 0) {
+              lineasCc.push({
+                ...baseLine,
+                codigo_cuenta: cc.cta,
+                denominacion_cuenta: getDenominacion(cc.cta, userId),
+                monto_debe: montoCc,
+                monto_haber: 0,
+                glosa: 'POR EL DESTINO DEL GASTO'
+              });
+            }
+          }
+
+          // Solo registrar destinos si se asignó al menos algo
+          if (lineasCc.length > 0) {
+            // Añadir los Debe al listado de líneas
+            for (const lc of lineasCc) {
+              lineNum++;
+              lineas.push({ ...lc, correlativo_asiento: `M${lineNum}` });
+            }
+
+            // Añadir el abono (Haber) a la cuenta destino_haber (100% del gasto)
+            lineNum++;
+            lineas.push({
+              ...baseLine,
+              correlativo_asiento: `M${lineNum}`,
+              codigo_cuenta: destHaber,
+              denominacion_cuenta: getDenominacion(destHaber, userId),
+              monto_debe: 0,
+              monto_haber: gastoCentimos,
+              glosa: 'POR EL DESTINO DEL GASTO'
+            });
+          }
+        }
       }
     }
 

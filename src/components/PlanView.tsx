@@ -19,6 +19,15 @@ const PlanView: React.FC = () => {
   const [reqCenCos, setReqCenCos] = useState(false);
   const [amarreDebe, setAmarreDebe] = useState('');
   const [amarreHaber, setAmarreHaber] = useState('');
+  const [divValue, setDivValue] = useState<number>(1);
+  const [ctaCc1, setCtaCc1] = useState('');
+  const [pctCc1, setPctCc1] = useState<number>(100);
+  const [ctaCc2, setCtaCc2] = useState('');
+  const [pctCc2, setPctCc2] = useState<number>(0);
+  const [ctaCc3, setCtaCc3] = useState('');
+  const [pctCc3, setPctCc3] = useState<number>(0);
+  const [destinoHaber, setDestinoHaber] = useState('');
+  const [niif18Category, setNiif18Category] = useState<string>('');
 
   // Filter accounts
   const filteredData = plan.filter(acc => 
@@ -30,11 +39,40 @@ const PlanView: React.FC = () => {
     { header: 'Cuenta', accessor: (row: Account) => <span className="font-mono font-bold text-pld-blue">{row.cta}</span> },
     { header: 'Descripción', accessor: 'description' as keyof Account },
     { header: 'Tipo', accessor: 'type' as keyof Account, className: 'text-app-muted italic' },
-    { header: 'Amarre D/H', accessor: (row: Account) => (
-      row.amarreDebe || row.amarreHaber ? 
-      <span className="font-mono text-[10px]">{row.amarreDebe || '-'} / {row.amarreHaber || '-'}</span> 
-      : '-'
-    ), className: 'text-center' },
+    { 
+      header: 'Detalle', 
+      accessor: (row: Account) => (
+        row.div === 0 ? 
+        <span className="px-2 py-0.5 text-[10px] bg-red-950/40 text-red-400 rounded-full font-semibold border border-red-900/30">Agrupadora</span> : 
+        <span className="px-2 py-0.5 text-[10px] bg-green-950/40 text-green-400 rounded-full font-semibold border border-green-900/30">Registro</span>
+      ), 
+      className: 'text-center' 
+    },
+    { 
+      header: 'Distribución Costos', 
+      accessor: (row: Account) => {
+        const parts = [];
+        if (row.cta_cc1) parts.push(`${row.cta_cc1} (${row.pct_cc1}%)`);
+        if (row.cta_cc2) parts.push(`${row.cta_cc2} (${row.pct_cc2}%)`);
+        if (row.cta_cc3) parts.push(`${row.cta_cc3} (${row.pct_cc3}%)`);
+        return (
+          <div className="flex flex-col gap-0.5 text-[10px] font-mono text-left max-w-[150px]">
+            {parts.map((p, idx) => <span key={idx}>{p}</span>)}
+            {row.destino_haber && <span className="text-app-muted">Haber: {row.destino_haber}</span>}
+            {parts.length === 0 && !row.destino_haber && <span className="text-app-muted">-</span>}
+          </div>
+        );
+      }
+    },
+    { 
+      header: 'NIIF 18', 
+      accessor: (row: Account) => (
+        row.niif18_category ? 
+        <span className="text-[10px] bg-blue-950/40 text-blue-300 px-1.5 py-0.5 rounded font-semibold uppercase border border-blue-900/20">{row.niif18_category}</span> : 
+        <span className="text-app-muted text-[10px]">-</span>
+      ), 
+      className: 'text-center' 
+    },
     { 
       header: 'Acciones', 
       accessor: (row: Account) => (
@@ -63,8 +101,17 @@ const PlanView: React.FC = () => {
     setNewDesc(acc.description);
     setNewType(acc.type);
     setReqCenCos(acc.reqCenCos || false);
-    setAmarreDebe(acc.amarreDebe || '');
-    setAmarreHaber(acc.amarreHaber || '');
+    setAmarreDebe(acc.amarreDebe || acc.cta_cc1 || '');
+    setAmarreHaber(acc.amarreHaber || acc.destino_haber || '');
+    setDivValue(acc.div !== undefined ? acc.div : 1);
+    setCtaCc1(acc.cta_cc1 || acc.amarreDebe || '');
+    setPctCc1(acc.pct_cc1 !== undefined ? acc.pct_cc1 : (acc.amarreDebe ? 100 : 0));
+    setCtaCc2(acc.cta_cc2 || '');
+    setPctCc2(acc.pct_cc2 || 0);
+    setCtaCc3(acc.cta_cc3 || '');
+    setPctCc3(acc.pct_cc3 || 0);
+    setDestinoHaber(acc.destino_haber || acc.amarreHaber || '');
+    setNiif18Category(acc.niif18_category || '');
     setShowAddModal(true);
   };
 
@@ -77,8 +124,17 @@ const PlanView: React.FC = () => {
       description: newDesc,
       type: newType,
       reqCenCos,
-      amarreDebe: amarreDebe || undefined,
-      amarreHaber: amarreHaber || undefined,
+      amarreDebe: ctaCc1 || undefined,
+      amarreHaber: destinoHaber || undefined,
+      div: divValue,
+      cta_cc1: ctaCc1 || undefined,
+      pct_cc1: pctCc1,
+      cta_cc2: ctaCc2 || undefined,
+      pct_cc2: pctCc2,
+      cta_cc3: ctaCc3 || undefined,
+      pct_cc3: pctCc3,
+      destino_haber: destinoHaber || undefined,
+      niif18_category: (niif18Category || undefined) as any
     };
 
     if (editingAcc) {
@@ -101,6 +157,15 @@ const PlanView: React.FC = () => {
     setReqCenCos(false);
     setAmarreDebe('');
     setAmarreHaber('');
+    setDivValue(1);
+    setCtaCc1('');
+    setPctCc1(100);
+    setCtaCc2('');
+    setPctCc2(0);
+    setCtaCc3('');
+    setPctCc3(0);
+    setDestinoHaber('');
+    setNiif18Category('');
     setEditingAcc(null);
     setShowAddModal(false);
   };
@@ -138,8 +203,15 @@ const PlanView: React.FC = () => {
                 { header: 'CUENTA', key: 'cta', width: 12, alignment: 'center' },
                 { header: 'DENOMINACIÓN', key: 'description', width: 50 },
                 { header: 'TIPO', key: 'type', width: 15, alignment: 'center' },
-                { header: 'AMARRE DEBE', key: 'amarreDebe', width: 14, alignment: 'center' },
-                { header: 'AMARRE HABER', key: 'amarreHaber', width: 14, alignment: 'center' }
+                { header: 'DETALLE', key: 'div', width: 10, alignment: 'center' },
+                { header: 'CC 1', key: 'cta_cc1', width: 12, alignment: 'center' },
+                { header: 'PCT 1', key: 'pct_cc1', width: 10, alignment: 'center' },
+                { header: 'CC 2', key: 'cta_cc2', width: 12, alignment: 'center' },
+                { header: 'PCT 2', key: 'pct_cc2', width: 10, alignment: 'center' },
+                { header: 'CC 3', key: 'cta_cc3', width: 12, alignment: 'center' },
+                { header: 'PCT 3', key: 'pct_cc3', width: 10, alignment: 'center' },
+                { header: 'DESTINO HABER', key: 'destino_haber', width: 15, alignment: 'center' },
+                { header: 'NIIF 18', key: 'niif18_category', width: 15, alignment: 'center' }
               ],
               rows: plan,
               companyInfo: {
@@ -166,7 +238,7 @@ const PlanView: React.FC = () => {
       {/* Add/Edit Account Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-app-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-app-border/50 animate-in fade-in zoom-in duration-200">
+          <div className="bg-app-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-app-border/50 animate-in fade-in zoom-in duration-200">
             <div className="p-4 border-b border-app-border bg-app-bg flex justify-between items-center">
               <h3 className="font-black uppercase text-xs tracking-widest text-pld-blue">
                 {editingAcc ? 'Editar Cuenta Contable' : 'Agregar Nueva Cuenta'}
@@ -176,82 +248,198 @@ const PlanView: React.FC = () => {
               </button>
             </div>
             
-            <form onSubmit={handleAddOrUpdate} className="p-6 space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-widest uppercase text-app-muted flex items-center gap-1">Cuenta <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  autoFocus
-                  required
-                  disabled={!!editingAcc}
-                  value={newCta}
-                  onChange={e => setNewCta(e.target.value)}
-                  className={`w-full h-10 font-mono text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue ${editingAcc ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  placeholder="Ej: 10411"
-                />
-              </div>
+            <form onSubmit={handleAddOrUpdate} className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Columna Izquierda: Información General */}
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-pld-blue border-b border-app-border/30 pb-1.5">Datos Generales</h4>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted flex items-center gap-1">Cuenta <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      autoFocus
+                      required
+                      disabled={!!editingAcc}
+                      value={newCta}
+                      onChange={e => setNewCta(e.target.value)}
+                      className={`w-full h-10 font-mono text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue ${editingAcc ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      placeholder="Ej: 10411"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-widest uppercase text-app-muted flex items-center gap-1">Descripción <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  required
-                  value={newDesc}
-                  onChange={e => setNewDesc(e.target.value)}
-                  className="w-full h-10 uppercase text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
-                  placeholder="Nombre de la cuenta..."
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted flex items-center gap-1">Descripción <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      required
+                      value={newDesc}
+                      onChange={e => setNewDesc(e.target.value)}
+                      className="w-full h-10 uppercase text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
+                      placeholder="Nombre de la cuenta..."
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Tipo de Cuenta</label>
-                <select 
-                  value={newType}
-                  onChange={e => setNewType(e.target.value as any)}
-                  className="w-full h-10 text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
-                >
-                  <option value="Balance">Balance</option>
-                  <option value="Registro">Registro (Naturaleza)</option>
-                  <option value="Resultados">Resultados</option>
-                </select>
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Tipo de Cuenta</label>
+                    <select 
+                      value={newType}
+                      onChange={e => setNewType(e.target.value as any)}
+                      className="w-full h-10 text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
+                    >
+                      <option value="Balance">Balance</option>
+                      <option value="Registro">Registro (Naturaleza)</option>
+                      <option value="Resultados">Resultados</option>
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Amarre Debe</label>
-                  <input 
-                    type="text"
-                    value={amarreDebe}
-                    onChange={e => setAmarreDebe(e.target.value)}
-                    className="w-full h-10 font-mono text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
-                    placeholder="Ej: 941"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">¿Permite Asientos/Movimientos?</label>
+                    <select 
+                      value={divValue}
+                      onChange={e => setDivValue(Number(e.target.value))}
+                      className="w-full h-10 text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
+                    >
+                      <option value={1}>Sí (Cuenta de Registro / Detalle)</option>
+                      <option value={0}>No (Cuenta Agrupadora / Cabecera)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Categoría NIIF 18</label>
+                    <select 
+                      value={niif18Category}
+                      onChange={e => setNiif18Category(e.target.value)}
+                      className="w-full h-10 text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
+                    >
+                      <option value="">Ninguna / No aplica</option>
+                      <option value="Operacion">Operación</option>
+                      <option value="Inversion">Inversión</option>
+                      <option value="Financiamiento">Financiamiento</option>
+                      <option value="Impuestos">Impuestos</option>
+                      <option value="Discontinuadas">Operaciones Discontinuadas</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Amarre Haber</label>
-                  <input 
-                    type="text"
-                    value={amarreHaber}
-                    onChange={e => setAmarreHaber(e.target.value)}
-                    className="w-full h-10 font-mono text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
-                    placeholder="Ej: 791"
-                  />
+
+                {/* Columna Derecha: Prorrateo de Costos */}
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-pld-blue border-b border-app-border/30 pb-1.5">Destino de Costos (Clase 6)</h4>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-app-muted">Destino Haber (Elemento 79)</label>
+                    <input 
+                      type="text"
+                      value={destinoHaber}
+                      onChange={e => setDestinoHaber(e.target.value)}
+                      className="w-full h-10 font-mono text-sm bg-app-bg border border-app-border rounded px-3 outline-none focus:border-pld-blue"
+                      placeholder="Ej: 791"
+                    />
+                  </div>
+
+                  <div className="bg-app-bg/50 border border-app-border/40 p-4 rounded-lg space-y-3">
+                    <span className="text-[10px] font-bold text-app-muted block uppercase tracking-wider">Distribución por Centro de Costos</span>
+                    
+                    {/* CC 1 */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">Cta CC 1</label>
+                        <input 
+                          type="text"
+                          value={ctaCc1}
+                          onChange={e => setCtaCc1(e.target.value)}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                          placeholder="Ej: 941"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">% 1</label>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={pctCc1}
+                          onChange={e => setPctCc1(Number(e.target.value))}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CC 2 */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">Cta CC 2</label>
+                        <input 
+                          type="text"
+                          value={ctaCc2}
+                          onChange={e => setCtaCc2(e.target.value)}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                          placeholder="Ej: 951"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">% 2</label>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={pctCc2}
+                          onChange={e => setPctCc2(Number(e.target.value))}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CC 3 */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">Cta CC 3</label>
+                        <input 
+                          type="text"
+                          value={ctaCc3}
+                          onChange={e => setCtaCc3(e.target.value)}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                          placeholder="Ej: 971"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase text-app-muted font-bold">% 3</label>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={pctCc3}
+                          onChange={e => setPctCc3(Number(e.target.value))}
+                          className="w-full h-9 font-mono text-xs bg-app-bg border border-app-border rounded px-2.5 outline-none focus:border-pld-blue"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-right font-mono font-bold pr-1 pt-1">
+                      Total: <span className={Math.abs((pctCc1 + pctCc2 + pctCc3) - 100) < 0.001 || (pctCc1 + pctCc2 + pctCc3) === 0 ? "text-green-400" : "text-yellow-500"}>
+                        {(pctCc1 + pctCc2 + pctCc3).toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-6 flex flex-col gap-2">
-                <button 
-                  type="submit"
-                  className="w-full h-12 bg-pld-blue hover:bg-pld-accent text-black rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-pld-blue/20"
-                >
-                  {editingAcc ? 'Actualizar Cuenta' : 'Guardar Cuenta'}
-                </button>
+              <div className="pt-4 border-t border-app-border/40 flex justify-end gap-3">
                 <button 
                   type="button" 
                   onClick={resetForm}
-                  className="w-full h-12 border border-app-border hover:bg-app-hover rounded-lg text-xs font-bold uppercase transition-colors"
+                  className="h-10 px-5 border border-app-border hover:bg-app-hover rounded-lg text-xs font-bold uppercase transition-colors"
                 >
                   Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="h-10 px-6 bg-pld-blue hover:bg-pld-accent text-black rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-pld-blue/20"
+                >
+                  {editingAcc ? 'Actualizar Cuenta' : 'Guardar Cuenta'}
                 </button>
               </div>
             </form>
