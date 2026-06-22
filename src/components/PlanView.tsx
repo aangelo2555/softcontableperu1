@@ -231,6 +231,7 @@ const PlanView: React.FC = () => {
             data={filteredData} 
             emptyMessage="No se encontraron cuentas con ese criterio."
             rowClassName="hover:bg-app-hover border-b border-app-border/50 text-xs"
+            pageSize={100}
           />
         </div>
       </div>
@@ -238,8 +239,8 @@ const PlanView: React.FC = () => {
       {/* Add/Edit Account Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-app-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-app-border/50 animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b border-app-border bg-app-bg flex justify-between items-center">
+          <div className="bg-app-surface w-full max-w-2xl max-h-[90vh] flex flex-col rounded-xl shadow-2xl overflow-hidden border border-app-border/50 animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b border-app-border bg-app-bg flex justify-between items-center shrink-0">
               <h3 className="font-black uppercase text-xs tracking-widest text-pld-blue">
                 {editingAcc ? 'Editar Cuenta Contable' : 'Agregar Nueva Cuenta'}
               </h3>
@@ -248,8 +249,8 @@ const PlanView: React.FC = () => {
               </button>
             </div>
             
-            <form onSubmit={handleAddOrUpdate} className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+            <form onSubmit={handleAddOrUpdate} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Columna Izquierda: Información General */}
                 <div className="space-y-4">
                   <h4 className="text-[11px] font-black uppercase tracking-wider text-pld-blue border-b border-app-border/30 pb-1.5">Datos Generales</h4>
