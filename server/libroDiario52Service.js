@@ -55,14 +55,20 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Obtener denominación de cuenta ──
-  const getDenominacion = (codigoCuenta) => {
-    const row = db.prepare(`SELECT description FROM plan_global WHERE cta=?`).get(codigoCuenta);
+  const getDenominacion = (codigoCuenta, userId) => {
+    let row = db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
+    if (!row) {
+      row = db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+    }
     return row ? row.description : codigoCuenta;
   };
 
   // ── Validar cuenta existe en plan ──
-  const validarCuenta = (codigoCuenta) => {
-    const row = db.prepare(`SELECT cta FROM plan_global WHERE cta=?`).get(codigoCuenta);
+  const validarCuenta = (codigoCuenta, userId) => {
+    let row = db.prepare(`SELECT cta FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
+    if (!row) {
+      row = db.prepare(`SELECT cta FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+    }
     return !!row;
   };
 
@@ -144,7 +150,7 @@ function createLibroDiario52Service(db) {
         insertStmt.run(
           workspaceId, userId, l.periodo, l.cuo, l.correlativo_asiento,
           l.fecha_operacion, l.glosa, l.ref_codigo_libro || null, l.ref_periodo || null,
-          l.ref_cuo || null, l.codigo_cuenta, l.denominacion_cuenta || getDenominacion(l.codigo_cuenta),
+          l.ref_cuo || null, l.codigo_cuenta, l.denominacion_cuenta || getDenominacion(l.codigo_cuenta, userId),
           l.codigo_auxiliar || null, l.denominacion_auxiliar || null, l.centro_costos || null,
           l.moneda || '01', l.tipo_cambio || 0, l.fecha_tipo_cambio || null,
           l.monto_debe, l.monto_haber, l.indicador_operacion || null,
@@ -182,34 +188,37 @@ function createLibroDiario52Service(db) {
 
     if (biCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto), monto_debe: biCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto, userId), monto_debe: biCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (noGravadaCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto), monto_debe: noGravadaCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto, userId), monto_debe: noGravadaCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (igvCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111') || 'IGV - CUENTA PROPIA', monto_debe: igvCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: igvCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (iscCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012') || 'ISC', monto_debe: iscCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012', userId) || 'ISC', monto_debe: iscCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: Cuentas por Pagar
     lineNum++;
-    lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaAbono, denominacion_cuenta: getDenominacion(ctaAbono) || 'FACTURAS POR PAGAR', monto_debe: 0, monto_haber: totalCentimos, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+    lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaAbono, denominacion_cuenta: getDenominacion(ctaAbono, userId) || 'FACTURAS POR PAGAR', monto_debe: 0, monto_haber: totalCentimos, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
 
     // Destino Clase 9 (si la cuenta es gasto Clase 6)
     const gastoCentimos = biCentimos + noGravadaCentimos;
     if (gastoCentimos > 0 && ctaGasto.startsWith('6')) {
-      const acc = db.prepare(`SELECT amarreDebe, amarreHaber FROM plan_global WHERE cta=?`).get(ctaGasto);
+      let acc = db.prepare(`SELECT amarreDebe, amarreHaber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
+      if (!acc) {
+        acc = db.prepare(`SELECT amarreDebe, amarreHaber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
+      }
       if (acc && acc.amarreDebe && acc.amarreHaber) {
         lineNum++;
-        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreDebe.trim(), denominacion_cuenta: getDenominacion(acc.amarreDebe.trim()), monto_debe: gastoCentimos, monto_haber: 0, glosa: 'POR EL DESTINO DEL GASTO' });
+        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreDebe.trim(), denominacion_cuenta: getDenominacion(acc.amarreDebe.trim(), userId), monto_debe: gastoCentimos, monto_haber: 0, glosa: 'POR EL DESTINO DEL GASTO' });
         lineNum++;
-        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreHaber.trim(), denominacion_cuenta: getDenominacion(acc.amarreHaber.trim()), monto_debe: 0, monto_haber: gastoCentimos, glosa: 'POR EL DESTINO DEL GASTO' });
+        lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: acc.amarreHaber.trim(), denominacion_cuenta: getDenominacion(acc.amarreHaber.trim(), userId), monto_debe: 0, monto_haber: gastoCentimos, glosa: 'POR EL DESTINO DEL GASTO' });
       }
     }
 
@@ -241,27 +250,27 @@ function createLibroDiario52Service(db) {
     // Debe: Cuentas por Cobrar
     if (totalCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaCargo, denominacion_cuenta: getDenominacion(ctaCargo) || 'FACTURAS POR COBRAR', monto_debe: totalCentimos, monto_haber: 0, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaCargo, denominacion_cuenta: getDenominacion(ctaCargo, userId) || 'FACTURAS POR COBRAR', monto_debe: totalCentimos, monto_haber: 0, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: IGV
     if (igvCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111') || 'IGV - CUENTA PROPIA', monto_debe: 0, monto_haber: igvCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: 0, monto_haber: igvCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: Ingresos
     if (biCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso) || 'VENTAS', monto_debe: 0, monto_haber: biCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso, userId) || 'VENTAS', monto_debe: 0, monto_haber: biCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (noGravadaCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso), monto_debe: 0, monto_haber: noGravadaCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso, userId), monto_debe: 0, monto_haber: noGravadaCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (iscCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012') || 'ISC', monto_debe: 0, monto_haber: iscCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012', userId) || 'ISC', monto_debe: 0, monto_haber: iscCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     return registrarAsiento(workspaceId, userId, lineas);
@@ -466,7 +475,7 @@ function createLibroDiario52Service(db) {
 
   // ── Generar TXT Formato 5.4 (Plan Contable) ──
   const generarTXT54 = (workspaceId, userId, periodo) => {
-    const plan = db.prepare(`SELECT * FROM plan_global ORDER BY cta`).all();
+    const plan = db.prepare(`SELECT * FROM plan_global WHERE user_id=? ORDER BY cta`).all(userId);
     const ejercicio = periodo.substring(0, 4);
     const lines = plan.map(p => [
       `${ejercicio}0100`,

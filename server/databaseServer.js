@@ -109,12 +109,14 @@ db.exec(`
     );
 
     CREATE TABLE IF NOT EXISTS plan_global (
-        cta TEXT PRIMARY KEY,
+        cta TEXT,
+        user_id TEXT,
         description TEXT,
         type TEXT,
         reqCenCos INTEGER,
         amarreDebe TEXT,
-        amarreHaber TEXT
+        amarreHaber TEXT,
+        PRIMARY KEY (cta, user_id)
     );
 
     CREATE TABLE IF NOT EXISTS entities (
@@ -354,6 +356,59 @@ db.exec(`
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
 `);
+
+// --- MIGRACIÓN PLAN_GLOBAL A MULTI-USUARIO ---
+try {
+    const columns = db.prepare("PRAGMA table_info(plan_global)").all();
+    const hasUserId = columns.some(c => c.name === 'user_id');
+    if (columns.length > 0 && !hasUserId) {
+        console.log('[MIGRATION] Migrando tabla plan_global a esquema multi-usuario...');
+        db.exec(`
+            ALTER TABLE plan_global RENAME TO plan_global_old;
+            
+            CREATE TABLE plan_global (
+                cta TEXT,
+                user_id TEXT,
+                description TEXT,
+                type TEXT,
+                reqCenCos INTEGER,
+                amarreDebe TEXT,
+                amarreHaber TEXT,
+                PRIMARY KEY (cta, user_id)
+            );
+        `);
+        
+        // Obtener todos los usuarios actuales
+        const users = db.prepare('SELECT id FROM users').all();
+        console.log(`[MIGRATION] Duplicando plan contable para ${users.length} usuarios...`);
+        
+        db.transaction(() => {
+            const insertStmt = db.prepare(`
+                INSERT INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `);
+            
+            const oldAccounts = db.prepare('SELECT * FROM plan_global_old').all();
+            
+            // Si hay usuarios, copiar para cada uno
+            for (const user of users) {
+                for (const acc of oldAccounts) {
+                    insertStmt.run(acc.cta, user.id, acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber);
+                }
+            }
+            
+            // También guardar una plantilla con user_id = 'system'
+            for (const acc of oldAccounts) {
+                insertStmt.run(acc.cta, 'system', acc.description, acc.type, acc.reqCenCos, acc.amarreDebe, acc.amarreHaber);
+            }
+        })();
+        
+        db.exec(`DROP TABLE plan_global_old;`);
+        console.log('[MIGRATION] Migración de plan_global completada con éxito.');
+    }
+} catch (e) {
+    console.error('[MIGRATION ERROR] Error migrando plan_global:', e.message);
+}
 
 // --- Tabla de Sugerencias y Reportes Inteligentes ---
 db.exec(`
@@ -954,7 +1009,47 @@ const dbManager = {
         const journal = db.prepare('SELECT * FROM journal WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const honorarios = db.prepare('SELECT * FROM honorarios WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const entities = db.prepare('SELECT * FROM entities WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const plan = db.prepare('SELECT * FROM plan_global').all();
+        
+        // --- Cargar plan contable del usuario o inicializarlo si no existe ---
+        let plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
+        if (plan.length === 0) {
+            console.log(`[DB] Inicializando plan contable personalizado para el usuario ${userId}...`);
+            try {
+                db.transaction(() => {
+                    const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
+                    const insertStmt = db.prepare(`
+                        INSERT OR IGNORE INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `);
+                    
+                    if (systemPlan.length === 0) {
+                        const planPath = path.join(__dirname, 'planContable.json');
+                        if (fs.existsSync(planPath)) {
+                            const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+                            for (const p of fullPlan) {
+                                insertStmt.run(
+                                    p.cta,
+                                    userId,
+                                    p.description,
+                                    p.type,
+                                    p.reqCenCos ? 1 : 0,
+                                    p.amarreDebe || null,
+                                    p.amarreHaber || null
+                                );
+                            }
+                        }
+                    } else {
+                        for (const p of systemPlan) {
+                            insertStmt.run(p.cta, userId, p.description, p.type, p.reqCenCos, p.amarreDebe, p.amarreHaber);
+                        }
+                    }
+                })();
+                plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
+            } catch (err) {
+                console.error('[DB ERROR] Error inicializando plan contable personalizado:', err.message);
+            }
+        }
+        
         const costs = db.prepare('SELECT * FROM costs WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const maintenance = db.prepare('SELECT * FROM maintenance WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const movimientosData = db.prepare('SELECT * FROM movimientos_data WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
@@ -1185,17 +1280,17 @@ const dbManager = {
 };
 
 // --- Carga Inicial de Plan Contable (si está vacío) ---
-const planCount = db.prepare('SELECT COUNT(*) as count FROM plan_global').get().count;
+const planCount = db.prepare("SELECT COUNT(*) as count FROM plan_global WHERE user_id = 'system'").get().count;
 if (planCount === 0) {
     try {
         const planPath = path.join(__dirname, 'planContable.json');
         if (fs.existsSync(planPath)) {
             const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
-            console.log(`[DB] Inicializando Plan Contable con ${fullPlan.length} cuentas...`);
+            console.log(`[DB] Inicializando Plan Contable del Sistema con ${fullPlan.length} cuentas...`);
             
             const insertPlan = db.prepare(`
-                INSERT INTO plan_global (cta, description, type, reqCenCos, amarreDebe, amarreHaber) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO plan_global (cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber) 
+                VALUES (?, 'system', ?, ?, ?, ?, ?)
             `);
             
             db.transaction(() => {
@@ -1210,7 +1305,7 @@ if (planCount === 0) {
                     );
                 }
             })();
-            console.log('[DB] Plan Contable inicializado con éxito.');
+            console.log('[DB] Plan Contable del Sistema inicializado con éxito.');
         }
     } catch (error) {
         console.error('[DB ERROR] Error cargando planContable.json:', error.message);

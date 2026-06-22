@@ -115,28 +115,51 @@ app.post('/api/db/execute', async (req, res) => {
         
         // ─── REESCRITURA AUTOMÁTICA DE SQL PARA SAAS (INYECCIÓN DE USER_ID) ───
         const insertMatch = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)/i);
-        if (insertMatch && req.targetUserId) {
-            const tableName = insertMatch[1];
-            try {
-                const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
-                const hasUserId = cols.some(c => c.name === 'user_id');
-                if (hasUserId && !sql.toLowerCase().includes('user_id')) {
-                    const colParenCloseIndex = sql.indexOf(')');
-                    const valuesIndex = sql.toUpperCase().indexOf('VALUES');
-                    const valuesCloseParenIndex = valuesIndex !== -1 ? sql.indexOf(')', valuesIndex) : -1;
-                    
-                    if (colParenCloseIndex !== -1 && valuesIndex !== -1 && valuesCloseParenIndex !== -1) {
-                        const beforeCols = sql.slice(0, colParenCloseIndex);
-                        const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
-                        const endStr = sql.slice(valuesCloseParenIndex);
+        const updateMatch = sql.match(/UPDATE\s+(\w+)/i);
+        const deleteMatch = sql.match(/DELETE\s+FROM\s+(\w+)/i);
+        
+        if (req.targetUserId) {
+            if (insertMatch) {
+                const tableName = insertMatch[1];
+                try {
+                    const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
+                    const hasUserId = cols.some(c => c.name === 'user_id');
+                    if (hasUserId && !sql.toLowerCase().includes('user_id')) {
+                        const colParenCloseIndex = sql.indexOf(')');
+                        const valuesIndex = sql.toUpperCase().indexOf('VALUES');
+                        const valuesCloseParenIndex = valuesIndex !== -1 ? sql.indexOf(')', valuesIndex) : -1;
                         
-                        sql = `${beforeCols}, user_id${afterCols}, ?${endStr}`;
-                        params.push(req.targetUserId);
-                        console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName}`);
+                        if (colParenCloseIndex !== -1 && valuesIndex !== -1 && valuesCloseParenIndex !== -1) {
+                            const beforeCols = sql.slice(0, colParenCloseIndex);
+                            const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
+                            const endStr = sql.slice(valuesCloseParenIndex);
+                            
+                            sql = `${beforeCols}, user_id${afterCols}, ?${endStr}`;
+                            params.push(req.targetUserId);
+                            console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para INSERT`);
+                        }
                     }
+                } catch (err) {
+                    console.error('[REWRITE ERROR] Error inyectando user_id en INSERT:', err.message);
                 }
-            } catch (err) {
-                console.error('[REWRITE ERROR] Error inyectando user_id:', err.message);
+            } else if (updateMatch || deleteMatch) {
+                const tableName = updateMatch ? updateMatch[1] : deleteMatch[1];
+                try {
+                    const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
+                    const hasUserId = cols.some(c => c.name === 'user_id');
+                    if (hasUserId && !sql.toLowerCase().includes('user_id')) {
+                        const hasWhere = sql.toUpperCase().includes('WHERE');
+                        if (hasWhere) {
+                            sql = `${sql} AND user_id = ?`;
+                        } else {
+                            sql = `${sql} WHERE user_id = ?`;
+                        }
+                        params.push(req.targetUserId);
+                        console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para UPDATE/DELETE`);
+                    }
+                } catch (err) {
+                    console.error('[REWRITE ERROR] Error inyectando user_id en UPDATE/DELETE:', err.message);
+                }
             }
         }
 
