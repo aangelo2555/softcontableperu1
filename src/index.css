@@ -82,13 +82,13 @@ table, tr, td, th {
   border-color: var(--border-color) !important;
 }
 table {
-  color: var(--text-primary) !important;
+  color: var(--text-primary);
 }
 th {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
 }
 td {
-  color: var(--text-primary) !important;
+  color: var(--text-primary);
 }
 
 

@@ -109,33 +109,35 @@ export function DataTable<T>({
               Anterior
             </button>
             
-            {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
-              let pageNum = page - 2 + idx;
-              if (pageNum < 1) pageNum = idx + 1;
-              if (pageNum > totalPages) return null;
+            {(() => {
+              let startPage = Math.max(1, page - 2);
+              let endPage = Math.min(totalPages, page + 2);
               
-              if (page > totalPages - 2) {
-                pageNum = totalPages - 4 + idx;
-                if (pageNum < 1) pageNum = idx + 1;
+              if (page <= 3) {
+                endPage = Math.min(totalPages, 5);
+              } else if (page >= totalPages - 2) {
+                startPage = Math.max(1, totalPages - 4);
               }
               
-              if (pageNum > totalPages) return null;
-
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={cn(
-                    "w-6 h-6 flex items-center justify-center rounded transition-all border text-[10px] font-bold",
-                    page === pageNum 
-                      ? "bg-pld-blue border-pld-blue text-white font-bold" 
-                      : "bg-app-bg border-app-border hover:bg-app-hover hover:text-pld-blue"
-                  )}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
+              const buttons = [];
+              for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
+                buttons.push(
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={cn(
+                      "w-6 h-6 flex items-center justify-center rounded transition-all border text-[10px] font-bold",
+                      page === pageNum 
+                        ? "bg-pld-blue border-pld-blue text-white font-bold" 
+                        : "bg-app-bg border-app-border hover:bg-app-hover hover:text-pld-blue"
+                    )}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              }
+              return buttons;
+            })()}
 
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}

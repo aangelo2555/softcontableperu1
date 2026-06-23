@@ -31,10 +31,12 @@ const PlanView: React.FC = () => {
 
   // Filter accounts
   const filteredData = React.useMemo(() => {
-    return plan.filter(acc => 
-      acc.cta.includes(query) || 
-      acc.description.toLowerCase().includes(query.toLowerCase())
-    );
+    return plan
+      .filter(acc => 
+        acc.cta.includes(query) || 
+        acc.description.toLowerCase().includes(query.toLowerCase())
+      )
+      .sort((a, b) => a.cta.localeCompare(b.cta));
   }, [plan, query]);
 
   const columns = React.useMemo(() => [
