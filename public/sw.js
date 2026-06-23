@@ -2,7 +2,7 @@ const CACHE_NAME = "softcontable-cache-v1";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
-  "/assets/logo.png"
+  "/assets/logo_pwa.png"
 ];
 
 self.addEventListener("install", (event) => {
