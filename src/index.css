@@ -56,30 +56,6 @@ body {
   -ms-user-select: none;
 }
 
-/* ═══ Transición de Tema Limpia y Fluida ═══ */
-body, 
-aside, 
-header, 
-nav, 
-table, 
-tr, 
-th, 
-td, 
-input, 
-select, 
-textarea,
-.bg-app-bg, 
-.bg-app-surface, 
-.border-app-border,
-.text-app-text,
-.text-app-muted,
-.card,
-.section-card,
-.glass,
-.glass-dropdown {
-  transition: background-color 0.25s ease-in-out, border-color 0.25s ease-in-out, color 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
-}
-
 /* ═══ Electron Window Management ═══ */
 .drag-region {
   -webkit-app-region: drag;
