@@ -223,6 +223,54 @@ const App: React.FC = () => {
   });
 
   const [logoLoaded, setLogoLoaded] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [showIosTip, setShowIosTip] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    if (isStandalone) {
+      setIsAppInstalled(true);
+    }
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredPrompt(null);
+      toast.success('¡SoftContable se ha instalado correctamente! 🎉');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const dismissedIosTip = localStorage.getItem('dismissed_ios_pwa_tip') === 'true';
+    if (isIos && !isStandalone && !dismissedIosTip) {
+      setShowIosTip(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    setDeferredPrompt(null);
+  };
+
+  const handleDismissIosTip = () => {
+    setShowIosTip(false);
+    localStorage.setItem('dismissed_ios_pwa_tip', 'true');
+  };
 
   const handleOpenCompanyConfig = () => {
     setActiveTab('EMPRESA');
@@ -659,6 +707,32 @@ const App: React.FC = () => {
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
         </div>
+
+        {/* PWA Install Button (Full Sidebar) */}
+        {deferredPrompt && !isSidebarCollapsed && (
+          <div className="p-4 border-t border-app-border bg-app-surface flex flex-col gap-2 shrink-0 animate-fade-in">
+            <button
+              onClick={handleInstallApp}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
+            >
+              <CloudDownload size={14} className="animate-bounce" />
+              <span>Instalar Aplicación</span>
+            </button>
+          </div>
+        )}
+
+        {/* PWA Install Button (Collapsed Sidebar) */}
+        {deferredPrompt && isSidebarCollapsed && (
+          <div className="p-4 border-t border-app-border bg-app-surface flex flex-col gap-2 shrink-0 items-center justify-center animate-fade-in">
+            <button
+              onClick={handleInstallApp}
+              className="w-9 h-9 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all border border-blue-500/20 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
+              title="Instalar Aplicación"
+            >
+              <CloudDownload size={16} className="animate-bounce" />
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* ═══ MAIN CONTENT ═══ */}
@@ -838,6 +912,27 @@ const App: React.FC = () => {
         </div>
       </div>
       <SuggestionBox />
+
+      {/* Banner flotante para iOS */}
+      {showIosTip && (
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-[9999] bg-app-surface/90 dark:bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl p-4 shadow-2xl animate-fade-in flex flex-col gap-3">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">💡</span>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-app-text">Instalar SoftContable</h3>
+            </div>
+            <button
+              onClick={handleDismissIosTip}
+              className="text-app-muted hover:text-app-text p-1 rounded-lg transition-colors cursor-pointer"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <p className="text-[11px] text-app-muted leading-relaxed font-medium">
+            Para instalar esta aplicación en tu iPhone/iPad: presiona el botón de <strong>Compartir</strong> en la barra de Safari y luego selecciona <strong>"Agregar a la pantalla de inicio"</strong>.
+          </p>
+        </div>
+      )}
     </div>
   </div>
 );
