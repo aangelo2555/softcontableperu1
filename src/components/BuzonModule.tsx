@@ -36,19 +36,7 @@ const BuzonView: React.FC = () => {
   const [constancias, setConstancias] = useState<any[]>([]);
   const [loadingConstancias, setLoadingConstancias] = useState(false);
 
-  // Dropdown de empresas personalizado
-  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowCompanyDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Sincronizar activeBrowserId cuando cambia selectedRuc
   useEffect(() => {
@@ -391,50 +379,6 @@ const BuzonView: React.FC = () => {
         subtitle={`${companyToUse.name} • RUC: ${selectedRuc}`}
         actions={
           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-start md:justify-end w-full md:w-auto">
-            <div className="relative shrink-0" ref={dropdownRef}>
-              <button
-                onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-                className="flex items-center justify-between gap-2 bg-app-bg hover:bg-app-hover border border-app-border rounded-xl px-3 py-1.5 text-xs text-app-text font-bold transition-all duration-200 cursor-pointer min-w-[130px] max-w-[200px]"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Building2 size={12} className="text-pld-blue shrink-0" />
-                  <span className="truncate uppercase tracking-wide text-[10.5px]">{companyToUse.name}</span>
-                </div>
-                <span className="text-[8px] text-app-muted shrink-0">▼</span>
-              </button>
-
-              {showCompanyDropdown && (
-                <div className="absolute left-0 md:left-auto md:right-0 mt-2 w-64 bg-app-surface border border-app-border rounded-2xl shadow-2xl z-50 py-1.5 animate-fade-in overflow-hidden">
-                  <div className="px-3 py-2 border-b border-app-border bg-app-bg/50">
-                    <span className="text-[9px] font-black text-app-muted uppercase tracking-wider">
-                      Seleccionar Empresa
-                    </span>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                    {workspaces.map((ws) => (
-                      <button
-                        key={ws.ruc}
-                        onClick={() => {
-                          setSelectedRuc(ws.ruc);
-                          setShowCompanyDropdown(false);
-                        }}
-                        className={`w-full flex flex-col items-start gap-0.5 px-3 py-2 hover:bg-app-hover text-left transition-colors border-b border-app-border/40 last:border-b-0 ${
-                          ws.ruc === selectedRuc ? 'bg-pld-blue/5 border-l-2 border-l-pld-blue' : ''
-                        }`}
-                      >
-                        <span className={`text-[11px] font-bold ${ws.ruc === selectedRuc ? 'text-pld-blue' : 'text-app-text'}`}>
-                          {ws.name}
-                        </span>
-                        <span className="text-[9px] font-mono text-app-muted">
-                          RUC: {ws.ruc}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {(statusText || downloadingText) && (
               <div className="flex items-center gap-1.5 text-[9px] font-bold text-pld-blue animate-pulse uppercase tracking-widest bg-pld-blue/5 px-2 py-1.5 rounded-xl border border-pld-blue/10">
                 <Loader2 size={10} className="animate-spin" />
@@ -473,6 +417,53 @@ const BuzonView: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto md:overflow-hidden custom-scrollbar flex flex-col">
         <div className="max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-4 md:gap-6 flex-1 min-h-0">
+          
+          {/* Selector Horizontal de Empresas */}
+          <div className="bg-app-surface/60 border border-app-border rounded-2xl p-4 flex flex-col gap-3 shrink-0 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 size={14} className="text-pld-blue" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-app-text">Seleccionar Cliente para Consultar</span>
+              </div>
+              <span className="text-[9px] text-app-muted font-bold uppercase tracking-wider bg-app-bg px-2 py-0.5 rounded-lg border border-app-border">
+                {workspaces.length} {workspaces.length === 1 ? 'Empresa' : 'Empresas'}
+              </span>
+            </div>
+            
+            <div className="flex gap-2.5 overflow-x-auto pb-1.5 custom-scrollbar scroll-smooth">
+              {workspaces.map((ws) => {
+                const isSelected = ws.ruc === selectedRuc;
+                return (
+                  <button
+                    key={ws.ruc}
+                    onClick={() => setSelectedRuc(ws.ruc)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left shrink-0 transition-all duration-200 active:scale-98 cursor-pointer ${
+                      isSelected
+                        ? 'bg-pld-blue/10 border-pld-blue text-pld-blue shadow-lg shadow-pld-blue/5'
+                        : 'bg-app-bg hover:bg-app-hover border-app-border text-app-text'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 transition-colors ${
+                      isSelected ? 'bg-pld-blue text-white' : 'bg-app-surface text-app-muted'
+                    }`}>
+                      <Building2 size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-[11px] font-black uppercase tracking-wide truncate max-w-[180px] sm:max-w-[240px] ${
+                        isSelected ? 'text-pld-blue' : 'text-app-text'
+                      }`}>
+                        {ws.name}
+                      </div>
+                      <div className="text-[9px] font-mono text-app-muted mt-0.5">
+                        RUC: {ws.ruc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {!isElectron && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
               <AlertCircle size={20} className="shrink-0 mt-0.5" />
