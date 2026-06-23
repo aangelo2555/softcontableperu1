@@ -26,10 +26,11 @@ const BuzonView: React.FC = () => {
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [selectedRuc, setSelectedRuc] = useState(currentCompany.ruc);
   const [searchTerm, setSearchTerm] = useState('');
-  const filteredWorkspaces = workspaces.filter(ws => 
-    ws.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ws.ruc.includes(searchTerm)
-  );
+  const filteredWorkspaces = workspaces.filter(ws => {
+    const name = ws?.name || '';
+    const ruc = ws?.ruc || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase()) || ruc.includes(searchTerm);
+  });
   const [activeBrowserId, setActiveBrowserId] = useState<string | null>(() => {
     return sessionStorage.getItem(`activeBuzonBrowserId_${currentCompany.ruc}`);
   });
