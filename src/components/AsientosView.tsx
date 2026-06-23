@@ -59,6 +59,10 @@ function parseFechaDisplay(fecha: string): { anio: string; mes: string } {
 const AsientosView: React.FC = () => {
   const { plan, asientos, saveAsiento, deleteAsientoById, saveAuditLog, getNextAsientoNumber, draftAsiento, setDraftAsiento, addAccount, glosasHabituales, saveGlosaHabitual, currentCompany } = useStore();
   
+  const companyRubro = currentCompany?.businessType || 'COMERCIAL';
+  const mappedCategory = companyRubro === 'MANUFACTURERA' ? 'INDUSTRIAL' : companyRubro;
+  const filteredGlosas = glosasHabituales.filter(g => g.category === mappedCategory || g.category === 'PERSONAL');
+
   const [lines, setLines] = useState<AsientoLine[]>(draftAsiento?.lines || []);
   const [currentInput, setCurrentInput] = useState({ cuenta: '', debe: '' as string | number, haber: '' as string | number });
   const [detalleLookup, setDetalleLookup] = useState('');
@@ -281,7 +285,7 @@ const AsientosView: React.FC = () => {
   const handleConfirmSaveGlosa = () => {
     if (glosaModal) {
       const simpleLines = glosaModal.lines.map(l => ({ cuenta: l.cuenta, detalle: l.detalle }));
-      saveGlosaHabitual(glosaModal.glosa, simpleLines);
+      saveGlosaHabitual(glosaModal.glosa, simpleLines, mappedCategory);
       setToast({ type: 'success', message: 'Glosa guardada como habitual.' });
       setGlosaModal(null);
       setTimeout(() => cuentaRef.current?.focus(), 100);
@@ -289,7 +293,7 @@ const AsientosView: React.FC = () => {
   };
 
   const handleCargarCategoria = (category: string) => {
-    const matching = glosasHabituales.filter(g => g.category === category);
+    const matching = filteredGlosas.filter(g => g.category === category);
     if (matching.length === 0) return;
 
     const fechaParts = header.fecEmi.split('/');
@@ -507,7 +511,7 @@ const AsientosView: React.FC = () => {
                         {!suggestionCategory ? (
                           <div className="p-1 flex flex-col gap-1">
                             <div className="grid grid-cols-2 gap-1 mb-1">
-                              {Array.from(new Set(glosasHabituales.map(g => g.category)))
+                              {Array.from(new Set(filteredGlosas.map(g => g.category)))
                                 .filter(c => !header.glosa || (c && c.toUpperCase().includes(header.glosa.toUpperCase())))
                                 .map(cat => (
                                   <button
@@ -516,7 +520,7 @@ const AsientosView: React.FC = () => {
                                     className="text-left px-3 py-2.5 hover:bg-pld-blue/10 rounded-lg transition-colors border border-transparent hover:border-pld-blue/20 bg-app-bg/30"
                                   >
                                     <span className="block text-[11px] font-black text-pld-blue">{cat}</span>
-                                    <span className="text-[9px] text-app-muted italic">{glosasHabituales.filter(g => g.category === cat).length} casos</span>
+                                    <span className="text-[9px] text-app-muted italic">{filteredGlosas.filter(g => g.category === cat).length} casos</span>
                                   </button>
                                 ))
                               }
@@ -525,7 +529,7 @@ const AsientosView: React.FC = () => {
                             {header.glosa.length >= 4 && (
                               <div className="border-t border-app-border mt-1 pt-1 px-1">
                                 <div className="px-2 py-1 text-[9px] font-bold text-app-muted uppercase italic">Coincidencias individuales</div>
-                                {glosasHabituales
+                                {filteredGlosas
                                   .filter(g => g.glosa.toUpperCase().includes(header.glosa.toUpperCase()))
                                   .map(g => (
                                     <button
@@ -579,7 +583,7 @@ const AsientosView: React.FC = () => {
                               <span className="block text-[11px] font-black text-emerald-600 uppercase">⚡ CARGAR TODO EL SECTOR {suggestionCategory}</span>
                               <span className="text-[9px] text-emerald-500/70 italic">Se añadirán todos los asientos correlativos de este sector</span>
                             </button>
-                            {glosasHabituales
+                            {filteredGlosas
                               .filter(g => g.category === suggestionCategory)
                               .map(g => (
                                 <button

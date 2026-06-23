@@ -1700,6 +1700,15 @@ export const useStore = create<AppState>()(
             await electron.dbExecute(`INSERT OR REPLACE INTO glosas_habituales (id, workspace_id, category, glosa, lines_json) VALUES (?,?,?,?,?)`, [id, ruc, seed.category, seed.glosa, JSON.stringify(seed.lines)]);
           }
         }
+
+        // Clean up obsolete seed glosas from database
+        const activeSeedIds = SEED_GLOSAS.map(seed => `glh-seed-${seed.glosa.replace(/\s+/g, '-').toLowerCase()}`);
+        if (activeSeedIds.length > 0) {
+          const placeholders = activeSeedIds.map(() => '?').join(',');
+          await electron.dbExecute(`DELETE FROM glosas_habituales WHERE workspace_id = ? AND id LIKE 'glh-seed-%' AND id NOT IN (${placeholders})`, [ruc, ...activeSeedIds]);
+        } else {
+          await electron.dbExecute(`DELETE FROM glosas_habituales WHERE workspace_id = ? AND id LIKE 'glh-seed-%'`, [ruc]);
+        }
         
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ glosasHabituales: data.glosasHabituales });
