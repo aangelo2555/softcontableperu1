@@ -7,10 +7,11 @@ import { exportSingleSheet } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
 
 const PlanView: React.FC = () => {
-  const { plan, addAccount, updateAccount, deleteAccount, currentCompany } = useStore();
+  const { plan, addAccount, updateAccount, deleteAccount, resetPlanToBase, currentCompany } = useStore();
   const [query, setQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAcc, setEditingAcc] = useState<Account | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   // Form state
   const [newCta, setNewCta] = useState('');
@@ -174,6 +175,20 @@ const PlanView: React.FC = () => {
     setShowAddModal(false);
   };
 
+  const handleResetPlan = async () => {
+    if (confirm('¿Está seguro de que desea restablecer el Plan Contable al plan base oficial 2026? Esto restaurará todas las cuentas del sistema y sobrescribirá cualquier cambio personalizado en las cuentas estándar. Los datos registrados de asientos no se verán afectados.')) {
+      setResetting(true);
+      try {
+        await resetPlanToBase();
+        alert('Plan Contable restablecido con éxito.');
+      } catch (err: any) {
+        alert('Error al restablecer el plan: ' + err.message);
+      } finally {
+        setResetting(false);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
       <PageHeader
@@ -224,6 +239,14 @@ const PlanView: React.FC = () => {
                 period: currentCompany?.period || String(new Date().getFullYear()),
               }
             }, 'Plan_Contable')} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted"><FileDown size={14} /> Excel</button>
+            <button 
+              onClick={handleResetPlan}
+              disabled={resetting}
+              className="h-8 px-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-bold disabled:opacity-50"
+              title="Restablece el plan contable del espacio de trabajo al plan base 2026 oficial (Borrará los cambios personalizados de las cuentas base)"
+            >
+              <Trash2 size={14} /> {resetting ? 'Restableciendo...' : 'Restablecer Plan'}
+            </button>
           </>
         }
       />

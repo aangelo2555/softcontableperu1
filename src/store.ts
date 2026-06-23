@@ -451,6 +451,7 @@ export interface AppState extends WorkspaceState {
   addAccount: (account: Account) => Promise<void>;
   updateAccount: (cta: string, data: Partial<Account>) => Promise<void>;
   deleteAccount: (cta: string) => Promise<void>;
+  resetPlanToBase: () => Promise<void>;
 
   saveProduct: (p: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -1204,6 +1205,7 @@ export const useStore = create<AppState>()(
                 data.plan = INITIAL_PLAN;
               }
               set({ ...data, plan: sortPlan(data.plan) });
+              await get().seedInitialPlan();
             }
           }
         } catch (error) {
@@ -1702,18 +1704,39 @@ export const useStore = create<AppState>()(
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ glosasHabituales: data.glosasHabituales });
       },
-
       seedInitialPlan: async () => {
         const existing = get().plan;
         const electron = (window as any).electronAPI;
         if (!electron) return;
 
-        // Si el plan es muy pequeño, inyectar el inicial
-        if (existing.length < 200) {
+        // Si el plan tiene menos cuentas que el plan base 2026, inyectar las faltantes
+        if (existing.length < INITIAL_PLAN.length) {
           for (const acc of INITIAL_PLAN) {
             const found = existing.find(a => a.cta === acc.cta);
             if (!found) {
-              await electron.dbExecute(`INSERT OR IGNORE INTO plan_global (cta, description, type, reqCenCos, amarreDebe, amarreHaber) VALUES (?,?,?,?,?,?)`, [acc.cta, acc.description, acc.type, acc.reqCenCos ? 1 : 0, acc.amarreDebe, acc.amarreHaber]);
+              await electron.dbExecute(
+                `INSERT OR IGNORE INTO plan_global (
+                  cta, description, type, reqCenCos, amarreDebe, amarreHaber,
+                  div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [
+                  acc.cta,
+                  acc.description,
+                  acc.type,
+                  acc.reqCenCos ? 1 : 0,
+                  acc.amarreDebe || null,
+                  acc.amarreHaber || null,
+                  acc.div !== undefined ? acc.div : 1,
+                  acc.cta_cc1 || null,
+                  acc.pct_cc1 !== undefined ? acc.pct_cc1 : 0.0,
+                  acc.cta_cc2 || null,
+                  acc.pct_cc2 !== undefined ? acc.pct_cc2 : 0.0,
+                  acc.cta_cc3 || null,
+                  acc.pct_cc3 !== undefined ? acc.pct_cc3 : 0.0,
+                  acc.destino_haber || null,
+                  acc.niif18_category || null
+                ]
+              );
             }
           }
           // Recargar datos
@@ -2089,6 +2112,13 @@ export const useStore = create<AppState>()(
       deleteAccount: async (cta) => {
         await electron.dbExecute('DELETE FROM plan_global WHERE cta = ?', [cta]);
         set({ plan: get().plan.filter(a => a.cta !== cta) });
+      },
+      resetPlanToBase: async () => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc) return;
+        await electron.dbExecute('DELETE FROM plan_global');
+        set({ plan: [] });
+        await get().seedInitialPlan();
       },
 
       updateMaintenance: async (id, data) => {

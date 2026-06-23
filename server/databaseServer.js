@@ -1072,11 +1072,16 @@ const dbManager = {
         
         // --- Cargar plan contable del usuario o inicializarlo si no existe ---
         let plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
-        if (plan.length === 0) {
-            console.log(`[DB] Inicializando plan contable personalizado para el usuario ${userId}...`);
+        
+        // Obtener el plan del sistema actual
+        const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
+        
+        // Si el plan del usuario está vacío o tiene menos cuentas que el plan del sistema,
+        // sincronizamos las cuentas faltantes de forma automática.
+        if (plan.length < systemPlan.length) {
+            console.log(`[DB] Sincronizando plan contable para el usuario ${userId} (${plan.length} < ${systemPlan.length} cuentas)...`);
             try {
                 db.transaction(() => {
-                    const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
                     const insertStmt = db.prepare(`
                         INSERT OR IGNORE INTO plan_global (
                             cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
@@ -1122,7 +1127,7 @@ const dbManager = {
                 })();
                 plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
             } catch (err) {
-                console.error('[DB ERROR] Error inicializando plan contable personalizado:', err.message);
+                console.error('[DB ERROR] Error al sincronizar plan contable del usuario:', err.message);
             }
         }
         
@@ -1355,14 +1360,18 @@ const dbManager = {
     rawDb: db
 };
 
-// --- Carga Inicial de Plan Contable (si está vacío) ---
-const planCount = db.prepare("SELECT COUNT(*) as count FROM plan_global WHERE user_id = 'system'").get().count;
-if (planCount === 0) {
-    try {
-        const planPath = path.join(__dirname, 'planContable.json');
-        if (fs.existsSync(planPath)) {
-            const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
-            console.log(`[DB] Inicializando Plan Contable del Sistema con ${fullPlan.length} cuentas...`);
+// --- Carga Inicial de Plan Contable (si está vacío o desactualizado) ---
+try {
+    const planPath = path.join(__dirname, 'planContable.json');
+    if (fs.existsSync(planPath)) {
+        const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+        const planCount = db.prepare("SELECT COUNT(*) as count FROM plan_global WHERE user_id = 'system'").get().count;
+        
+        if (planCount < fullPlan.length) {
+            console.log(`[DB] Detectado Plan Contable del Sistema desactualizado (${planCount} < ${fullPlan.length} cuentas). Actualizando...`);
+            
+            // Vaciar las cuentas de system para evitar duplicados o cuentas obsoletas del template antiguo
+            db.prepare("DELETE FROM plan_global WHERE user_id = 'system'").run();
             
             const insertPlan = db.prepare(`
                 INSERT OR IGNORE INTO plan_global (
@@ -1393,11 +1402,11 @@ if (planCount === 0) {
                     );
                 }
             })();
-            console.log('[DB] Plan Contable del Sistema inicializado con éxito.');
+            console.log('[DB] Plan Contable del Sistema actualizado con éxito.');
         }
-    } catch (error) {
-        console.error('[DB ERROR] Error cargando planContable.json:', error.message);
     }
+} catch (error) {
+    console.error('[DB ERROR] Error cargando planContable.json:', error.message);
 }
 
 module.exports = dbManager;
