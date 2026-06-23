@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, Building2, Download, Loader2, LogOut } from 'lucide-react';
+import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Building2, Download, Loader2, LogOut } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 
@@ -376,56 +376,60 @@ const BuzonView: React.FC = () => {
         }
         subtitle={`${companyToUse.name} • RUC: ${selectedRuc}`}
         actions={
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-app-muted uppercase">Cliente:</span>
+          <div className="flex items-center gap-1.5 flex-wrap md:flex-nowrap justify-start md:justify-end w-full md:w-auto">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-app-muted uppercase hidden sm:inline">Cliente:</span>
               <select 
                 value={selectedRuc} 
                 onChange={(e) => setSelectedRuc(e.target.value)}
-                className="bg-app-bg border border-app-border rounded-xl px-3 py-1.5 text-xs text-app-text font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                className="bg-app-bg border border-app-border rounded-xl px-2.5 py-1.5 text-xs text-app-text font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[140px] sm:max-w-[180px] md:max-w-xs truncate"
               >
                 {workspaces.map(ws => (
                   <option key={ws.ruc} value={ws.ruc}>
-                    {ws.name} ({ws.ruc})
+                    {ws.name}
                   </option>
                 ))}
               </select>
             </div>
 
             {(statusText || downloadingText) && (
-              <div className="flex items-center gap-2 text-[9px] font-bold text-pld-blue animate-pulse uppercase tracking-widest bg-pld-blue/5 px-2.5 py-1.5 rounded-xl border border-pld-blue/10">
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-pld-blue animate-pulse uppercase tracking-widest bg-pld-blue/5 px-2 py-1.5 rounded-xl border border-pld-blue/10">
                 <Loader2 size={10} className="animate-spin" />
-                {statusText || downloadingText}
+                <span>{statusText || downloadingText}</span>
               </div>
             )}
 
             <button 
               onClick={handleCerrarSesion}
-              className="flex items-center gap-1.5 h-8 px-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500 hover:text-white transition-all"
+              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500 hover:text-white transition-all active:scale-95"
+              title="Salir de SUNAT"
             >
               <LogOut size={12} />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </button>
             <button 
               onClick={handleVerConstancias}
-              className="flex items-center gap-1.5 h-8 px-3 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-wider text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all"
+              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-wider text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all active:scale-95"
+              title="Ver constancias descargadas"
             >
-              Constancias
+              <Paperclip size={12} />
+              <span className="hidden sm:inline">Constancias</span>
             </button>
             <button 
               onClick={handleConsultar}
               disabled={loading}
-              className="flex items-center gap-1.5 h-8 px-4 bg-pld-blue text-white rounded-xl font-black uppercase tracking-wider text-[10px] hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-pld-blue/20"
+              className="flex items-center justify-center gap-1.5 h-8 px-3 sm:px-4 bg-pld-blue text-white rounded-xl font-black uppercase tracking-wider text-[10px] hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-pld-blue/20 active:scale-95"
+              title="Sincronizar mensajes"
             >
               {loading ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
-              Sincronizar
+              <span className="hidden sm:inline">Sincronizar</span>
             </button>
           </div>
         }
       />
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
+      <div className="flex-1 overflow-y-auto md:overflow-hidden custom-scrollbar flex flex-col">
+        <div className="max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-4 md:gap-6 flex-1 min-h-0">
           {!isElectron && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
               <AlertCircle size={20} className="shrink-0 mt-0.5" />
@@ -446,10 +450,12 @@ const BuzonView: React.FC = () => {
       )}
 
       {/* Inbox Grid */}
-      <div className="flex flex-1 gap-6 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 gap-4 md:gap-6 min-h-0">
         
         {/* Left: Message List */}
-        <div className="w-1/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm">
+        <div className={`w-full md:w-1/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm ${
+          selectedMessage ? 'hidden md:flex' : 'flex'
+        }`}>
           <div className="p-4 border-b border-app-border bg-app-surface/40 flex justify-between items-center">
             <span className="text-[10px] font-black text-pld-blue uppercase tracking-widest">
                Bandeja de Entrada ({buzonMensajes.length})
@@ -503,17 +509,28 @@ const BuzonView: React.FC = () => {
         </div>
 
         {/* Right: Message Content */}
-        <div className="w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm p-4">
+        <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm p-4 ${
+          selectedMessage ? 'flex' : 'hidden md:flex'
+        }`}>
             {selectedMessage ? (
               <div className="flex flex-col h-full animate-in zoom-in-95 fade-in duration-300">
                   <div className="mb-2 border-b border-app-border pb-2 flex justify-between items-start">
-                    <div>
-                      <span className="text-[8px] font-black text-pld-blue uppercase tracking-[0.2em] mb-0.5 block">
-                        Asunto del Mensaje
-                      </span>
-                      <h2 className="text-base font-black text-app-text leading-tight uppercase">
-                        {selectedMessage.asunto}
-                      </h2>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        onClick={() => setSelectedMessage(null)}
+                        className="md:hidden p-1.5 hover:bg-app-bg border border-app-border rounded-xl text-app-text transition-all shrink-0 flex items-center justify-center"
+                        title="Regresar a la bandeja"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <div className="min-w-0">
+                        <span className="text-[8px] font-black text-pld-blue uppercase tracking-[0.2em] mb-0.5 block">
+                          Asunto del Mensaje
+                        </span>
+                        <h2 className="text-sm md:text-base font-black text-app-text leading-tight uppercase truncate">
+                          {selectedMessage.asunto}
+                        </h2>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                        <button 
@@ -549,7 +566,7 @@ const BuzonView: React.FC = () => {
                            <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
                         </div>
                       ) : detalleHtml || selectedMessage.contenido ? (
-                        <div className="min-h-[600px] flex-1 bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border">
+                        <div className="flex-1 min-h-[350px] md:min-h-[500px] h-full bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border">
                           <iframe 
                             key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
                             id="buzon-iframe"
