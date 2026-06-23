@@ -601,7 +601,7 @@ const App: React.FC = () => {
         </nav>
 
         {/* User Profile & Logout (Full) */}
-        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface/50 ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate" translate="no">
               {userInitial}
@@ -626,7 +626,7 @@ const App: React.FC = () => {
         </div>
 
         {/* User Profile & Logout (Collapsed) */}
-        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface/50 items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate animate-fade-in" translate="no" title={userName}>
             {userInitial}
           </div>
@@ -645,7 +645,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Bottom: Theme */}
-        <div className={`p-4 flex items-center shrink-0 border-t border-app-border ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`p-4 flex items-center shrink-0 border-t border-app-border bg-app-surface ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isSidebarCollapsed && (
             <span className="text-[11px] font-black tracking-widest uppercase text-app-muted">
               Modo

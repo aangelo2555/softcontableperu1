@@ -10,12 +10,12 @@
   --color-app-hover: var(--bg-hover);
   --color-app-input: var(--bg-input);
   
-  --color-pld-blue: #2563eb;
-  --color-pld-magenta: #7c3aed;
-  --color-pld-accent: #0ea5e9;
-  --color-pld-success: #10b981;
-  --color-pld-danger: #ef4444;
-  --color-pld-warning: #f59e0b;
+  --color-pld-blue: var(--pld-blue);
+  --color-pld-magenta: var(--pld-magenta);
+  --color-pld-accent: var(--pld-accent);
+  --color-pld-success: var(--pld-success);
+  --color-pld-danger: var(--pld-danger);
+  --color-pld-warning: var(--pld-warning);
 }
 
 :root {
@@ -24,9 +24,16 @@
   --bg-surface: #ffffff;
   --border-color: #e2e8f0;
   --text-primary: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #475569; /* Darker slate for better light contrast */
   --bg-hover: #f1f5f9;
   --bg-input: #ffffff;
+
+  --pld-blue: #2563eb;
+  --pld-magenta: #7c3aed;
+  --pld-accent: #0ea5e9;
+  --pld-success: #10b981;
+  --pld-danger: #ef4444;
+  --pld-warning: #f59e0b;
 }
 
 .dark {
@@ -38,7 +45,52 @@
   --text-muted: #94a3b8;
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-input: #090b10;
+
+  --pld-blue: #60a5fa;     /* Light blue for dark mode contrast */
+  --pld-magenta: #a78bfa;  /* Light purple */
+  --pld-accent: #38bdf8;   /* Light cyan */
+  --pld-success: #34d399;  /* Light green */
+  --pld-danger: #f87171;   /* Light red */
+  --pld-warning: #fbbf24;  /* Light yellow */
 }
+
+/* ═══ Direct Theme Utility Classes (Bypass compiler bugs) ═══ */
+.bg-app-bg {
+  background-color: var(--bg-primary) !important;
+}
+.bg-app-surface {
+  background-color: var(--bg-surface) !important;
+}
+.border-app-border {
+  border-color: var(--border-color) !important;
+}
+.text-app-text {
+  color: var(--text-primary) !important;
+}
+.text-app-muted {
+  color: var(--text-muted) !important;
+}
+.bg-app-hover {
+  background-color: var(--bg-hover) !important;
+}
+.bg-app-input {
+  background-color: var(--bg-input) !important;
+}
+
+/* ═══ Global Table Styling ═══ */
+table, tr, td, th {
+  border-color: var(--border-color) !important;
+}
+table {
+  color: var(--text-primary) !important;
+}
+th {
+  color: var(--text-muted) !important;
+}
+td {
+  color: var(--text-primary) !important;
+}
+
 
 
 

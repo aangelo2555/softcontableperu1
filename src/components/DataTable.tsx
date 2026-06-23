@@ -47,7 +47,7 @@ export function DataTable<T>({
   return (
     <div className="flex flex-col gap-4">
       <div className="overflow-x-auto bg-app-surface border border-app-border rounded-lg shadow-sm">
-        <table className="w-full text-xs text-left border-collapse">
+        <table className="w-full text-xs text-left border-collapse text-app-text">
           <thead className="sticky top-0 z-20">
             <tr className={cn("bg-app-surface text-app-muted uppercase tracking-wider text-[10px] border-b border-app-border", headerClassName)}>
               {columns.map((col, i) => (
