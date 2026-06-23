@@ -226,6 +226,7 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -660,12 +661,7 @@ const App: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => {
-              if (window.confirm('¿Desea cerrar sesión?')) {
-                localStorage.removeItem('softcontable_token');
-                window.location.reload();
-              }
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer"
           >
             <LogOut size={12} />
@@ -679,12 +675,7 @@ const App: React.FC = () => {
             {userInitial}
           </div>
           <button
-            onClick={() => {
-              if (window.confirm('¿Desea cerrar sesión?')) {
-                localStorage.removeItem('softcontable_token');
-                window.location.reload();
-              }
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-8 h-8 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
             title="Cerrar Sesión"
           >
@@ -931,6 +922,42 @@ const App: React.FC = () => {
           <p className="text-[11px] text-app-muted leading-relaxed font-medium">
             Para instalar esta aplicación en tu iPhone/iPad: presiona el botón de <strong>Compartir</strong> en la barra de Safari y luego selecciona <strong>"Agregar a la pantalla de inicio"</strong>.
           </p>
+        </div>
+      )}
+      {/* Modal de Confirmación de Cierre de Sesión */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-app-surface/95 border border-app-border rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-scale-up">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-500/10 text-red-500 rounded-2xl shrink-0">
+                <LogOut size={22} className="animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-app-text">Cerrar Sesión</h3>
+                <p className="text-[11px] font-bold text-app-muted uppercase tracking-wide mt-0.5">¿Estás seguro de que deseas salir?</p>
+              </div>
+            </div>
+            <p className="text-xs text-app-muted leading-relaxed font-medium">
+              Se cerrará tu sesión activa de SoftContable y tendrás que volver a ingresar tus credenciales para acceder a tus empresas.
+            </p>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-3 px-4 bg-app-bg hover:bg-app-hover border border-app-border text-app-text font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('softcontable_token');
+                  window.location.reload();
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

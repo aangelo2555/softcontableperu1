@@ -36,6 +36,20 @@ const BuzonView: React.FC = () => {
   const [constancias, setConstancias] = useState<any[]>([]);
   const [loadingConstancias, setLoadingConstancias] = useState(false);
 
+  // Dropdown de empresas personalizado
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowCompanyDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Sincronizar activeBrowserId cuando cambia selectedRuc
   useEffect(() => {
     const savedId = sessionStorage.getItem(`activeBuzonBrowserId_${selectedRuc}`);
@@ -376,20 +390,49 @@ const BuzonView: React.FC = () => {
         }
         subtitle={`${companyToUse.name} • RUC: ${selectedRuc}`}
         actions={
-          <div className="flex items-center gap-1.5 flex-wrap md:flex-nowrap justify-start md:justify-end w-full md:w-auto">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold text-app-muted uppercase hidden sm:inline">Cliente:</span>
-              <select 
-                value={selectedRuc} 
-                onChange={(e) => setSelectedRuc(e.target.value)}
-                className="bg-app-bg border border-app-border rounded-xl px-2.5 py-1.5 text-xs text-app-text font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[140px] sm:max-w-[180px] md:max-w-xs truncate"
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-start md:justify-end w-full md:w-auto">
+            <div className="relative shrink-0" ref={dropdownRef}>
+              <button
+                onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                className="flex items-center justify-between gap-2 bg-app-bg hover:bg-app-hover border border-app-border rounded-xl px-3 py-1.5 text-xs text-app-text font-bold transition-all duration-200 cursor-pointer min-w-[130px] max-w-[200px]"
               >
-                {workspaces.map(ws => (
-                  <option key={ws.ruc} value={ws.ruc}>
-                    {ws.name}
-                  </option>
-                ))}
-              </select>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Building2 size={12} className="text-pld-blue shrink-0" />
+                  <span className="truncate uppercase tracking-wide text-[10.5px]">{companyToUse.name}</span>
+                </div>
+                <span className="text-[8px] text-app-muted shrink-0">▼</span>
+              </button>
+
+              {showCompanyDropdown && (
+                <div className="absolute left-0 md:left-auto md:right-0 mt-2 w-64 bg-app-surface border border-app-border rounded-2xl shadow-2xl z-50 py-1.5 animate-fade-in overflow-hidden">
+                  <div className="px-3 py-2 border-b border-app-border bg-app-bg/50">
+                    <span className="text-[9px] font-black text-app-muted uppercase tracking-wider">
+                      Seleccionar Empresa
+                    </span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                    {workspaces.map((ws) => (
+                      <button
+                        key={ws.ruc}
+                        onClick={() => {
+                          setSelectedRuc(ws.ruc);
+                          setShowCompanyDropdown(false);
+                        }}
+                        className={`w-full flex flex-col items-start gap-0.5 px-3 py-2 hover:bg-app-hover text-left transition-colors border-b border-app-border/40 last:border-b-0 ${
+                          ws.ruc === selectedRuc ? 'bg-pld-blue/5 border-l-2 border-l-pld-blue' : ''
+                        }`}
+                      >
+                        <span className={`text-[11px] font-bold ${ws.ruc === selectedRuc ? 'text-pld-blue' : 'text-app-text'}`}>
+                          {ws.name}
+                        </span>
+                        <span className="text-[9px] font-mono text-app-muted">
+                          RUC: {ws.ruc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {(statusText || downloadingText) && (
@@ -401,28 +444,28 @@ const BuzonView: React.FC = () => {
 
             <button 
               onClick={handleCerrarSesion}
-              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500 hover:text-white transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500 hover:text-white transition-all active:scale-95 cursor-pointer shrink-0"
               title="Salir de SUNAT"
             >
               <LogOut size={12} />
-              <span className="hidden sm:inline">Salir</span>
+              <span className="hidden lg:inline">Salir</span>
             </button>
             <button 
               onClick={handleVerConstancias}
-              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-wider text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 h-8 px-2.5 sm:px-3 bg-app-surface border border-app-border text-app-text rounded-xl font-bold uppercase tracking-wider text-[10px] hover:border-pld-blue hover:text-pld-blue transition-all active:scale-95 cursor-pointer shrink-0"
               title="Ver constancias descargadas"
             >
               <Paperclip size={12} />
-              <span className="hidden sm:inline">Constancias</span>
+              <span className="hidden lg:inline">Constancias</span>
             </button>
             <button 
               onClick={handleConsultar}
               disabled={loading}
-              className="flex items-center justify-center gap-1.5 h-8 px-3 sm:px-4 bg-pld-blue text-white rounded-xl font-black uppercase tracking-wider text-[10px] hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-pld-blue/20 active:scale-95"
+              className="flex items-center justify-center gap-1.5 h-8 px-3 sm:px-4 bg-pld-blue text-white rounded-xl font-black uppercase tracking-wider text-[10px] hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-pld-blue/20 active:scale-95 cursor-pointer shrink-0"
               title="Sincronizar mensajes"
             >
               {loading ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
-              <span className="hidden sm:inline">Sincronizar</span>
+              <span className="hidden lg:inline">Sincronizar</span>
             </button>
           </div>
         }

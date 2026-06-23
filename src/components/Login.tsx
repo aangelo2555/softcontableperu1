@@ -453,7 +453,7 @@ export const Login: React.FC = () => {
             <style>{glassStyles}</style>
 
             {/* Panel de Login (Ubicado centralizado a la izquierda, z-30 para prioridad) */}
-            <div className="w-full md:w-[48%] lg:w-[44%] xl:w-[40%] shrink-0 flex items-center justify-center p-6 md:p-12 relative z-30 md:ml-[6%] lg:ml-[10%] select-none">
+            <div className="w-full md:w-[48%] lg:w-[44%] xl:w-[40%] shrink-0 flex items-center justify-center p-6 md:p-12 relative z-30 md:ml-[1%] lg:ml-[2.5%] select-none">
                 {/* Luces de Fondo para móvil */}
                 <div className="absolute inset-0 md:hidden overflow-hidden pointer-events-none z-0">
                     <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[#d4af37]/3 blur-[140px] rounded-full"></div>
@@ -593,7 +593,7 @@ export const Login: React.FC = () => {
             </div>
 
             {/* Panel de Showcase (Ubicado a la derecha, en perspectiva 3D, z-10) */}
-            <div className="absolute right-[-10%] lg:right-[-5%] xl:right-[0%] top-1/2 -translate-y-1/2 w-[60%] h-[580px] lg:h-[640px] hidden md:flex items-center justify-center z-10 pointer-events-none">
+            <div className="absolute right-[4%] lg:right-[8%] xl:right-[12%] top-1/2 -translate-y-1/2 w-[54%] h-[580px] lg:h-[640px] hidden md:flex items-center justify-center z-10 pointer-events-none">
                 {/* Luces de Fondo muy tenues y elegantes */}
                 <div 
                     className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-[#d4af37]/3 blur-[140px] rounded-full transition-transform duration-500 ease-out"
