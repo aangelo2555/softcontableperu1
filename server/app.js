@@ -111,7 +111,8 @@ app.delete(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, re
 
 app.post('/api/db/execute', async (req, res) => {
     try {
-        let { sql, params } = req.body;
+        let { sql } = req.body;
+        let params = req.body.params || [];
         
         // ─── REESCRITURA AUTOMÁTICA DE SQL PARA SAAS (INYECCIÓN DE USER_ID) ───
         const insertMatch = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)/i);

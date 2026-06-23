@@ -63,12 +63,12 @@ export const webApiBridge = {
         const res = await api.get(`/api/db/workspaces/${ruc}?t=${Date.now()}`);
         return res.data.data;
     },
-    dbExecute: async (sql: string, params: any[]) => {
-        const res = await api.post('/api/db/execute', { sql, params });
+    dbExecute: async (sql: string, params?: any[]) => {
+        const res = await api.post('/api/db/execute', { sql, params: params || [] });
         return res.data;
     },
-    dbQuery: async (sql: string, params: any[]) => {
-        const res = await api.post('/api/db/query', { sql, params });
+    dbQuery: async (sql: string, params?: any[]) => {
+        const res = await api.post('/api/db/query', { sql, params: params || [] });
         return res.data;
     },
     dbBackup: async () => {
