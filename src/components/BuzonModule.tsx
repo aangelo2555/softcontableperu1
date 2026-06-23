@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Building2, Download, Loader2, LogOut } from 'lucide-react';
+import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Building2, Download, Loader2, LogOut, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 
@@ -437,7 +437,7 @@ const BuzonView: React.FC = () => {
               
               {/* Barra de Búsqueda */}
               <div className="relative w-full sm:w-64 shrink-0">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted">
+                <span className="absolute top-1/2 -translate-y-1/2 text-app-muted" style={{ left: '0.75rem' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </span>
                 <input
@@ -445,7 +445,8 @@ const BuzonView: React.FC = () => {
                   placeholder="BUSCAR POR NOMBRE O RUC..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-app-bg hover:bg-app-hover focus:bg-app-hover border border-app-border rounded-xl pl-8 pr-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-app-text placeholder:text-app-muted focus:outline-none focus:ring-1 focus:ring-pld-blue/50 transition-all duration-200"
+                  style={{ paddingLeft: '2.2rem' }}
+                  className="w-full bg-app-bg hover:bg-app-hover focus:bg-app-hover border border-app-border rounded-xl pr-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-app-text placeholder:text-app-muted focus:outline-none focus:ring-1 focus:ring-pld-blue/50 transition-all duration-200"
                 />
               </div>
             </div>
@@ -705,23 +706,55 @@ const BuzonView: React.FC = () => {
                        <span className="text-sm font-bold uppercase tracking-widest opacity-50">No hay descargas para este cliente.</span>
                     </div>
                  ) : (
-                    <div className="space-y-3">
-                       {constancias.map((c, i) => (
-                          <div key={i} className="flex justify-between items-center bg-app-surface/50 border border-app-border rounded-xl p-4 hover:border-pld-blue/50 transition-all">
-                             <div className="flex flex-col min-w-0 pr-4">
-                                <span className="font-bold text-app-text truncate text-sm">{c.nombre}</span>
-                                <div className="flex gap-3 text-[10px] text-app-muted font-bold mt-1 uppercase">
-                                   <span>{c.fecha}</span>
-                                   <span>•</span>
-                                   <span>{c.tamano}</span>
+                    <div className="space-y-4">
+                       {constancias.map((grupo, i) => (
+                          <div key={grupo.id || i} className="bg-app-surface/50 border border-app-border rounded-xl p-4 hover:border-pld-blue/50 transition-all flex flex-col gap-3">
+                             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-app-border/40 pb-2 gap-2">
+                                <div className="flex flex-col min-w-0">
+                                   <span className="font-black text-pld-blue text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      <FileText size={12} />
+                                      Grupo de Notificación
+                                   </span>
+                                   <span className="text-[10px] text-app-muted font-bold mt-0.5">
+                                      DESCARGADO: {grupo.fecha}
+                                   </span>
                                 </div>
+                                <span className="text-[9px] bg-app-bg text-app-text border border-app-border px-2 py-0.5 rounded-md font-bold uppercase shrink-0 self-start sm:self-auto">
+                                   {grupo.archivos?.length || 0} {grupo.archivos?.length === 1 ? 'Archivo' : 'Archivos'}
+                                </span>
                              </div>
-                             <button
-                               onClick={() => handleAbrirConstancia(c.ruta)}
-                               className="shrink-0 px-4 py-2 bg-pld-blue/10 text-pld-blue rounded-lg text-xs font-black uppercase hover:bg-pld-blue hover:text-white transition-all"
-                             >
-                               Abrir Archivo
-                             </button>
+                             
+                             <div className="flex flex-col gap-2">
+                                {(grupo.archivos || []).map((archivo: any, aIdx: number) => {
+                                   let friendlyLabel = "Archivo Adjunto";
+                                   if (archivo.nombre.startsWith('MERGED_')) {
+                                      friendlyLabel = "PDF Fusionado (Carta + Constancia)";
+                                   } else if (archivo.nombre.includes('Carta_') || archivo.nombre.toLowerCase().includes('carta')) {
+                                      friendlyLabel = "Carta / Notificación";
+                                   } else if (archivo.nombre.startsWith('constancia_')) {
+                                      friendlyLabel = "Constancia de Recepción";
+                                   }
+
+                                   return (
+                                      <div key={aIdx} className="flex items-center justify-between bg-app-bg/50 border border-app-border/40 rounded-lg p-2.5 hover:bg-app-bg transition-colors">
+                                         <div className="flex flex-col min-w-0 pr-2">
+                                            <span className="text-[10px] font-black text-app-text truncate">{archivo.nombre}</span>
+                                            <div className="flex gap-2 text-[9px] text-app-muted font-bold mt-0.5">
+                                               <span className="text-pld-blue uppercase">{friendlyLabel}</span>
+                                               <span>•</span>
+                                               <span>{archivo.tamano}</span>
+                                            </div>
+                                         </div>
+                                         <button
+                                           onClick={() => handleAbrirConstancia(archivo.ruta)}
+                                           className="shrink-0 px-3 py-1.5 bg-pld-blue/10 text-pld-blue rounded-md text-[10px] font-black uppercase hover:bg-pld-blue hover:text-white transition-all active:scale-95 cursor-pointer"
+                                         >
+                                           Abrir
+                                         </button>
+                                      </div>
+                                   );
+                                })}
+                             </div>
                           </div>
                        ))}
                     </div>

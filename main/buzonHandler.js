@@ -757,25 +757,42 @@ class BuzonHandler {
       }
 
       const archivos = fs.readdirSync(clientePath);
-      const constancias = archivos.map(archivo => {
+      const rawConstancias = archivos.map(archivo => {
         const ruta = path.join(clientePath, archivo);
         const stat = fs.statSync(ruta);
         return {
           nombre: archivo,
           ruta: ruta,
           tamano: (stat.size / 1024).toFixed(2) + ' KB',
-          fecha: stat.mtime.toLocaleDateString() + ' ' + stat.mtime.toLocaleTimeString()
+          mtime: stat.mtime
         };
       });
 
-      // Ordenar por fecha más reciente
-      constancias.sort((a, b) => {
-        const statA = fs.statSync(a.ruta);
-        const statB = fs.statSync(b.ruta);
-        return statB.mtime - statA.mtime;
-      });
+      // Ordenar por fecha mtime más reciente
+      rawConstancias.sort((a, b) => b.mtime - a.mtime);
 
-      return { success: true, constancias };
+      // Agrupar por mtime dentro de un umbral de 30 segundos
+      const grouped = [];
+      for (const item of rawConstancias) {
+        // Encontrar si ya existe un grupo que fue modificado dentro de 30 segundos de este item
+        const existingGroup = grouped.find(g => {
+          const diff = Math.abs(g.mtime.getTime() - item.mtime.getTime());
+          return diff <= 30000; // 30 segundos
+        });
+
+        if (existingGroup) {
+          existingGroup.archivos.push(item);
+        } else {
+          grouped.push({
+            id: `group-${item.mtime.getTime()}`,
+            fecha: item.mtime.toLocaleDateString() + ' ' + item.mtime.toLocaleTimeString(),
+            mtime: item.mtime,
+            archivos: [item]
+          });
+        }
+      }
+
+      return { success: true, constancias: grouped };
     } catch (e) {
       return { success: false, error: e.message };
     }
