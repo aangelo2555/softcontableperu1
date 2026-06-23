@@ -17,8 +17,6 @@ export interface Account {
 }
 
 export const INITIAL_PLAN: Account[] = [
-  { cta: '001', description: "pedrito", type: 'Balance', div: 1 },
-  { cta: '01', description: "11111111", type: 'Balance', reqCenCos: true, amarreDebe: '951', amarreHaber: '791', div: 1, cta_cc1: '951', pct_cc1: 100, destino_haber: '791' },
   { cta: '10', description: "EFECTIVO Y EQUIVALENTES DE EFECTIVO", type: 'Balance', div: 0 },
   { cta: '101', description: "Caja", type: 'Balance', div: 0 },
   { cta: '1011', description: "Efectivo MN", type: 'Balance', div: 0 },
@@ -1837,6 +1835,4 @@ export const INITIAL_PLAN: Account[] = [
   { cta: '951', description: "GASTOS DE VENTAS.", type: 'Registro', div: 1 },
   { cta: '96', description: "GASTOS FINANCIEROS", type: 'Registro', div: 0 },
   { cta: '961', description: "GASTOS FINANCIEROS", type: 'Registro', div: 1 },
-  { cta: '999', description: "9999", type: 'Registro', div: 0 },
-  { cta: '9999', description: "YYYYYYY", type: 'Registro', div: 1 },
 ] as any;

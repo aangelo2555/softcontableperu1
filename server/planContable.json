@@ -1,23 +1,5 @@
 [
   {
-    "cta": "001",
-    "description": "pedrito",
-    "type": "Balance",
-    "div": 1
-  },
-  {
-    "cta": "01",
-    "description": "11111111",
-    "type": "Balance",
-    "div": 1,
-    "cta_cc1": "951",
-    "pct_cc1": 100,
-    "destino_haber": "791",
-    "amarreHaber": "791",
-    "amarreDebe": "951",
-    "reqCenCos": true
-  },
-  {
     "cta": "10",
     "description": "EFECTIVO Y EQUIVALENTES DE EFECTIVO",
     "type": "Balance",
@@ -12343,18 +12325,6 @@
   {
     "cta": "961",
     "description": "GASTOS FINANCIEROS",
-    "type": "Registro",
-    "div": 1
-  },
-  {
-    "cta": "999",
-    "description": "9999",
-    "type": "Registro",
-    "div": 0
-  },
-  {
-    "cta": "9999",
-    "description": "YYYYYYY",
     "type": "Registro",
     "div": 1
   }
