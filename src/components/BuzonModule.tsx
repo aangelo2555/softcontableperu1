@@ -25,6 +25,11 @@ const BuzonView: React.FC = () => {
   const [detalleHtml, setDetalleHtml] = useState<string | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [selectedRuc, setSelectedRuc] = useState(currentCompany.ruc);
+  const [searchTerm, setSearchTerm] = useState('');
+  const filteredWorkspaces = workspaces.filter(ws => 
+    ws.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ws.ruc.includes(searchTerm)
+  );
   const [activeBrowserId, setActiveBrowserId] = useState<string | null>(() => {
     return sessionStorage.getItem(`activeBuzonBrowserId_${currentCompany.ruc}`);
   });
@@ -420,48 +425,68 @@ const BuzonView: React.FC = () => {
           
           {/* Selector Horizontal de Empresas */}
           <div className="bg-app-surface/60 border border-app-border rounded-2xl p-4 flex flex-col gap-3 shrink-0 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-app-border/40">
               <div className="flex items-center gap-2">
                 <Building2 size={14} className="text-pld-blue" />
                 <span className="text-[10px] font-black uppercase tracking-wider text-app-text">Seleccionar Cliente para Consultar</span>
+                <span className="text-[9px] text-app-muted font-bold uppercase tracking-wider bg-app-bg px-2 py-0.5 rounded-lg border border-app-border ml-1">
+                  {filteredWorkspaces.length} {filteredWorkspaces.length === 1 ? 'coincidencia' : 'coincidencias'}
+                </span>
               </div>
-              <span className="text-[9px] text-app-muted font-bold uppercase tracking-wider bg-app-bg px-2 py-0.5 rounded-lg border border-app-border">
-                {workspaces.length} {workspaces.length === 1 ? 'Empresa' : 'Empresas'}
-              </span>
+              
+              {/* Barra de Búsqueda */}
+              <div className="relative w-full sm:w-64 shrink-0">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="BUSCAR POR NOMBRE O RUC..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-app-bg hover:bg-app-hover focus:bg-app-hover border border-app-border rounded-xl pl-8 pr-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-app-text placeholder:text-app-muted focus:outline-none focus:ring-1 focus:ring-pld-blue/50 transition-all duration-200"
+                />
+              </div>
             </div>
             
-            <div className="flex gap-2.5 overflow-x-auto pb-1.5 custom-scrollbar scroll-smooth">
-              {workspaces.map((ws) => {
-                const isSelected = ws.ruc === selectedRuc;
-                return (
-                  <button
-                    key={ws.ruc}
-                    onClick={() => setSelectedRuc(ws.ruc)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left shrink-0 transition-all duration-200 active:scale-98 cursor-pointer ${
-                      isSelected
-                        ? 'bg-pld-blue/10 border-pld-blue text-pld-blue shadow-lg shadow-pld-blue/5'
-                        : 'bg-app-bg hover:bg-app-hover border-app-border text-app-text'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg shrink-0 transition-colors ${
-                      isSelected ? 'bg-pld-blue text-white' : 'bg-app-surface text-app-muted'
-                    }`}>
-                      <Building2 size={14} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className={`text-[11px] font-black uppercase tracking-wide truncate max-w-[180px] sm:max-w-[240px] ${
-                        isSelected ? 'text-pld-blue' : 'text-app-text'
+            {filteredWorkspaces.length === 0 ? (
+              <div className="py-4 text-center text-[10px] font-black text-app-muted uppercase tracking-wider animate-pulse">
+                No se encontraron empresas con esos criterios.
+              </div>
+            ) : (
+              <div className="flex gap-2.5 overflow-x-auto pb-1.5 custom-scrollbar scroll-smooth">
+                {filteredWorkspaces.map((ws) => {
+                  const isSelected = ws.ruc === selectedRuc;
+                  return (
+                    <button
+                      key={ws.ruc}
+                      onClick={() => setSelectedRuc(ws.ruc)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left shrink-0 transition-all duration-200 active:scale-98 cursor-pointer ${
+                        isSelected
+                          ? 'bg-pld-blue/10 border-pld-blue text-pld-blue shadow-lg shadow-pld-blue/5'
+                          : 'bg-app-bg hover:bg-app-hover border-app-border text-app-text'
+                      }`}
+                    >
+                      <div className={`p-2 rounded-lg shrink-0 transition-colors ${
+                        isSelected ? 'bg-pld-blue text-white' : 'bg-app-surface text-app-muted'
                       }`}>
-                        {ws.name}
+                        <Building2 size={14} />
                       </div>
-                      <div className="text-[9px] font-mono text-app-muted mt-0.5">
-                        RUC: {ws.ruc}
+                      <div className="min-w-0">
+                        <div className={`text-[11px] font-black uppercase tracking-wide truncate max-w-[180px] sm:max-w-[240px] ${
+                          isSelected ? 'text-pld-blue' : 'text-app-text'
+                        }`}>
+                          {ws.name}
+                        </div>
+                        <div className="text-[9px] font-mono text-app-muted mt-0.5">
+                          RUC: {ws.ruc}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {!isElectron && (

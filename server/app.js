@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { sireDir, buzonDir } = require('./storageConfig');
 const db = require('./databaseServer');
 const createLibroDiario52Service = require('./libroDiario52Service');
 const ld52Service = createLibroDiario52Service(db.rawDb);
