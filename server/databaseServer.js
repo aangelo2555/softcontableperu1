@@ -1367,11 +1367,14 @@ try {
         const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
         const planCount = db.prepare("SELECT COUNT(*) as count FROM plan_global WHERE user_id = 'system'").get().count;
         
-        if (planCount < fullPlan.length) {
-            console.log(`[DB] Detectado Plan Contable del Sistema desactualizado (${planCount} < ${fullPlan.length} cuentas). Actualizando...`);
+        if (planCount !== fullPlan.length) {
+            console.log(`[DB] Detectado Plan Contable del Sistema desactualizado o modificado (${planCount} !== ${fullPlan.length} cuentas). Actualizando...`);
             
             // Vaciar las cuentas de system para evitar duplicados o cuentas obsoletas del template antiguo
             db.prepare("DELETE FROM plan_global WHERE user_id = 'system'").run();
+            
+            // También eliminar explícitamente de todos los usuarios las cuentas obsoletas/de prueba 001, 01, 999, 9999
+            db.prepare("DELETE FROM plan_global WHERE cta IN ('001', '01', '999', '9999')").run();
             
             const insertPlan = db.prepare(`
                 INSERT OR IGNORE INTO plan_global (
