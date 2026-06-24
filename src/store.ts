@@ -420,8 +420,10 @@ export interface AppState extends WorkspaceState {
   // --- Data Actions ---
   savePurchase: (data: PurchaseEntry) => Promise<void>;
   deletePurchase: (id: string) => Promise<void>;
+  deletePurchases: (ids: string[]) => Promise<void>;
   saveSale: (data: SaleEntry) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
+  deleteSales: (ids: string[]) => Promise<void>;
   saveHonorario: (data: HonorarioEntry) => Promise<void>;
   deleteHonorario: (id: string) => Promise<void>;
   
@@ -1373,6 +1375,44 @@ export const useStore = create<AppState>()(
         }
       },
 
+      deletePurchases: async (ids) => {
+        if (!checkPermission('DELETE')) return;
+        const ruc = get().currentCompany?.ruc || '';
+        
+        const items = get().purchases.filter(x => ids.includes(x.id));
+        const datesToCheck = Array.from(new Set(items.map(x => x.fecha)));
+        
+        for (const date of datesToCheck) {
+          if (await get().checkIfPeriodClosed(date)) {
+            toast.error(`⚠️ Eliminación bloqueada: Hay comprobantes en el período ${date.substring(0, 7)} que está CERRADO.`);
+            return;
+          }
+        }
+
+        for (const id of ids) {
+          await electron.dbExecute('DELETE FROM purchases WHERE id = ?', [id]);
+          await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${id}-%`]);
+          await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
+          
+          try {
+            await electron.ld52DeleteOrigen(ruc, id);
+          } catch (err) {
+            console.warn('[STORE] ld52DeleteOrigen failed:', err);
+          }
+        }
+
+        const data = await electron.dbGetWorkspaceData(ruc);
+        set({ 
+          purchases: data.purchases, 
+          journal: data.journal,
+          inventoryMovements: data.inventoryMovements 
+        });
+
+        for (const date of datesToCheck) {
+          await get().triggerCascadeInvalidation('journal', date);
+        }
+      },
+
       saveSale: async (s) => {
         if (!checkPermission('WRITE')) return;
         const ruc = get().currentCompany?.ruc || '';
@@ -1483,6 +1523,44 @@ export const useStore = create<AppState>()(
           await electron.ld52DeleteOrigen(ruc, id);
         } catch (err) {
           console.warn('[STORE] ld52DeleteOrigen failed:', err);
+        }
+      },
+
+      deleteSales: async (ids) => {
+        if (!checkPermission('DELETE')) return;
+        const ruc = get().currentCompany?.ruc || '';
+        
+        const items = get().sales.filter(x => ids.includes(x.id));
+        const datesToCheck = Array.from(new Set(items.map(x => x.fecha)));
+        
+        for (const date of datesToCheck) {
+          if (await get().checkIfPeriodClosed(date)) {
+            toast.error(`⚠️ Eliminación bloqueada: Hay comprobantes en el período ${date.substring(0, 7)} que está CERRADO.`);
+            return;
+          }
+        }
+
+        for (const id of ids) {
+          await electron.dbExecute('DELETE FROM sales WHERE id = ?', [id]);
+          await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${id}-%`]);
+          await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
+          
+          try {
+            await electron.ld52DeleteOrigen(ruc, id);
+          } catch (err) {
+            console.warn('[STORE] ld52DeleteOrigen failed:', err);
+          }
+        }
+
+        const data = await electron.dbGetWorkspaceData(ruc);
+        set({ 
+          sales: data.sales, 
+          journal: data.journal,
+          inventoryMovements: data.inventoryMovements 
+        });
+
+        for (const date of datesToCheck) {
+          await get().triggerCascadeInvalidation('journal', date);
         }
       },
 

@@ -27,7 +27,7 @@ import { reconcileSireWithERP, type ReconciliationSummary, type DiagnosticLevel 
 import PageHeader from './ui/PageHeader';
 
 const SireView: React.FC = () => {
-  const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, setActiveTab } = useStore();
+  const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, deletePurchases, deleteSales, setActiveTab } = useStore();
   const [proceso, setProceso] = useState<'Generar RCE' | 'Generar RVIE'>('Generar RCE');
   const [periodoMes, setPeriodoMes] = useState(new Date().getMonth());
   const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear());
@@ -343,6 +343,68 @@ const SireView: React.FC = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) {
+      toast.error('Selecciona al menos un documento.');
+      return;
+    }
+
+    const confirmMessage = `¿Estás seguro de que deseas eliminar los ${selectedIds.size} registros seleccionados de la conciliación?
+⚠️ ADVERTENCIA: Se eliminarán los registros importados de SUNAT y los comprobantes contables locales seleccionados (junto con sus asientos contables asociados).`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    const loadingToast = toast.loading(`Eliminando ${selectedIds.size} documentos...`);
+
+    try {
+      const targetIds = comparedData
+        .filter(d => selectedIds.has(d.id))
+        .map(d => d.sunat?.id || d.local?.id)
+        .filter(Boolean) as string[];
+
+      if (proceso === 'Generar RCE') {
+        await deletePurchases(targetIds);
+      } else {
+        await deleteSales(targetIds);
+      }
+
+      toast.success('Registros eliminados correctamente.', { id: loadingToast });
+      setSelectedIds(new Set());
+      await syncCurrentWorkspace();
+    } catch (error: any) {
+      toast.error(`Error al eliminar: ${error.message}`, { id: loadingToast });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (comparedData.length === 0) return;
+
+    const confirmMessage = `⚠️ ADVERTENCIA CRÍTICA: ¿Estás seguro de que deseas eliminar TODOS los ${comparedData.length} registros listados en la conciliación?
+Esto eliminará tanto los registros importados de SUNAT como los comprobantes locales de este período (con sus asientos asociados).`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    const loadingToast = toast.loading(`Eliminando todos los ${comparedData.length} registros...`);
+
+    try {
+      const targetIds = comparedData
+        .map(d => d.sunat?.id || d.local?.id)
+        .filter(Boolean) as string[];
+
+      if (proceso === 'Generar RCE') {
+        await deletePurchases(targetIds);
+      } else {
+        await deleteSales(targetIds);
+      }
+
+      toast.success('Todos los registros del período fueron eliminados.', { id: loadingToast });
+      setSelectedIds(new Set());
+      await syncCurrentWorkspace();
+    } catch (error: any) {
+      toast.error(`Error al eliminar todo: ${error.message}`, { id: loadingToast });
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.size === comparedData.length) {
       setSelectedIds(new Set());
@@ -485,6 +547,25 @@ const SireView: React.FC = () => {
             >
               <Database size={14} /> Centralizar {selectedIds.size > 0 && `(${selectedIds.size})`}
             </button>
+            {selectedIds.size > 0 ? (
+              <button
+                onClick={handleDeleteSelected}
+                className="h-8 px-4 bg-rose-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2 animate-fade-in"
+                title="Eliminar comprobantes seleccionados"
+              >
+                <Trash2 size={14} /> Eliminar ({selectedIds.size})
+              </button>
+            ) : (
+              comparedData.length > 0 && (
+                <button
+                  onClick={handleDeleteAll}
+                  className="h-8 px-4 bg-rose-600/10 text-rose-500 border border-rose-500/20 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all flex items-center gap-2 animate-fade-in"
+                  title="Eliminar todos los comprobantes del periodo"
+                >
+                  <Trash2 size={14} /> Eliminar Todo
+                </button>
+              )
+            )}
             <button
               onClick={handleGenerarArchivoReemplazo}
               className="h-8 w-8 flex items-center justify-center bg-app-bg border border-app-border text-app-muted hover:text-emerald-500 hover:border-emerald-500/30 rounded-lg transition-all"
