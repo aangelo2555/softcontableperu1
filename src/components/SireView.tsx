@@ -125,7 +125,24 @@ const SireView: React.FC = () => {
   }, [comparedData]);
 
   const uniqueArchivos = useMemo(() => {
-    const filtered = archivos.filter(file => proceso === 'Generar RCE' ? file.nombre.includes('RCE') : file.nombre.includes('RVIE'));
+    const rucFilter = currentCompany?.ruc || '';
+    if (!rucFilter) return [];
+
+    const filtered = archivos.filter(file => {
+      const nameUpper = file.nombre.toUpperCase();
+      
+      // Filtrar por RUC correspondiente
+      const hasRuc = nameUpper.includes(rucFilter);
+      if (!hasRuc) return false;
+
+      // Filtrar por proceso (RCE o RVIE)
+      if (proceso === 'Generar RCE') {
+        return nameUpper.includes('RCE') || nameUpper.includes('080400');
+      } else {
+        return nameUpper.includes('RVIE') || nameUpper.includes('140400');
+      }
+    });
+
     const map = new Map<string, typeof archivos[0]>();
     filtered.forEach(file => {
       const parts = file.nombre.split('_');
@@ -137,7 +154,7 @@ const SireView: React.FC = () => {
       }
     });
     return Array.from(map.values());
-  }, [archivos, proceso]);
+  }, [archivos, proceso, currentCompany?.ruc]);
 
   // --- Handlers ---
   const loadArchivos = async () => {
@@ -754,7 +771,7 @@ const SireView: React.FC = () => {
                   </div>
                 </div>
               )})}
-              {archivos.length === 0 && (
+              {uniqueArchivos.length === 0 && (
                 <div className="col-span-full py-20 flex flex-col items-center opacity-20">
                   <FileJson size={40} className="mb-3" />
                   <p className="text-[9px] font-black uppercase tracking-[0.2em]">Sin archivos disponibles</p>
