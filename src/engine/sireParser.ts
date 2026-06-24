@@ -70,12 +70,12 @@ export function parseSireTxt(content: string, isRvie: boolean = false): SirePars
     const validationErrors: string[] = [];
 
     // ─── Extraer campos clave ───
-    const ruc = (fields[0] || '').trim();
+    const ruc = (fields[isRvie ? 0 : 12] || '').trim(); // Para RVIE el emisor es la propia empresa (index 0). Para RCE el emisor es el proveedor (index 12).
     const car = (fields[3] || '').trim();
     const tipoComp = (fields[6] || '').trim();
     const serie = (fields[7] || '').trim();
-    const numero = (fields[8] || '').trim();
-    const fechaEmision = (fields[5] || '').trim();
+    const numero = (fields[isRvie ? 8 : 9] || '').trim(); // Para RCE la columna de DUA ocupa index 8, el número de documento está en index 9.
+    const fechaEmision = (fields[4] || '').trim(); // Fecha de emisión está en index 4 (col5_fecEmision) para ambos.
     const estadoCPE = (fields[fields.length - 1] || '').trim();
 
     // ─── Validar longitudes ───
@@ -90,9 +90,9 @@ export function parseSireTxt(content: string, isRvie: boolean = false): SirePars
     }
 
     // ─── Parsear campos monetarios ───
-    const bi = parseDecimal(fields[isRvie ? 14 : 13]);
-    const igv = parseDecimal(fields[isRvie ? 16 : 15]);
-    const total = parseDecimal(fields[isRvie ? 25 : 23]);
+    const bi = parseDecimal(fields[isRvie ? 14 : 14]); // col15_baseImponibleGravada es index 14 para ambos.
+    const igv = parseDecimal(fields[isRvie ? 16 : 15]); // col17_igvIpm para RVIE (index 16), col16_igvGravada para RCE (index 15).
+    const total = parseDecimal(fields[isRvie ? 25 : 24]); // col26_importeTotal para RVIE (index 25), col25_importeTotal para RCE (index 24).
 
     records.push({
       ruc_emisor: ruc,

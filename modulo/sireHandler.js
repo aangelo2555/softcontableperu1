@@ -112,36 +112,63 @@ class SireHandler {
         return parseFloat(clean) || 0;
       };
 
-      // Si el usuario indica Fila 8, cortamos los primeros 7 registros (cabeceras de metadatos)
-      const dataRows = data.length > 7 ? data.slice(7) : data;
+      // El backend recibe la data limpia del parser de TXT del ZIP, no tiene metadatos adicionales de cabecera.
+      const dataRows = data;
       
       const isRVIE = proceso.includes('RVIE');
       
       // Mapeo dinámico basado en proceso (RCE vs RVIE)
       const mappedRecords = dataRows.map((row, index) => {
         const id = `${ruc}-${proceso}-${Date.now()}-${index}`;
-        return {
-          id,
-          registro: 'SIRE',
-          fecha: row[4] || '', // Fecha Emisión
-          fecVcto: row[5] || '', // Fecha Vcto
-          tipo_doc: row[6] || '',
-          serie: row[7] || '',
-          numero: row[8] || '',
-          doc_tipo: row[10] || '',
-          doc_num: row[11] || '',
-          nombre: row[12] || '',
-          bi: parseNum(row[isRVIE ? 14 : 13]),
-          igv: parseNum(row[isRVIE ? 16 : 14]),
-          noGravada: parseNum(row[19]),
-          isc: parseNum(row[isRVIE ? 21 : 20]),
-          icbper: parseNum(row[isRVIE ? 23 : 21]),
-          otros_tributos: parseNum(row[isRVIE ? 24 : 22]),
-          total: parseNum(row[isRVIE ? 25 : 24]), 
-          tc: parseNum(row[isRVIE ? 27 : 26] || 1),
-          car: row[3] || '',
-          estado_sire: 'Propuesta'
-        };
+        if (isRVIE) {
+          // Ventas (RVIE)
+          return {
+            id,
+            registro: 'SIRE',
+            fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
+            fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
+            tipo_doc: row[6] || '',
+            serie: row[7] || '',
+            numero: row[8] || '', // Documento Número (col9_numInicial)
+            doc_tipo: row[10] || '', // Tipo Doc Cliente (col11_tipoDoc)
+            doc_num: row[11] || '', // Nro Doc Cliente (col12_numDoc)
+            nombre: row[12] || '', // Nombre/Razón Social Cliente (col13_razonSocialCliente)
+            bi: parseNum(row[14]), // Base Imponible (col15_baseImponibleGravada)
+            igv: parseNum(row[16]), // IGV (col17_igvIpm)
+            noGravada: parseNum(row[19]), // Operación Inafecta (col20_operacionInafecta)
+            isc: parseNum(row[20]), // ISC (col21_isc)
+            icbper: parseNum(row[23]), // ICBPER (col24_icbper)
+            otros_tributos: parseNum(row[24]), // Otros Tributos (col25_otrosTributos)
+            total: parseNum(row[25]), // Importe Total (col26_importeTotal)
+            tc: parseNum(row[27] || 1), // Tipo de Cambio (col28_tipoCambio)
+            car: row[3] || '',
+            estado_sire: 'Propuesta'
+          };
+        } else {
+          // Compras (RCE)
+          return {
+            id,
+            registro: 'SIRE',
+            fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
+            fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
+            tipo_doc: row[6] || '',
+            serie: row[7] || '',
+            numero: row[9] || '', // Documento Número (col10_numInicial)
+            doc_tipo: row[11] || '', // Tipo Doc Proveedor (col12_tipoDoc)
+            doc_num: row[12] || '', // Nro Doc Proveedor (col13_numDoc)
+            nombre: row[13] || '', // Razón Social Proveedor (col14_razonSocialProveedor)
+            bi: parseNum(row[14]), // Base Imponible (col15_baseImponibleGravada)
+            igv: parseNum(row[15]), // IGV (col16_igvGravada)
+            noGravada: parseNum(row[18]), // Base Imponible No Gravada (col19_baseImponibleNoGravada)
+            isc: parseNum(row[21]), // ISC (col22_isc)
+            icbper: parseNum(row[22]), // ICBPER (col23_icbper)
+            otros_tributos: parseNum(row[23]), // Otros Tributos (col24_otrosTributos)
+            total: parseNum(row[24]), // Importe Total (col25_importeTotal)
+            tc: parseNum(row[26] || 1), // Tipo de Cambio (col27_tipoCambio)
+            car: row[3] || '',
+            estado_sire: 'Propuesta'
+          };
+        }
       });
 
       if (proceso === 'Generar RCE') {
