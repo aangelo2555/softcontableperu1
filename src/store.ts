@@ -496,6 +496,7 @@ export interface AppState extends WorkspaceState {
   setBuzonMensajes: (mensajes: BuzonMensaje[]) => void;
   markBuzonMensajeAsRead: (id: string) => void;
   centralizeSireRecords: (ruc: string, records: any[], proceso: string) => Promise<void>;
+  autoCentralizeAllProposals: (ruc: string, proceso: string) => Promise<void>;
   syncMaintenance: () => Promise<void>;
   
   // --- Mejora #2 & #5: Control de Períodos y Obsoleto (stale) ---
@@ -2199,7 +2200,16 @@ export const useStore = create<AppState>()(
 
         // ── Invalidation Cascade Trigger para cada periodo afectado ──
         for (const fecha of periodsToInvalidate) {
-          await get().triggerCascadeInvalidation('journal', fecha);
+           await get().triggerCascadeInvalidation('journal', fecha);
+        }
+      },
+
+      autoCentralizeAllProposals: async (ruc, proceso) => {
+        const records = proceso === 'Generar RCE' ? get().purchases : get().sales;
+        const propuestas = records.filter(r => r.estado_sire === 'Propuesta');
+        if (propuestas.length > 0) {
+          console.log(`[STORE] Auto-centralizando ${propuestas.length} propuestas de ${proceso}...`);
+          await get().centralizeSireRecords(ruc, propuestas, proceso);
         }
       },
 

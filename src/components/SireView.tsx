@@ -203,8 +203,12 @@ const SireView: React.FC = () => {
       });
 
       if (result.success) {
-        toast.success(`Sincronización exitosa.`, { id: loadingToast });
+        toast.success(`Sincronización exitosa. Centralizando...`, { id: loadingToast });
         await syncCurrentWorkspace(); // Recargar datos desde DB
+        
+        // Auto-centralización solicitada
+        await useStore.getState().autoCentralizeAllProposals(currentCompany.ruc, proceso);
+        
         loadArchivos();
       } else {
         toast.error(`Error: ${result.error}`, { id: loadingToast });
