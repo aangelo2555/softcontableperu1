@@ -139,9 +139,11 @@ app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) 
             cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
         }
         
+        // CRÍTICO: Enviar respuesta ANTES de intentar auto-sync
+        res.json({ success: true, data });
+        
         // --- AUTO-SYNC AL CARGAR EMPRESA EXISTENTE ---
-        // Ejecutar auto-sync en segundo plano si la empresa tiene credenciales
-        // Solo si ha pasado suficiente tiempo (throttling)
+        // Ejecutar auto-sync en segundo plano DESPUÉS de enviar respuesta
         if (data?.currentCompany) {
             setImmediate(async () => {
                 try {
@@ -157,12 +159,12 @@ app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) 
                         });
                     }
                 } catch (error) {
-                    console.error('[AUTO SYNC ON LOAD] Error en auto-sincronización al cargar:', error);
+                    // Error en auto-sync NO debe afectar la carga de datos
+                    console.error('[AUTO SYNC ON LOAD] Error en auto-sincronización (no crítico):', error);
                 }
             });
         }
         
-        res.json({ success: true, data });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);
         res.status(500).json({ success: false, error: error.message });
