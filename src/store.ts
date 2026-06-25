@@ -732,7 +732,7 @@ function buildJournalEntries(
           entry.cta,
           entry.debe,
           plan,
-          base,
+          entry.id,
           source,
           p.registro,
           p.fecha,
