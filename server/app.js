@@ -130,12 +130,36 @@ app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) 
     try {
         const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}`;
         
-        // Verificar cache (2 minutos para workspace data)
+        // Verificar cache
         let data = cacheService.get(cacheKey);
         
         if (!data) {
+            // Si no está en cache, consultar DB
             data = await db.getWorkspaceData(req.params.ruc, req.targetUserId);
             cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
+        }
+        
+        // --- AUTO-SYNC AL CARGAR EMPRESA EXISTENTE ---
+        // Ejecutar auto-sync en segundo plano si la empresa tiene credenciales
+        // Solo si ha pasado suficiente tiempo (throttling)
+        if (data?.currentCompany) {
+            setImmediate(async () => {
+                try {
+                    console.log(`[AUTO SYNC ON LOAD] Verificando auto-sincronización para ${data.currentCompany.ruc}`);
+                    const syncResults = await autoSyncService.checkAndSyncOnLoad(data.currentCompany, req.targetUserId);
+                    
+                    if (syncResults?.skipped) {
+                        console.log(`[AUTO SYNC ON LOAD] Omitido para ${data.currentCompany.ruc}: ${syncResults.reason}`);
+                    } else if (syncResults?.buzon || syncResults?.sire) {
+                        console.log(`[AUTO SYNC ON LOAD] Ejecutado para ${data.currentCompany.ruc}:`, {
+                            buzon: !!syncResults.buzon?.success,
+                            sire: !!syncResults.sire?.success
+                        });
+                    }
+                } catch (error) {
+                    console.error('[AUTO SYNC ON LOAD] Error en auto-sincronización al cargar:', error);
+                }
+            });
         }
         
         res.json({ success: true, data });
@@ -272,6 +296,22 @@ app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('[DB ERROR] Error en deleteBalanceInicial:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Mejora #7: Endpoint de Estado de Auto-Sincronización (Debug) ---
+app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'Falta RUC.' });
+        }
+        
+        const status = autoSyncService.getSyncStatus(ruc);
+        res.json({ success: true, status });
+    } catch (error) {
+        console.error('[DEBUG ERROR] Error obteniendo estado de auto-sync:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

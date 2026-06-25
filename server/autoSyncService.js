@@ -11,6 +11,8 @@ const db = require('./databaseServer');
 class AutoSyncService {
   constructor() {
     this.syncInProgress = new Map(); // ruc -> { buzon: boolean, sire: boolean }
+    this.lastSyncTime = new Map(); // ruc -> { buzon: timestamp, sire: timestamp }
+    this.THROTTLE_MINUTES = 10; // Mínimo intervalo entre sincronizaciones (10 minutos)
   }
 
   /**
@@ -38,11 +40,43 @@ class AutoSyncService {
   }
 
   /**
+   * Verifica si es necesario ejecutar sincronización (throttling)
+   */
+  shouldSyncBuzon(ruc) {
+    const lastSync = this.lastSyncTime.get(ruc)?.buzon;
+    if (!lastSync) return true;
+
+    const now = Date.now();
+    const elapsedMinutes = (now - lastSync) / (1000 * 60);
+    return elapsedMinutes >= this.THROTTLE_MINUTES;
+  }
+
+  /**
+   * Verifica si es necesario ejecutar sincronización SIRE (throttling)
+   */
+  shouldSyncSIRE(ruc) {
+    const lastSync = this.lastSyncTime.get(ruc)?.sire;
+    if (!lastSync) return true;
+
+    const now = Date.now();
+    const elapsedMinutes = (now - lastSync) / (1000 * 60);
+    return elapsedMinutes >= this.THROTTLE_MINUTES;
+  }
+
+  /**
    * Ejecuta la sincronización automática del Buzón Electrónico
    * Solo para la empresa especificada
    */
   async autoSyncBuzon(workspace) {
     const ruc = workspace.ruc;
+
+    // Throttling - verificar si es necesario sincronizar
+    if (!this.shouldSyncBuzon(ruc)) {
+      const lastSync = this.lastSyncTime.get(ruc)?.buzon;
+      const elapsed = Math.floor((Date.now() - lastSync) / (1000 * 60));
+      console.log(`[AUTO SYNC] Buzón para ${ruc} ya sincronizado hace ${elapsed} min (throttle: ${this.THROTTLE_MINUTES} min)`);
+      return { success: false, error: 'Sincronización reciente, esperando throttle' };
+    }
 
     // Prevenir ejecuciones duplicadas
     if (this.syncInProgress.get(ruc)?.buzon) {
@@ -65,6 +99,10 @@ class AutoSyncService {
         empresa: workspace.name
       });
 
+      // Registrar hora de sincronización exitosa
+      const currentTime = this.lastSyncTime.get(ruc) || {};
+      this.lastSyncTime.set(ruc, { ...currentTime, buzon: Date.now() });
+
       console.log(`[AUTO SYNC] Buzón consultado para ${ruc}: ${result.mensajes?.length || 0} mensajes`);
 
       return result;
@@ -85,6 +123,14 @@ class AutoSyncService {
    */
   async autoSyncSIRE(workspace) {
     const ruc = workspace.ruc;
+
+    // Throttling - verificar si es necesario sincronizar
+    if (!this.shouldSyncSIRE(ruc)) {
+      const lastSync = this.lastSyncTime.get(ruc)?.sire;
+      const elapsed = Math.floor((Date.now() - lastSync) / (1000 * 60));
+      console.log(`[AUTO SYNC] SIRE para ${ruc} ya sincronizado hace ${elapsed} min (throttle: ${this.THROTTLE_MINUTES} min)`);
+      return { success: false, error: 'Sincronización reciente, esperando throttle' };
+    }
 
     // Prevenir ejecuciones duplicadas
     if (this.syncInProgress.get(ruc)?.sire) {
@@ -161,6 +207,10 @@ class AutoSyncService {
 
       console.log(`[AUTO SYNC] SIRE Ventas descargado para ${ruc}: ${resultVentas.totalRegistros || 0} registros`);
 
+      // Registrar hora de sincronización exitosa
+      const currentTime = this.lastSyncTime.get(ruc) || {};
+      this.lastSyncTime.set(ruc, { ...currentTime, sire: Date.now() });
+
       return {
         success: true,
         compras: resultCompras,
@@ -180,7 +230,7 @@ class AutoSyncService {
 
   /**
    * Verifica y ejecuta sincronizaciones automáticas necesarias
-   * Se llama cuando se guarda o actualiza un workspace
+   * Se llama cuando se guarda o actualiza un workspace, O cuando se carga uno existente
    */
   async checkAndSync(workspace, userId) {
     const results = {
@@ -204,10 +254,40 @@ class AutoSyncService {
   }
 
   /**
+   * Verifica y ejecuta sincronizaciones automáticas necesarias SOLO para cargas (con throttling)
+   * Se llama cuando se carga un workspace existente (GET endpoint)
+   */
+  async checkAndSyncOnLoad(workspace, userId) {
+    // Solo ejecutar si tenemos credenciales válidas Y ha pasado suficiente tiempo
+    const shouldSyncBuzon = this.hasValidSOLCredentials(workspace) && this.shouldSyncBuzon(workspace.ruc);
+    const shouldSyncSIRE = this.hasValidSIRECredentials(workspace) && this.hasValidSOLCredentials(workspace) && this.shouldSyncSIRE(workspace.ruc);
+
+    if (!shouldSyncBuzon && !shouldSyncSIRE) {
+      // No hay nada que sincronizar
+      return { skipped: true, reason: 'throttle' };
+    }
+
+    // Usar checkAndSync normal para ejecutar
+    return await this.checkAndSync(workspace, userId);
+  }
+
+  /**
    * Limpia el estado de sincronización para un RUC específico
    */
   clearSyncState(ruc) {
     this.syncInProgress.delete(ruc);
+    this.lastSyncTime.delete(ruc);
+  }
+
+  /**
+   * Obtiene el estado de sincronización para debugging
+   */
+  getSyncStatus(ruc) {
+    return {
+      inProgress: this.syncInProgress.get(ruc) || {},
+      lastSync: this.lastSyncTime.get(ruc) || {},
+      throttleMinutes: this.THROTTLE_MINUTES
+    };
   }
 }
 

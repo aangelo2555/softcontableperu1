@@ -1,11 +1,11 @@
 ═══════════════════════════════════════════════════════════════════
-  ARCHIVOS MODIFICADOS Y CREADOS - SOFTCONTABLE v1.1.0
+  ARCHIVOS MODIFICADOS Y CREADOS - SOFTCONTABLE v1.2.0
 ═══════════════════════════════════════════════════════════════════
 
 📦 NUEVOS ARCHIVOS CREADOS (10):
 
 Backend:
-✅ server/autoSyncService.js          - Servicio de auto-sincronización (Buzón + SIRE)
+✅ server/autoSyncService.js          - Servicio de auto-sincronización (Buzón + SIRE) + THROTTLING
 ✅ server/cacheService.js             - Cache en memoria para optimización
 
 Frontend:
@@ -25,11 +25,12 @@ Database:
 
 ═══════════════════════════════════════════════════════════════════
 
-📝 ARCHIVOS MODIFICADOS (5):
+📝 ARCHIVOS MODIFICADOS (6):
 
 Backend:
-✅ server/app.js                      - Compresión GZIP, cache, auto-sync, health check
+✅ server/app.js                      - Compresión GZIP, cache, auto-sync, health check + AUTO-SYNC AL CARGAR
 ✅ server/databaseServer.js           - Aplicación automática de índices SQL
+✅ server/autoSyncService.js          - ACTUALIZADO: Throttling de 10 min, auto-sync al cargar empresa
 ✅ package.json                       - Añadida dependencia 'compression'
 
 Frontend:
@@ -42,12 +43,50 @@ Frontend:
 
 1. ✅ BUZÓN AUTOMÁTICO
    - Se ejecuta al guardar credenciales SOL
+   - ✨ NUEVO: También al cargar/seleccionar empresa existente
+   - ✨ THROTTLING: Máximo 1 vez cada 10 minutos
    - Solo para empresa seleccionada
-   - Sin intervención manual
 
 2. ✅ SIRE AUTOMÁTICO (ENERO → HOY)
    - Se ejecuta al guardar credenciales SIRE + SOL
+   - ✨ NUEVO: También al cargar/seleccionar empresa existente  
+   - ✨ THROTTLING: Máximo 1 vez cada 10 minutos
    - Descarga compras y ventas desde enero
+
+3. ✅ CENTRALIZACIÓN MANUAL DE SIRE
+   - Usuario debe usar botón "CENTRALIZAR"
+   - Ya no se centraliza automáticamente
+
+4. ✅ OPTIMIZACIONES DE PERFORMANCE
+   - Compresión GZIP (70-80% reducción tráfico)
+   - Cache en memoria (TTL 5 min)
+   - 20+ índices SQL automáticos
+   - Paginación 50 registros/página
+   - Health check endpoint
+
+5. ✨ NUEVO: DEBUG AUTO-SYNC
+   - Endpoint: GET /api/debug/auto-sync-status/:ruc
+   - Muestra estado de sincronización y throttling
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 PROBLEMA RESUELTO:
+
+❌ ANTES: Auto-sync solo funcionaba al GUARDAR credenciales
+✅ AHORA: Auto-sync funciona también al CARGAR/SELECCIONAR empresa existente
+
+• Si tienes credenciales guardadas, se auto-sincroniza al cambiar de empresa
+• Throttling de 10 minutos evita sincronizaciones excesivas  
+• Funciona para empresas con credenciales pre-existentes
+
+═══════════════════════════════════════════════════════════════════
+
+📊 COMMITS REALIZADOS:
+• 67ccdf4 - Fix: Declaración duplicada cacheService
+• 120ad9a - feat: optimización completa + auto-sync buzón y SIRE
+• [PENDIENTE] - feat: auto-sync al cargar empresa + throttling
+
+═══════════════════════════════════════════════════════════════════
    - Solo para empresa seleccionada
 
 3. ✅ CENTRALIZACIÓN MANUAL
