@@ -21,7 +21,6 @@ const sireHandler = require('../modulo/sireHandler');
 const ublService = require('./ublService');
 const autoSyncService = require('./autoSyncService');
 const cacheService = require('./cacheService');
-const cacheService = require('./cacheService');
 
 const app = express();
 const authRoutes = require('./authRoutes');
