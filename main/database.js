@@ -688,7 +688,7 @@ const dbManager = {
           r.doc_num, r.nombre, r.tc, r.bi, r.igv,
           r.noGravada, r.isc, r.icbper, r.otros_tributos,
           r.total, r.car, r.estado_sire,
-          '60111', // ctaGasto por defecto
+          '6011', // ctaGasto por defecto (sin destino a almacén)
           '4212',  // ctaAbono por defecto
           'COMPRA INTERNA GRAVADA', // tipOper por defecto
           '02',    // tipOperCode por defecto

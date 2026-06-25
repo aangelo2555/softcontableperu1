@@ -687,7 +687,7 @@ function buildJournalEntries(
     const p = data as PurchaseEntry;
     const base = `compra-${p.id}`;
     const entries: JournalEntry[] = [];
-    const ctaGasto = (p.ctaGasto || '60111').trim();
+    const ctaGasto = (p.ctaGasto || '6011').trim();
     
     // Converted amounts in PEN
     const rate = p.tc || 1;

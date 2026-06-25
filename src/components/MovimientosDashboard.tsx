@@ -245,11 +245,11 @@ const MovimientosView: React.FC = () => {
         const d = parseLocalDate(p.fecha);
         return d && d.getFullYear().toString() == currentPeriod;
       })
-      .map(p => p.ctaGasto || '60111')
+      .map(p => p.ctaGasto || '6011')
     ));
 
     const allVctas = Array.from(new Set([...vManualKeys, ...vDetectedKeys, '70111']));
-    const allCctas = Array.from(new Set([...cManualKeys, ...cDetectedKeys, '60111', '63111']));
+    const allCctas = Array.from(new Set([...cManualKeys, ...cDetectedKeys, '6011', '60111', '62111', '63111']));
 
     return MONTHS.map((name, index) => {
       const monthNum = index + 1;
@@ -285,7 +285,7 @@ const MovimientosView: React.FC = () => {
 
       const purchaseAccounts: Record<string, { val: number, ov: boolean }> = {};
       allCctas.forEach(cta => {
-        const sysVal = mPurchases.filter(p => (p.ctaGasto || '60111') === cta).reduce((acc, p) => acc + p.bi, 0);
+        const sysVal = mPurchases.filter(p => (p.ctaGasto || '6011') === cta).reduce((acc, p) => acc + p.bi, 0);
         const ovVal = movimientosData.find(m => m.month === monthNum && m.section === 'C' && m.key === cta && m.period === currentPeriod)?.value;
         purchaseAccounts[cta] = { val: ovVal ?? sysVal, ov: ovVal !== undefined };
       });
