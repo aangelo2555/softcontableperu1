@@ -49,16 +49,11 @@ const BuzonView: React.FC = () => {
     const savedId = sessionStorage.getItem(`activeBuzonBrowserId_${selectedRuc}`);
     setActiveBrowserId(savedId);
     
-    // 🔧 FIX: Limpiar mensajes del buzón anterior al cambiar de empresa
-    // Solo mantener mensajes si el RUC coincide con selectedRuc
-    if (buzonMensajes.length > 0) {
-      // Verificar si los mensajes actuales son de la empresa seleccionada
-      // Si no hay forma de verificar, limpiar por seguridad
-      console.log('[BUZON] Cambiando a empresa:', selectedRuc);
-      setBuzonMensajes([]); // Limpiar mensajes al cambiar de empresa
-      setSelectedMessage(null); // Limpiar mensaje seleccionado
-      setDetalleHtml(null); // Limpiar detalle
-    }
+    // 🔧 FIX: Solo limpiar estado local al cambiar de empresa
+    // NO limpiar buzonMensajes porque el auto-sync global los cargará
+    console.log('[BUZON] Cambiando a empresa:', selectedRuc);
+    setSelectedMessage(null); // Limpiar mensaje seleccionado
+    setDetalleHtml(null); // Limpiar detalle
   }, [selectedRuc]);
 
   // Sincronizar el estado del proceso de sincronización activo cuando cambia de pestaña o de cliente

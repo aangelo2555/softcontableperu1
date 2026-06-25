@@ -447,7 +447,9 @@ const App: React.FC = () => {
 
   // ✨ AUTO-SINCRONIZACIÓN GLOBAL DEL BUZÓN
   // Se ejecuta automáticamente cuando se selecciona una empresa con credenciales SOL
-  // Solo funciona en Desktop (Electron), throttling de 10 minutos por empresa
+  // Solo funciona en Desktop (Electron), throttling inteligente
+  const previousRucRef = useRef<string | null>(null);
+  
   useEffect(() => {
     const autoSyncBuzon = async () => {
       // Solo en entorno Desktop (Electron)
@@ -462,27 +464,41 @@ const App: React.FC = () => {
         return;
       }
 
+      // 🔧 FIX: Detectar si es un CAMBIO EXPLÍCITO de empresa
+      const isExplicitChange = previousRucRef.current !== null && 
+                               previousRucRef.current !== currentCompany.ruc;
+      
+      // Actualizar el ref con el RUC actual
+      previousRucRef.current = currentCompany.ruc;
+
       // Throttling: máximo 1 vez cada 10 minutos por empresa
+      // PERO: Omitir throttling si es un cambio explícito de empresa
       const lastSyncKey = `lastBuzonSync_${currentCompany.ruc}`;
       const lastSync = localStorage.getItem(lastSyncKey);
       const now = Date.now();
       
-      if (lastSync) {
+      if (lastSync && !isExplicitChange) {
         const elapsed = now - parseInt(lastSync);
         const THROTTLE_MS = 10 * 60 * 1000; // 10 minutos
         
         if (elapsed < THROTTLE_MS) {
           const remainingMin = Math.ceil((THROTTLE_MS - elapsed) / 60000);
           console.log(`[AUTO SYNC GLOBAL] Throttling activo para ${currentCompany.ruc}. Próxima sync en ${remainingMin} min`);
+          console.log('[AUTO SYNC GLOBAL] 💡 Mostrando mensajes del caché local si existen');
           return;
         }
+      }
+
+      // Mensaje especial si es cambio explícito
+      if (isExplicitChange) {
+        console.log(`[AUTO SYNC GLOBAL] 🔄 Cambio de empresa detectado. Omitiendo throttling...`);
       }
 
       // Ejecutar auto-sincronización
       console.log('[AUTO SYNC GLOBAL] Iniciando auto-sincronización para', currentCompany.ruc);
       localStorage.setItem(lastSyncKey, now.toString());
       
-      // Esperar 2 segundos antes de sincronizar (dar tiempo a que la UI se estabilice)
+      // Esperar 1 segundo antes de sincronizar (reducido de 2s)
       setTimeout(async () => {
         try {
           if ((window as any).electronAPI?.buzonConsultar) {
@@ -505,7 +521,7 @@ const App: React.FC = () => {
         } catch (error) {
           console.error('[AUTO SYNC GLOBAL] Error en sincronización:', error);
         }
-      }, 2000);
+      }, 1000); // Reducido de 2000ms a 1000ms
     };
 
     autoSyncBuzon();
