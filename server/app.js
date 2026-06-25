@@ -108,17 +108,8 @@ app.post('/api/db/workspaces', async (req, res) => {
         cacheService.invalidate(`workspaces_${req.targetUserId}`);
         cacheService.invalidate(`workspace_data_${req.body.ruc}_${req.targetUserId}`);
         
-        // --- MEJORA #1 y #2: Auto-sincronización de Buzón y SIRE ---
-        // Ejecutar en segundo plano para no bloquear la respuesta
-        setImmediate(async () => {
-            try {
-                const workspace = req.body;
-                console.log(`[AUTO SYNC] Verificando auto-sincronización para ${workspace.ruc}`);
-                await autoSyncService.checkAndSync(workspace, req.targetUserId);
-            } catch (error) {
-                console.error('[AUTO SYNC] Error en auto-sincronización:', error);
-            }
-        });
+        // --- AUTO-SYNC DESACTIVADO ---
+        // El auto-sync ahora se maneja desde el frontend mediante auto-click de botones
         
         res.json({ success: true });
     } catch (error) {
@@ -139,31 +130,12 @@ app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) 
             cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
         }
         
-        // CRÍTICO: Enviar respuesta ANTES de intentar auto-sync
+        // Enviar respuesta inmediatamente
         res.json({ success: true, data });
         
-        // --- AUTO-SYNC AL CARGAR EMPRESA EXISTENTE ---
-        // Ejecutar auto-sync en segundo plano DESPUÉS de enviar respuesta
-        if (data?.currentCompany) {
-            setImmediate(async () => {
-                try {
-                    console.log(`[AUTO SYNC ON LOAD] Verificando auto-sincronización para ${data.currentCompany.ruc}`);
-                    const syncResults = await autoSyncService.checkAndSyncOnLoad(data.currentCompany, req.targetUserId);
-                    
-                    if (syncResults?.skipped) {
-                        console.log(`[AUTO SYNC ON LOAD] Omitido para ${data.currentCompany.ruc}: ${syncResults.reason}`);
-                    } else if (syncResults?.buzon || syncResults?.sire) {
-                        console.log(`[AUTO SYNC ON LOAD] Ejecutado para ${data.currentCompany.ruc}:`, {
-                            buzon: !!syncResults.buzon?.success,
-                            sire: !!syncResults.sire?.success
-                        });
-                    }
-                } catch (error) {
-                    // Error en auto-sync NO debe afectar la carga de datos
-                    console.error('[AUTO SYNC ON LOAD] Error en auto-sincronización (no crítico):', error);
-                }
-            });
-        }
+        // --- AUTO-SYNC DESACTIVADO ---
+        // El auto-sync ahora se maneja desde el frontend mediante auto-click de botones
+        // Esto evita problemas de sincronización y es más confiable
         
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);

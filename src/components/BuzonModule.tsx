@@ -68,6 +68,55 @@ const BuzonView: React.FC = () => {
     };
   }, [selectedRuc]);
 
+  // ✨ AUTO-SINCRONIZACIÓN AUTOMÁTICA AL CARGAR EMPRESA
+  // Se ejecuta una vez cuando se carga el componente y hay credenciales SOL válidas
+  // Throttling: máximo 1 vez cada 10 minutos por empresa
+  useEffect(() => {
+    const autoSync = async () => {
+      const companyToCheck = workspaces.find(w => w.ruc === selectedRuc) || currentCompany;
+      
+      // Verificar si tiene credenciales SOL válidas
+      const hasCredentials = companyToCheck.sol_user && companyToCheck.sol_pass;
+      if (!hasCredentials) {
+        console.log('[AUTO SYNC] Sin credenciales SOL para', selectedRuc);
+        return;
+      }
+
+      // Verificar si ya está sincronizando
+      if (globalSyncState[selectedRuc]?.loading) {
+        console.log('[AUTO SYNC] Ya hay una sincronización en progreso para', selectedRuc);
+        return;
+      }
+
+      // Throttling: máximo 1 vez cada 10 minutos
+      const lastSyncKey = `lastBuzonSync_${selectedRuc}`;
+      const lastSync = localStorage.getItem(lastSyncKey);
+      const now = Date.now();
+      
+      if (lastSync) {
+        const elapsed = now - parseInt(lastSync);
+        const THROTTLE_MS = 10 * 60 * 1000; // 10 minutos
+        
+        if (elapsed < THROTTLE_MS) {
+          const remainingMin = Math.ceil((THROTTLE_MS - elapsed) / 60000);
+          console.log(`[AUTO SYNC] Throttling activo para ${selectedRuc}. Próxima sync en ${remainingMin} min`);
+          return;
+        }
+      }
+
+      // Ejecutar auto-sincronización
+      console.log('[AUTO SYNC] Iniciando auto-sincronización para', selectedRuc);
+      localStorage.setItem(lastSyncKey, now.toString());
+      
+      // Esperar 2 segundos antes de sincronizar (dar tiempo a que la UI se estabilice)
+      setTimeout(() => {
+        handleConsultar();
+      }, 2000);
+    };
+
+    autoSync();
+  }, [selectedRuc]); // Se ejecuta cuando cambia la empresa seleccionada
+
   const setSyncState = (ruc: string, updates: Partial<SyncState>) => {
     const currentState = globalSyncState[ruc] || { loading: false, statusText: '', error: null };
     const newState = { ...currentState, ...updates };
