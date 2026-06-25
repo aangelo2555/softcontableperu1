@@ -16,6 +16,38 @@ import toast from 'react-hot-toast';
 import { exportSingleSheet } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
 
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const cleaned = dateStr.trim();
+  
+  if (cleaned.includes('-')) {
+    const parts = cleaned.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+  }
+  
+  if (cleaned.includes('/')) {
+    const parts = cleaned.split('/');
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+  }
+
+  const parsed = new Date(cleaned);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
   'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -148,14 +180,20 @@ const CajaDashboard: React.FC = () => {
 
     const vManualKeys = getExtraKeys('V');
     const vDetectedKeys = Array.from(new Set(sales
-      .filter(s => new Date(s.fecha).getFullYear().toString() === currentPeriod)
+      .filter(s => {
+        const d = parseLocalDate(s.fecha);
+        return d && d.getFullYear().toString() === currentPeriod;
+      })
       .map(s => s.ctaIngreso || '70111')
     ));
     const allVctas = Array.from(new Set([...vManualKeys, ...vDetectedKeys, '70111']));
 
     const cManualKeys = getExtraKeys('C');
     const cDetectedKeys = Array.from(new Set(purchases
-      .filter(p => new Date(p.fecha).getFullYear().toString() === currentPeriod)
+      .filter(p => {
+        const d = parseLocalDate(p.fecha);
+        return d && d.getFullYear().toString() === currentPeriod;
+      })
       .map(p => p.ctaGasto || '60111')
     ));
     const allCctas = Array.from(new Set([...cManualKeys, ...cDetectedKeys, '60111', '63111']));
@@ -170,8 +208,8 @@ const CajaDashboard: React.FC = () => {
       const monthNum = index + 1;
       
       const filterByMonth = (items: any[]) => items.filter(i => {
-        const d = new Date(i.fecha);
-        return (d.getMonth() + 1 === monthNum) && (d.getFullYear().toString() === currentPeriod);
+        const d = parseLocalDate(i.fecha);
+        return d && (d.getMonth() + 1 === monthNum) && (d.getFullYear().toString() === currentPeriod);
       });
 
       const mSales = filterByMonth(sales);

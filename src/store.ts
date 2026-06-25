@@ -595,6 +595,81 @@ const sortPlan = (plan: Account[]): Account[] => {
   return [...plan].sort((a, b) => a.cta.localeCompare(b.cta, undefined, { numeric: true }));
 };
 
+function buildDestinationEntries(
+  cta: string,
+  amount: number,
+  plan: Account[],
+  baseId: string,
+  source: 'COMPRA' | 'VENTA' | 'HONORARIO' | 'ASIENTO',
+  asiento: string,
+  fecha: string,
+  glosa: string
+): JournalEntry[] {
+  const destEntries: JournalEntry[] = [];
+  if (amount <= 0 || !cta.startsWith('6')) return destEntries;
+
+  // Evitamos destinos circulares si la cuenta ya es de amarre (9x o 79)
+  if (cta.startsWith('79') || cta.startsWith('9')) return destEntries;
+
+  const acc = plan.find(a => a.cta === cta);
+  if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
+    const destHaber = acc.destino_haber.trim();
+    const ccList = [];
+    if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) {
+      ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
+    }
+    if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) {
+      ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
+    }
+    if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) {
+      ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
+    }
+
+    if (ccList.length > 0) {
+      const destinationGlosa = glosa || 'POR EL DESTINO DEL GASTO';
+      let totalAsignado = 0;
+      
+      for (let i = 0; i < ccList.length; i++) {
+        const cc = ccList[i];
+        let montoCc = Number((amount * (cc.pct / 100.0)).toFixed(2));
+        
+        if (i === ccList.length - 1) {
+          montoCc = Number((amount - totalAsignado).toFixed(2));
+        } else {
+          totalAsignado = Number((totalAsignado + montoCc).toFixed(2));
+        }
+
+        if (montoCc > 0) {
+          destEntries.push({
+            id: `${baseId}-dest-debe-${cta}-${i}`,
+            source,
+            asiento,
+            fecha,
+            glosa: destinationGlosa,
+            cta: cc.cta,
+            desc: `DESTINO DEBE (${cc.pct}%)`,
+            debe: montoCc,
+            haber: 0
+          });
+        }
+      }
+
+      destEntries.push({
+        id: `${baseId}-dest-haber-${cta}`,
+        source,
+        asiento,
+        fecha,
+        glosa: destinationGlosa,
+        cta: destHaber,
+        desc: 'DESTINO HABER',
+        debe: 0,
+        haber: amount
+      });
+    }
+  }
+  return destEntries;
+}
+
 function buildJournalEntries(
   source: 'COMPRA' | 'VENTA' | 'HONORARIO' | 'ASIENTO',
   data: any,
@@ -616,13 +691,15 @@ function buildJournalEntries(
     const noGravadaPEN = isUsd ? Number((p.noGravada * rate).toFixed(2)) : p.noGravada;
     const igvPEN = isUsd ? Number((p.igv * rate).toFixed(2)) : p.igv;
     const iscPEN = isUsd ? Number((p.isc * rate).toFixed(2)) : p.isc;
+    const icbperPEN = isUsd ? Number(((p.icbper || 0) * rate).toFixed(2)) : (p.icbper || 0);
+    const otrosTributosPEN = isUsd ? Number(((p.otros_tributos || 0) * rate).toFixed(2)) : (p.otros_tributos || 0);
     const totalPEN = isUsd ? Number((p.total * rate).toFixed(2)) : p.total;
     
     // If USD, perform rounding adjustment to balance the provisión perfectly:
     // SUM(debit) = SUM(credit)
     let adjustedBiPEN = biPEN;
     if (isUsd) {
-      const sumDebits = Number((biPEN + noGravadaPEN + igvPEN + iscPEN).toFixed(2));
+      const sumDebits = Number((biPEN + noGravadaPEN + igvPEN + iscPEN + icbperPEN + otrosTributosPEN).toFixed(2));
       const diff = Number((totalPEN - sumDebits).toFixed(2));
       if (diff !== 0) {
         if (p.bi > 0) {
@@ -630,8 +707,6 @@ function buildJournalEntries(
         }
       }
     }
-    
-    const totalGastoPEN = Number((adjustedBiPEN + noGravadaPEN).toFixed(2));
     
     // Provisión
     const natureGlosa = p.glosa || `POR LA COMPRA DE MERCADERIA SEGUN ${p.tipo_doc} ${p.serie}-${p.numero}`;
@@ -643,68 +718,30 @@ function buildJournalEntries(
       entries.push({ id: `${base}-igv`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: igvSeg.subcuenta, desc: igvSeg.description, debe: igvPEN, haber: 0 });
     }
     if (p.isc > 0) entries.push({ id: `${base}-isc`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: '4012', desc: 'I.S.C.', debe: iscPEN, haber: 0 });
+    if (icbperPEN > 0) entries.push({ id: `${base}-icbper`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: '6419', desc: 'ICBPER COMPRAS', debe: icbperPEN, haber: 0 });
+    if (otrosTributosPEN > 0) entries.push({ id: `${base}-otros`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: '6419', desc: 'OTROS TRIBUTOS COMPRAS', debe: otrosTributosPEN, haber: 0 });
     if (p.total > 0) entries.push({ id: `${base}-total`, source, asiento: p.registro, fecha: p.fecha, glosa: natureGlosa, cta: (p.ctaAbono || '4212').trim(), desc: 'EMITIDAS', debe: 0, haber: totalPEN });
 
-    // Destino (Amarre)
-    if (totalGastoPEN > 0 && ctaGasto.startsWith('6')) {
-      const acc = plan.find(a => a.cta === ctaGasto);
-      if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
-        const destHaber = acc.destino_haber.trim();
-        const ccList = [];
-        if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) {
-          ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
-        }
-        if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) {
-          ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
-        }
-        if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) {
-          ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
-        }
-
-        if (ccList.length > 0) {
-          const destinationGlosa = 'POR EL INGRESO FISICO MERCADERIA AL ALMACEN';
-          let totalAsignado = 0;
-          
-          for (let i = 0; i < ccList.length; i++) {
-            const cc = ccList[i];
-            let montoCc = Number((totalGastoPEN * (cc.pct / 100.0)).toFixed(2));
-            
-            // Si es el último, absorber diferencia para cuadrar exacto
-            if (i === ccList.length - 1) {
-              montoCc = Number((totalGastoPEN - totalAsignado).toFixed(2));
-            } else {
-              totalAsignado = Number((totalAsignado + montoCc).toFixed(2));
-            }
-
-            if (montoCc > 0) {
-              entries.push({
-                id: `${base}-amd-${i}`,
-                source,
-                asiento: p.registro,
-                fecha: p.fecha,
-                glosa: destinationGlosa,
-                cta: cc.cta,
-                desc: `DESTINO DEBE (${cc.pct}%)`,
-                debe: montoCc,
-                haber: 0
-              });
-            }
-          }
-
-          entries.push({
-            id: `${base}-amh`,
-            source,
-            asiento: p.registro,
-            fecha: p.fecha,
-            glosa: destinationGlosa,
-            cta: destHaber,
-            desc: 'DESTINO HABER',
-            debe: 0,
-            haber: totalGastoPEN
-          });
-        }
+    // Destinos dinámicos para todas las cuentas de clase 6 de la provisión
+    const provisEntries = [...entries];
+    provisEntries.forEach(entry => {
+      if (entry.cta.startsWith('6') && entry.debe > 0) {
+        const destGlosa = entry.cta.startsWith('60')
+          ? 'POR EL INGRESO FISICO MERCADERIA AL ALMACEN'
+          : 'POR EL DESTINO DEL GASTO';
+        const dests = buildDestinationEntries(
+          entry.cta,
+          entry.debe,
+          plan,
+          base,
+          source,
+          p.registro,
+          p.fecha,
+          destGlosa
+        );
+        entries.push(...dests);
       }
-    }
+    });
 
     // --- SPOT (Detracción) ---
     if (p.spot_monto && p.spot_monto > 0 && p.spot_constancia && p.spot_fecha) {
@@ -804,6 +841,8 @@ function buildJournalEntries(
     const cta70_pen = isUsd ? Number((s.bi * tcCompra).toFixed(2)) : s.bi;
     const noGravada_pen = isUsd ? Number((s.noGravada * tcCompra).toFixed(2)) : s.noGravada;
     const isc_pen = isUsd ? Number((s.isc * tcCompra).toFixed(2)) : s.isc;
+    const icbper_pen = isUsd ? Number(((s.icbper || 0) * tcCompra).toFixed(2)) : (s.icbper || 0);
+    const otros_pen = isUsd ? Number(((s.otros_tributos || 0) * tcCompra).toFixed(2)) : (s.otros_tributos || 0);
 
     // 1. NATURALEZA (Venta: 12, 40, 70)
     const natureGlosa = s.glosa || `VENTA ${s.tipo_doc} ${s.serie}-${s.numero}`;
@@ -824,7 +863,7 @@ function buildJournalEntries(
 
     if (isUsd) {
       // Calculate exchange asymmetry difference
-      const credits = Number((cta70_pen + cta40_pen + noGravada_pen + isc_pen).toFixed(2));
+      const credits = Number((cta70_pen + cta40_pen + noGravada_pen + isc_pen + icbper_pen + otros_pen).toFixed(2));
       const descuadre = Number((cta12_pen - credits).toFixed(2));
       
       if (descuadre < 0) {
@@ -909,6 +948,34 @@ function buildJournalEntries(
         desc: 'I.S.C. VENTAS', 
         debe: 0, 
         haber: isc_pen 
+      });
+    }
+
+    if (icbper_pen > 0) {
+      entries.push({
+        id: `${base}-icbper`,
+        source,
+        asiento: s.registro,
+        fecha: s.fecha,
+        glosa: natureGlosa,
+        cta: '40189',
+        desc: 'ICBPER VENTAS',
+        debe: 0,
+        haber: icbper_pen
+      });
+    }
+
+    if (otros_pen > 0) {
+      entries.push({
+        id: `${base}-otros`,
+        source,
+        asiento: s.registro,
+        fecha: s.fecha,
+        glosa: natureGlosa,
+        cta: '40189',
+        desc: 'OTROS TRIBUTOS VENTAS',
+        debe: 0,
+        haber: otros_pen
       });
     }
 
@@ -2091,6 +2158,13 @@ export const useStore = create<AppState>()(
           }
 
           const j = buildJournalEntries(proceso === 'Generar RCE' ? 'COMPRA' : 'VENTA', r, get().plan);
+          
+          // Si el registro está anulado o vacío (sin asientos contables con importes > 0), lo omitimos
+          if (j.length === 0 || j.every(line => line.debe === 0 && line.haber === 0)) {
+            const table = proceso === 'Generar RCE' ? 'purchases' : 'sales';
+            await electron.dbExecute(`UPDATE ${table} SET estado_sire = 'Aceptado' WHERE id = ?`, [r.id]);
+            continue;
+          }
           
           // ── Barrera de partida doble (Mejora #1) ──
           try {

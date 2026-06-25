@@ -12,6 +12,38 @@ import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
 
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const cleaned = dateStr.trim();
+  
+  if (cleaned.includes('-')) {
+    const parts = cleaned.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+  }
+  
+  if (cleaned.includes('/')) {
+    const parts = cleaned.split('/');
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+  }
+
+  const parsed = new Date(cleaned);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 /**
  * FORMATO 14.1: REGISTRO DE VENTAS E INGRESOS
  * ══════════════════════════════════════════════
@@ -85,7 +117,8 @@ const RegistroVentasView: React.FC = () => {
   // ─── Filtrado por Periodo ───
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
-      const d = new Date(s.fecha);
+      const d = parseLocalDate(s.fecha);
+      if (!d) return false;
       const matchMonth = d.getMonth() === periodoMes;
       const matchYear = d.getFullYear() === periodoAnio;
       const matchSearch = searchTerm === '' ||
