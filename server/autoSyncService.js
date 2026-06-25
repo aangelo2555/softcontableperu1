@@ -258,13 +258,35 @@ class AutoSyncService {
    * Se llama cuando se carga un workspace existente (GET endpoint)
    */
   async checkAndSyncOnLoad(workspace, userId) {
+    const ruc = workspace.ruc;
+    
+    // Verificar si nunca se ha sincronizado (primera vez)
+    const lastSync = this.lastSyncTime.get(ruc);
+    const isFirstTime = !lastSync || (!lastSync.buzon && !lastSync.sire);
+    
+    if (isFirstTime) {
+      console.log(`[AUTO SYNC ON LOAD] Primera sincronización para ${ruc}, omitiendo throttling`);
+      return await this.checkAndSync(workspace, userId);
+    }
+    
     // Solo ejecutar si tenemos credenciales válidas Y ha pasado suficiente tiempo
-    const shouldSyncBuzon = this.hasValidSOLCredentials(workspace) && this.shouldSyncBuzon(workspace.ruc);
-    const shouldSyncSIRE = this.hasValidSIRECredentials(workspace) && this.hasValidSOLCredentials(workspace) && this.shouldSyncSIRE(workspace.ruc);
+    const shouldSyncBuzon = this.hasValidSOLCredentials(workspace) && this.shouldSyncBuzon(ruc);
+    const shouldSyncSIRE = this.hasValidSIRECredentials(workspace) && this.hasValidSOLCredentials(workspace) && this.shouldSyncSIRE(ruc);
 
     if (!shouldSyncBuzon && !shouldSyncSIRE) {
       // No hay nada que sincronizar
-      return { skipped: true, reason: 'throttle' };
+      const buzonElapsed = lastSync?.buzon ? Math.floor((Date.now() - lastSync.buzon) / (1000 * 60)) : 'never';
+      const sireElapsed = lastSync?.sire ? Math.floor((Date.now() - lastSync.sire) / (1000 * 60)) : 'never';
+      
+      return { 
+        skipped: true, 
+        reason: 'throttle',
+        details: {
+          buzonLastSync: buzonElapsed,
+          sireLastSync: sireElapsed,
+          throttleMinutes: this.THROTTLE_MINUTES
+        }
+      };
     }
 
     // Usar checkAndSync normal para ejecutar
@@ -280,13 +302,33 @@ class AutoSyncService {
   }
 
   /**
+   * Resetea el throttling para un RUC específico (solo para debugging)
+   */
+  resetThrottling(ruc) {
+    const current = this.lastSyncTime.get(ruc) || {};
+    this.lastSyncTime.set(ruc, {
+      ...current,
+      buzon: 0,  // Resetear a epoch para forzar sync
+      sire: 0
+    });
+    console.log(`[AUTO SYNC] Throttling reseteado para ${ruc}`);
+  }
+
+  /**
    * Obtiene el estado de sincronización para debugging
    */
   getSyncStatus(ruc) {
+    const lastSync = this.lastSyncTime.get(ruc) || {};
+    const now = Date.now();
+    
     return {
       inProgress: this.syncInProgress.get(ruc) || {},
-      lastSync: this.lastSyncTime.get(ruc) || {},
-      throttleMinutes: this.THROTTLE_MINUTES
+      lastSync,
+      throttleMinutes: this.THROTTLE_MINUTES,
+      elapsedSinceLastBuzon: lastSync.buzon ? Math.floor((now - lastSync.buzon) / (1000 * 60)) : 'never',
+      elapsedSinceLastSIRE: lastSync.sire ? Math.floor((now - lastSync.sire) / (1000 * 60)) : 'never',
+      canSyncBuzon: this.shouldSyncBuzon(ruc),
+      canSyncSIRE: this.shouldSyncSIRE(ruc)
     };
   }
 }

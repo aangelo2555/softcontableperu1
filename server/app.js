@@ -300,6 +300,40 @@ app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
     }
 });
 
+// --- ENDPOINT DE PRUEBA MANUAL PARA AUTO-SYNC ---
+app.post('/api/debug/force-auto-sync/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'Falta RUC.' });
+        }
+        
+        // Obtener datos de la empresa
+        const data = await db.getWorkspaceData(ruc, req.targetUserId);
+        if (!data?.currentCompany) {
+            return res.status(404).json({ success: false, error: 'Empresa no encontrada.' });
+        }
+        
+        console.log(`[FORCE AUTO SYNC] Ejecutando sincronización forzada para ${ruc}`);
+        
+        // Forzar auto-sync sin throttling
+        const syncResults = await autoSyncService.checkAndSync(data.currentCompany, req.targetUserId);
+        
+        console.log(`[FORCE AUTO SYNC] Resultados para ${ruc}:`, syncResults);
+        
+        res.json({ 
+            success: true, 
+            results: syncResults,
+            company: data.currentCompany.name,
+            hasSOL: autoSyncService.hasValidSOLCredentials(data.currentCompany),
+            hasSIRE: autoSyncService.hasValidSIRECredentials(data.currentCompany)
+        });
+    } catch (error) {
+        console.error('[FORCE AUTO SYNC ERROR]:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // --- Mejora #7: Endpoint de Estado de Auto-Sincronización (Debug) ---
 app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
@@ -312,6 +346,69 @@ app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, a
         res.json({ success: true, status });
     } catch (error) {
         console.error('[DEBUG ERROR] Error obteniendo estado de auto-sync:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- ENDPOINT PARA VERIFICAR CREDENCIALES ---
+app.get('/api/debug/check-credentials/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'Falta RUC.' });
+        }
+        
+        // Obtener datos de la empresa
+        const data = await db.getWorkspaceData(ruc, req.targetUserId);
+        if (!data?.currentCompany) {
+            return res.status(404).json({ success: false, error: 'Empresa no encontrada.' });
+        }
+        
+        const company = data.currentCompany;
+        const hasSOL = autoSyncService.hasValidSOLCredentials(company);
+        const hasSIRE = autoSyncService.hasValidSIRECredentials(company);
+        
+        res.json({ 
+            success: true, 
+            ruc: company.ruc,
+            name: company.name,
+            credentials: {
+                sol: {
+                    valid: hasSOL,
+                    user: company.sol_user ? '***presente***' : 'no configurado',
+                    pass: company.sol_pass ? '***presente***' : 'no configurado'
+                },
+                sire: {
+                    valid: hasSIRE,
+                    clientId: company.sunatClientId ? '***presente***' : 'no configurado',
+                    clientSecret: company.sunatClientSecret ? '***presente***' : 'no configurado'
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[DEBUG ERROR] Error verificando credenciales:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- ENDPOINT PARA RESETEAR THROTTLING ---
+app.post('/api/debug/reset-throttling/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { ruc } = req.params;
+        if (!ruc) {
+            return res.status(400).json({ success: false, error: 'Falta RUC.' });
+        }
+        
+        autoSyncService.resetThrottling(ruc);
+        const status = autoSyncService.getSyncStatus(ruc);
+        
+        res.json({ 
+            success: true, 
+            message: 'Throttling reseteado exitosamente',
+            status 
+        });
+    } catch (error) {
+        console.error('[DEBUG ERROR] Error reseteando throttling:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
