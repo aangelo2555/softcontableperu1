@@ -445,6 +445,72 @@ const App: React.FC = () => {
     }
   }, [activeTab, currentCompany, setActiveTab]);
 
+  // ✨ AUTO-SINCRONIZACIÓN GLOBAL DEL BUZÓN
+  // Se ejecuta automáticamente cuando se selecciona una empresa con credenciales SOL
+  // Solo funciona en Desktop (Electron), throttling de 10 minutos por empresa
+  useEffect(() => {
+    const autoSyncBuzon = async () => {
+      // Solo en entorno Desktop (Electron)
+      const isElectron = !!(window as any).electronAPI;
+      if (!isElectron) {
+        return;
+      }
+
+      // Verificar que hay credenciales SOL válidas
+      const hasCredentials = currentCompany.sol_user && currentCompany.sol_pass;
+      if (!hasCredentials) {
+        return;
+      }
+
+      // Throttling: máximo 1 vez cada 10 minutos por empresa
+      const lastSyncKey = `lastBuzonSync_${currentCompany.ruc}`;
+      const lastSync = localStorage.getItem(lastSyncKey);
+      const now = Date.now();
+      
+      if (lastSync) {
+        const elapsed = now - parseInt(lastSync);
+        const THROTTLE_MS = 10 * 60 * 1000; // 10 minutos
+        
+        if (elapsed < THROTTLE_MS) {
+          const remainingMin = Math.ceil((THROTTLE_MS - elapsed) / 60000);
+          console.log(`[AUTO SYNC GLOBAL] Throttling activo para ${currentCompany.ruc}. Próxima sync en ${remainingMin} min`);
+          return;
+        }
+      }
+
+      // Ejecutar auto-sincronización
+      console.log('[AUTO SYNC GLOBAL] Iniciando auto-sincronización para', currentCompany.ruc);
+      localStorage.setItem(lastSyncKey, now.toString());
+      
+      // Esperar 2 segundos antes de sincronizar (dar tiempo a que la UI se estabilice)
+      setTimeout(async () => {
+        try {
+          if ((window as any).electronAPI?.buzonConsultar) {
+            const result = await (window as any).electronAPI.buzonConsultar({
+              ruc: currentCompany.ruc,
+              usuario: currentCompany.sol_user,
+              clave: currentCompany.sol_pass,
+              empresa: currentCompany.name,
+              email: ''
+            });
+            
+            if (result.success) {
+              // Actualizar el store con los mensajes sincronizados
+              useStore.getState().setBuzonMensajes(result.mensajes);
+              console.log(`[AUTO SYNC GLOBAL] ✅ Buzón sincronizado: ${result.mensajes.length} mensajes`);
+            } else {
+              console.log('[AUTO SYNC GLOBAL] ❌ Error:', result.error);
+            }
+          }
+        } catch (error) {
+          console.error('[AUTO SYNC GLOBAL] Error en sincronización:', error);
+        }
+      }, 2000);
+    };
+
+    autoSyncBuzon();
+  }, [currentCompany.ruc, currentCompany.sol_user, currentCompany.sol_pass]); // Se ejecuta cuando cambia la empresa o sus credenciales
+
 
   const handleBackup = async () => {
     const loadingToast = toast.loading('Creando respaldo...');
