@@ -236,14 +236,14 @@ const MovimientosView: React.FC = () => {
     const vDetectedKeys = Array.from(new Set(sales
       .filter(s => {
         const d = parseLocalDate(s.fecha);
-        return d && d.getFullYear().toString() === currentPeriod;
+        return d && d.getFullYear().toString() == currentPeriod;
       })
       .map(s => s.ctaIngreso || '70111')
     ));
     const cDetectedKeys = Array.from(new Set(purchases
       .filter(p => {
         const d = parseLocalDate(p.fecha);
-        return d && d.getFullYear().toString() === currentPeriod;
+        return d && d.getFullYear().toString() == currentPeriod;
       })
       .map(p => p.ctaGasto || '60111')
     ));
@@ -256,7 +256,7 @@ const MovimientosView: React.FC = () => {
 
       const filterByMonth = (items: any[]) => items.filter(i => {
         const d = parseLocalDate(i.fecha);
-        return d && (d.getMonth() + 1 === monthNum) && (d.getFullYear().toString() === currentPeriod);
+        return d && (d.getMonth() + 1 === monthNum) && (d.getFullYear().toString() == currentPeriod);
       });
 
       const mSales = filterByMonth(sales);
