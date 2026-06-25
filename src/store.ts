@@ -54,6 +54,12 @@ export interface PurchaseEntry {
   retencion_fecha?: string;
   percepcion_monto?: number;
   percepcion_comprobante?: string;
+  // --- Pago Bancario ---
+  pago_monto?: number;
+  pago_fecha?: string;
+  pago_medio?: string;
+  pago_cuenta?: string;
+  pago_operacion?: string;
 }
 
 export interface SaleEntry {
@@ -681,7 +687,7 @@ function buildJournalEntries(
     const p = data as PurchaseEntry;
     const base = `compra-${p.id}`;
     const entries: JournalEntry[] = [];
-    const ctaGasto = (p.ctaGasto || '6011').trim();
+    const ctaGasto = (p.ctaGasto || '60111').trim();
     
     // Converted amounts in PEN
     const rate = p.tc || 1;
@@ -820,6 +826,40 @@ function buildJournalEntries(
         desc: 'PROVEEDOR POR PERCEPCION',
         debe: 0,
         haber: percPEN
+      });
+    }
+
+    // --- Pago Bancario ---
+    if (p.pago_monto && p.pago_monto > 0 && p.pago_fecha && p.pago_cuenta) {
+      const pagoPEN = isUsd ? Number((p.pago_monto * rate).toFixed(2)) : p.pago_monto;
+      const pagoGlosa = `PAGO ${p.tipo_doc} ${p.serie}-${p.numero}${p.pago_operacion ? ` OP. ${p.pago_operacion}` : ''}`;
+      entries.push({
+        id: `${base}-pago-debe`,
+        source,
+        asiento: p.registro,
+        fecha: p.pago_fecha,
+        glosa: pagoGlosa,
+        cta: (p.ctaAbono || '4212').trim(),
+        desc: 'PAGO A PROVEEDOR',
+        debe: pagoPEN,
+        haber: 0,
+        medio_pago: p.pago_medio || '',
+        nro_transaccion: p.pago_operacion || '',
+        razon_social: p.nombre || ''
+      });
+      entries.push({
+        id: `${base}-pago-haber`,
+        source,
+        asiento: p.registro,
+        fecha: p.pago_fecha,
+        glosa: pagoGlosa,
+        cta: (p.pago_cuenta || '10411').trim(),
+        desc: 'SALIDA DE BANCO',
+        debe: 0,
+        haber: pagoPEN,
+        medio_pago: p.pago_medio || '',
+        nro_transaccion: p.pago_operacion || '',
+        razon_social: p.nombre || ''
       });
     }
 
@@ -1384,8 +1424,9 @@ export const useStore = create<AppState>()(
             monto_me, tc_origen,
             spot_tipo, spot_monto, spot_constancia, spot_fecha,
             retencion_monto, retencion_comprobante, retencion_fecha,
-            percepcion_monto, percepcion_comprobante
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+            percepcion_monto, percepcion_comprobante,
+            pago_monto, pago_fecha, pago_medio, pago_cuenta, pago_operacion
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
           [
             p.id, ruc, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero, 
             p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono, 
@@ -1393,7 +1434,8 @@ export const useStore = create<AppState>()(
             monto_me, tc_origen,
             p.spot_tipo || null, p.spot_monto || 0, p.spot_constancia || null, p.spot_fecha || null,
             p.retencion_monto || 0, p.retencion_comprobante || null, p.retencion_fecha || null,
-            p.percepcion_monto || 0, p.percepcion_comprobante || null
+            p.percepcion_monto || 0, p.percepcion_comprobante || null,
+            p.pago_monto || 0, p.pago_fecha || null, p.pago_medio || null, p.pago_cuenta || null, p.pago_operacion || null
           ]
         );
         

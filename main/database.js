@@ -458,7 +458,12 @@ const purchaseSpotCols = [
   { name: 'retencion_comprobante', type: 'TEXT' },
   { name: 'retencion_fecha', type: 'TEXT' },
   { name: 'percepcion_monto', type: 'REAL DEFAULT 0' },
-  { name: 'percepcion_comprobante', type: 'TEXT' }
+  { name: 'percepcion_comprobante', type: 'TEXT' },
+  { name: 'pago_monto', type: 'REAL DEFAULT 0' },
+  { name: 'pago_fecha', type: 'TEXT' },
+  { name: 'pago_medio', type: 'TEXT' },
+  { name: 'pago_cuenta', type: 'TEXT' },
+  { name: 'pago_operacion', type: 'TEXT' }
 ];
 purchaseSpotCols.forEach(col => {
   if (!purchaseColsForSpot.some(c => c.name === col.name)) {
@@ -671,8 +676,8 @@ const dbManager = {
   saveSirePurchases: (ruc, records) => {
     const insert = db.prepare(`
       INSERT OR REPLACE INTO purchases 
-      (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono, tipOper, tipOperCode, moneda, glosa, detraccion)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((recs) => {
@@ -682,7 +687,14 @@ const dbManager = {
           r.tipo_doc, r.serie, r.numero, r.doc_tipo,
           r.doc_num, r.nombre, r.tc, r.bi, r.igv,
           r.noGravada, r.isc, r.icbper, r.otros_tributos,
-          r.total, r.car, r.estado_sire
+          r.total, r.car, r.estado_sire,
+          '60111', // ctaGasto por defecto
+          '4212',  // ctaAbono por defecto
+          'COMPRA INTERNA GRAVADA', // tipOper por defecto
+          '02',    // tipOperCode por defecto
+          'SOLES', // moneda por defecto
+          'POR LA COMPRA DE MERCADERIA', // glosa por defecto
+          0        // detraccion
         );
       }
     });

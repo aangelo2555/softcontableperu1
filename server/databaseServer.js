@@ -966,6 +966,13 @@ ensureColumnExists('purchases', 'retencion_fecha', 'TEXT');
 ensureColumnExists('purchases', 'percepcion_monto', 'REAL DEFAULT 0');
 ensureColumnExists('purchases', 'percepcion_comprobante', 'TEXT');
 
+// --- Campos de Pago Bancario para Compras ---
+ensureColumnExists('purchases', 'pago_monto', 'REAL DEFAULT 0');
+ensureColumnExists('purchases', 'pago_fecha', 'TEXT');
+ensureColumnExists('purchases', 'pago_medio', 'TEXT');
+ensureColumnExists('purchases', 'pago_cuenta', 'TEXT');
+ensureColumnExists('purchases', 'pago_operacion', 'TEXT');
+
 ensureColumnExists('sales', 'spot_tipo', 'TEXT');
 ensureColumnExists('sales', 'spot_monto', 'REAL DEFAULT 0');
 ensureColumnExists('sales', 'spot_constancia', 'TEXT');
@@ -1180,12 +1187,24 @@ const dbManager = {
     saveSirePurchases: (ruc, records, userId) => {
         const insert = db.prepare(`
             INSERT OR REPLACE INTO purchases 
-            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono, tipOper, tipOperCode, moneda, glosa, detraccion, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const transaction = db.transaction((recs) => {
             for (const r of recs) {
-                insert.run(r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, r.doc_tipo, r.doc_num, r.nombre, r.tc, r.bi, r.igv, r.noGravada, r.isc, r.icbper, r.otros_tributos, r.total, r.car, r.estado_sire, userId);
+                insert.run(
+                    r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
+                    r.doc_tipo, r.doc_num, r.nombre, r.tc, r.bi, r.igv, r.noGravada, r.isc, 
+                    r.icbper, r.otros_tributos, r.total, r.car, r.estado_sire,
+                    '60111', // ctaGasto por defecto
+                    '4212',  // ctaAbono por defecto
+                    'COMPRA INTERNA GRAVADA', // tipOper por defecto
+                    '02',    // tipOperCode por defecto
+                    'SOLES', // moneda por defecto
+                    'POR LA COMPRA DE MERCADERIA', // glosa por defecto
+                    0,       // detraccion
+                    userId
+                );
             }
         });
         transaction(records);
