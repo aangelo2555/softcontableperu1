@@ -585,6 +585,102 @@ try {
 
 console.log('[DB] Tablas Libro Diario 5.2, Formato 5.4 y secuencias verificadas.');
 
+// ====================================================================
+// MEJORA #4: ÍNDICES DE PERFORMANCE OPTIMIZADOS
+// ====================================================================
+console.log('[DB PERFORMANCE] Creando índices optimizados...');
+
+try {
+    // Índices para PURCHASES (Compras)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_purchases_workspace_fecha 
+        ON purchases(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_sire_estado 
+        ON purchases(workspace_id, user_id, estado_sire, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_proveedor 
+        ON purchases(workspace_id, user_id, doc_num, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_tipo_doc 
+        ON purchases(workspace_id, user_id, tipo_doc, serie, numero);
+    `);
+    
+    // Índices para SALES (Ventas)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_sales_workspace_fecha 
+        ON sales(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_sire_estado 
+        ON sales(workspace_id, user_id, estado_sire, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_cliente 
+        ON sales(workspace_id, user_id, doc_num, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_tipo_doc 
+        ON sales(workspace_id, user_id, tipo_doc, serie, numero);
+    `);
+    
+    // Índices para JOURNAL (Libro Diario)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_journal_fecha 
+        ON journal(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_cuenta 
+        ON journal(workspace_id, user_id, cta, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_asiento 
+        ON journal(workspace_id, user_id, asiento, fecha);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_source 
+        ON journal(workspace_id, user_id, source, fecha DESC);
+    `);
+    
+    // Índices para LIBRO_DIARIO_52
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_ld52_cuenta 
+        ON libro_diario_52(workspace_id, user_id, codigo_cuenta, periodo);
+        
+        CREATE INDEX IF NOT EXISTS idx_ld52_cuo_periodo 
+        ON libro_diario_52(workspace_id, user_id, cuo, periodo);
+    `);
+    
+    // Índices para otras tablas críticas
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_workspaces_user 
+        ON workspaces(user_id, ruc);
+        
+        CREATE INDEX IF NOT EXISTS idx_honorarios_fecha 
+        ON honorarios(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_products_workspace 
+        ON products(workspace_id, user_id, code);
+        
+        CREATE INDEX IF NOT EXISTS idx_inventory_movements_fecha 
+        ON inventory_movements(workspace_id, user_id, fecha DESC, product_id);
+        
+        CREATE INDEX IF NOT EXISTS idx_employees_workspace 
+        ON employees(workspace_id, user_id, dni);
+        
+        CREATE INDEX IF NOT EXISTS idx_fixed_assets_workspace 
+        ON fixed_assets(workspace_id, user_id, codigo);
+        
+        CREATE INDEX IF NOT EXISTS idx_fixed_assets_fecha_adq 
+        ON fixed_assets(workspace_id, user_id, fecha_adquisicion DESC);
+    `);
+    
+    // Actualizar estadísticas para optimización automática
+    db.exec('ANALYZE;');
+    
+    console.log('[DB PERFORMANCE] ✅ Índices optimizados creados exitosamente');
+} catch (e) {
+    console.error('[DB PERFORMANCE] Error creando índices:', e.message);
+}
+
+// ====================================================================
+// FIN DE ÍNDICES DE PERFORMANCE
+// ====================================================================
+
 try {
     db.exec(`
         CREATE TABLE IF NOT EXISTS mapa_pcge_tabla9 (
@@ -759,6 +855,118 @@ db.exec(`
         UNIQUE(workspace_id, periodo, tipo, user_id)
     );
 `);
+console.log('[DB] Tablas period_versions y accounting_periods verificadas.');
+
+// ====================================================================
+// OPTIMIZACIÓN: ÍNDICES DE PERFORMANCE
+// ====================================================================
+console.log('[DB] Aplicando índices de optimización...');
+
+try {
+    // Índices para PURCHASES (Registro de Compras)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_purchases_workspace_fecha 
+        ON purchases(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_sire_estado 
+        ON purchases(workspace_id, user_id, estado_sire, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_proveedor 
+        ON purchases(workspace_id, user_id, doc_num, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_purchases_tipo_doc 
+        ON purchases(workspace_id, user_id, tipo_doc, serie, numero);
+    `);
+
+    // Índices para SALES (Registro de Ventas)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_sales_workspace_fecha 
+        ON sales(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_sire_estado 
+        ON sales(workspace_id, user_id, estado_sire, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_cliente 
+        ON sales(workspace_id, user_id, doc_num, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_sales_tipo_doc 
+        ON sales(workspace_id, user_id, tipo_doc, serie, numero);
+    `);
+
+    // Índices para JOURNAL (Libro Diario)
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_journal_fecha 
+        ON journal(workspace_id, user_id, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_cuenta 
+        ON journal(workspace_id, user_id, cta, fecha DESC);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_asiento 
+        ON journal(workspace_id, user_id, asiento, fecha);
+        
+        CREATE INDEX IF NOT EXISTS idx_journal_source 
+        ON journal(workspace_id, user_id, source, fecha DESC);
+    `);
+
+    // Índices para LIBRO_DIARIO_52
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_ld52_cuenta 
+        ON libro_diario_52(workspace_id, user_id, codigo_cuenta, periodo);
+        
+        CREATE INDEX IF NOT EXISTS idx_ld52_cuo_periodo 
+        ON libro_diario_52(workspace_id, user_id, cuo, periodo);
+    `);
+
+    // Índices para WORKSPACES
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_workspaces_user 
+        ON workspaces(user_id, ruc);
+    `);
+
+    // Índices para ASIENTOS
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_asientos_workspace 
+        ON asientos(workspace_id, user_id);
+    `);
+
+    // Índices para HONORARIOS
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_honorarios_fecha 
+        ON honorarios(workspace_id, user_id, fecha DESC);
+    `);
+
+    // Índices para PRODUCTOS E INVENTARIO
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_products_workspace 
+        ON products(workspace_id, user_id, code);
+        
+        CREATE INDEX IF NOT EXISTS idx_inventory_movements_fecha 
+        ON inventory_movements(workspace_id, user_id, fecha DESC, product_id);
+    `);
+
+    // Índices para EMPLEADOS
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_employees_workspace 
+        ON employees(workspace_id, user_id, dni);
+    `);
+
+    // Índices para ACTIVOS FIJOS
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_fixed_assets_workspace 
+        ON fixed_assets(workspace_id, user_id, codigo);
+        
+        CREATE INDEX IF NOT EXISTS idx_fixed_assets_fecha_adq 
+        ON fixed_assets(workspace_id, user_id, fecha_adquisicion DESC);
+    `);
+
+    // Actualizar estadísticas de SQLite
+    db.exec('ANALYZE;');
+    
+    console.log('[DB] ✅ Índices de optimización aplicados exitosamente');
+} catch (error) {
+    console.error('[DB ERROR] Error al crear índices:', error.message);
+}
+
 console.log('[DB] Tablas period_versions y accounting_periods verificadas.');
 // Función auxiliar para añadir columnas si no existen (para migración de tablas existentes)
 function ensureColumnExists(tableName, colName, colType) {

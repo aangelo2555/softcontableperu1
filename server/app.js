@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const { sireDir, buzonDir } = require('./storageConfig');
@@ -18,11 +19,20 @@ const sbsService = require('./sbsService');
 const buzonHandler = require('../main/buzonHandler');
 const sireHandler = require('../modulo/sireHandler');
 const ublService = require('./ublService');
+const autoSyncService = require('./autoSyncService');
+const cacheService = require('./cacheService');
+const cacheService = require('./cacheService');
 
 const app = express();
 const authRoutes = require('./authRoutes');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026';
+
+// --- Optimización #4: Compresión GZIP para reducir tamaño de respuestas ---
+app.use(compression({
+    threshold: 1024, // Solo comprimir respuestas > 1KB
+    level: 6 // Nivel de compresión (1-9)
+}));
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -73,7 +83,17 @@ app.use('/api/sire', authMiddleware, inspectMiddleware);
 
 app.get('/api/db/workspaces', async (req, res) => {
     try {
-        const workspaces = await db.getWorkspaces(req.targetUserId);
+        const cacheKey = `workspaces_${req.targetUserId}`;
+        
+        // Verificar cache
+        let workspaces = cacheService.get(cacheKey);
+        
+        if (!workspaces) {
+            // Si no está en cache, consultar DB
+            workspaces = await db.getWorkspaces(req.targetUserId);
+            cacheService.set(cacheKey, workspaces, 5 * 60 * 1000); // 5 minutos
+        }
+        
         res.json({ success: true, workspaces });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaces:', error);
@@ -84,6 +104,23 @@ app.get('/api/db/workspaces', async (req, res) => {
 app.post('/api/db/workspaces', async (req, res) => {
     try {
         await db.saveWorkspace(req.body, req.targetUserId);
+        
+        // Invalidar cache de workspaces
+        cacheService.invalidate(`workspaces_${req.targetUserId}`);
+        cacheService.invalidate(`workspace_data_${req.body.ruc}_${req.targetUserId}`);
+        
+        // --- MEJORA #1 y #2: Auto-sincronización de Buzón y SIRE ---
+        // Ejecutar en segundo plano para no bloquear la respuesta
+        setImmediate(async () => {
+            try {
+                const workspace = req.body;
+                console.log(`[AUTO SYNC] Verificando auto-sincronización para ${workspace.ruc}`);
+                await autoSyncService.checkAndSync(workspace, req.targetUserId);
+            } catch (error) {
+                console.error('[AUTO SYNC] Error en auto-sincronización:', error);
+            }
+        });
+        
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -92,7 +129,16 @@ app.post('/api/db/workspaces', async (req, res) => {
 
 app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
     try {
-        const data = await db.getWorkspaceData(req.params.ruc, req.targetUserId);
+        const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}`;
+        
+        // Verificar cache (2 minutos para workspace data)
+        let data = cacheService.get(cacheKey);
+        
+        if (!data) {
+            data = await db.getWorkspaceData(req.params.ruc, req.targetUserId);
+            cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
+        }
+        
         res.json({ success: true, data });
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);
@@ -1689,6 +1735,55 @@ app.use(express.static(distPath));
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
+});
+
+// --- Health Check y Monitoreo ---
+app.get('/health', (req, res) => {
+    const fs = require('fs');
+    const dbPath = process.env.DATABASE_PATH || require('path').join(process.cwd(), 'database', 'pld_contable.db');
+    
+    try {
+        const dbSize = fs.existsSync(dbPath) ? fs.statSync(dbPath).size / (1024 * 1024) : 0;
+        const memUsage = process.memoryUsage();
+        const cacheStats = cacheService.getStats();
+        
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            database: {
+                path: dbPath,
+                size_mb: dbSize.toFixed(2),
+                max_size_gb: 5,
+                usage_percent: ((dbSize / 1024 / 5) * 100).toFixed(2)
+            },
+            memory: {
+                rss_mb: (memUsage.rss / 1024 / 1024).toFixed(2),
+                heap_used_mb: (memUsage.heapUsed / 1024 / 1024).toFixed(2),
+                heap_total_mb: (memUsage.heapTotal / 1024 / 1024).toFixed(2)
+            },
+            cache: cacheStats,
+            uptime_seconds: Math.floor(process.uptime()),
+            node_version: process.version
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error.message
+        });
+    }
+});
+
+// --- Endpoint de Limpieza de Cache (Solo Admin) ---
+app.post('/api/cache/clear', authMiddleware, (req, res) => {
+    const normalizedEmail = (req.user?.email || '').trim().toLowerCase();
+    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com';
+    
+    if (!isAdmin) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado' });
+    }
+    
+    cacheService.clear();
+    res.json({ success: true, message: 'Cache limpiado exitosamente' });
 });
 
 const PORT = process.env.PORT || 3001;

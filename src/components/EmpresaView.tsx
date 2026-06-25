@@ -792,9 +792,13 @@ const EmpresaView: React.FC = () => {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
                     <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Usuario SOL</label>
+                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-2">
+                        Usuario SOL
+                        <span className="text-[9px] bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full border border-blue-500/20">Auto Buzón</span>
+                      </label>
                       <input type="text" value={currentCompany.sol_user || ''}
                         onChange={(e) => updateCompany({ sol_user: e.target.value })} placeholder="Ej: JSANTOS1" />
+                      <span className="text-[9px] text-app-muted italic">Al configurar las credenciales SOL, el buzón se consultará automáticamente</span>
                     </div>
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
@@ -804,9 +808,13 @@ const EmpresaView: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
                     <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Client ID (SIRE)</label>
+                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-2">
+                        Client ID (SIRE)
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-500/20">Auto SIRE</span>
+                      </label>
                       <input type="text" value={currentCompany.sunatClientId || ''}
                         onChange={(e) => updateCompany({ sunatClientId: e.target.value })} placeholder="Ingrese Client ID..." />
+                      <span className="text-[9px] text-app-muted italic">Al configurar las credenciales SIRE, se descargará desde enero hasta el mes actual</span>
                     </div>
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Client Secret (SIRE)</label>

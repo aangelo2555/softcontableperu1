@@ -25,6 +25,8 @@ import { toast } from 'react-hot-toast';
 import { parseSireTxt } from '../engine/sireParser';
 import { reconcileSireWithERP, type ReconciliationSummary, type DiagnosticLevel } from '../engine/sireReconciliation';
 import PageHeader from './ui/PageHeader';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './ui/Pagination';
 
 const SireView: React.FC = () => {
   const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, deletePurchases, deleteSales, setActiveTab } = useStore();
@@ -124,6 +126,12 @@ const SireView: React.FC = () => {
     };
   }, [comparedData]);
 
+  // --- Paginación para optimizar renderizado de tablas grandes ---
+  const pagination = usePagination({
+    data: comparedData,
+    itemsPerPage: 50 // Mostrar 50 registros por página por defecto
+  });
+
   const uniqueArchivos = useMemo(() => {
     const rucFilter = currentCompany?.ruc || '';
     if (!rucFilter) return [];
@@ -203,12 +211,9 @@ const SireView: React.FC = () => {
       });
 
       if (result.success) {
-        toast.success(`Sincronización exitosa. Centralizando...`, { id: loadingToast });
+        // MEJORA #3: Ya no centraliza automáticamente, el usuario debe usar el botón "CENTRALIZAR"
+        toast.success(`✅ Sincronización exitosa. Use el botón "CENTRALIZAR" para importar los datos al sistema.`, { id: loadingToast });
         await syncCurrentWorkspace(); // Recargar datos desde DB
-        
-        // Auto-centralización solicitada
-        await useStore.getState().autoCentralizeAllProposals(currentCompany.ruc, proceso);
-        
         loadArchivos();
       } else {
         toast.error(`Error: ${result.error}`, { id: loadingToast });
@@ -675,7 +680,7 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-app-border/50">
-                  {comparedData.map((item) => {
+                  {pagination.paginatedData.map((item) => {
                     const doc = item.sunat || item.local;
                     const diff = (item.sunat?.total || 0) - (item.local?.total || 0);
                     const isSelected = selectedIds.has(item.id);
@@ -762,7 +767,7 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                       </tr>
                     );
                   })}
-                  {comparedData.length === 0 && (
+                  {pagination.paginatedData.length === 0 && (
                     <tr>
                       <td colSpan={8} className="py-24 text-center">
                         <div className="flex flex-col items-center opacity-30">
@@ -780,6 +785,24 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                 </tbody>
               </table>
             </div>
+            
+            {/* Paginación */}
+            {comparedData.length > 0 && (
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={pagination.goToPage}
+                onFirstPage={pagination.goToFirstPage}
+                onLastPage={pagination.goToLastPage}
+                onPrevPage={pagination.prevPage}
+                onNextPage={pagination.nextPage}
+                itemsPerPage={pagination.itemsPerPage}
+                onItemsPerPageChange={pagination.setItemsPerPage}
+                startIndex={pagination.startIndex}
+                endIndex={pagination.endIndex}
+                totalItems={pagination.totalItems}
+              />
+            )}
             
             {/* Footer Summary */}
             <div className="px-5 py-2 bg-app-surface border-t border-app-border flex items-center justify-between shrink-0">
