@@ -90,8 +90,12 @@ export function parseSireTxt(content: string, isRvie: boolean = false): SirePars
     }
 
     // ─── Parsear campos monetarios ───
-    const bi = parseDecimal(fields[isRvie ? 14 : 14]); // col15_baseImponibleGravada es index 14 para ambos.
-    const igv = parseDecimal(fields[isRvie ? 16 : 15]); // col17_igvIpm para RVIE (index 16), col16_igvGravada para RCE (index 15).
+    const bi = isRvie 
+      ? parseDecimal(fields[14]) 
+      : parseDecimal(fields[14]) + parseDecimal(fields[16]) + parseDecimal(fields[18]) + parseDecimal(fields[20]); // col15 (gravado DG) + col17 (gravado DGNG) + col19 (gravado DNG) + col21 (Valor Adq. NG)
+    const igv = isRvie 
+      ? parseDecimal(fields[16]) 
+      : parseDecimal(fields[15]) + parseDecimal(fields[17]) + parseDecimal(fields[19]); // col16 (IGV DG) + col18 (IGV DGNG) + col20 (IGV DNG)
     const total = parseDecimal(fields[isRvie ? 25 : 24]); // col26_importeTotal para RVIE (index 25), col25_importeTotal para RCE (index 24).
 
     records.push({

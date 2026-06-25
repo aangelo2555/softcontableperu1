@@ -157,9 +157,12 @@ class SireHandler {
             doc_tipo: row[11] || '', // Tipo Doc Proveedor (col12_tipoDoc)
             doc_num: row[12] || '', // Nro Doc Proveedor (col13_numDoc)
             nombre: row[13] || '', // Razón Social Proveedor (col14_razonSocialProveedor)
-            bi: parseNum(row[14]), // Base Imponible (col15_baseImponibleGravada)
-            igv: parseNum(row[15]), // IGV (col16_igvGravada)
-            noGravada: parseNum(row[18]), // Base Imponible No Gravada (col19_baseImponibleNoGravada)
+            // La base imponible de compras puede estar en col15 (gravado DG), col17 (gravado DGNG) o col19 (gravado DNG)
+            bi: parseNum(row[14]) + parseNum(row[16]) + parseNum(row[18]),
+            // El IGV puede estar en col16 (IGV DG), col18 (IGV DGNG) o col20 (IGV DNG)
+            igv: parseNum(row[15]) + parseNum(row[17]) + parseNum(row[19]),
+            // El valor de las adquisiciones no gravadas está en col21 (Valor Adq. NG)
+            noGravada: parseNum(row[20]), 
             isc: parseNum(row[21]), // ISC (col22_isc)
             icbper: parseNum(row[22]), // ICBPER (col23_icbper)
             otros_tributos: parseNum(row[23]), // Otros Tributos (col24_otrosTributos)
