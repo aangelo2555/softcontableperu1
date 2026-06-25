@@ -696,16 +696,14 @@ function buildJournalEntries(
     const otrosTributosPEN = isUsd ? Number(((p.otros_tributos || 0) * rate).toFixed(2)) : (p.otros_tributos || 0);
     const totalPEN = isUsd ? Number((p.total * rate).toFixed(2)) : p.total;
     
-    // If USD, perform rounding adjustment to balance the provisión perfectly:
+    // Perform rounding/balance adjustment to balance the provisión perfectly:
     // SUM(debit) = SUM(credit)
     let adjustedBiPEN = biPEN;
-    if (isUsd) {
-      const sumDebits = Number((biPEN + noGravadaPEN + igvPEN + iscPEN + icbperPEN + otrosTributosPEN).toFixed(2));
-      const diff = Number((totalPEN - sumDebits).toFixed(2));
-      if (diff !== 0) {
-        if (p.bi > 0) {
-          adjustedBiPEN = Number((biPEN + diff).toFixed(2));
-        }
+    const sumDebits = Number((biPEN + noGravadaPEN + igvPEN + iscPEN + icbperPEN + otrosTributosPEN).toFixed(2));
+    const diff = Number((totalPEN - sumDebits).toFixed(2));
+    if (diff !== 0) {
+      if (p.bi > 0) {
+        adjustedBiPEN = Number((biPEN + diff).toFixed(2));
       }
     }
     
@@ -862,6 +860,7 @@ function buildJournalEntries(
       });
     }
 
+    let adjustedBiPEN = cta70_pen;
     if (isUsd) {
       // Calculate exchange asymmetry difference
       const credits = Number((cta70_pen + cta40_pen + noGravada_pen + isc_pen + icbper_pen + otros_pen).toFixed(2));
@@ -894,6 +893,13 @@ function buildJournalEntries(
           haber: descuadre
         });
       }
+    } else {
+      // For PEN, adjust the base imponible directly if there is a rounding mismatch
+      const credits = Number((cta70_pen + cta40_pen + noGravada_pen + isc_pen + icbper_pen + otros_pen).toFixed(2));
+      const descuadre = Number((cta12_pen - credits).toFixed(2));
+      if (descuadre !== 0 && s.bi > 0) {
+        adjustedBiPEN = Number((cta70_pen + descuadre).toFixed(2));
+      }
     }
 
     if (cta40_pen > 0) {
@@ -910,7 +916,7 @@ function buildJournalEntries(
       });
     }
 
-    if (cta70_pen > 0) {
+    if (adjustedBiPEN > 0) {
       entries.push({ 
         id: `${base}-bi`, 
         source, 
@@ -920,7 +926,7 @@ function buildJournalEntries(
         cta: (s.ctaIngreso || '70111').trim(), 
         desc: 'INGRESOS', 
         debe: 0, 
-        haber: cta70_pen 
+        haber: adjustedBiPEN 
       });
     }
 
