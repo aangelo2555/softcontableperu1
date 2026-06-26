@@ -68,21 +68,92 @@ pool.on('error', (err) => {
     console.error('[POSTGRES ERROR]', err);
 });
 
+// Helper: Convertir sintaxis SQLite a PostgreSQL
+function translateSqliteToPostgres(sql, params) {
+    let translatedSql = sql;
+    let translatedParams = [...params];
+    
+    // 1. Convertir placeholders ? a $1, $2, etc.
+    let paramIndex = 1;
+    translatedSql = translatedSql.replace(/\?/g, () => `$${paramIndex++}`);
+    
+    // 2. Convertir INSERT OR REPLACE a INSERT ... ON CONFLICT
+    const insertOrReplaceMatch = translatedSql.match(/INSERT OR REPLACE INTO (\w+)\s*\(([^)]+)\)\s*VALUES/i);
+    if (insertOrReplaceMatch) {
+        const tableName = insertOrReplaceMatch[1];
+        const columns = insertOrReplaceMatch[2].split(',').map(c => c.trim());
+        
+        // Determinar la primary key según la tabla
+        let primaryKey = 'id';
+        if (tableName === 'asientos') {
+            primaryKey = 'id, workspace_id'; // Clave compuesta
+        } else if (tableName === 'workspaces') {
+            primaryKey = 'ruc, user_id'; // Clave compuesta
+        }
+        
+        // Generar lista de actualizaciones excluyendo las PK
+        const pkColumns = primaryKey.split(',').map(c => c.trim());
+        const updateColumns = columns
+            .filter(col => !pkColumns.includes(col))
+            .map(col => `${col} = EXCLUDED.${col}`)
+            .join(', ');
+        
+        translatedSql = translatedSql.replace(
+            /INSERT OR REPLACE INTO/i,
+            `INSERT INTO`
+        );
+        
+        // Agregar ON CONFLICT al final
+        if (updateColumns) {
+            translatedSql += ` ON CONFLICT (${primaryKey}) DO UPDATE SET ${updateColumns}`;
+        } else {
+            translatedSql += ` ON CONFLICT (${primaryKey}) DO NOTHING`;
+        }
+    }
+    
+    // 3. Convertir INSERT OR IGNORE a INSERT ... ON CONFLICT DO NOTHING
+    if (translatedSql.match(/INSERT OR IGNORE/i)) {
+        const insertOrIgnoreMatch = translatedSql.match(/INSERT OR IGNORE INTO (\w+)\s*\(([^)]+)\)/i);
+        if (insertOrIgnoreMatch) {
+            const tableName = insertOrIgnoreMatch[1];
+            let primaryKey = 'id';
+            if (tableName === 'workspaces') {
+                primaryKey = 'ruc, user_id';
+            }
+            
+            translatedSql = translatedSql.replace(/INSERT OR IGNORE INTO/i, 'INSERT INTO');
+            translatedSql += ` ON CONFLICT (${primaryKey}) DO NOTHING`;
+        }
+    }
+    
+    // 4. Convertir AUTOINCREMENT a SERIAL (en CREATE TABLE, por si acaso)
+    translatedSql = translatedSql.replace(/AUTOINCREMENT/gi, 'SERIAL');
+    
+    // 5. Convertir datetime('now') a NOW()
+    translatedSql = translatedSql.replace(/datetime\('now'\)/gi, 'NOW()');
+    
+    return { sql: translatedSql, params: translatedParams };
+}
+
 // Helper: Ejecutar query
 async function query(text, params) {
     const start = Date.now();
     try {
-        const res = await pool.query(text, params);
+        // Traducir sintaxis SQLite a PostgreSQL
+        const { sql: translatedSql, params: translatedParams } = translateSqliteToPostgres(text, params);
+        
+        const res = await pool.query(translatedSql, translatedParams);
         const duration = Date.now() - start;
         
         if (duration > 500) {
-            console.warn(`[POSTGRES SLOW QUERY] ${duration}ms:`, text.substring(0, 100));
+            console.warn(`[POSTGRES SLOW QUERY] ${duration}ms:`, translatedSql.substring(0, 100));
         }
         
         return res;
     } catch (error) {
         console.error('[POSTGRES QUERY ERROR]', error.message);
-        console.error('Query:', text);
+        console.error('Original Query:', text);
+        console.error('Translated Query:', translateSqliteToPostgres(text, params).sql);
         throw error;
     }
 }
