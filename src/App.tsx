@@ -417,6 +417,12 @@ const App: React.FC = () => {
   // --- SQLite Initialization ---
   useEffect(() => {
     const init = async () => {
+      // No inicializar si no hay usuario autenticado
+      if (!isLoggedIn) {
+        setIsInitializing(false);
+        return;
+      }
+
       try {
         // Wait a small bit to ensure electronAPI is injected
         await new Promise(r => setTimeout(r, 500));
@@ -431,7 +437,7 @@ const App: React.FC = () => {
       }
     };
     init();
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const group = findGroupForTab(activeTab);
