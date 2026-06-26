@@ -698,14 +698,19 @@ async function ensureSchemaConstraints() {
                         workspace_id TEXT NOT NULL,
                         periodo TEXT NOT NULL,
                         tipo TEXT NOT NULL DEFAULT 'MENSUAL',
+                        module TEXT,
                         version INTEGER NOT NULL DEFAULT 1,
                         snapshot_data TEXT,
+                        is_stale INTEGER DEFAULT 0,
+                        stale_since TIMESTAMP,
                         created_at TIMESTAMP DEFAULT NOW(),
                         created_by TEXT,
-                        user_id TEXT,
-                        UNIQUE(workspace_id, periodo, tipo, version, user_id)
+                        user_id TEXT
                     );
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_period_versions_unique 
+                        ON period_versions(workspace_id, periodo, module, user_id);
                     CREATE INDEX IF NOT EXISTS idx_period_versions_workspace ON period_versions(workspace_id, user_id);
+                    CREATE INDEX IF NOT EXISTS idx_period_versions_module ON period_versions(workspace_id, module);
                 `
             },
             {
