@@ -553,6 +553,12 @@ app.post('/api/db/query', authMiddleware, inspectMiddleware, async (req, res) =>
         let { sql } = req.body;
         let params = req.body.params || [];
         
+        // ✅ CONVERTIR $N a ? para SQLite
+        if (!USE_POSTGRES) {
+            // Reemplazar $1, $2, $3... con ?
+            sql = sql.replace(/\$\d+/g, '?');
+        }
+        
         // Solo permitir SELECT para seguridad
         if (!sql.trim().toUpperCase().startsWith('SELECT')) {
             return res.status(403).json({ success: false, error: 'Solo se permiten consultas SELECT en este endpoint.' });
