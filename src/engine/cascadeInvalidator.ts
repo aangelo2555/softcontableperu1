@@ -109,7 +109,7 @@ export async function propagateInvalidation(
     INSERT INTO period_versions (workspace_id, periodo, module, is_stale, last_sync, version)
     VALUES (?, ?, ?, 0, ?, 1)
     ON CONFLICT(workspace_id, periodo, module, user_id)
-    DO UPDATE SET is_stale = 0, last_sync = ?, version = version + 1
+    DO UPDATE SET is_stale = 0, last_sync = ?, version = period_versions.version + 1
   `, [workspaceId, periodo, source, timestamp, timestamp]);
 
   return {
@@ -135,7 +135,7 @@ export async function markModuleSynced(
     INSERT INTO period_versions (workspace_id, periodo, module, is_stale, last_sync, version)
     VALUES (?, ?, ?, 0, ?, 1)
     ON CONFLICT(workspace_id, periodo, module, user_id)
-    DO UPDATE SET is_stale = 0, last_sync = ?, version = version + 1
+    DO UPDATE SET is_stale = 0, last_sync = ?, version = period_versions.version + 1
   `, [workspaceId, periodo, module, timestamp, timestamp]);
 }
 
