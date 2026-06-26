@@ -206,7 +206,9 @@ app.post('/api/db/execute', async (req, res) => {
                             const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
                             const endStr = sql.slice(valuesCloseParenIndex);
                             
-                            sql = `${beforeCols}, user_id${afterCols}, ?${endStr}`;
+                            // Para PostgreSQL, usar $N en lugar de ?
+                            const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
+                            sql = `${beforeCols}, user_id${afterCols}, ${placeholder}${endStr}`;
                             params.push(req.targetUserId);
                             console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para INSERT`);
                         }
@@ -228,10 +230,12 @@ app.post('/api/db/execute', async (req, res) => {
                     
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
                         const hasWhere = sql.toUpperCase().includes('WHERE');
+                        // Para PostgreSQL, usar $N en lugar de ?
+                        const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
                         if (hasWhere) {
-                            sql = `${sql} AND user_id = ?`;
+                            sql = `${sql} AND user_id = ${placeholder}`;
                         } else {
-                            sql = `${sql} WHERE user_id = ?`;
+                            sql = `${sql} WHERE user_id = ${placeholder}`;
                         }
                         params.push(req.targetUserId);
                         console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para UPDATE/DELETE`);
