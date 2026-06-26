@@ -639,6 +639,42 @@ async function ensureSchemaConstraints() {
                     CREATE INDEX IF NOT EXISTS idx_costs_workspace ON costs(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_costs_user ON costs(user_id);
                 `
+            },
+            {
+                name: 'accounting_periods',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS accounting_periods (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        periodo TEXT NOT NULL,
+                        tipo TEXT NOT NULL DEFAULT 'MENSUAL',
+                        estado TEXT NOT NULL DEFAULT 'ABIERTO',
+                        cerrado_por TEXT,
+                        cerrado_at TIMESTAMP,
+                        notas TEXT,
+                        user_id TEXT,
+                        UNIQUE(workspace_id, periodo, tipo, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_accounting_periods_workspace ON accounting_periods(workspace_id, user_id);
+                `
+            },
+            {
+                name: 'period_versions',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS period_versions (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        periodo TEXT NOT NULL,
+                        tipo TEXT NOT NULL DEFAULT 'MENSUAL',
+                        version INTEGER NOT NULL DEFAULT 1,
+                        snapshot_data TEXT,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        created_by TEXT,
+                        user_id TEXT,
+                        UNIQUE(workspace_id, periodo, tipo, version, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_period_versions_workspace ON period_versions(workspace_id, user_id);
+                `
             }
         ];
         
