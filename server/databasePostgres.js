@@ -707,10 +707,17 @@ async function ensureSchemaConstraints() {
                         created_by TEXT,
                         user_id TEXT
                     );
+                `
+            },
+            {
+                name: 'period_versions_indexes',
+                schema: `
                     CREATE UNIQUE INDEX IF NOT EXISTS idx_period_versions_unique 
                         ON period_versions(workspace_id, periodo, module, user_id);
-                    CREATE INDEX IF NOT EXISTS idx_period_versions_workspace ON period_versions(workspace_id, user_id);
-                    CREATE INDEX IF NOT EXISTS idx_period_versions_module ON period_versions(workspace_id, module);
+                    CREATE INDEX IF NOT EXISTS idx_period_versions_workspace 
+                        ON period_versions(workspace_id, user_id);
+                    CREATE INDEX IF NOT EXISTS idx_period_versions_module 
+                        ON period_versions(workspace_id, module);
                 `
             },
             {
