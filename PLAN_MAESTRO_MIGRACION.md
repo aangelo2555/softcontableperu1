@@ -328,9 +328,51 @@ psql $DATABASE_URL < backup.sql
 
 ## 🎯 PRÓXIMOS PASOS INMEDIATOS
 
-### PASO 1: Completar schemas PostgreSQL (60 min) ✅ PRIORITARIO
+### ✅ PASO 1 COMPLETADO: Schemas PostgreSQL actualizados
 
-Necesitamos agregar TODAS las columnas faltantes a PostgreSQL que existen en SQLite:
+**LOGROS:**
+- ✅ 24 columnas agregadas a `purchases` (tipOper, ctaGasto, moneda, SIRE, SPOT, etc.)
+- ✅ 18 columnas agregadas a `sales` (ctaCargo, ctaIngreso, moneda, SIRE, etc.)
+- ✅ Base de datos PostgreSQL limpiada exitosamente
+- ✅ Código actualizado y listo para despliegue
+
+Ver detalles completos en: `RESUMEN_CAMBIOS_POSTGRES.md`
+
+---
+
+### 🚀 PASO 2: Hacer Push y Redesplegar (5 min) ⏳ EJECUTAR AHORA
+
+**Comandos a ejecutar uno por uno:**
+
+```bash
+cd c:\Users\aange\Desktop\SOFTCONTABLE_WEB_READY
+
+git add server/databasePostgres.js PLAN_MAESTRO_MIGRACION.md clean-db.js RESUMEN_CAMBIOS_POSTGRES.md
+
+git commit -m "fix: completar schemas PostgreSQL purchases y sales con todas las columnas"
+
+git push origin main
+```
+
+**Qué va a pasar:**
+1. GitHub recibe el push
+2. Railway detecta el cambio automáticamente
+3. Railway redesplega el backend (2-3 min)
+4. Las tablas se recrean con schemas completos
+
+**Verificar despliegue:**
+```bash
+railway logs --service softcontableperu1 -f
+```
+
+Buscar en logs:
+- ✅ `[POSTGRES] ✅ Conectado exitosamente`
+- ✅ `[POSTGRES] ✅ Schema y constraints verificados`
+- ❌ NO debe aparecer: `column "..." does not exist`
+
+---
+
+### 🧪 PASO 3: Validar Persistencia de Datos (15 min)
 
 <function_calls>
 <invoke name="grep_search">
