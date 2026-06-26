@@ -675,6 +675,247 @@ async function ensureSchemaConstraints() {
                     );
                     CREATE INDEX IF NOT EXISTS idx_period_versions_workspace ON period_versions(workspace_id, user_id);
                 `
+            },
+            {
+                name: 'products',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS products (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        codigo TEXT,
+                        descripcion TEXT,
+                        unidad TEXT,
+                        precio NUMERIC DEFAULT 0,
+                        stock NUMERIC DEFAULT 0,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_products_workspace ON products(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_products_user ON products(user_id);
+                `
+            },
+            {
+                name: 'maintenance',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS maintenance (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        periodo TEXT,
+                        anexo TEXT,
+                        descripcion TEXT,
+                        monto NUMERIC,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_maintenance_workspace ON maintenance(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_maintenance_user ON maintenance(user_id);
+                `
+            },
+            {
+                name: 'movimientos_data',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS movimientos_data (
+                        workspace_id TEXT,
+                        period TEXT,
+                        month INTEGER,
+                        section TEXT,
+                        key TEXT,
+                        value TEXT,
+                        user_id TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_movimientos_workspace ON movimientos_data(workspace_id, user_id);
+                `
+            },
+            {
+                name: 'fixed_assets',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS fixed_assets (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        codigo TEXT,
+                        descripcion TEXT,
+                        fecha_adquisicion TEXT,
+                        costo_adquisicion NUMERIC DEFAULT 0,
+                        depreciacion_acumulada NUMERIC DEFAULT 0,
+                        valor_neto NUMERIC DEFAULT 0,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_fixed_assets_workspace ON fixed_assets(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_fixed_assets_user ON fixed_assets(user_id);
+                `
+            },
+            {
+                name: 'employees',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS employees (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        nombres TEXT,
+                        apellidos TEXT,
+                        dni TEXT,
+                        cargo TEXT,
+                        sueldo NUMERIC DEFAULT 0,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_employees_workspace ON employees(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_employees_user ON employees(user_id);
+                `
+            },
+            {
+                name: 'inventory_movements',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS inventory_movements (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        product_id TEXT,
+                        fecha TEXT,
+                        tipo TEXT,
+                        cantidad NUMERIC DEFAULT 0,
+                        costo_unitario NUMERIC DEFAULT 0,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_inventory_workspace ON inventory_movements(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_inventory_user ON inventory_movements(user_id);
+                `
+            },
+            {
+                name: 'cash_movements',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS cash_movements (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        fecha TEXT,
+                        tipo TEXT,
+                        monto NUMERIC DEFAULT 0,
+                        descripcion TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_cash_workspace ON cash_movements(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_cash_user ON cash_movements(user_id);
+                `
+            },
+            {
+                name: 'bank_statements',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS bank_statements (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        fecha TEXT,
+                        descripcion TEXT,
+                        cargo NUMERIC DEFAULT 0,
+                        abono NUMERIC DEFAULT 0,
+                        saldo NUMERIC DEFAULT 0,
+                        reconciled_journal_id TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_bank_statements_workspace ON bank_statements(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_bank_statements_user ON bank_statements(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_bank_statements_reconciled ON bank_statements(reconciled_journal_id);
+                `
+            },
+            {
+                name: 'suggestions',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS suggestions (
+                        id TEXT PRIMARY KEY,
+                        user_id TEXT,
+                        type TEXT,
+                        title TEXT,
+                        description TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        resolved_at TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_suggestions_user ON suggestions(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_suggestions_status ON suggestions(status);
+                `
+            },
+            {
+                name: 'libro_diario_52',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS libro_diario_52 (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT,
+                        periodo TEXT NOT NULL,
+                        cuo TEXT NOT NULL,
+                        correlativo_asiento TEXT NOT NULL,
+                        fecha_operacion TEXT NOT NULL,
+                        glosa TEXT NOT NULL,
+                        codigo_cuenta TEXT NOT NULL,
+                        denominacion_cuenta TEXT NOT NULL,
+                        codigo_auxiliar TEXT,
+                        denominacion_auxiliar TEXT,
+                        centro_costos TEXT,
+                        moneda TEXT DEFAULT '01',
+                        tipo_cambio NUMERIC DEFAULT 0.000,
+                        fecha_tipo_cambio TEXT,
+                        monto_debe NUMERIC NOT NULL DEFAULT 0,
+                        monto_haber NUMERIC NOT NULL DEFAULT 0,
+                        dato_estructurado TEXT,
+                        estado TEXT NOT NULL DEFAULT '1',
+                        origen_modulo TEXT,
+                        asiento_id_origen TEXT,
+                        ejercicio INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        ref_periodo TEXT,
+                        ref_cuo TEXT,
+                        ref_codigo_libro TEXT,
+                        columna_tabla9 TEXT,
+                        grupo_tabla9 TEXT,
+                        indicador_operacion TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ld52_workspace ON libro_diario_52(workspace_id, user_id);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_periodo ON libro_diario_52(workspace_id, user_id, periodo);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_cuo ON libro_diario_52(workspace_id, cuo);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_cuo_periodo ON libro_diario_52(workspace_id, user_id, cuo, periodo);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_estado ON libro_diario_52(estado);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_origen ON libro_diario_52(origen_modulo, asiento_id_origen);
+                    CREATE INDEX IF NOT EXISTS idx_ld52_cuenta ON libro_diario_52(codigo_cuenta);
+                `
+            },
+            {
+                name: 'sbs_rates',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS sbs_rates (
+                        fecha TEXT PRIMARY KEY,
+                        compra NUMERIC NOT NULL,
+                        venta NUMERIC NOT NULL
+                    );
+                `
+            },
+            {
+                name: 'audit_logs',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS audit_logs (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT,
+                        user_id TEXT,
+                        action TEXT,
+                        entity_type TEXT,
+                        entity_id TEXT,
+                        changes TEXT,
+                        timestamp TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_audit_workspace ON audit_logs(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp);
+                `
+            },
+            {
+                name: 'balance_inicial',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS balance_inicial (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        cta TEXT,
+                        descripcion TEXT,
+                        debe NUMERIC DEFAULT 0,
+                        haber NUMERIC DEFAULT 0
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_balance_inicial_workspace ON balance_inicial(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_balance_inicial_user ON balance_inicial(user_id);
+                `
             }
         ];
         
