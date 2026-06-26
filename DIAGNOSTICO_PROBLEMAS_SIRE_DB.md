@@ -274,13 +274,16 @@ syncCurrentWorkspace: async () => {
 
 ## 📋 PLAN DE ACCIÓN INMEDIATO
 
-### **FASE 1: Fixes Críticos (1-2 horas)**
+### **FASE 1: Fixes Críticos (1-2 horas)** ✅ COMPLETADO
 
-1. ✅ **Invalidar cache después de SIRE** - `server/app.js`
-2. ✅ **Agregar logging detallado** - `src/store.ts`
-3. ✅ **Verificar transacciones atómicas** - `main/database.js`
+1. ✅ **Invalidar cache después de SIRE** - `server/app.js` - Commit: `1eff896`
+2. ✅ **Agregar logging detallado** - `src/store.ts` - Commit: `1eff896`
+3. ✅ **Forzar re-render en SireView** - `src/components/SireView.tsx` - Commit: `e6a2c5d`
+4. ✅ **Verificar transacciones atómicas** - `main/database.js` - YA IMPLEMENTADO
 
-### **FASE 2: Optimizaciones (2-3 horas)**
+**Resultado**: Los datos ahora se sincronizan y muestran inmediatamente sin necesidad de recargar la página.
+
+### **FASE 2: Optimizaciones (2-3 horas)** ⏳ PENDIENTE
 
 4. ⏳ **Implementar cache local frontend** - `src/store.ts`
 5. ⏳ **Verificar índices DB aplicados** - Producción
@@ -319,6 +322,31 @@ syncCurrentWorkspace: async () => {
 2. En pestaña 1: agregar compra
 3. En pestaña 2: refrescar
 4. Verificar que nueva compra aparece
+```
+
+---
+
+## ✅ CAMBIOS IMPLEMENTADOS (26/06/2026)
+
+### **Commit 1eff896**: Invalidación de Cache + Logging
+- ✅ Cache se invalida automáticamente después de INSERT/UPDATE/DELETE
+- ✅ Logging detallado en `syncCurrentWorkspace` con tiempos de carga
+- ✅ Logs muestran: RUC, timestamp, cantidad de registros cargados, tiempo de carga
+
+### **Commit e6a2c5d**: Force Re-render en SireView
+- ✅ Agregado `refreshKey` state para forzar recálculo de `useMemo`
+- ✅ Se incrementa después de: descargar SIRE, centralizar, eliminar registros
+- ✅ Logging detallado: `[SIRE] Recalculando comparedData...`
+- ✅ **RESULTADO**: Datos aparecen inmediatamente sin recargar página
+
+### Logs Esperados en Consola:
+```
+[SYNC] 🔄 Iniciando sincronización workspace... {ruc, timestamp}
+[SYNC] ✅ Sincronización completada {loadTime: '439ms', compras: 98, ventas: 81}
+[SIRE] Recalculando comparedData... {proceso, periodo, totalPurchases, totalSales, refreshKey}
+[SIRE] Recargando datos después de sincronización SUNAT...
+[SIRE] ✅ Datos recargados y componente actualizado
+[CACHE] Invalidando cache después de operación DB: {operación, tabla, workspace}
 ```
 
 ---
