@@ -2623,7 +2623,7 @@ export const useStore = create<AppState>()(
           } catch (e) {
             const errorTime = Date.now() - startTime;
             console.error('[SYNC] ❌ Error en sincronización:', {
-              error: e.message,
+              error: e instanceof Error ? e.message : String(e),
               errorTime: `${errorTime}ms`,
               ruc
             });
