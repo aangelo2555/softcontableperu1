@@ -212,39 +212,57 @@ const db = {
         const encryptedClientSecret = encrypt(sunatClientSecret || '');
         const encryptedCertPass = certificado_pass ? encrypt(certificado_pass) : null;
         
-        await query(`
-            INSERT INTO workspaces (
-                ruc, user_id, name, regimenTributario, location, address, support, period,
-                logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret,
+        try {
+            // Primero intentar actualizar
+            const updateResult = await query(`
+                UPDATE workspaces SET
+                    name = $3,
+                    regimenTributario = $4,
+                    location = $5,
+                    address = $6,
+                    support = $7,
+                    period = $8,
+                    logoBase64 = $9,
+                    sol_user = $10,
+                    sol_pass = $11,
+                    sunatClientId = $12,
+                    sunatClientSecret = $13,
+                    businessType = $14,
+                    annualIncomeUIT = $15,
+                    agente_retencion = $16,
+                    ciiuCode = $17,
+                    fixedAssetsValue = $18,
+                    employeeCount = $19,
+                    certificado_pfx = $20,
+                    certificado_pass = $21
+                WHERE ruc = $1 AND user_id = $2
+            `, [
+                ruc, userId, name, regimenTributario, location, address, support, period,
+                logoBase64, encryptedSolUser, encryptedSolPass, encryptedClientId, encryptedClientSecret,
                 businessType, annualIncomeUIT, agente_retencion, ciiuCode,
-                fixedAssetsValue, employeeCount, certificado_pfx, certificado_pass
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-            ON CONFLICT (ruc, user_id) DO UPDATE SET
-                name = EXCLUDED.name,
-                regimenTributario = EXCLUDED.regimenTributario,
-                location = EXCLUDED.location,
-                address = EXCLUDED.address,
-                support = EXCLUDED.support,
-                period = EXCLUDED.period,
-                logoBase64 = EXCLUDED.logoBase64,
-                sol_user = EXCLUDED.sol_user,
-                sol_pass = EXCLUDED.sol_pass,
-                sunatClientId = EXCLUDED.sunatClientId,
-                sunatClientSecret = EXCLUDED.sunatClientSecret,
-                businessType = EXCLUDED.businessType,
-                annualIncomeUIT = EXCLUDED.annualIncomeUIT,
-                agente_retencion = EXCLUDED.agente_retencion,
-                ciiuCode = EXCLUDED.ciiuCode,
-                fixedAssetsValue = EXCLUDED.fixedAssetsValue,
-                employeeCount = EXCLUDED.employeeCount,
-                certificado_pfx = EXCLUDED.certificado_pfx,
-                certificado_pass = EXCLUDED.certificado_pass
-        `, [
-            ruc, userId, name, regimenTributario, location, address, support, period,
-            logoBase64, encryptedSolUser, encryptedSolPass, encryptedClientId, encryptedClientSecret,
-            businessType, annualIncomeUIT, agente_retencion, ciiuCode,
-            fixedAssetsValue, employeeCount, certificado_pfx, encryptedCertPass
-        ]);
+                fixedAssetsValue, employeeCount, certificado_pfx, encryptedCertPass
+            ]);
+            
+            // Si no se actualizó ninguna fila, hacer INSERT
+            if (updateResult.rowCount === 0) {
+                await query(`
+                    INSERT INTO workspaces (
+                        ruc, user_id, name, regimenTributario, location, address, support, period,
+                        logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret,
+                        businessType, annualIncomeUIT, agente_retencion, ciiuCode,
+                        fixedAssetsValue, employeeCount, certificado_pfx, certificado_pass
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                `, [
+                    ruc, userId, name, regimenTributario, location, address, support, period,
+                    logoBase64, encryptedSolUser, encryptedSolPass, encryptedClientId, encryptedClientSecret,
+                    businessType, annualIncomeUIT, agente_retencion, ciiuCode,
+                    fixedAssetsValue, employeeCount, certificado_pfx, encryptedCertPass
+                ]);
+            }
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveWorkspace:', error.message);
+            throw error;
+        }
     },
     
     // Delete workspace

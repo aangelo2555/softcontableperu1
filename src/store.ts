@@ -1957,7 +1957,7 @@ export const useStore = create<AppState>()(
             `SELECT estado FROM accounting_periods WHERE workspace_id = ? AND periodo = ? AND tipo = 'MENSUAL'`,
             [ruc, periodo]
           );
-          const rows = res?.rows || res || [];
+          const rows = Array.isArray(res?.rows) ? res.rows : (Array.isArray(res) ? res : []);
           return rows.some((r: any) => r.estado === 'CERRADO');
         } catch (e) {
           console.error('[PERIOD GUARD] Error comprobando periodo cerrado:', e);
