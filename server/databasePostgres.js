@@ -414,11 +414,53 @@ async function ensureSchemaConstraints() {
     try {
         console.log('[POSTGRES] Verificando schema y constraints...');
         
-        // Lista de tablas críticas que deben tener PRIMARY KEY
-        const criticalTables = [
-            { 
-                name: 'asientos', 
-                pk: 'id',
+        // Lista de tablas críticas con schema completo y correcto
+        const tables = [
+            {
+                name: 'users',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS users (
+                        id TEXT PRIMARY KEY,
+                        email TEXT UNIQUE NOT NULL,
+                        password TEXT NOT NULL,
+                        name TEXT,
+                        role TEXT DEFAULT 'user',
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                `
+            },
+            {
+                name: 'workspaces',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS workspaces (
+                        ruc TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        name TEXT,
+                        regimenTributario TEXT,
+                        location TEXT,
+                        address TEXT,
+                        support TEXT,
+                        period TEXT,
+                        logoBase64 TEXT,
+                        sol_user BYTEA,
+                        sol_pass BYTEA,
+                        sunatClientId BYTEA,
+                        sunatClientSecret BYTEA,
+                        businessType TEXT,
+                        annualIncomeUIT NUMERIC DEFAULT 0,
+                        agente_retencion BOOLEAN DEFAULT false,
+                        ciiuCode TEXT,
+                        fixedAssetsValue NUMERIC DEFAULT 0,
+                        employeeCount INTEGER DEFAULT 0,
+                        certificado_pfx BYTEA,
+                        certificado_pass BYTEA,
+                        PRIMARY KEY (ruc, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_workspaces_user ON workspaces(user_id);
+                `
+            },
+            {
+                name: 'asientos',
                 schema: `
                     CREATE TABLE IF NOT EXISTS asientos (
                         id TEXT PRIMARY KEY,
@@ -432,9 +474,8 @@ async function ensureSchemaConstraints() {
                     CREATE INDEX IF NOT EXISTS idx_asientos_user ON asientos(user_id);
                 `
             },
-            { 
-                name: 'purchases', 
-                pk: 'id',
+            {
+                name: 'purchases',
                 schema: `
                     CREATE TABLE IF NOT EXISTS purchases (
                         id TEXT PRIMARY KEY,
@@ -448,22 +489,22 @@ async function ensureSchemaConstraints() {
                         doc_tipo TEXT,
                         doc_num TEXT,
                         nombre TEXT,
-                        tc REAL,
-                        bi REAL,
-                        igv REAL,
-                        noGravada REAL,
-                        isc REAL,
-                        total REAL,
+                        tc NUMERIC,
+                        bi NUMERIC,
+                        igv NUMERIC,
+                        noGravada NUMERIC,
+                        isc NUMERIC,
+                        total NUMERIC,
                         glosa TEXT,
                         user_id TEXT NOT NULL
                     );
                     CREATE INDEX IF NOT EXISTS idx_purchases_workspace ON purchases(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_purchases_fecha ON purchases(fecha);
                 `
             },
-            { 
-                name: 'sales', 
-                pk: 'id',
+            {
+                name: 'sales',
                 schema: `
                     CREATE TABLE IF NOT EXISTS sales (
                         id TEXT PRIMARY KEY,
@@ -477,22 +518,22 @@ async function ensureSchemaConstraints() {
                         doc_tipo TEXT,
                         doc_num TEXT,
                         nombre TEXT,
-                        tc REAL,
-                        bi REAL,
-                        igv REAL,
-                        noGravada REAL,
-                        isc REAL,
-                        total REAL,
+                        tc NUMERIC,
+                        bi NUMERIC,
+                        igv NUMERIC,
+                        noGravada NUMERIC,
+                        isc NUMERIC,
+                        total NUMERIC,
                         glosa TEXT,
                         user_id TEXT NOT NULL
                     );
                     CREATE INDEX IF NOT EXISTS idx_sales_workspace ON sales(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_sales_fecha ON sales(fecha);
                 `
             },
-            { 
-                name: 'journal', 
-                pk: 'id',
+            {
+                name: 'journal',
                 schema: `
                     CREATE TABLE IF NOT EXISTS journal (
                         id TEXT PRIMARY KEY,
@@ -503,55 +544,109 @@ async function ensureSchemaConstraints() {
                         glosa TEXT,
                         cta TEXT,
                         desc TEXT,
-                        debe REAL,
-                        haber REAL,
+                        debe NUMERIC,
+                        haber NUMERIC,
+                        user_id TEXT NOT NULL,
                         medio_pago TEXT,
                         nro_transaccion TEXT,
-                        razon_social TEXT,
-                        user_id TEXT NOT NULL
+                        razon_social TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_journal_workspace ON journal(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_journal_user ON journal(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_journal_fecha ON journal(fecha);
+                    CREATE INDEX IF NOT EXISTS idx_journal_cuenta ON journal(cta);
+                `
+            },
+            {
+                name: 'plan_global',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS plan_global (
+                        cta TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        description TEXT,
+                        type TEXT,
+                        reqCenCos INTEGER DEFAULT 0,
+                        amarreDebe TEXT,
+                        amarreHaber TEXT,
+                        div INTEGER DEFAULT 1,
+                        cta_cc1 TEXT,
+                        pct_cc1 NUMERIC DEFAULT 0,
+                        cta_cc2 TEXT,
+                        pct_cc2 NUMERIC DEFAULT 0,
+                        cta_cc3 TEXT,
+                        pct_cc3 NUMERIC DEFAULT 0,
+                        destino_haber TEXT,
+                        niif18_category TEXT,
+                        PRIMARY KEY (cta, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_plan_user ON plan_global(user_id);
+                `
+            },
+            {
+                name: 'entities',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS entities (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        tipo TEXT,
+                        ruc TEXT,
+                        descripcion TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_entities_workspace ON entities(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_entities_user ON entities(user_id);
+                `
+            },
+            {
+                name: 'honorarios',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS honorarios (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        registro TEXT,
+                        fecha TEXT,
+                        tipo_doc TEXT,
+                        serie TEXT,
+                        numero TEXT,
+                        doc_tipo TEXT,
+                        doc_num TEXT,
+                        nombre TEXT,
+                        ctaGasto TEXT,
+                        ctaAbono TEXT,
+                        bi NUMERIC,
+                        retencion NUMERIC,
+                        total NUMERIC,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_honorarios_workspace ON honorarios(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_honorarios_user ON honorarios(user_id);
+                `
+            },
+            {
+                name: 'costs',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS costs (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        codigo TEXT,
+                        descripcion TEXT,
+                        porcentaje NUMERIC,
+                        monto NUMERIC,
+                        cuenta_debe TEXT,
+                        cuenta_haber TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_costs_workspace ON costs(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_costs_user ON costs(user_id);
                 `
             }
         ];
         
-        for (const table of criticalTables) {
-            // Verificar si existe la tabla
-            const tableExists = await pool.query(`
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = $1
-                );
-            `, [table.name]);
-            
-            if (!tableExists.rows[0].exists) {
-                console.log(`[POSTGRES] Creando tabla ${table.name}...`);
-                await pool.query(table.schema);
-                console.log(`[POSTGRES] ✅ Tabla ${table.name} creada`);
-            } else {
-                // Verificar si existe el PRIMARY KEY
-                const pkExists = await pool.query(`
-                    SELECT constraint_name
-                    FROM information_schema.table_constraints
-                    WHERE table_name = $1
-                    AND constraint_type = 'PRIMARY KEY';
-                `, [table.name]);
-                
-                if (pkExists.rows.length === 0) {
-                    console.log(`[POSTGRES] Agregando PRIMARY KEY a ${table.name}...`);
-                    try {
-                        await pool.query(`ALTER TABLE ${table.name} ADD PRIMARY KEY (${table.pk});`);
-                        console.log(`[POSTGRES] ✅ PRIMARY KEY agregado a ${table.name}`);
-                    } catch (error) {
-                        console.error(`[POSTGRES] Error agregando PK a ${table.name}:`, error.message);
-                    }
-                }
-            }
+        for (const table of tables) {
+            await pool.query(table.schema);
         }
         
-        console.log('[POSTGRES] ✅ Schema constraints verificados y corregidos');
+        console.log('[POSTGRES] ✅ Schema y constraints verificados');
     } catch (error) {
         console.error('[POSTGRES] Error verificando constraints:', error.message);
     }
