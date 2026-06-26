@@ -1,0 +1,51 @@
+# Railway Ignore File
+# Archivos que NO se deben deployar
+
+# Node modules
+node_modules/
+
+# Electron specific (no necesario en web)
+main/
+modulo/
+
+# Development
+.env.local
+.env.development
+*.log
+logs/
+
+# Database local (se usa PostgreSQL en Railway)
+database/
+*.db
+*.db-shm
+*.db-wal
+
+# Testing
+coverage/
+.nyc_output/
+
+# Build artifacts (se construyen en deploy)
+.vite/
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentación
+*.md
+!README.md
+
+# Backups
+backups/
+*.backup
