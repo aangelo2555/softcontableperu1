@@ -179,7 +179,8 @@ app.post('/api/db/execute', async (req, res) => {
         let params = req.body.params || [];
         
         // ─── REESCRITURA AUTOMÁTICA DE SQL PARA SAAS (INYECCIÓN DE USER_ID) ───
-        const insertMatch = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)/i);
+        // Detectar INSERT, INSERT OR REPLACE, INSERT OR IGNORE, etc.
+        const insertMatch = sql.match(/INSERT\s+(?:OR\s+(?:REPLACE|IGNORE|ROLLBACK|ABORT|FAIL)\s+)?INTO\s+(\w+)/i);
         const updateMatch = sql.match(/UPDATE\s+(\w+)/i);
         const deleteMatch = sql.match(/DELETE\s+FROM\s+(\w+)/i);
         
