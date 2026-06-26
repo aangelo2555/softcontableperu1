@@ -178,6 +178,12 @@ app.post('/api/db/execute', async (req, res) => {
         let { sql } = req.body;
         let params = req.body.params || [];
         
+        // ✅ CONVERTIR $N a ? para SQLite
+        if (!USE_POSTGRES) {
+            // Reemplazar $1, $2, $3... con ?
+            sql = sql.replace(/\$\d+/g, '?');
+        }
+        
         // ─── REESCRITURA AUTOMÁTICA DE SQL PARA SAAS (INYECCIÓN DE USER_ID) ───
         // Detectar INSERT, INSERT OR REPLACE, INSERT OR IGNORE, etc.
         const insertMatch = sql.match(/INSERT\s+(?:OR\s+(?:REPLACE|IGNORE|ROLLBACK|ABORT|FAIL)\s+)?INTO\s+(\w+)/i);
