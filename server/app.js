@@ -191,9 +191,9 @@ app.post('/api/db/execute', async (req, res) => {
                     const query = USE_POSTGRES 
                         ? `SELECT column_name as name FROM information_schema.columns WHERE table_name = $1`
                         : `PRAGMA table_info(${tableName})`;
-                    const params = USE_POSTGRES ? [tableName.toLowerCase()] : [];
+                    const checkParams = USE_POSTGRES ? [tableName.toLowerCase()] : [];
                     
-                    const cols = await db.queryAll(query, params);
+                    const cols = await db.queryAll(query, checkParams);
                     const hasUserId = Array.isArray(cols) && cols.some(c => c.name === 'user_id' || c.column_name === 'user_id');
                     
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
@@ -206,7 +206,7 @@ app.post('/api/db/execute', async (req, res) => {
                             const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
                             const endStr = sql.slice(valuesCloseParenIndex);
                             
-                            // Para PostgreSQL, usar $N en lugar de ?
+                            // ✅ FIX: Para SQLite simplemente agregar ?, para PostgreSQL calcular posición correcta
                             const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
                             sql = `${beforeCols}, user_id${afterCols}, ${placeholder}${endStr}`;
                             params.push(req.targetUserId);
@@ -230,7 +230,7 @@ app.post('/api/db/execute', async (req, res) => {
                     
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
                         const hasWhere = sql.toUpperCase().includes('WHERE');
-                        // Para PostgreSQL, usar $N en lugar de ?
+                        // ✅ FIX: Para SQLite simplemente agregar ?, para PostgreSQL calcular posición correcta
                         const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
                         if (hasWhere) {
                             sql = `${sql} AND user_id = ${placeholder}`;
