@@ -1876,21 +1876,13 @@ app.post('/api/facturacion/emitir-comprobante', authMiddleware, inspectMiddlewar
     }
 });
 
-// --- Static Files & SPA Routing ---
-
-const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
-
-app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-});
-
-// --- Health Check y Monitoreo ---
+// --- Health Check y Monitoreo (ANTES del catch-all) ---
 app.get('/health', (req, res) => {
     const fs = require('fs');
     const dbPath = process.env.DATABASE_PATH || require('path').join(process.cwd(), 'database', 'pld_contable.db');
     
     try {
+        const dbType = USE_POSTGRES ? 'PostgreSQL' : 'SQLite';
         const dbSize = fs.existsSync(dbPath) ? fs.statSync(dbPath).size / (1024 * 1024) : 0;
         const memUsage = process.memoryUsage();
         const cacheStats = cacheService.getStats();
@@ -1898,7 +1890,11 @@ app.get('/health', (req, res) => {
         res.json({
             status: 'ok',
             timestamp: new Date().toISOString(),
-            database: {
+            database: USE_POSTGRES ? {
+                type: dbType,
+                host: process.env.DATABASE_URL ? 'connected' : 'not configured'
+            } : {
+                type: dbType,
                 path: dbPath,
                 size_mb: dbSize.toFixed(2),
                 max_size_gb: 5,
@@ -1919,6 +1915,21 @@ app.get('/health', (req, res) => {
             error: error.message
         });
     }
+});
+
+app.get('/api/health', (req, res) => {
+    // Alias de /health para compatibilidad
+    req.url = '/health';
+    app.handle(req, res);
+});
+
+// --- Static Files & SPA Routing (DESPUÉS de todas las rutas API) ---
+
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // --- Endpoint de Limpieza de Cache (Solo Admin) ---
