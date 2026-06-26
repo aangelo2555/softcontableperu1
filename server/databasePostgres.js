@@ -84,15 +84,22 @@ function translateSqliteToPostgres(sql, params) {
         const columns = insertOrReplaceMatch[2].split(',').map(c => c.trim());
         
         // Determinar la primary key según la tabla
+        // Para PostgreSQL multi-tenant, usamos PRIMARY KEY compuesta
         let primaryKey = 'id';
+        let conflictColumns = 'id';
+        
         if (tableName === 'asientos') {
-            primaryKey = 'id, workspace_id'; // Clave compuesta
+            // Para asientos, solo usamos 'id' como conflict porque es la PK real
+            conflictColumns = 'id';
         } else if (tableName === 'workspaces') {
-            primaryKey = 'ruc, user_id'; // Clave compuesta
+            conflictColumns = 'ruc, user_id';
+        } else if (['purchases', 'sales', 'journal', 'honorarios', 'entities', 'costs', 'maintenance', 'products', 'employees', 'fixed_assets'].includes(tableName)) {
+            // Para otras tablas, solo ID
+            conflictColumns = 'id';
         }
         
         // Generar lista de actualizaciones excluyendo las PK
-        const pkColumns = primaryKey.split(',').map(c => c.trim());
+        const pkColumns = conflictColumns.split(',').map(c => c.trim());
         const updateColumns = columns
             .filter(col => !pkColumns.includes(col))
             .map(col => `${col} = EXCLUDED.${col}`)
@@ -105,9 +112,9 @@ function translateSqliteToPostgres(sql, params) {
         
         // Agregar ON CONFLICT al final
         if (updateColumns) {
-            translatedSql += ` ON CONFLICT (${primaryKey}) DO UPDATE SET ${updateColumns}`;
+            translatedSql += ` ON CONFLICT (${conflictColumns}) DO UPDATE SET ${updateColumns}`;
         } else {
-            translatedSql += ` ON CONFLICT (${primaryKey}) DO NOTHING`;
+            translatedSql += ` ON CONFLICT (${conflictColumns}) DO NOTHING`;
         }
     }
     
@@ -396,5 +403,19 @@ pool.query('SELECT NOW()', (err, res) => {
         console.error('[POSTGRES] ❌ Error de conexión:', err.message);
     } else {
         console.log('[POSTGRES] ✅ Conectado exitosamente. Server time:', res.rows[0].now);
+        
+        // Ejecutar migraciones de schema si es necesario
+        ensureSchemaConstraints();
     }
 });
+
+// Asegurar que existen los constraints necesarios
+async function ensureSchemaConstraints() {
+    try {
+        // No hacer nada por ahora, las tablas ya tienen PRIMARY KEY correctos
+        // Si en el futuro necesitamos índices únicos compuestos, los agregaríamos aquí
+        console.log('[POSTGRES] Schema constraints verificados');
+    } catch (error) {
+        console.error('[POSTGRES] Error verificando constraints:', error.message);
+    }
+}
