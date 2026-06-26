@@ -40,6 +40,7 @@ const SireView: React.FC = () => {
   const [isLoadingArchivos, setIsLoadingArchivos] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // 🔧 FIX: Key para forzar re-render
 
   const electron = (window as any).electronAPI;
 
@@ -47,6 +48,14 @@ const SireView: React.FC = () => {
   const comparedData = useMemo(() => {
     const monthStr = String(periodoMes + 1).padStart(2, '0');
     const periodoStr = `${periodoAnio}-${monthStr}`;
+    
+    console.log('[SIRE] Recalculando comparedData...', {
+      proceso,
+      periodo: periodoStr,
+      totalPurchases: purchases.length,
+      totalSales: sales.length,
+      refreshKey
+    });
     
     const allDocLocal = (proceso === 'Generar RCE' ? purchases : sales) as (PurchaseEntry | SaleEntry)[];
     
@@ -113,7 +122,7 @@ const SireView: React.FC = () => {
         doc.doc_num.toLowerCase().includes(term)
       );
     });
-  }, [purchases, sales, proceso, periodoMes, periodoAnio, searchTerm]);
+  }, [purchases, sales, proceso, periodoMes, periodoAnio, searchTerm, refreshKey]); // 🔧 FIX: Agregado refreshKey
 
   const stats = useMemo(() => {
     return {
@@ -213,7 +222,14 @@ const SireView: React.FC = () => {
       if (result.success) {
         // MEJORA #3: Ya no centraliza automáticamente, el usuario debe usar el botón "CENTRALIZAR"
         toast.success(`✅ Sincronización exitosa. Use el botón "CENTRALIZAR" para importar los datos al sistema.`, { id: loadingToast });
+        
+        console.log('[SIRE] Recargando datos después de sincronización SUNAT...');
         await syncCurrentWorkspace(); // Recargar datos desde DB
+        
+        // 🔧 FIX: Forzar re-render del componente
+        setRefreshKey(prev => prev + 1);
+        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+        
         loadArchivos();
       } else {
         toast.error(`Error: ${result.error}`, { id: loadingToast });
@@ -347,6 +363,12 @@ const SireView: React.FC = () => {
       await useStore.getState().centralizeSireRecords(currentCompany.ruc, recordsToCentralize, proceso);
       toast.success('Centralización completada y asientos generados.', { id: loadingToast });
       setSelectedIds(new Set());
+      
+      // 🔧 FIX: Recargar datos y forzar re-render
+      console.log('[SIRE] Recargando datos después de centralización...');
+      await syncCurrentWorkspace();
+      setRefreshKey(prev => prev + 1);
+      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
     } catch (error: any) {
       toast.error(`Error: ${error.message}`, { id: loadingToast });
     }
@@ -379,7 +401,12 @@ const SireView: React.FC = () => {
 
       toast.success('Registros eliminados correctamente.', { id: loadingToast });
       setSelectedIds(new Set());
+      
+      // 🔧 FIX: Recargar datos y forzar re-render
+      console.log('[SIRE] Recargando datos después de eliminación...');
       await syncCurrentWorkspace();
+      setRefreshKey(prev => prev + 1);
+      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
     } catch (error: any) {
       toast.error(`Error al eliminar: ${error.message}`, { id: loadingToast });
     }
@@ -408,7 +435,12 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
 
       toast.success('Todos los registros del período fueron eliminados.', { id: loadingToast });
       setSelectedIds(new Set());
+      
+      // 🔧 FIX: Recargar datos y forzar re-render
+      console.log('[SIRE] Recargando datos después de eliminación masiva...');
       await syncCurrentWorkspace();
+      setRefreshKey(prev => prev + 1);
+      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
     } catch (error: any) {
       toast.error(`Error al eliminar todo: ${error.message}`, { id: loadingToast });
     }
