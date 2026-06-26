@@ -21,7 +21,20 @@ function encrypt(text) {
 }
 
 function decrypt(text) {
-    if (!text || text === 'null') return '';
+    if (!text) return '';
+    if (text === 'null') return '';
+    
+    // Convertir Buffer a string si es necesario
+    if (Buffer.isBuffer(text)) {
+        text = text.toString('utf8');
+    }
+    
+    // Verificar que sea string
+    if (typeof text !== 'string') {
+        console.error('[DECRYPT ERROR] Expected string, got:', typeof text);
+        return '';
+    }
+    
     try {
         const parts = text.split(':');
         if (parts.length !== 2) return '';

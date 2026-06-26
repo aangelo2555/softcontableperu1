@@ -35,6 +35,12 @@ api.interceptors.response.use(
     }
 );
 
+// Helper: Convertir placeholders de SQLite (?) a PostgreSQL ($1, $2, $3...)
+function convertSQLitePlaceholdersToPostgres(sql: string): string {
+    let index = 1;
+    return sql.replace(/\?/g, () => `$${index++}`);
+}
+
 export const webApiBridge = {
     // --- Auth API ---
     authLogin: async (credentials: any) => {
@@ -64,11 +70,15 @@ export const webApiBridge = {
         return res.data.data;
     },
     dbExecute: async (sql: string, params?: any[]) => {
-        const res = await api.post('/api/db/execute', { sql, params: params || [] });
+        // Convertir ? a $1, $2, $3 para PostgreSQL
+        const convertedSQL = convertSQLitePlaceholdersToPostgres(sql);
+        const res = await api.post('/api/db/execute', { sql: convertedSQL, params: params || [] });
         return res.data;
     },
     dbQuery: async (sql: string, params?: any[]) => {
-        const res = await api.post('/api/db/query', { sql, params: params || [] });
+        // Convertir ? a $1, $2, $3 para PostgreSQL
+        const convertedSQL = convertSQLitePlaceholdersToPostgres(sql);
+        const res = await api.post('/api/db/query', { sql: convertedSQL, params: params || [] });
         return res.data;
     },
     dbBackup: async () => {

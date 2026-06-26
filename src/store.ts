@@ -1954,7 +1954,7 @@ export const useStore = create<AppState>()(
         const periodo = fecha.substring(0, 7);
         try {
           const res = await electron.dbQuery(
-            `SELECT estado FROM accounting_periods WHERE workspace_id = ? AND periodo = ? AND tipo = 'MENSUAL'`,
+            `SELECT estado FROM accounting_periods WHERE workspace_id = $1 AND periodo = $2 AND tipo = 'MENSUAL'`,
             [ruc, periodo]
           );
           const rows = Array.isArray(res?.rows) ? res.rows : (Array.isArray(res) ? res : []);
