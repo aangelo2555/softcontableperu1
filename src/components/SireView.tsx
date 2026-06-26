@@ -20,6 +20,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useStore } from '../store';
+import { api } from '../services/apiBridge';
 import type { PurchaseEntry, SaleEntry } from '../store';
 import { toast } from 'react-hot-toast';
 import { parseSireTxt } from '../engine/sireParser';
@@ -175,10 +176,12 @@ const SireView: React.FC = () => {
 
   // --- Handlers ---
   const loadArchivos = async () => {
-    if (!electron) return;
     setIsLoadingArchivos(true);
     try {
-      const docs = await electron.listarArchivosSire();
+      // Usar API en web, Electron en desktop
+      const docs = electron
+        ? await electron.listarArchivosSire()
+        : await api.get('/sire/archivos', { params: { ruc: currentCompany.ruc } }).then((r: any) => r.data);
       if (Array.isArray(docs)) setArchivos(docs);
     } catch (error) {
       console.error("Error cargando archivos:", error);
@@ -192,7 +195,6 @@ const SireView: React.FC = () => {
   }, []);
 
   const handleEjecutar = async () => {
-    if (!electron) return;
     if (!currentCompany.sol_user || !currentCompany.sol_pass || !currentCompany.sunatClientId || !currentCompany.sunatClientSecret) {
       toast.error('Faltan credenciales SOL o API en Configuración.');
       return;
@@ -203,7 +205,7 @@ const SireView: React.FC = () => {
     const loadingToast = toast.loading(`Sincronizando con SUNAT para el periodo ${periodo}...`);
 
     try {
-      const result = await electron.ejecutarSire({
+      const payload = {
         ruc: currentCompany.ruc,
         empresa: currentCompany.name,
         proceso: proceso,
@@ -217,7 +219,12 @@ const SireView: React.FC = () => {
           client_secret: currentCompany.sunatClientSecret
         },
         plan: 'premium'
-      });
+      };
+
+      // Usar API en web, Electron en desktop
+      const result = electron 
+        ? await electron.ejecutarSire(payload)
+        : await api.post('/sire/ejecutar', payload).then((r: any) => r.data);
 
       if (result.success) {
         // MEJORA #3: Ya no centraliza automáticamente, el usuario debe usar el botón "CENTRALIZAR"
@@ -244,7 +251,7 @@ const SireView: React.FC = () => {
   };
 
   const handleGenerarArchivoReemplazo = async () => {
-    if (!electron || comparedData.length === 0) return;
+    if (comparedData.length === 0) return;
     
     const periodo = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
     const loadingToast = toast.loading('Generando archivo de reemplazo...');
@@ -252,15 +259,21 @@ const SireView: React.FC = () => {
     try {
       const registros = comparedData.map(item => item.local || item.sunat);
       
-      const result = await electron.generarArchivoSire({
+      const payload = {
         ruc: currentCompany.ruc,
         periodo: periodo,
         proceso: proceso,
         registros: registros
-      });
+      };
+      
+      // Usar API en web, Electron en desktop
+      const result = electron
+        ? await electron.generarArchivoSire(payload)
+        : await api.post('/sire/generar-archivo', payload).then((r: any) => r.data);
 
       if (result.success) {
-        toast.success(`Archivo generado en CARPETA SIRE SUNAT: ${result.filename}`, { id: loadingToast });
+        toast.success(`Archivo generado: ${result.filename}`, { id: loadingToast });
+        loadArchivos(); // Recargar lista de archivos
       } else {
         toast.error(`Error: ${result.error}`, { id: loadingToast });
       }
