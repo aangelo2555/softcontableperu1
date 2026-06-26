@@ -73,6 +73,17 @@ function translateSqliteToPostgres(sql, params) {
     let translatedSql = sql;
     let translatedParams = [...params];
     
+    // 0. Escapar palabras reservadas (desc) en los nombres de columnas
+    // Esto debe hacerse ANTES de cualquier otra transformación
+    translatedSql = translatedSql.replace(/\bdesc\b/gi, (match) => {
+        // Si está rodeado de comillas, no hacer nada
+        if (translatedSql.indexOf(`"${match}"`) !== -1 || translatedSql.indexOf(`'${match}'`) !== -1) {
+            return match;
+        }
+        // Escapar la columna
+        return `"desc"`;
+    });
+    
     // 1. Convertir placeholders ? a $1, $2, etc.
     let paramIndex = 1;
     translatedSql = translatedSql.replace(/\?/g, () => `$${paramIndex++}`);
@@ -899,6 +910,21 @@ async function ensureSchemaConstraints() {
                     CREATE INDEX IF NOT EXISTS idx_audit_workspace ON audit_logs(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id);
                     CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp);
+                `
+            },
+            {
+                name: 'glosas_habituales',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS glosas_habituales (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        category TEXT,
+                        glosa TEXT,
+                        lines_json TEXT,
+                        user_id TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_glosas_workspace ON glosas_habituales(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_glosas_user ON glosas_habituales(user_id);
                 `
             },
             {
