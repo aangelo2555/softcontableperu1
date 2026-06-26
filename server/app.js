@@ -529,12 +529,50 @@ app.get('/api/audit/correlatividad/:ruc', authMiddleware, inspectMiddleware, asy
 // --- Endpoint genérico de consulta SQL (lectura) para modo SaaS ---
 app.post('/api/db/query', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
-        const { sql, params } = req.body;
+        let { sql } = req.body;
+        let params = req.body.params || [];
+        
         // Solo permitir SELECT para seguridad
         if (!sql.trim().toUpperCase().startsWith('SELECT')) {
             return res.status(403).json({ success: false, error: 'Solo se permiten consultas SELECT en este endpoint.' });
         }
-        const rows = db.queryAll(sql, params || []);
+        
+        // ─── INYECCIÓN DE USER_ID PARA SELECT QUERIES ───
+        if (req.targetUserId) {
+            // Detectar la tabla principal del SELECT
+            const fromMatch = sql.match(/FROM\s+(\w+)/i);
+            
+            if (fromMatch) {
+                const tableName = fromMatch[1];
+                try {
+                    // Verificar si la tabla tiene columna user_id
+                    const query = USE_POSTGRES 
+                        ? `SELECT column_name as name FROM information_schema.columns WHERE table_name = $1`
+                        : `PRAGMA table_info(${tableName})`;
+                    const checkParams = USE_POSTGRES ? [tableName.toLowerCase()] : [];
+                    
+                    const cols = await db.queryAll(query, checkParams);
+                    const hasUserId = Array.isArray(cols) && cols.some(c => c.name === 'user_id' || c.column_name === 'user_id');
+                    
+                    if (hasUserId && !sql.toLowerCase().includes('user_id')) {
+                        const hasWhere = sql.toUpperCase().includes('WHERE');
+                        const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
+                        
+                        if (hasWhere) {
+                            sql = `${sql} AND ${tableName}.user_id = ${placeholder}`;
+                        } else {
+                            sql = `${sql} WHERE ${tableName}.user_id = ${placeholder}`;
+                        }
+                        params.push(req.targetUserId);
+                        console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para SELECT`);
+                    }
+                } catch (err) {
+                    console.error('[REWRITE ERROR] Error inyectando user_id en SELECT:', err.message);
+                }
+            }
+        }
+        
+        const rows = await db.queryAll(sql, params);
         res.json({ success: true, rows });
     } catch (error) {
         console.error('[DB ERROR] Error en query:', error);
