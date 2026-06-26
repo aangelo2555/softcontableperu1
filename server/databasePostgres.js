@@ -412,9 +412,146 @@ pool.query('SELECT NOW()', (err, res) => {
 // Asegurar que existen los constraints necesarios
 async function ensureSchemaConstraints() {
     try {
-        // No hacer nada por ahora, las tablas ya tienen PRIMARY KEY correctos
-        // Si en el futuro necesitamos índices únicos compuestos, los agregaríamos aquí
-        console.log('[POSTGRES] Schema constraints verificados');
+        console.log('[POSTGRES] Verificando schema y constraints...');
+        
+        // Lista de tablas críticas que deben tener PRIMARY KEY
+        const criticalTables = [
+            { 
+                name: 'asientos', 
+                pk: 'id',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS asientos (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        header_json TEXT,
+                        lines_json TEXT,
+                        user_id TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_asientos_workspace ON asientos(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_asientos_user ON asientos(user_id);
+                `
+            },
+            { 
+                name: 'purchases', 
+                pk: 'id',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS purchases (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        registro TEXT,
+                        fecha TEXT,
+                        fecVcto TEXT,
+                        tipo_doc TEXT,
+                        serie TEXT,
+                        numero TEXT,
+                        doc_tipo TEXT,
+                        doc_num TEXT,
+                        nombre TEXT,
+                        tc REAL,
+                        bi REAL,
+                        igv REAL,
+                        noGravada REAL,
+                        isc REAL,
+                        total REAL,
+                        glosa TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_purchases_workspace ON purchases(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id);
+                `
+            },
+            { 
+                name: 'sales', 
+                pk: 'id',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS sales (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        registro TEXT,
+                        fecha TEXT,
+                        fecVcto TEXT,
+                        tipo_doc TEXT,
+                        serie TEXT,
+                        numero TEXT,
+                        doc_tipo TEXT,
+                        doc_num TEXT,
+                        nombre TEXT,
+                        tc REAL,
+                        bi REAL,
+                        igv REAL,
+                        noGravada REAL,
+                        isc REAL,
+                        total REAL,
+                        glosa TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_sales_workspace ON sales(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
+                `
+            },
+            { 
+                name: 'journal', 
+                pk: 'id',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS journal (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        source TEXT,
+                        asiento TEXT,
+                        fecha TEXT,
+                        glosa TEXT,
+                        cta TEXT,
+                        desc TEXT,
+                        debe REAL,
+                        haber REAL,
+                        medio_pago TEXT,
+                        nro_transaccion TEXT,
+                        razon_social TEXT,
+                        user_id TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_journal_workspace ON journal(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_journal_user ON journal(user_id);
+                `
+            }
+        ];
+        
+        for (const table of criticalTables) {
+            // Verificar si existe la tabla
+            const tableExists = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = $1
+                );
+            `, [table.name]);
+            
+            if (!tableExists.rows[0].exists) {
+                console.log(`[POSTGRES] Creando tabla ${table.name}...`);
+                await pool.query(table.schema);
+                console.log(`[POSTGRES] ✅ Tabla ${table.name} creada`);
+            } else {
+                // Verificar si existe el PRIMARY KEY
+                const pkExists = await pool.query(`
+                    SELECT constraint_name
+                    FROM information_schema.table_constraints
+                    WHERE table_name = $1
+                    AND constraint_type = 'PRIMARY KEY';
+                `, [table.name]);
+                
+                if (pkExists.rows.length === 0) {
+                    console.log(`[POSTGRES] Agregando PRIMARY KEY a ${table.name}...`);
+                    try {
+                        await pool.query(`ALTER TABLE ${table.name} ADD PRIMARY KEY (${table.pk});`);
+                        console.log(`[POSTGRES] ✅ PRIMARY KEY agregado a ${table.name}`);
+                    } catch (error) {
+                        console.error(`[POSTGRES] Error agregando PK a ${table.name}:`, error.message);
+                    }
+                }
+            }
+        }
+        
+        console.log('[POSTGRES] ✅ Schema constraints verificados y corregidos');
     } catch (error) {
         console.error('[POSTGRES] Error verificando constraints:', error.message);
     }
