@@ -543,7 +543,7 @@ async function ensureSchemaConstraints() {
                         fecha TEXT,
                         glosa TEXT,
                         cta TEXT,
-                        desc TEXT,
+                        "desc" TEXT,
                         debe NUMERIC,
                         haber NUMERIC,
                         user_id TEXT NOT NULL,
