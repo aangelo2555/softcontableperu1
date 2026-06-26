@@ -703,6 +703,7 @@ async function ensureSchemaConstraints() {
                         snapshot_data TEXT,
                         is_stale INTEGER DEFAULT 0,
                         stale_since TIMESTAMP,
+                        last_sync TIMESTAMP,
                         created_at TIMESTAMP DEFAULT NOW(),
                         created_by TEXT,
                         user_id TEXT
