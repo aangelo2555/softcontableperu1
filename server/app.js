@@ -187,8 +187,15 @@ app.post('/api/db/execute', async (req, res) => {
             if (insertMatch) {
                 const tableName = insertMatch[1];
                 try {
-                    const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
-                    const hasUserId = cols.some(c => c.name === 'user_id');
+                    // PostgreSQL: usar information_schema en lugar de PRAGMA
+                    const query = USE_POSTGRES 
+                        ? `SELECT column_name as name FROM information_schema.columns WHERE table_name = $1`
+                        : `PRAGMA table_info(${tableName})`;
+                    const params = USE_POSTGRES ? [tableName.toLowerCase()] : [];
+                    
+                    const cols = await db.queryAll(query, params);
+                    const hasUserId = Array.isArray(cols) && cols.some(c => c.name === 'user_id' || c.column_name === 'user_id');
+                    
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
                         const colParenCloseIndex = sql.indexOf(')');
                         const valuesIndex = sql.toUpperCase().indexOf('VALUES');
@@ -210,8 +217,15 @@ app.post('/api/db/execute', async (req, res) => {
             } else if (updateMatch || deleteMatch) {
                 const tableName = updateMatch ? updateMatch[1] : deleteMatch[1];
                 try {
-                    const cols = db.queryAll(`PRAGMA table_info(${tableName})`);
-                    const hasUserId = cols.some(c => c.name === 'user_id');
+                    // PostgreSQL: usar information_schema en lugar de PRAGMA
+                    const query = USE_POSTGRES 
+                        ? `SELECT column_name as name FROM information_schema.columns WHERE table_name = $1`
+                        : `PRAGMA table_info(${tableName})`;
+                    const queryParams = USE_POSTGRES ? [tableName.toLowerCase()] : [];
+                    
+                    const cols = await db.queryAll(query, queryParams);
+                    const hasUserId = Array.isArray(cols) && cols.some(c => c.name === 'user_id' || c.column_name === 'user_id');
+                    
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
                         const hasWhere = sql.toUpperCase().includes('WHERE');
                         if (hasWhere) {
