@@ -198,9 +198,11 @@ const db = {
     // Save workspace
     saveWorkspace: async (workspace, userId) => {
         const {
-            ruc, name, address, phone, email,
+            ruc, name, address, location, support, period, logoBase64,
+            regimenTributario, businessType, annualIncomeUIT, agente_retencion,
+            ciiuCode, fixedAssetsValue, employeeCount,
             sol_user, sol_pass, sunatClientId, sunatClientSecret,
-            naturaleza_comercial, regime_type, activity_code, start_date
+            certificado_pfx, certificado_pass
         } = workspace;
         
         // Cifrar credenciales
@@ -208,30 +210,40 @@ const db = {
         const encryptedSolPass = encrypt(sol_pass || '');
         const encryptedClientId = encrypt(sunatClientId || '');
         const encryptedClientSecret = encrypt(sunatClientSecret || '');
+        const encryptedCertPass = certificado_pass ? encrypt(certificado_pass) : null;
         
         await query(`
             INSERT INTO workspaces (
-                ruc, user_id, name, address, phone, email,
-                sol_user, sol_pass, sunatClientId, sunatClientSecret,
-                naturaleza_comercial, regime_type, activity_code, start_date
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                ruc, user_id, name, regimenTributario, location, address, support, period,
+                logoBase64, sol_user, sol_pass, sunatClientId, sunatClientSecret,
+                businessType, annualIncomeUIT, agente_retencion, ciiuCode,
+                fixedAssetsValue, employeeCount, certificado_pfx, certificado_pass
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
             ON CONFLICT (ruc, user_id) DO UPDATE SET
                 name = EXCLUDED.name,
+                regimenTributario = EXCLUDED.regimenTributario,
+                location = EXCLUDED.location,
                 address = EXCLUDED.address,
-                phone = EXCLUDED.phone,
-                email = EXCLUDED.email,
+                support = EXCLUDED.support,
+                period = EXCLUDED.period,
+                logoBase64 = EXCLUDED.logoBase64,
                 sol_user = EXCLUDED.sol_user,
                 sol_pass = EXCLUDED.sol_pass,
                 sunatClientId = EXCLUDED.sunatClientId,
                 sunatClientSecret = EXCLUDED.sunatClientSecret,
-                naturaleza_comercial = EXCLUDED.naturaleza_comercial,
-                regime_type = EXCLUDED.regime_type,
-                activity_code = EXCLUDED.activity_code,
-                start_date = EXCLUDED.start_date
+                businessType = EXCLUDED.businessType,
+                annualIncomeUIT = EXCLUDED.annualIncomeUIT,
+                agente_retencion = EXCLUDED.agente_retencion,
+                ciiuCode = EXCLUDED.ciiuCode,
+                fixedAssetsValue = EXCLUDED.fixedAssetsValue,
+                employeeCount = EXCLUDED.employeeCount,
+                certificado_pfx = EXCLUDED.certificado_pfx,
+                certificado_pass = EXCLUDED.certificado_pass
         `, [
-            ruc, userId, name, address, phone, email,
-            encryptedSolUser, encryptedSolPass, encryptedClientId, encryptedClientSecret,
-            naturaleza_comercial, regime_type, activity_code, start_date
+            ruc, userId, name, regimenTributario, location, address, support, period,
+            logoBase64, encryptedSolUser, encryptedSolPass, encryptedClientId, encryptedClientSecret,
+            businessType, annualIncomeUIT, agente_retencion, ciiuCode,
+            fixedAssetsValue, employeeCount, certificado_pfx, encryptedCertPass
         ]);
     },
     
