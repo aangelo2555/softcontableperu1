@@ -198,20 +198,40 @@ app.post('/api/db/execute', async (req, res) => {
                     const hasUserId = Array.isArray(cols) && cols.some(c => c.name === 'user_id' || c.column_name === 'user_id');
                     
                     if (hasUserId && !sql.toLowerCase().includes('user_id')) {
-                        const colParenCloseIndex = sql.indexOf(')');
+                        // Buscar la posición de VALUES
                         const valuesIndex = sql.toUpperCase().indexOf('VALUES');
-                        const valuesCloseParenIndex = valuesIndex !== -1 ? sql.indexOf(')', valuesIndex) : -1;
-                        
-                        if (colParenCloseIndex !== -1 && valuesIndex !== -1 && valuesCloseParenIndex !== -1) {
-                            const beforeCols = sql.slice(0, colParenCloseIndex);
-                            const afterCols = sql.slice(colParenCloseIndex, valuesCloseParenIndex);
-                            const endStr = sql.slice(valuesCloseParenIndex);
+                        if (valuesIndex === -1) {
+                            console.error('[REWRITE ERROR] No se encontró VALUES en INSERT');
+                        } else {
+                            // Extraer la parte de columnas: desde ( hasta VALUES
+                            const beforeValues = sql.substring(0, valuesIndex);
+                            const afterValues = sql.substring(valuesIndex);
                             
-                            // ✅ FIX: Para SQLite simplemente agregar ?, para PostgreSQL calcular posición correcta
-                            const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
-                            sql = `${beforeCols}, user_id${afterCols}, ${placeholder}${endStr}`;
-                            params.push(req.targetUserId);
-                            console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para INSERT`);
+                            // Buscar el último ) antes de VALUES (cierre de columnas)
+                            const colParenCloseIndex = beforeValues.lastIndexOf(')');
+                            
+                            if (colParenCloseIndex === -1) {
+                                console.error('[REWRITE ERROR] No se encontró cierre de columnas');
+                            } else {
+                                // Buscar el primer ) después de VALUES (cierre de valores)
+                                const valuesParenOpenIndex = afterValues.indexOf('(');
+                                const valuesParenCloseIndex = afterValues.indexOf(')', valuesParenOpenIndex);
+                                
+                                if (valuesParenCloseIndex === -1) {
+                                    console.error('[REWRITE ERROR] No se encontró cierre de valores');
+                                } else {
+                                    // Reconstruir query
+                                    const beforeCols = beforeValues.substring(0, colParenCloseIndex);
+                                    const afterValuesComplete = afterValues.substring(valuesParenCloseIndex + 1);
+                                    const valuesContent = afterValues.substring(valuesParenOpenIndex + 1, valuesParenCloseIndex);
+                                    
+                                    const placeholder = USE_POSTGRES ? `$${params.length + 1}` : '?';
+                                    
+                                    sql = `${beforeCols}, user_id) ${afterValues.substring(0, valuesParenOpenIndex + 1)}${valuesContent}, ${placeholder})${afterValuesComplete}`;
+                                    params.push(req.targetUserId);
+                                    console.log(`[SAAS DB REWRITE] Inyectado user_id en la tabla ${tableName} para INSERT`);
+                                }
+                            }
                         }
                     }
                 } catch (err) {
