@@ -226,9 +226,11 @@ const SireView: React.FC = () => {
         console.log('[SIRE] Recargando datos después de sincronización SUNAT...');
         await syncCurrentWorkspace(); // Recargar datos desde DB
         
-        // 🔧 FIX: Forzar re-render del componente
-        setRefreshKey(prev => prev + 1);
-        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+        // 🔧 FIX: Esperar a que React procese la actualización del store antes de incrementar refreshKey
+        setTimeout(() => {
+          setRefreshKey(prev => prev + 1);
+          console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+        }, 100); // 100ms es suficiente para que React actualice el store
         
         loadArchivos();
       } else {
@@ -364,11 +366,14 @@ const SireView: React.FC = () => {
       toast.success('Centralización completada y asientos generados.', { id: loadingToast });
       setSelectedIds(new Set());
       
-      // 🔧 FIX: Recargar datos y forzar re-render
+      // 🔧 FIX: Recargar datos y forzar re-render con delay
       console.log('[SIRE] Recargando datos después de centralización...');
       await syncCurrentWorkspace();
-      setRefreshKey(prev => prev + 1);
-      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      
+      setTimeout(() => {
+        setRefreshKey(prev => prev + 1);
+        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      }, 100);
     } catch (error: any) {
       toast.error(`Error: ${error.message}`, { id: loadingToast });
     }
@@ -402,11 +407,14 @@ const SireView: React.FC = () => {
       toast.success('Registros eliminados correctamente.', { id: loadingToast });
       setSelectedIds(new Set());
       
-      // 🔧 FIX: Recargar datos y forzar re-render
+      // 🔧 FIX: Recargar datos y forzar re-render con delay
       console.log('[SIRE] Recargando datos después de eliminación...');
       await syncCurrentWorkspace();
-      setRefreshKey(prev => prev + 1);
-      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      
+      setTimeout(() => {
+        setRefreshKey(prev => prev + 1);
+        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      }, 100);
     } catch (error: any) {
       toast.error(`Error al eliminar: ${error.message}`, { id: loadingToast });
     }
@@ -436,11 +444,14 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
       toast.success('Todos los registros del período fueron eliminados.', { id: loadingToast });
       setSelectedIds(new Set());
       
-      // 🔧 FIX: Recargar datos y forzar re-render
+      // 🔧 FIX: Recargar datos y forzar re-render con delay
       console.log('[SIRE] Recargando datos después de eliminación masiva...');
       await syncCurrentWorkspace();
-      setRefreshKey(prev => prev + 1);
-      console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      
+      setTimeout(() => {
+        setRefreshKey(prev => prev + 1);
+        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
+      }, 100);
     } catch (error: any) {
       toast.error(`Error al eliminar todo: ${error.message}`, { id: loadingToast });
     }
