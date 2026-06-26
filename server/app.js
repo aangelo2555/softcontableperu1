@@ -4,7 +4,27 @@ const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const { sireDir, buzonDir } = require('./storageConfig');
-const db = require('./databaseServer');
+
+// ====================================================================
+// MIGRACIÓN A POSTGRESQL: Configuración dinámica de base de datos
+// ====================================================================
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const db = USE_POSTGRES 
+    ? require('./databasePostgres')
+    : require('./databaseServer');
+
+console.log(`[DB CONFIG] Usando: ${USE_POSTGRES ? 'PostgreSQL' : 'SQLite'}`);
+console.log(`[DB CONFIG] NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+if (USE_POSTGRES) {
+    console.log(`[DB CONFIG] DATABASE_URL configurado: ${process.env.DATABASE_URL ? '✅' : '❌'}`);
+}
+
+// Exponer rawDb para servicios legacy que lo necesitan
+// En PostgreSQL, rawDb será el pool de conexiones
+if (!db.rawDb) {
+    db.rawDb = USE_POSTGRES ? db.pool : db;
+}
+// ====================================================================
 const createLibroDiario52Service = require('./libroDiario52Service');
 const ld52Service = createLibroDiario52Service(db.rawDb);
 const createRetenciones41Service = require('./retenciones41Service');

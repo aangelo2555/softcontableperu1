@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment Variables (sensibles)
+.env
+.env.local
+.env.production
+
 # Local Databases & Storage (En Railway irán en un Volume)
 database/*.db
 database/*.db-journal
@@ -23,6 +28,10 @@ salida_instalador*
 salida_empaquetado
 temp
 .tmp
+
+# Migration & Backups (locales)
+backups/
+migration-output/
 
 # Editor directories and files
 .vscode/*

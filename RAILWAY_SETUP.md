@@ -1,261 +1,489 @@
-# 🚂 Configuración de Railway - SOFTCONTABLE
+# 🚀 RAILWAY SETUP: PostgreSQL + Backend
 
-## ⚠️ IMPORTANTE: Cambios Requeridos en Railway
+## Estado Actual: DÍA 1 - Pasos Completos en Local
 
-### 📦 Paso 1: Instalar Nuevas Dependencias
+### ✅ COMPLETADO EN LOCAL
 
-Después de hacer `git push` a Railway, las dependencias se instalarán automáticamente. La nueva dependencia añadida es:
+- [x] Backup de SQLite creado: `backups/pld_contable_backup_20260626.db`
+- [x] Datos exportados: `migration-output/sqlite_export.json` (1,898 registros)
+- [x] Schema PostgreSQL generado: `migration-output/postgres_schema.sql`
+- [x] Índices optimizados creados: `migration-output/create_indexes.sql`
+- [x] Dependencia `pg` instalada
+- [x] Código de backend actualizado para soportar PostgreSQL/SQLite dinámicamente
 
-- ✅ `compression@^1.7.4` - Ya incluida en `package.json`
+---
 
-### 🔧 Paso 2: Variables de Entorno (Sin Cambios)
+## 🎯 PRÓXIMOS PASOS EN RAILWAY
 
-Las variables de entorno actuales siguen siendo válidas:
+### PASO 1: Crear PostgreSQL en Railway (5 min)
 
-```env
-DATABASE_PATH=/app/database/pld_contable.db
-JWT_SECRET=tu-secreto-jwt-actual
-PORT=8888
-NODE_ENV=production
+1. Ve a tu dashboard de Railway: https://railway.app/dashboard
+2. Selecciona tu proyecto **SOFTCONTABLE**
+3. Click en **"+ New"** → **"Database"** → **"PostgreSQL"**
+4. Espera 2-3 minutos a que se cree el servicio
+5. El servicio aparecerá con el nombre **"Postgres"**
+
+✅ **Checkpoint**: PostgreSQL creado y visible en el dashboard
+
+---
+
+### PASO 2: Obtener DATABASE_URL (2 min)
+
+#### Opción A: Desde Railway Dashboard (Recomendado)
+
+1. Click en el servicio **Postgres** que acabas de crear
+2. Ve a la pestaña **"Variables"**
+3. Busca la variable **`DATABASE_URL`**
+4. Click en el ícono de **"Copy"** para copiar el valor completo
+5. Guarda este valor en un lugar seguro (lo necesitarás en varios pasos)
+
+El formato es algo como:
+```
+postgresql://postgres:PASSWORD@XXXXX.railway.app:5432/railway
 ```
 
-**NO necesitas cambiar nada aquí.** ✅
-
-### 💾 Paso 3: Volume Configuration (Sin Cambios)
-
-Tu configuración actual del Volume es correcta:
-
-- **Mount Path**: `/app/database`
-- **Size**: 5.00 GB
-- **Database Path**: `/app/database/pld_contable.db`
-
-**NO necesitas cambiar nada aquí.** ✅
-
-### 🎯 Paso 4: Deploy del Código
+#### Opción B: Usando Railway CLI (Alternativo)
 
 ```bash
-# 1. Commit los cambios
-git add .
-git commit -m "feat: optimización performance + auto-sync buzón y SIRE"
+# Instalar Railway CLI (si no lo tienes)
+npm install -g @railway/cli
 
-# 2. Push a Railway (se desplegará automáticamente)
+# Login
+railway login
+
+# Link al proyecto
+railway link
+
+# Ver variables
+railway variables
+```
+
+✅ **Checkpoint**: DATABASE_URL copiado y guardado
+
+---
+
+### PASO 3: Crear Schema en PostgreSQL (10 min)
+
+#### Opción A: Usando Railway CLI (Más fácil)
+
+```bash
+# Desde la carpeta del proyecto
+cd C:\Users\aange\Desktop\SOFTCONTABLE_WEB_READY
+
+# Crear el schema
+railway run psql < migration-output\postgres_schema.sql
+
+# Verificar tablas creadas
+railway run psql -c "\dt"
+```
+
+Deberías ver **31 tablas** creadas.
+
+#### Opción B: Usando psql Local (Si tienes PostgreSQL instalado)
+
+```bash
+# Configurar DATABASE_URL
+set DATABASE_URL=postgresql://postgres:PASSWORD@XXXXX.railway.app:5432/railway
+
+# Ejecutar schema
+psql %DATABASE_URL% < migration-output\postgres_schema.sql
+
+# Verificar
+psql %DATABASE_URL% -c "\dt"
+```
+
+#### Opción C: Desde Railway Dashboard (Interfaz Web)
+
+1. En el servicio Postgres, ve a la pestaña **"Data"**
+2. Click en **"Query"**
+3. Abre el archivo `migration-output/postgres_schema.sql` en un editor de texto
+4. Copia TODO el contenido
+5. Pégalo en el editor de consultas de Railway
+6. Click en **"Run"**
+
+✅ **Checkpoint**: 31 tablas creadas en PostgreSQL
+
+---
+
+### PASO 4: Importar Datos a PostgreSQL (15-20 min)
+
+```bash
+# Configurar la DATABASE_URL como variable de entorno temporal
+set DATABASE_URL=postgresql://postgres:PASSWORD@XXXXX.railway.app:5432/railway
+
+# Ejecutar importación
+node scripts\import-to-postgres.js
+```
+
+**Salida esperada:**
+```
+📊 Tablas a importar: 31
+
+📋 Importando workspaces...
+   Progreso: 1/1 (100%)
+   ✅ 1 registros importados
+
+📋 Importando users...
+   Progreso: 5/5 (100%)
+   ✅ 5 registros importados
+
+📋 Importando plan_global...
+   Progreso: 1818/1818 (100%)
+   ✅ 1818 registros importados
+
+...
+
+✅ Importación completada!
+📊 Total de registros importados: 1898
+
+🔍 Verificando integridad...
+   ✅ workspaces: 1 registros (OK)
+   ✅ users: 5 registros (OK)
+   ✅ plan_global: 1818 registros (OK)
+   ✅ mapa_pcge_tabla9: 74 registros (OK)
+```
+
+**IMPORTANTE**: Si hay errores de conexión, verifica que:
+- El DATABASE_URL esté correctamente copiado (sin espacios extra)
+- La base de datos esté accesible desde internet
+- No haya firewalls bloqueando la conexión
+
+✅ **Checkpoint**: 1,898 registros importados correctamente
+
+---
+
+### PASO 5: Crear Índices Optimizados (5 min)
+
+```bash
+# Usando Railway CLI
+railway run psql < migration-output\create_indexes.sql
+
+# O usando psql local
+psql %DATABASE_URL% < migration-output\create_indexes.sql
+```
+
+**Salida esperada:**
+```
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+...
+ANALYZE
+```
+
+**Verificar índices creados:**
+```bash
+railway run psql -c "\di"
+```
+
+Deberías ver **40+ índices** creados.
+
+✅ **Checkpoint**: Índices creados y base de datos optimizada
+
+---
+
+### PASO 6: Configurar Variables de Entorno en Railway (5 min)
+
+1. En el dashboard de Railway, selecciona tu servicio **backend** (el que ejecuta Node.js)
+2. Ve a la pestaña **"Variables"**
+3. Agrega/actualiza las siguientes variables:
+
+```env
+# Database (CRÍTICO)
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+USE_POSTGRES=true
+
+# Node Environment
+NODE_ENV=production
+PORT=8080
+
+# Security (CAMBIAR ESTOS VALORES)
+JWT_SECRET=tu-secret-key-super-seguro-cambialo-ahora
+ENCRYPTION_KEY=softcontable-2026-encryption-key-super-seguro
+
+# Features
+ENABLE_RATE_LIMIT=true
+CACHE_TTL=1800000
+```
+
+**IMPORTANTE**: 
+- `DATABASE_URL=${{Postgres.DATABASE_URL}}` se autocompleta si el servicio Postgres está en el mismo proyecto
+- Cambia `JWT_SECRET` y `ENCRYPTION_KEY` por valores únicos y seguros
+
+✅ **Checkpoint**: Variables configuradas correctamente
+
+---
+
+### PASO 7: Deploy Backend con PostgreSQL (10 min)
+
+```bash
+# En tu máquina local
+cd C:\Users\aange\Desktop\SOFTCONTABLE_WEB_READY
+
+# Verificar cambios
+git status
+
+# Agregar todos los cambios
+git add .
+
+# Commit
+git commit -m "feat: migración a PostgreSQL - soporte dinámico SQLite/PostgreSQL"
+
+# Push a Railway (esto dispara el deploy automáticamente)
 git push origin main
 ```
 
-Railway detectará automáticamente los cambios y redesplegará el servicio.
+**Monitorear el deploy:**
+1. En Railway Dashboard, ve al servicio backend
+2. Click en la pestaña **"Deployments"**
+3. Verás el nuevo deploy en progreso
+4. Click en el deploy para ver los logs en tiempo real
 
-### ⏱️ Paso 5: Verificar el Deploy
+**Logs esperados:**
+```
+[DB CONFIG] Usando: PostgreSQL
+[DB CONFIG] NODE_ENV: production
+[DB CONFIG] DATABASE_URL configurado: ✅
+[POSTGRES] ✅ Conectado exitosamente. Server time: 2026-06-26...
+[SERVER] ✅ Servidor escuchando en puerto 8080
+```
 
-Después del deploy (tarda ~2-3 minutos), verifica que todo esté funcionando:
-
-1. **Health Check**:
-   ```
-   https://tu-dominio.railway.app/health
-   ```
-   
-   Deberías ver una respuesta JSON como:
-   ```json
-   {
-     "status": "ok",
-     "database": {
-       "size_mb": "123.45",
-       "usage_percent": "2.47"
-     },
-     "memory": {
-       "rss_mb": "150.23",
-       "heap_used_mb": "85.12"
-     },
-     "cache": {
-       "size": 0,
-       "ttl_seconds": 300
-     },
-     "uptime_seconds": 3600
-   }
-   ```
-
-2. **Logs del Servidor**:
-   
-   En Railway Dashboard → Deployments → Ver Logs
-   
-   Deberías ver:
-   ```
-   [SERVER] SOFTCONTABLE 2 ONLINE en puerto 8888
-   [DB] ✅ Índices de optimización aplicados exitosamente
-   ```
-
-### 🔍 Paso 6: Monitoreo
-
-Railway te permite monitorear el uso de recursos:
-
-1. Ve a tu proyecto en Railway
-2. Click en "Metrics"
-3. Observa:
-   - **CPU Usage**: Debe ser <30% en promedio
-   - **Memory Usage**: Debe ser <200MB en promedio
-   - **Disk Usage**: Tu base de datos con índices ocupará ~10-15% más
-
-### 📊 Paso 7: Testing de las Nuevas Funcionalidades
-
-#### Test 1: Compresión GZIP
-1. Abre DevTools (F12) → Network
-2. Haz una consulta grande: `/api/db/workspaces`
-3. Verifica que en Headers aparezca:
-   ```
-   Content-Encoding: gzip
-   ```
-4. Compara `Size` vs `Transferred` (debe ser ~30% del original)
-
-#### Test 2: Cache en Memoria
-1. Primera consulta a `/api/db/workspaces`: ~500ms
-2. Segunda consulta (dentro de 5 minutos): ~50ms ⚡
-3. Después de 5 minutos: vuelve a ~500ms (cache expiró)
-
-#### Test 3: Índices de Base de Datos
-1. Ve a cualquier vista (Compras, Ventas, Diario)
-2. Filtra por fecha
-3. Debe cargar en <1 segundo (antes: 5-10 segundos)
-
-#### Test 4: Paginación
-1. Ve al Módulo SIRE
-2. Descarga datos de varios meses
-3. Verifica que aparezcan controles de paginación
-4. Cambia entre páginas: debe ser instantáneo
-
-#### Test 5: Auto-Sync Buzón
-1. Ve a Panel de Empresa
-2. Ingresa credenciales SOL válidas
-3. Guarda
-4. Espera 10-30 segundos
-5. Ve al módulo Buzón → Debe tener mensajes cargados
-
-#### Test 6: Auto-Sync SIRE
-1. Ve a Panel de Empresa
-2. Ingresa credenciales SIRE + SOL válidas
-3. Guarda
-4. Espera 2-5 minutos (descarga desde enero hasta hoy)
-5. Ve al módulo SIRE → Debe tener datos desde enero
+✅ **Checkpoint**: Backend deployado y funcionando con PostgreSQL
 
 ---
 
-## 🆘 Troubleshooting
+### PASO 8: Verificar Funcionamiento (5 min)
 
-### Problema: El servidor no inicia
+#### 8.1 Health Check
+
+Abre en tu navegador (reemplaza con tu URL de Railway):
+```
+https://softcontable.up.railway.app/api/health
+```
+
+**Respuesta esperada:**
+```json
+{
+  "status": "ok",
+  "database": "PostgreSQL",
+  "timestamp": "2026-06-26T..."
+}
+```
+
+#### 8.2 Test de Login
+
+```bash
+# Usando curl (en CMD)
+curl -X POST https://softcontable.up.railway.app/api/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"tu-email@ejemplo.com\",\"password\":\"tu-password\"}"
+```
+
+**Respuesta esperada:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "...",
+    "email": "...",
+    "name": "..."
+  }
+}
+```
+
+#### 8.3 Verificar Datos en Frontend
+
+1. Abre tu aplicación frontend: `https://softcontable.up.railway.app`
+2. Inicia sesión con tus credenciales
+3. Verifica que:
+   - Las empresas se cargan correctamente
+   - El plan contable aparece
+   - Los módulos responden correctamente
+
+✅ **Checkpoint**: Sistema funcionando end-to-end con PostgreSQL
+
+---
+
+## 📊 VERIFICACIÓN FINAL
+
+### Queries de Verificación
+
+```sql
+-- Conectar a PostgreSQL
+railway run psql
+
+-- Verificar cantidad de registros
+SELECT 'workspaces' as tabla, COUNT(*) FROM workspaces
+UNION ALL SELECT 'users', COUNT(*) FROM users
+UNION ALL SELECT 'plan_global', COUNT(*) FROM plan_global
+UNION ALL SELECT 'purchases', COUNT(*) FROM purchases
+UNION ALL SELECT 'sales', COUNT(*) FROM sales;
+
+-- Verificar workspace con credenciales descifradas (deberían estar vacías en DB)
+SELECT ruc, name, sol_user, sol_pass FROM workspaces;
+
+-- Verificar índices
+SELECT tablename, indexname 
+FROM pg_indexes 
+WHERE schemaname = 'public' 
+ORDER BY tablename, indexname;
+
+-- Salir
+\q
+```
+
+---
+
+## 🆘 TROUBLESHOOTING
+
+### Error: "No se puede conectar a PostgreSQL"
+
+```bash
+# Verificar DATABASE_URL
+railway variables | findstr DATABASE_URL
+
+# Test conexión directa
+railway run psql -c "SELECT NOW()"
+```
+
+**Solución**: Verifica que DATABASE_URL esté correctamente configurado y que el servicio Postgres esté running.
+
+---
+
+### Error: "relation does not exist"
+
+**Causa**: El schema no se ejecutó correctamente.
 
 **Solución**:
-1. Revisa los logs en Railway Dashboard
-2. Busca errores relacionados con dependencias
-3. Si ves `Cannot find module 'compression'`:
+```bash
+# Re-ejecutar schema
+railway run psql < migration-output\postgres_schema.sql
+```
+
+---
+
+### Error: "Too many connections"
+
+**Causa**: Pool de conexiones saturado.
+
+**Solución**: Edita `server/databasePostgres.js`:
+```javascript
+max: 10, // Reducir de 20 a 10
+```
+
+Luego re-deploy:
+```bash
+git add server/databasePostgres.js
+git commit -m "fix: reducir pool de conexiones PostgreSQL"
+git push origin main
+```
+
+---
+
+### Error: "Query timeout"
+
+**Causa**: Query muy lenta o conexión lenta.
+
+**Solución**: Aumenta el timeout en `server/databasePostgres.js`:
+```javascript
+connectionTimeoutMillis: 30000, // 30 segundos
+```
+
+---
+
+### Error en Importación: "duplicate key value violates unique constraint"
+
+**Causa**: Datos duplicados o importación ejecutada dos veces.
+
+**Solución**: Limpiar la base de datos y volver a importar:
+```bash
+# Conectar
+railway run psql
+
+# Eliminar todas las tablas
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
+# Salir
+\q
+
+# Re-crear schema
+railway run psql < migration-output\postgres_schema.sql
+
+# Re-importar datos
+set DATABASE_URL=postgresql://...
+node scripts\import-to-postgres.js
+```
+
+---
+
+## ✅ CHECKLIST FINAL DÍA 1
+
+- [ ] ✅ Backup SQLite creado
+- [ ] ✅ Datos exportados a JSON
+- [ ] ✅ PostgreSQL creado en Railway
+- [ ] ✅ DATABASE_URL obtenido
+- [ ] ✅ Schema PostgreSQL creado (31 tablas)
+- [ ] ✅ Datos importados (1,898 registros)
+- [ ] ✅ Índices creados (40+ índices)
+- [ ] ✅ Variables de entorno configuradas
+- [ ] ✅ Backend deployado con PostgreSQL
+- [ ] ✅ Health check pasando (✅ status: ok)
+- [ ] ✅ Login funcionando
+- [ ] ✅ Frontend cargando datos correctamente
+
+---
+
+## 📈 MEJORAS ESPERADAS
+
+### Antes (SQLite)
+- ❌ Latencia: ~500ms por request
+- ❌ Conexiones: 1 (bloqueante)
+- ❌ Usuarios concurrentes: 10-15 máx
+- ❌ Bloqueos frecuentes en escritura
+- ❌ Escalamiento: Imposible
+
+### Después (PostgreSQL)
+- ✅ Latencia: ~150-200ms por request (**60% más rápido**)
+- ✅ Conexiones: 20 simultáneas (pool)
+- ✅ Usuarios concurrentes: 100+ sin problemas
+- ✅ Sin bloqueos (MVCC)
+- ✅ Escalamiento: Horizontal y vertical
+
+---
+
+## 🎯 PRÓXIMO: DÍA 2
+
+Una vez completado el DÍA 1, estarás listo para:
+
+1. **Separar Frontend** (Servicio Nginx independiente)
+2. **Implementar CDN** para assets estáticos
+3. **Configurar Cache Redis** (opcional)
+4. **Monitoreo y Logs** avanzados
+
+**Tiempo estimado DÍA 1**: 4-6 horas  
+**Tiempo estimado TOTAL**: 3-5 días
+
+---
+
+## 💡 NOTAS IMPORTANTES
+
+1. **Backup**: El archivo SQLite original sigue intacto. Puedes volver a él en cualquier momento cambiando `USE_POSTGRES=false`.
+
+2. **Credenciales**: PostgreSQL usa el mismo sistema de encriptación que SQLite. Las credenciales SUNAT están seguras.
+
+3. **Rollback**: Si algo falla, simplemente:
    ```bash
-   railway run npm install
+   # En Railway, eliminar variable
+   USE_POSTGRES=false
+   
+   # O comentar la variable en Variables
    ```
 
-### Problema: La base de datos no tiene índices
-
-**Solución**:
-Los índices se aplican automáticamente al iniciar el servidor. Si quieres verificar manualmente:
-
-```bash
-# Conectar a Railway CLI
-railway run bash
-
-# Verificar índices
-sqlite3 /app/database/pld_contable.db "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%';"
-```
-
-### Problema: El cache no funciona
-
-**Solución**:
-1. Verifica el endpoint `/health` → debe mostrar `cache.size`
-2. Limpia el cache manualmente:
-   ```
-   POST /api/cache/clear
-   Authorization: Bearer TU_TOKEN_ADMIN
-   ```
-
-### Problema: Auto-sync no se ejecuta
-
-**Solución**:
-1. Revisa logs: busca `[AUTO SYNC]`
-2. Verifica que las credenciales estén correctas
-3. El auto-sync se ejecuta en segundo plano (no bloquea la respuesta)
-4. Logs deben mostrar:
-   ```
-   [AUTO SYNC] Verificando auto-sincronización para RUC
-   [AUTO SYNC] Credenciales SOL detectadas
-   [AUTO SYNC] Credenciales SIRE detectadas
-   ```
-
-### Problema: Paginación no aparece
-
-**Solución**:
-1. Verifica que el componente se haya compilado correctamente
-2. Revisa la consola del navegador por errores
-3. Asegúrate de que hay más de 50 registros en la tabla
+4. **Monitoring**: Después del deploy, monitorea los logs durante 24-48h para detectar problemas.
 
 ---
 
-## 📈 Optimizaciones Futuras (Opcional)
+**¿Necesitas ayuda?** Revisa la sección de Troubleshooting o consulta los logs de Railway.
 
-Si en el futuro necesitas más rendimiento:
-
-### 1. Redis para Cache Distribuido
-
-```bash
-# En Railway, añadir servicio Redis
-railway service add redis
-
-# Actualizar código para usar Redis en lugar de Map
-```
-
-### 2. PostgreSQL en lugar de SQLite
-
-Para >100,000 registros por empresa, considera migrar a PostgreSQL:
-
-```bash
-railway service add postgresql
-```
-
-### 3. CDN para Assets Estáticos
-
-Subir el frontend compilado a Cloudflare Pages o Vercel Edge.
-
-### 4. Workers para Tareas Pesadas
-
-Usar Railway Background Workers para SIRE y buzón.
-
----
-
-## 🎉 Resumen de Mejoras Implementadas
-
-| Mejora | Impacto | Automático |
-|--------|---------|------------|
-| Compresión GZIP | 70-80% menos tráfico | ✅ Sí |
-| Cache en Memoria | Respuestas 10x más rápidas | ✅ Sí |
-| Índices SQL | Consultas 20x más rápidas | ✅ Sí |
-| Paginación | Renderizado instantáneo | ✅ Sí |
-| Auto-Sync Buzón | Sin clicks manuales | ✅ Sí |
-| Auto-Sync SIRE | Datos listos desde enero | ✅ Sí |
-| Health Check | Monitoreo en tiempo real | ✅ Sí |
-
----
-
-## ✅ Checklist Final
-
-Antes de considerarlo completado:
-
-- [ ] Deploy exitoso en Railway
-- [ ] Health check responde correctamente
-- [ ] Logs muestran "Índices de optimización aplicados"
-- [ ] Compresión GZIP activa (verificar en Network)
-- [ ] Cache funciona (segunda consulta más rápida)
-- [ ] Paginación visible en SIRE con >50 registros
-- [ ] Auto-sync de buzón funciona al guardar credenciales SOL
-- [ ] Auto-sync de SIRE funciona al guardar credenciales SIRE
-- [ ] Uso de CPU <30% en Railway Metrics
-- [ ] Uso de Memoria <300MB en Railway Metrics
-
----
-
-**¿Dudas?** Revisa los logs en Railway Dashboard o consulta `RECOMENDACIONES_OPTIMIZACION.md` para más detalles técnicos.
-
-**Última actualización**: 25 de junio de 2026
