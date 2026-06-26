@@ -73,16 +73,14 @@ function translateSqliteToPostgres(sql, params) {
     let translatedSql = sql;
     let translatedParams = [...params];
     
-    // 0. Escapar palabras reservadas (desc) en los nombres de columnas
-    // Esto debe hacerse ANTES de cualquier otra transformación
-    translatedSql = translatedSql.replace(/\bdesc\b/gi, (match) => {
-        // Si está rodeado de comillas, no hacer nada
-        if (translatedSql.indexOf(`"${match}"`) !== -1 || translatedSql.indexOf(`'${match}'`) !== -1) {
-            return match;
-        }
-        // Escapar la columna
-        return `"desc"`;
-    });
+    // 0. Mapear columna 'desc' a 'descripcion' (evitar palabra reservada)
+    // Solo en contextos de columnas (después de SELECT, INSERT, UPDATE, etc.)
+    translatedSql = translatedSql.replace(/(\bSELECT\s+[^F]+?)\bdesc\b/gi, '$1descripcion');
+    translatedSql = translatedSql.replace(/(\bINSERT\s+INTO\s+\w+\s*\([^)]*?)\bdesc\b/gi, '$1descripcion');
+    translatedSql = translatedSql.replace(/(\bUPDATE\s+\w+\s+SET\s+[^W]*?)\bdesc\b/gi, '$1descripcion');
+    translatedSql = translatedSql.replace(/,\s*desc\s*,/gi, ', descripcion,');
+    translatedSql = translatedSql.replace(/\(\s*desc\s*,/gi, '(descripcion,');
+    translatedSql = translatedSql.replace(/,\s*desc\s*\)/gi, ', descripcion)');
     
     // 1. Convertir placeholders ? a $1, $2, etc.
     let paramIndex = 1;
@@ -403,6 +401,29 @@ const db = {
         }
         
         return await db.run(sql, params);
+    },
+    
+    // Admin functions
+    getSuggestions: async () => {
+        const result = await query('SELECT * FROM suggestions ORDER BY created_at DESC');
+        return result.rows;
+    },
+    
+    getAdminUsersSummary: async () => {
+        const result = await query(`
+            SELECT 
+                u.id,
+                u.email,
+                u.name,
+                u.role,
+                u.created_at,
+                COUNT(DISTINCT w.ruc) as workspace_count
+            FROM users u
+            LEFT JOIN workspaces w ON w.user_id = u.id
+            GROUP BY u.id, u.email, u.name, u.role, u.created_at
+            ORDER BY u.created_at DESC
+        `);
+        return result.rows;
     }
 };
 
@@ -554,7 +575,7 @@ async function ensureSchemaConstraints() {
                         fecha TEXT,
                         glosa TEXT,
                         cta TEXT,
-                        "desc" TEXT,
+                        descripcion TEXT,
                         debe NUMERIC,
                         haber NUMERIC,
                         user_id TEXT NOT NULL,
