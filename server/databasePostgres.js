@@ -69,9 +69,9 @@ pool.on('error', (err) => {
 });
 
 // Helper: Convertir sintaxis SQLite a PostgreSQL
-function translateSqliteToPostgres(sql, params) {
+function translateSqliteToPostgres(sql, params = []) {
     let translatedSql = sql;
-    let translatedParams = [...params];
+    let translatedParams = params ? [...params] : [];
     
     // 0. Mapear columna 'desc' a 'descripcion' (evitar palabra reservada)
     // Solo en contextos de columnas (después de SELECT, INSERT, UPDATE, etc.)
@@ -405,7 +405,7 @@ const db = {
     
     // Admin functions
     getSuggestions: async () => {
-        const result = await query('SELECT * FROM suggestions ORDER BY created_at DESC');
+        const result = await query('SELECT * FROM suggestions ORDER BY created_at DESC', []);
         return result.rows;
     },
     
@@ -422,7 +422,7 @@ const db = {
             LEFT JOIN workspaces w ON w.user_id = u.id
             GROUP BY u.id, u.email, u.name, u.role, u.created_at
             ORDER BY u.created_at DESC
-        `);
+        `, []);
         return result.rows;
     }
 };
