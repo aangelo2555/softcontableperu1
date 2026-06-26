@@ -1317,15 +1317,42 @@ export const useStore = create<AppState>()(
           if (currentRuc) {
             const data = await electron.dbGetWorkspaceData(currentRuc);
             if (data) {
-              if (!data.plan || data.plan.length === 0) {
-                data.plan = INITIAL_PLAN;
-              }
-              set({ ...data, plan: sortPlan(data.plan) });
+              // Asegurar que todos los arrays existan
+              const safeData = {
+                ...data,
+                plan: data.plan && data.plan.length > 0 ? sortPlan(data.plan) : INITIAL_PLAN,
+                purchases: data.purchases || [],
+                sales: data.sales || [],
+                journal: data.journal || [],
+                entities: data.entities || [],
+                costs: data.costs || [],
+                products: data.products || [],
+                inventoryMovements: data.inventoryMovements || [],
+                employees: data.employees || [],
+                fixedAssets: data.fixedAssets || [],
+                cashMovements: data.cashMovements || [],
+                bankStatements: data.bankStatements || [],
+              };
+              set(safeData);
               await get().seedInitialPlan();
             }
           }
         } catch (error) {
           console.error('[STORE] Error en initApp:', error);
+          // En caso de error, asegurar que los arrays estén inicializados
+          set({
+            purchases: [],
+            sales: [],
+            journal: [],
+            entities: [],
+            costs: [],
+            products: [],
+            inventoryMovements: [],
+            employees: [],
+            fixedAssets: [],
+            cashMovements: [],
+            bankStatements: [],
+          });
         }
       },
 
