@@ -102,6 +102,9 @@ function translateSqliteToPostgres(sql, params = []) {
             conflictColumns = 'id';
         } else if (tableName === 'workspaces') {
             conflictColumns = 'ruc, user_id';
+        } else if (tableName === 'period_versions') {
+            // period_versions tiene constraint único en workspace_id, periodo, module, user_id
+            conflictColumns = 'workspace_id, periodo, module, user_id';
         } else if (['purchases', 'sales', 'journal', 'honorarios', 'entities', 'costs', 'maintenance', 'products', 'employees', 'fixed_assets'].includes(tableName)) {
             // Para otras tablas, solo ID
             conflictColumns = 'id';
@@ -111,7 +114,13 @@ function translateSqliteToPostgres(sql, params = []) {
         const pkColumns = conflictColumns.split(',').map(c => c.trim());
         const updateColumns = columns
             .filter(col => !pkColumns.includes(col))
-            .map(col => `${col} = EXCLUDED.${col}`)
+            .map(col => {
+                // CASO ESPECIAL: period_versions.version debe incrementarse
+                if (tableName === 'period_versions' && col === 'version') {
+                    return `${col} = period_versions.${col} + 1`;
+                }
+                return `${col} = EXCLUDED.${col}`;
+            })
             .join(', ');
         
         translatedSql = translatedSql.replace(
