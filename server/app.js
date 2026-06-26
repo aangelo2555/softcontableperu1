@@ -209,6 +209,24 @@ app.post('/api/db/execute', async (req, res) => {
         }
 
         const result = await db.run(sql, params);
+        
+        // ✅ NUEVO: Invalidar cache después de modificaciones
+        if (req.targetUserId && (insertMatch || updateMatch || deleteMatch)) {
+            // Extraer workspace_id/ruc de los parámetros si existe
+            const workspaceId = params[0]; // Primer parámetro suele ser workspace_id/ruc
+            
+            if (workspaceId && typeof workspaceId === 'string' && workspaceId.length >= 11) {
+                console.log('[CACHE] Invalidando cache después de operación DB:', {
+                    operación: insertMatch ? 'INSERT' : updateMatch ? 'UPDATE' : 'DELETE',
+                    tabla: insertMatch?.[1] || updateMatch?.[1] || deleteMatch?.[1],
+                    workspace: workspaceId
+                });
+                
+                cacheService.invalidate(`workspace_data_${workspaceId}_${req.targetUserId}`);
+                cacheService.invalidate(`workspaces_${req.targetUserId}`);
+            }
+        }
+        
         res.json({ success: true, result });
     } catch (error) {
         console.error('[DB ERROR] Error en execute:', error);

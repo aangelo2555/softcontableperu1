@@ -2601,10 +2601,33 @@ export const useStore = create<AppState>()(
         if (!electron) return;
         const ruc = get().currentCompany?.ruc || '';
         if (ruc) {
+          const startTime = Date.now();
+          console.log('[SYNC] 🔄 Iniciando sincronización workspace...', {
+            ruc,
+            timestamp: new Date().toISOString()
+          });
+          
           try {
             const data = await electron.dbGetWorkspaceData(ruc);
+            const loadTime = Date.now() - startTime;
+            
+            console.log('[SYNC] ✅ Sincronización completada', {
+              loadTime: `${loadTime}ms`,
+              compras: data.purchases?.length || 0,
+              ventas: data.sales?.length || 0,
+              diario: data.journal?.length || 0,
+              asientos: data.asientos?.length || 0
+            });
+            
             if (data) set({ ...data });
-          } catch (e) { console.error("Error sincronizando workspace:", e); }
+          } catch (e) {
+            const errorTime = Date.now() - startTime;
+            console.error('[SYNC] ❌ Error en sincronización:', {
+              error: e.message,
+              errorTime: `${errorTime}ms`,
+              ruc
+            });
+          }
         }
       },
 
