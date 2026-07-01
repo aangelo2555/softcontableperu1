@@ -29,7 +29,6 @@ COPY --from=build-stage /app/dist ./dist
 # Configurar variables de entorno
 ENV PORT=3001
 ENV NODE_ENV=production
-ENV ENCRYPTION_KEY=your_secure_master_key_change_me
 EXPOSE 3001
 
 # Crear carpetas para datos persistentes
