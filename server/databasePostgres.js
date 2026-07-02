@@ -28,6 +28,34 @@ pool.on('error', (err) => {
     console.error('[POSTGRES ERROR]', err);
 });
 
+// Helper to map PostgreSQL lowercase column names to camelCase frontend expected properties
+function mapWorkspaceColumns(ws) {
+    if (!ws) return null;
+    return {
+        ...ws,
+        ruc: ws.ruc,
+        name: ws.name,
+        regimenTributario: ws.regimentributario || ws.regimenTributario || 'Régimen General',
+        location: ws.location || '',
+        address: ws.address || '',
+        support: ws.support || '',
+        period: ws.period || '',
+        logoBase64: ws.logobase64 || ws.logoBase64 || '',
+        sol_user: decrypt(ws.sol_user),
+        sol_pass: decrypt(ws.sol_pass),
+        sunatClientId: decrypt(ws.sunatclientid || ws.sunatClientId),
+        sunatClientSecret: decrypt(ws.sunatclientsecret || ws.sunatClientSecret),
+        businessType: ws.businesstype || ws.businessType || 'COMERCIAL',
+        annualIncomeUIT: Number(ws.annualincomeuit ?? ws.annualIncomeUIT ?? 0),
+        agente_retencion: Boolean(ws.agente_retencion),
+        ciiuCode: ws.ciiucode || ws.ciiuCode || '',
+        fixedAssetsValue: Number(ws.fixedassetsvalue ?? ws.fixedAssetsValue ?? 0),
+        employeeCount: Number(ws.employeecount ?? ws.employeeCount ?? 0),
+        certificado_pfx: ws.certificado_pfx || '',
+        certificado_pass: ws.certificado_pass ? decrypt(ws.certificado_pass) : ''
+    };
+}
+
 // Helper: Convertir sintaxis SQLite a PostgreSQL
 function translateSqliteToPostgres(sql, params = []) {
     let translatedSql = sql;
@@ -192,19 +220,13 @@ const db = {
             [userId]
         );
         
-        return result.rows.map(ws => ({
-            ...ws,
-            sol_user: decrypt(ws.sol_user),
-            sol_pass: decrypt(ws.sol_pass),
-            sunatClientId: decrypt(ws.sunatclientid),
-            sunatClientSecret: decrypt(ws.sunatclientsecret)
-        }));
+        return result.rows.map(ws => mapWorkspaceColumns(ws));
     },
     
     // Get workspace data (paginado)
     getWorkspaceData: async (ruc, userId, options = {}) => {
         const page = options.page || 1;
-        const limit = options.limit || 100;
+        const limit = options.limit || 1000;
         const offset = (page - 1) * limit;
         
         const wsInfo = await query(
@@ -214,8 +236,8 @@ const db = {
         
         if (!wsInfo.rows[0]) return null;
         
-        // Cargar datos con paginación
-        const [purchases, sales, journal] = await Promise.all([
+        // Cargar datos de tablas principales con paginación
+        const [purchases, sales, journal, honorarios] = await Promise.all([
             query(
                 'SELECT * FROM purchases WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
@@ -227,34 +249,78 @@ const db = {
             query(
                 'SELECT * FROM journal WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
+            ),
+            query(
+                'SELECT * FROM honorarios WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
+                [ruc, userId, limit, offset]
             )
         ]);
         
-        // Cargar datos ligeros (sin paginación)
-        const [entities, costs, products] = await Promise.all([
+        // Cargar datos auxiliares (asientos, glosas, entidades, maintenance, movimientos_data, etc.)
+        const [
+            entities, costs, products, maintenance, movimientosData,
+            asientos, glosasHabituales, inventoryMovements, cashMovements,
+            fixedAssets, employees, balanceInicial, bankStatements
+        ] = await Promise.all([
             query('SELECT * FROM entities WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
             query('SELECT * FROM costs WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM products WHERE workspace_id = $1 AND user_id = $2 LIMIT 1000', [ruc, userId])
+            query('SELECT * FROM products WHERE workspace_id = $1 AND user_id = $2 LIMIT 1000', [ruc, userId]),
+            query('SELECT * FROM maintenance WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM movimientos_data WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM asientos WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM glosas_habituales WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM inventory_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM cash_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM fixed_assets WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM employees WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM balance_inicial WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM bank_statements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId])
         ]);
         
         // Plan contable del usuario
         let plan = await query('SELECT * FROM plan_global WHERE user_id = $1', [userId]);
         
+        // Mapear asientos parseando header_json y lines_json
+        const mapAsientos = (asientos.rows || []).map(a => {
+            let header = a.header || {};
+            let lines = a.lines || [];
+            try {
+                if (a.header_json) header = typeof a.header_json === 'string' ? JSON.parse(a.header_json) : a.header_json;
+            } catch (e) {}
+            try {
+                if (a.lines_json) lines = typeof a.lines_json === 'string' ? JSON.parse(a.lines_json) : a.lines_json;
+            } catch (e) {}
+            return { ...a, header, lines };
+        });
+
+        const mapGlosas = (glosasHabituales.rows || []).map(g => {
+            let lines = g.lines || [];
+            try {
+                if (g.lines_json) lines = typeof g.lines_json === 'string' ? JSON.parse(g.lines_json) : g.lines_json;
+            } catch (e) {}
+            return { ...g, lines };
+        });
+        
         return {
-            currentCompany: {
-                ...wsInfo.rows[0],
-                sol_user: decrypt(wsInfo.rows[0].sol_user),
-                sol_pass: decrypt(wsInfo.rows[0].sol_pass),
-                sunatClientId: decrypt(wsInfo.rows[0].sunatclientid),
-                sunatClientSecret: decrypt(wsInfo.rows[0].sunatclientsecret)
-            },
-            purchases: purchases.rows,
-            sales: sales.rows,
-            journal: journal.rows,
-            entities: entities.rows,
-            costs: costs.rows,
-            products: products.rows,
-            plan: plan.rows,
+            currentCompany: mapWorkspaceColumns(wsInfo.rows[0]),
+            purchases: purchases.rows || [],
+            sales: sales.rows || [],
+            journal: journal.rows || [],
+            honorarios: honorarios.rows || [],
+            entities: entities.rows || [],
+            costs: costs.rows || [],
+            products: products.rows || [],
+            plan: plan.rows || [],
+            maintenanceRecords: maintenance.rows || [],
+            movimientosData: movimientosData.rows || [],
+            asientos: mapAsientos,
+            glosasHabituales: mapGlosas,
+            inventoryMovements: inventoryMovements.rows || [],
+            cashMovements: cashMovements.rows || [],
+            fixedAssets: fixedAssets.rows || [],
+            employees: employees.rows || [],
+            balanceInicial: balanceInicial.rows || [],
+            bankStatements: bankStatements.rows || [],
             // Metadata de paginación
             pagination: {
                 page,

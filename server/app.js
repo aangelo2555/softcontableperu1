@@ -648,7 +648,7 @@ app.post('/api/db/asientos/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH ASIENTOS ERROR]', error);

@@ -30,9 +30,9 @@ const dbController = {
         try {
             await db.saveWorkspace(req.body, req.targetUserId);
             
-            // Invalidar cache de workspaces
-            cacheService.invalidate(`workspaces_${req.targetUserId}`);
-            cacheService.invalidate(`workspace_data_${req.body.ruc}_${req.targetUserId}`);
+            // Invalidar cache de workspaces y workspace_data
+            cacheService.invalidatePattern(`workspaces_.*`);
+            cacheService.invalidatePattern(`workspace_data_${req.body.ruc}_.*`);
             
             res.json({ success: true });
         } catch (error) {
