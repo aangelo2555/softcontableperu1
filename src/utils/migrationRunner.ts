@@ -1,4 +1,5 @@
 import { toast } from 'react-hot-toast';
+import { webApiBridge } from '../services/apiBridge';
 
 
 // --- Interfaces para el formato antiguo (localStorage) ---
@@ -25,8 +26,7 @@ interface OldAppState {
  * Se ejecuta una sola vez al detectar que hay datos antiguos pero la DB está vacía.
  */
 export async function runMigration() {
-  const electron = (window as any).electronAPI;
-  if (!electron) return;
+  const electron = webApiBridge;
 
   // 1. Verificar si ya tenemos workspaces en la DB
   const dbWorkspaces = await electron.dbGetWorkspaces();

@@ -56,6 +56,22 @@ app.use(compression({
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// --- Health Check Endpoint (para Docker HEALTHCHECK y Railway) ---
+app.get('/api/health', (req, res) => {
+    const memUsage = process.memoryUsage();
+    res.json({
+        status: 'ok',
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        db: USE_POSTGRES ? 'PostgreSQL' : 'SQLite',
+        cache: cacheService.getStats(),
+        memory: {
+            rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB',
+            heap: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB'
+        }
+    });
+});
+
 // --- Middleware de Autenticación ---
 const authMiddleware = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1];

@@ -18,6 +18,7 @@ dist-ssr
 .env.production
 
 # Local Databases & Storage (En Railway irán en un Volume)
+*.db
 database/*.db
 database/*.db-journal
 database/*.db-wal

@@ -583,20 +583,8 @@ export interface AppState extends WorkspaceState {
 
 import { webApiBridge } from './services/apiBridge';
 
-// Proxy dinámico para alternar entre modo Escritorio (Electron) y modo Web (Railway)
-const electron = new Proxy({}, {
-  get(target, prop) {
-    const api = (window as any).electronAPI;
-    if (!api) {
-      // Si no hay electronAPI, usamos el puente web para Railway
-      return (webApiBridge as any)[prop] || (() => {
-        console.warn(`[STORE] Acción no implementada en modo Web: electron.${String(prop)}`);
-        return Promise.resolve(null);
-      });
-    }
-    return api[prop];
-  }
-}) as any;
+// API Bridge directo para modo Web (Railway)
+const electron = webApiBridge as any;
 
 const sortPlan = (plan: Account[]): Account[] => {
   return [...plan].sort((a, b) => a.cta.localeCompare(b.cta, undefined, { numeric: true }));

@@ -1,23 +1,20 @@
 {
   "name": "softcontable",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Sistema de Gestión Contable y Tributaria - ERP especializado en contabilidad, facturación electrónica SUNAT, buzón SOL, libros electrónicos SIRE y reportes financieros para empresas peruanas.",
   "author": {
     "name": "Angelo Serna Simeon",
     "email": "aangelo2555@gmail.com"
   },
   "type": "commonjs",
-  "main": "main/main.js",
   "scripts": {
     "dev": "vite",
-    "electron:start": "electron .",
-    "electron:dev": "npm run build && electron .",
     "build-renderer": "vite build",
     "build": "tsc -b && npm run build-renderer",
+    "start": "node server/app.js",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "dist:win": "npm run build && electron-builder --win --x64"
+    "preview": "vite preview"
   },
   "dependencies": {
     "adm-zip": "^0.5.17",
@@ -48,19 +45,14 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.4",
     "@tailwindcss/vite": "^4.2.2",
-    "@tauri-apps/cli": "^2.10.1",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20.11.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
-    "electron": "^34.0.0",
-    "electron-builder": "^26.8.1",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -70,52 +62,5 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"
-  },
-  "build": {
-    "appId": "com.softcontable.erp",
-    "productName": "SOFTCONTABLE",
-    "copyright": "Copyright © 2026 Angelo Serna Simeon",
-    "directories": {
-      "output": "salida_instalador4"
-    },
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**/*",
-      "database/**/*"
-    ],
-    "files": [
-      "dist/**/*",
-      "main/**/*",
-      "modulo/**/*",
-      "sire/**/*",
-      "public/**/*",
-      "database/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "database",
-        "to": "database",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "icon": "public/assets/icon.ico",
-      "target": [
-        "nsis"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "SOFTCONTABLE",
-      "installerIcon": "public/assets/icon.ico",
-      "uninstallerIcon": "public/assets/icon.ico",
-      "installerHeaderIcon": "public/assets/icon.ico"
-    }
   }
 }
