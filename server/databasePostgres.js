@@ -389,7 +389,20 @@ const db = {
             GROUP BY u.id, u.email, u.name, u.role, u.created_at
             ORDER BY u.created_at DESC
         `, []);
-        return result.rows;
+    // --- User management ---
+    getUserByEmail: async (email) => {
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        const result = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
+        return result.rows[0] || null;
+    },
+
+    createUser: async (u) => {
+        const normalizedEmail = u.email ? u.email.trim().toLowerCase() : '';
+        const result = await query(
+            'INSERT INTO users (id, email, password, name, role) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password, name = EXCLUDED.name, role = EXCLUDED.role',
+            [u.id, normalizedEmail, u.password, u.name, u.role || 'user']
+        );
+        return result;
     }
 };
 

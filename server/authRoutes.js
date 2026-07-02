@@ -15,7 +15,7 @@ router.post('/register', async (req, res) => {
         console.log(`[AUTH] Intento de registro: ${email}`);
 
         // Verificar si ya existe
-        const existingUser = dbManager.getUserByEmail(email);
+        const existingUser = await dbManager.getUserByEmail(email);
         if (existingUser) {
             console.warn(`[AUTH] El correo ${email} ya existe.`);
             return res.status(400).json({ success: false, error: 'El correo ya está registrado' });
@@ -25,7 +25,8 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const userCount = dbManager.queryAll('SELECT COUNT(*) as count FROM users')[0]?.count || 0;
+        const usersList = await dbManager.queryAll('SELECT COUNT(*) as count FROM users');
+        const userCount = parseInt(usersList[0]?.count || 0);
         const normalizedEmail = email.trim().toLowerCase();
         const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin')) ? 'admin' : 'user';
 
@@ -37,7 +38,7 @@ router.post('/register', async (req, res) => {
             role
         };
 
-        dbManager.createUser(newUser);
+        await dbManager.createUser(newUser);
 
         res.json({ success: true, message: 'Usuario registrado exitosamente' });
     } catch (error) {
@@ -51,7 +52,7 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body;
         console.log(`[AUTH] Intento de login: ${email}`);
 
-        const user = dbManager.getUserByEmail(email);
+        const user = await dbManager.getUserByEmail(email);
         if (!user) {
             console.warn(`[AUTH] Usuario no encontrado: ${email}`);
             return res.status(400).json({ success: false, error: 'Usuario no encontrado' });

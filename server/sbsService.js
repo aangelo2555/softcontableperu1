@@ -42,7 +42,7 @@ async function getExchangeRate(date, depth = 0) {
     if (depth > 10) {
         // Recursion limit reached: get last rate from DB or use fallback
         try {
-            const lastRate = dbManager.queryAll('SELECT * FROM sbs_rates ORDER BY fecha DESC LIMIT 1');
+            const lastRate = await dbManager.queryAll('SELECT * FROM sbs_rates ORDER BY fecha DESC LIMIT 1');
             if (lastRate && lastRate.length > 0) {
                 return {
                     compra: lastRate[0].compra,
@@ -59,7 +59,7 @@ async function getExchangeRate(date, depth = 0) {
 
     try {
         // 1. Check local cache first
-        const cached = dbManager.queryAll('SELECT * FROM sbs_rates WHERE fecha = ?', [date]);
+        const cached = await dbManager.queryAll('SELECT * FROM sbs_rates WHERE fecha = ?', [date]);
         if (cached && cached.length > 0) {
             return {
                 compra: cached[0].compra,
@@ -78,7 +78,7 @@ async function getExchangeRate(date, depth = 0) {
     if (rate) {
         try {
             // Save to local cache
-            dbManager.run('INSERT OR REPLACE INTO sbs_rates (fecha, compra, venta) VALUES (?, ?, ?)', [
+            await dbManager.run('INSERT OR REPLACE INTO sbs_rates (fecha, compra, venta) VALUES (?, ?, ?)', [
                 date,
                 rate.compra,
                 rate.venta
