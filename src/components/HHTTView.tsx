@@ -134,7 +134,7 @@ const HHTTView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const hhttStale = staleVersions.find((x: any) => x.module === 'hhtt');
+  const hhttStale = (staleVersions || []).find((x: any) => x.module === 'hhtt');
   const isStale = hhttStale?.is_stale === 1 || hhttStale?.is_stale === true;
   const staleSince = hhttStale?.stale_since;
 

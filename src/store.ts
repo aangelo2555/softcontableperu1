@@ -1347,9 +1347,10 @@ export const useStore = create<AppState>()(
                 products: data.products || [],
                 inventoryMovements: data.inventoryMovements || [],
                 employees: data.employees || [],
-                fixedAssets: data.fixedAssets || [],
-                cashMovements: data.cashMovements || [],
-                bankStatements: data.bankStatements || [],
+                asientos: data.asientos || [],
+                glosasHabituales: data.glosasHabituales || [],
+                periodsList: data.periodsList || [],
+                staleVersions: data.staleVersions || []
               };
               set(safeData);
               await get().seedInitialPlan();
@@ -1370,6 +1371,10 @@ export const useStore = create<AppState>()(
             fixedAssets: [],
             cashMovements: [],
             bankStatements: [],
+            asientos: [],
+            glosasHabituales: [],
+            periodsList: [],
+            staleVersions: []
           });
         }
       },

@@ -39,7 +39,7 @@ const MayorView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const mayorStale = staleVersions.find((x: any) => x.module === 'mayor');
+  const mayorStale = (staleVersions || []).find((x: any) => x.module === 'mayor');
   const isStale = mayorStale?.is_stale === 1 || mayorStale?.is_stale === true;
   const staleSince = mayorStale?.stale_since;
 

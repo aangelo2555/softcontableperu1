@@ -39,7 +39,7 @@ const BalanceView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const eeffStale = staleVersions.find((x: any) => x.module === 'eeff');
+  const eeffStale = (staleVersions || []).find((x: any) => x.module === 'eeff');
   const isStale = eeffStale?.is_stale === 1 || eeffStale?.is_stale === true;
   const staleSince = eeffStale?.stale_since;
 
