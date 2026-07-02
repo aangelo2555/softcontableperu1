@@ -10,7 +10,7 @@ const excelReader = require('./excelReader');
 
 class SireHandler {
   constructor() {
-    this.excelSirePath = pathResolver.resolve('data/API_SIRE.xlsm');
+    this.excelSirePath = path.join(process.cwd(), 'data/API_SIRE.xlsm');
     this.orchestrator = new SireOrchestrator();
     this.generator = new SireFileGenerator();
     this.db = db;

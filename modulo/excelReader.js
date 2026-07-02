@@ -2,7 +2,6 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./logger');
-const pathResolver = require('./pathResolver');
 
 class ExcelReader {
   constructor() {
@@ -21,7 +20,7 @@ class ExcelReader {
   async readClients(filePath = 'data/CLIENTES.xlsx') {
     try {
       // Resolver la ruta para producción/desarrollo
-      const resolvedPath = filePath.startsWith('data/') ? pathResolver.resolve(filePath) : filePath;
+      const resolvedPath = filePath.startsWith('data/') ? path.join(process.cwd(), filePath) : filePath;
 
       // Verificar que el archivo existe
       if (!fs.existsSync(resolvedPath)) {
@@ -273,7 +272,7 @@ class ExcelReader {
   createExampleFile(filePath = 'data/CLIENTES.xlsx') {
     try {
       // Resolver la ruta para producción/desarrollo
-      const resolvedPath = filePath.startsWith('data/') ? pathResolver.resolve(filePath) : filePath;
+      const resolvedPath = filePath.startsWith('data/') ? path.join(process.cwd(), filePath) : filePath;
 
       // Crear directorio si no existe
       const dir = path.dirname(resolvedPath);
