@@ -1116,8 +1116,8 @@ const LibroDiario52View: React.FC = () => {
                   {/* Form Footer Totals */}
                   <div className="flex items-center justify-between bg-app-bg/40 p-2.5 border border-app-border rounded-lg mt-1 font-mono text-[10px]">
                     <div className="flex gap-4">
-                      <div>DEBE FORM: <span className="text-emerald-400 font-black">S/ {currentTotals.debe.toFixed(2)}</span></div>
-                      <div>HABER FORM: <span className="text-rose-400 font-black">S/ {currentTotals.haber.toFixed(2)}</span></div>
+                      <div>DEBE FORM: <span className="text-emerald-400 font-black">S/ {Number(currentTotals.debe || 0).toFixed(2)}</span></div>
+                      <div>HABER FORM: <span className="text-rose-400 font-black">S/ {Number(currentTotals.haber || 0).toFixed(2)}</span></div>
                     </div>
                     
                     <div className="flex items-center gap-3">
@@ -1292,8 +1292,8 @@ const LibroDiario52View: React.FC = () => {
                   {/* Form Footer Totals */}
                   <div className="flex items-center justify-between bg-app-bg/40 p-2.5 border border-app-border rounded-lg mt-1 font-mono text-[10px]">
                     <div className="flex gap-4">
-                      <div>DEBE FORM: <span className="text-emerald-400 font-black">S/ {corrTotals.debe.toFixed(2)}</span></div>
-                      <div>HABER FORM: <span className="text-rose-400 font-black">S/ {corrTotals.haber.toFixed(2)}</span></div>
+                      <div>DEBE FORM: <span className="text-emerald-400 font-black">S/ {Number(corrTotals.debe || 0).toFixed(2)}</span></div>
+                      <div>HABER FORM: <span className="text-rose-400 font-black">S/ {Number(corrTotals.haber || 0).toFixed(2)}</span></div>
                     </div>
                     
                     <div className="flex items-center gap-3">

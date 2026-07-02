@@ -88,9 +88,9 @@ const DatosView: React.FC = () => {
     { header: 'Aglosa', accessor: 'glosa' as any, className: 'italic text-[10px] max-w-[150px] truncate' },
     { header: 'Acta', accessor: 'cta' as any, className: 'font-mono text-[10px] text-pld-blue' },
     { header: 'Adesc', accessor: 'desc' as any, className: 'text-[10px] max-w-[150px] truncate' },
-    { header: 'Adebe', accessor: (row: any) => <span className="text-right block font-mono text-[10px] text-pld-blue">{row.debe.toFixed(2)}</span> },
-    { header: 'Ahaber', accessor: (row: any) => <span className="text-right block font-mono text-[10px] text-pld-accent">{row.haber.toFixed(2)}</span> },
-    { header: 'Adif', accessor: (row: any) => <span className="text-right block font-mono text-[10px]">{(row.debe - row.haber).toFixed(2)}</span> },
+    { header: 'Adebe', accessor: (row: any) => <span className="text-right block font-mono text-[10px] text-pld-blue">{Number(row.debe || 0).toFixed(2)}</span> },
+    { header: 'Ahaber', accessor: (row: any) => <span className="text-right block font-mono text-[10px] text-pld-accent">{Number(row.haber || 0).toFixed(2)}</span> },
+    { header: 'Adif', accessor: (row: any) => <span className="text-right block font-mono text-[10px]">{Number((Number(row.debe || 0) - Number(row.haber || 0))).toFixed(2)}</span> },
     { header: 'Source', accessor: (row: any) => (
       <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
         row.source === 'COMPRA' ? 'bg-indigo-500/10 text-indigo-400' :

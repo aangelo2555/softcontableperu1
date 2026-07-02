@@ -338,9 +338,9 @@ const SireView: React.FC = () => {
     toast((t) => (
       <div className="flex flex-col gap-1 text-[11px] font-bold">
         <p className="text-amber-500 font-black border-b border-app-border pb-1 mb-1">DETALLE DE DISCREPANCIAS</p>
-        <p>Total SUNAT: S/ {item.sunat?.total.toFixed(2)} | Local: S/ {item.local?.total.toFixed(2)} (Diff: S/ {diffTotal.toFixed(2)})</p>
-        <p>B.I. SUNAT: S/ {item.sunat?.bi.toFixed(2)} | Local: S/ {item.local?.bi.toFixed(2)} (Diff: S/ {diffBi.toFixed(2)})</p>
-        <p>I.G.V. SUNAT: S/ {item.sunat?.igv.toFixed(2)} | Local: S/ {item.local?.igv.toFixed(2)} (Diff: S/ {diffIgv.toFixed(2)})</p>
+        <p>Total SUNAT: S/ {Number(item.sunat?.total || 0).toFixed(2)} | Local: S/ {Number(item.local?.total || 0).toFixed(2)} (Diff: S/ {Number(diffTotal || 0).toFixed(2)})</p>
+        <p>B.I. SUNAT: S/ {Number(item.sunat?.bi || 0).toFixed(2)} | Local: S/ {Number(item.local?.bi || 0).toFixed(2)} (Diff: S/ {Number(diffBi || 0).toFixed(2)})</p>
+        <p>I.G.V. SUNAT: S/ {Number(item.sunat?.igv || 0).toFixed(2)} | Local: S/ {Number(item.local?.igv || 0).toFixed(2)} (Diff: S/ {Number(diffIgv || 0).toFixed(2)})</p>
       </div>
     ), { duration: 6000, icon: '🔍' });
   };

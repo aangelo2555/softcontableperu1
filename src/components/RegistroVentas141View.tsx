@@ -101,12 +101,15 @@ const MONTHS = [
   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
 ];
 
-const fmt = (n: number) => n !== 0
-  ? n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  : '';
+const fmt = (n: number | string) => {
+  const val = Number(n || 0);
+  return val !== 0
+    ? val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '';
+};
 
-const fmtAlways = (n: number) =>
-  n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtAlways = (n: number | string) =>
+  Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const RegistroVentasView: React.FC = () => {
   const { sales, currentCompany } = useStore();

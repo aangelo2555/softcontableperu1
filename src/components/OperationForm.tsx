@@ -890,7 +890,7 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                   <span className="text-xs font-bold uppercase tracking-wider opacity-90">Total<br />Documento</span>
                   <div className="text-2xl font-mono font-black">
                     <span className="text-lg opacity-70 mr-1">{form.moneda === 'SOLES' ? 'S/' : '$'}</span>
-                    {form.total.toFixed(2)}
+                    {Number(form.total || 0).toFixed(2)}
                   </div>
                 </div>
 
@@ -1072,8 +1072,8 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
                     <tr key={i} className="border-b border-app-border/50 hover:bg-app-hover">
                       <td className="p-2.5 border-r border-app-border/50 font-bold text-pld-blue">{line.cta}</td>
                       <td className="p-2.5 text-app-text font-sans">{line.desc}</td>
-                      <td className="p-2.5 text-right font-bold text-emerald-500">{line.debe > 0 ? line.debe.toFixed(2) : '—'}</td>
-                      <td className="p-2.5 text-right font-bold text-red-500">{line.haber > 0 ? line.haber.toFixed(2) : '—'}</td>
+                      <td className="p-2.5 text-right font-bold text-emerald-500">{line.debe > 0 ? Number(line.debe || 0).toFixed(2) : '—'}</td>
+                      <td className="p-2.5 text-right font-bold text-red-500">{line.haber > 0 ? Number(line.haber || 0).toFixed(2) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
