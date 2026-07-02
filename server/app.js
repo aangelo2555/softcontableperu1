@@ -545,6 +545,179 @@ app.post('/api/db/journal/batch', async (req, res) => {
     }
 });
 
+// Batch Entities (Clientes/Proveedores)
+app.post('/api/db/entities/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const e of items) {
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO entities (id, workspace_id, user_id, tipo, ruc, descripcion)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                        ON CONFLICT (id) DO UPDATE SET
+                            tipo = EXCLUDED.tipo, ruc = EXCLUDED.ruc, descripcion = EXCLUDED.descripcion
+                    `, [e.id, workspace_id, userId, e.tipo || 'CLIENTE', e.ruc, e.descripcion || e.nombre || '']);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO entities (id, workspace_id, user_id, tipo, ruc, descripcion)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    `, [e.id, workspace_id, userId, e.tipo || 'CLIENTE', e.ruc, e.descripcion || e.nombre || '']);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH ENTITIES ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Batch Honorarios
+app.post('/api/db/honorarios/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const h of items) {
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO honorarios (id, workspace_id, user_id, registro, fecha, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, ctaGasto, ctaAbono, bi, retencion, total)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                        ON CONFLICT (id) DO UPDATE SET
+                            registro = EXCLUDED.registro, fecha = EXCLUDED.fecha, tipo_doc = EXCLUDED.tipo_doc,
+                            serie = EXCLUDED.serie, numero = EXCLUDED.numero, doc_tipo = EXCLUDED.doc_tipo,
+                            doc_num = EXCLUDED.doc_num, nombre = EXCLUDED.nombre, ctaGasto = EXCLUDED.ctaGasto,
+                            ctaAbono = EXCLUDED.ctaAbono, bi = EXCLUDED.bi, retencion = EXCLUDED.retencion, total = EXCLUDED.total
+                    `, [h.id, workspace_id, userId, h.registro, h.fecha, h.tipo_doc, h.serie, h.numero, h.doc_tipo, h.doc_num, h.nombre, h.ctaGasto, h.ctaAbono, h.bi || 0, h.retencion || 0, h.total || 0]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO honorarios (id, workspace_id, user_id, registro, fecha, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, ctaGasto, ctaAbono, bi, retencion, total)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [h.id, workspace_id, userId, h.registro, h.fecha, h.tipo_doc, h.serie, h.numero, h.doc_tipo, h.doc_num, h.nombre, h.ctaGasto, h.ctaAbono, h.bi || 0, h.retencion || 0, h.total || 0]);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH HONORARIOS ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Batch Asientos
+app.post('/api/db/asientos/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const a of items) {
+                const headerStr = typeof a.header === 'string' ? a.header : JSON.stringify(a.header || {});
+                const linesStr = typeof a.lines === 'string' ? a.lines : JSON.stringify(a.lines || []);
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO asientos (id, workspace_id, user_id, header_json, lines_json)
+                        VALUES ($1, $2, $3, $4, $5)
+                        ON CONFLICT (id) DO UPDATE SET
+                            header_json = EXCLUDED.header_json, lines_json = EXCLUDED.lines_json
+                    `, [a.id, workspace_id, userId, headerStr, linesStr]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO asientos (id, workspace_id, user_id, header_json, lines_json)
+                        VALUES (?, ?, ?, ?, ?)
+                    `, [a.id, workspace_id, userId, headerStr, linesStr]);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH ASIENTOS ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Purchase by ID
+app.delete('/api/db/purchases/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { workspace_id } = req.query;
+        const userId = req.targetUserId;
+        await db.run('DELETE FROM purchases WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (workspace_id) {
+            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `compra-${id}-%`]);
+            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Sale by ID
+app.delete('/api/db/sales/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { workspace_id } = req.query;
+        const userId = req.targetUserId;
+        await db.run('DELETE FROM sales WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (workspace_id) {
+            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `venta-${id}-%`]);
+            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Honorarios by ID
+app.delete('/api/db/honorarios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.targetUserId;
+        await db.run('DELETE FROM honorarios WHERE id = $1 AND user_id = $2', [id, userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Asiento by ID
+app.delete('/api/db/asientos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { workspace_id } = req.query;
+        const userId = req.targetUserId;
+        await db.run('DELETE FROM asientos WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (workspace_id) {
+            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `${id}-line-%`]);
+            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.post('/api/db/backup', async (req, res) => {
     try {
         const normalizedEmail = (req.user?.email || '').trim().toLowerCase();

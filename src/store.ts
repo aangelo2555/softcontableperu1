@@ -1634,9 +1634,7 @@ export const useStore = create<AppState>()(
           }
         }
 
-        await electron.dbExecute('DELETE FROM sales WHERE id = ?', [id]);
-        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${id}-%`]);
-        await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
+        await electron.dbDeleteSale(id, ruc);
 
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ 
@@ -1746,7 +1744,7 @@ export const useStore = create<AppState>()(
           }
         }
 
-        await electron.dbExecute('DELETE FROM honorarios WHERE id = ?', [id]);
+        await electron.dbDeleteHonorario(id);
         set({ honorarios: get().honorarios.filter(h => h.id !== id) });
 
         // ── Invalidation Cascade Trigger ──
@@ -1792,10 +1790,9 @@ export const useStore = create<AppState>()(
           return id; // Retorna id sin persistir
         }
 
-        await electron.dbExecute(`INSERT OR REPLACE INTO asientos (id, workspace_id, header_json, lines_json) VALUES (?,?,?,?)`, [id, ruc, JSON.stringify(header), JSON.stringify(lines)]);
-
-        for (const entry of journalEntries) {
-          await electron.dbExecute(`INSERT INTO journal (id, workspace_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [entry.id, ruc, entry.source, entry.asiento, entry.fecha, entry.glosa, entry.cta, entry.desc, entry.debe, entry.haber, entry.medio_pago || null, entry.nro_transaccion || null, entry.razon_social || null]);
+        await electron.dbSaveAsientosBatch(ruc, [{ id, header, lines }]);
+        if (journalEntries.length > 0) {
+          await electron.dbSaveJournalBatch(ruc, journalEntries);
         }
 
         // Trigger a data reload
@@ -1824,8 +1821,7 @@ export const useStore = create<AppState>()(
           }
         }
 
-        await electron.dbExecute('DELETE FROM asientos WHERE id = ?', [id]);
-        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${id}-line-%`]);
+        await electron.dbDeleteAsiento(id, ruc);
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ ...data });
 

@@ -109,6 +109,37 @@ export const webApiBridge = {
         const res = await api.post('/api/db/journal/batch', { workspace_id, items });
         return res.data;
     },
+    dbSaveEntitiesBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/entities/batch', { workspace_id, items });
+        return res.data;
+    },
+    dbSaveHonorariosBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/honorarios/batch', { workspace_id, items });
+        return res.data;
+    },
+    dbSaveAsientosBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/asientos/batch', { workspace_id, items });
+        return res.data;
+    },
+    dbDeletePurchase: async (id: string, workspace_id?: string) => {
+        const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
+        const res = await api.delete(`/api/db/purchases/${id}${query}`);
+        return res.data;
+    },
+    dbDeleteSale: async (id: string, workspace_id?: string) => {
+        const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
+        const res = await api.delete(`/api/db/sales/${id}${query}`);
+        return res.data;
+    },
+    dbDeleteHonorario: async (id: string) => {
+        const res = await api.delete(`/api/db/honorarios/${id}`);
+        return res.data;
+    },
+    dbDeleteAsiento: async (id: string, workspace_id?: string) => {
+        const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
+        const res = await api.delete(`/api/db/asientos/${id}${query}`);
+        return res.data;
+    },
     dbQuery: async (sql: string, params?: any[]) => {
         // Convertir ? a $1, $2, $3 para PostgreSQL
         const convertedSQL = convertSQLitePlaceholdersToPostgres(sql);
