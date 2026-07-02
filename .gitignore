@@ -43,3 +43,11 @@ migration-output/
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary script & summary files
+*.bat
+FIX_*.md
+RESUMEN_*.md
+COMANDOS_*.txt
+SOLUCION_*.md
+
