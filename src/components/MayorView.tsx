@@ -71,8 +71,8 @@ const MayorView: React.FC = () => {
       fecha: entry.fecha,
       correlativo: entry.asiento,
       glosa: entry.glosa,
-      deudor: entry.debe,
-      acreedor: entry.haber,
+      deudor: typeof entry.debe === 'number' ? entry.debe : (parseFloat(String(entry.debe || 0)) || 0),
+      acreedor: typeof entry.haber === 'number' ? entry.haber : (parseFloat(String(entry.haber || 0)) || 0),
     });
     return acc;
   }, {} as Record<string, { code: string; desc: string; items: { fecha: string; correlativo: string; glosa: string; deudor: number; acreedor: number }[] }>);

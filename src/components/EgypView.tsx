@@ -60,7 +60,9 @@ const EgypView: React.FC = () => {
   const accountBalances = journal.reduce((acc, entry) => {
     const cta = (entry.cta || '').trim();
     if (!cta) return acc;
-    acc[cta] = (acc[cta] || 0) + (entry.debe - entry.haber);
+    const d = typeof entry.debe === 'number' ? entry.debe : (parseFloat(String(entry.debe || 0)) || 0);
+    const h = typeof entry.haber === 'number' ? entry.haber : (parseFloat(String(entry.haber || 0)) || 0);
+    acc[cta] = (acc[cta] || 0) + (d - h);
     return acc;
   }, {} as Record<string, number>);
 

@@ -110,8 +110,14 @@ interface HHTTRow {
   return types;
 }
 
-const fmt = (n: number) => n !== 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-';
-const fmtAlways = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
+const fmt = (n: any) => {
+  const val = typeof n === 'number' ? n : (parseFloat(String(n || 0)) || 0);
+  return val !== 0 ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+};
+const fmtAlways = (n: any) => {
+  const val = typeof n === 'number' ? n : (parseFloat(String(n || 0)) || 0);
+  return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 const HHTTView: React.FC = () => {
   const store = useStore();
@@ -172,8 +178,10 @@ const HHTTView: React.FC = () => {
           haber: 0,
         };
       }
-      acc[cta].debe += entry.debe;
-      acc[cta].haber += entry.haber;
+      const eDebe = typeof entry.debe === 'number' ? entry.debe : (parseFloat(String(entry.debe || 0)) || 0);
+      const eHaber = typeof entry.haber === 'number' ? entry.haber : (parseFloat(String(entry.haber || 0)) || 0);
+      acc[cta].debe += eDebe;
+      acc[cta].haber += eHaber;
       return acc;
     }, {} as Record<string, { cta: string; desc: string; debe: number; haber: number }>);
 
@@ -293,20 +301,20 @@ const HHTTView: React.FC = () => {
 
   // ─── Totales ───
   const totals = rows.reduce((acc, row) => ({
-    debe: acc.debe + row.debe,
-    haber: acc.haber + row.haber,
-    deudor: acc.deudor + row.deudor,
-    acreedor: acc.acreedor + row.acreedor,
-    adjDebe: acc.adjDebe + row.adjDebe,
-    adjHaber: acc.adjHaber + row.adjHaber,
-    adjDeudor: acc.adjDeudor + row.adjDeudor,
-    adjAcreedor: acc.adjAcreedor + row.adjAcreedor,
-    activo: acc.activo + row.activo,
-    pasivo: acc.pasivo + row.pasivo,
-    perdidaNaturaleza: acc.perdidaNaturaleza + row.perdidaNaturaleza,
-    gananciaNaturaleza: acc.gananciaNaturaleza + row.gananciaNaturaleza,
-    perdidaFuncion: acc.perdidaFuncion + row.perdidaFuncion,
-    gananciaFuncion: acc.gananciaFuncion + row.gananciaFuncion,
+    debe: Number(acc.debe || 0) + Number(row.debe || 0),
+    haber: Number(acc.haber || 0) + Number(row.haber || 0),
+    deudor: Number(acc.deudor || 0) + Number(row.deudor || 0),
+    acreedor: Number(acc.acreedor || 0) + Number(row.acreedor || 0),
+    adjDebe: Number(acc.adjDebe || 0) + Number(row.adjDebe || 0),
+    adjHaber: Number(acc.adjHaber || 0) + Number(row.adjHaber || 0),
+    adjDeudor: Number(acc.adjDeudor || 0) + Number(row.adjDeudor || 0),
+    adjAcreedor: Number(acc.adjAcreedor || 0) + Number(row.adjAcreedor || 0),
+    activo: Number(acc.activo || 0) + Number(row.activo || 0),
+    pasivo: Number(acc.pasivo || 0) + Number(row.pasivo || 0),
+    perdidaNaturaleza: Number(acc.perdidaNaturaleza || 0) + Number(row.perdidaNaturaleza || 0),
+    gananciaNaturaleza: Number(acc.gananciaNaturaleza || 0) + Number(row.gananciaNaturaleza || 0),
+    perdidaFuncion: Number(acc.perdidaFuncion || 0) + Number(row.perdidaFuncion || 0),
+    gananciaFuncion: Number(acc.gananciaFuncion || 0) + Number(row.gananciaFuncion || 0),
   }), {
     debe: 0, haber: 0, deudor: 0, acreedor: 0,
     adjDebe: 0, adjHaber: 0, adjDeudor: 0, adjAcreedor: 0,

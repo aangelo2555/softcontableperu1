@@ -58,7 +58,9 @@ const BalanceView: React.FC = () => {
 
   // Logic to derive balance amounts from journal
   const accountBalances = journal.reduce((acc, entry) => {
-    acc[entry.cta] = (acc[entry.cta] || 0) + (entry.debe - entry.haber);
+    const d = typeof entry.debe === 'number' ? entry.debe : (parseFloat(String(entry.debe || 0)) || 0);
+    const h = typeof entry.haber === 'number' ? entry.haber : (parseFloat(String(entry.haber || 0)) || 0);
+    acc[entry.cta] = (acc[entry.cta] || 0) + (d - h);
     return acc;
   }, {} as Record<string, number>);
 

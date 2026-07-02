@@ -139,17 +139,26 @@ const RegistroVentasView: React.FC = () => {
 
   // ─── Totales ───
   const totals = useMemo(() => {
-    return filteredSales.reduce((acc, s) => ({
-      exportacion: acc.exportacion + (s.tipOperCode === '02' ? s.bi : 0),
-      bi: acc.bi + s.bi,
-      exonerada: acc.exonerada + (s.noGravada || 0),
-      inafecta: 0,
-      isc: acc.isc + (s.isc || 0),
-      igv: acc.igv + s.igv,
-      icbper: acc.icbper + (s.icbper || 0),
-      otros: acc.otros + (s.otros_tributos || 0),
-      total: acc.total + s.total,
-    }), {
+    return filteredSales.reduce((acc, s) => {
+      const bi = typeof s.bi === 'number' ? s.bi : (parseFloat(String(s.bi || 0)) || 0);
+      const noGrav = typeof s.noGravada === 'number' ? s.noGravada : (parseFloat(String(s.noGravada || 0)) || 0);
+      const isc = typeof s.isc === 'number' ? s.isc : (parseFloat(String(s.isc || 0)) || 0);
+      const igv = typeof s.igv === 'number' ? s.igv : (parseFloat(String(s.igv || 0)) || 0);
+      const icbper = typeof s.icbper === 'number' ? s.icbper : (parseFloat(String(s.icbper || 0)) || 0);
+      const otros = typeof s.otros_tributos === 'number' ? s.otros_tributos : (parseFloat(String(s.otros_tributos || 0)) || 0);
+      const total = typeof s.total === 'number' ? s.total : (parseFloat(String(s.total || 0)) || 0);
+      return {
+        exportacion: acc.exportacion + (s.tipOperCode === '02' ? bi : 0),
+        bi: acc.bi + bi,
+        exonerada: acc.exonerada + noGrav,
+        inafecta: 0,
+        isc: acc.isc + isc,
+        igv: acc.igv + igv,
+        icbper: acc.icbper + icbper,
+        otros: acc.otros + otros,
+        total: acc.total + total,
+      };
+    }, {
       exportacion: 0, bi: 0, exonerada: 0, inafecta: 0,
       isc: 0, igv: 0, icbper: 0, otros: 0, total: 0,
     });

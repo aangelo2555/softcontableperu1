@@ -96,7 +96,7 @@ const EditableCell: React.FC<{
       className={`group relative cursor-pointer text-right min-h-[20px] transition-all ${isOverride ? 'text-pld-blue font-bold' : 'text-app-text'} ${className}`}
       onClick={() => { setTemp(value.toString()); setEditing(true); }}
     >
-      {value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       {isOverride && onReset && (
         <button 
           onClick={(e) => { e.stopPropagation(); onReset(); }}
@@ -297,7 +297,7 @@ const CajaDashboard: React.FC = () => {
     }), { ingresos: 0, egresos: 0 });
   }, [cajaMonthlyData]);
 
-  const format = (n: number) => n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const format = (n: any) => Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleExportExcel = () => {
     const rowsFormatted = cajaMonthlyData.map(m => ({

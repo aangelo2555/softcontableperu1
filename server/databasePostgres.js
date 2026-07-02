@@ -4,8 +4,15 @@
  * Reemplaza databaseServer.js para usar PostgreSQL en lugar de SQLite
  */
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { encrypt, decrypt } = require('./cryptoUtils');
+
+// Force node-postgres to return NUMERIC (1700) and FLOAT types as native Numbers to prevent string concatenation bugs
+types.setTypeParser(1700, val => val === null ? 0 : parseFloat(val));
+types.setTypeParser(700, val => val === null ? 0 : parseFloat(val));
+types.setTypeParser(701, val => val === null ? 0 : parseFloat(val));
+types.setTypeParser(20, val => val === null ? 0 : parseInt(val, 10));
+types.setTypeParser(23, val => val === null ? 0 : parseInt(val, 10));
 
 // Connection Pool optimizado para alta concurrencia (50-100 usuarios simultáneos)
 const pool = new Pool({

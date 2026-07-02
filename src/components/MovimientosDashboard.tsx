@@ -112,7 +112,7 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, isOverride, 
       className={`group cursor-pointer relative flex items-center justify-end gap-1 px-1 rounded hover:bg-app-hover transition-all ${isOverride ? 'text-pld-blue font-bold' : 'text-app-text'} ${className}`}
       onClick={() => setIsEditing(true)}
     >
-      {prefix}{value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {prefix}{Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       {isOverride && onReset && (
         <button 
           onClick={(e) => { e.stopPropagation(); onReset(); }}

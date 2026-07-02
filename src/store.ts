@@ -1335,13 +1335,15 @@ export const useStore = create<AppState>()(
           if (currentRuc) {
             const data = await electron.dbGetWorkspaceData(currentRuc);
             if (data) {
-              // Asegurar que todos los arrays existan
+              const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
+
+              // Asegurar que todos los arrays existan y sus campos numéricos sean números reales
               const safeData = {
                 ...data,
                 plan: data.plan && data.plan.length > 0 ? sortPlan(data.plan) : INITIAL_PLAN,
-                purchases: Array.isArray(data.purchases) ? data.purchases : [],
-                sales: Array.isArray(data.sales) ? data.sales : [],
-                journal: Array.isArray(data.journal) ? data.journal : [],
+                purchases: Array.isArray(data.purchases) ? data.purchases.map((p: any) => ({ ...p, SUBTOT: sanitizeNum(p.SUBTOT), IGV: sanitizeNum(p.IGV), TOTAL: sanitizeNum(p.TOTAL), NOGRAV: sanitizeNum(p.NOGRAV) })) : [],
+                sales: Array.isArray(data.sales) ? data.sales.map((s: any) => ({ ...s, SUBTOT: sanitizeNum(s.SUBTOT), IGV: sanitizeNum(s.IGV), TOTAL: sanitizeNum(s.TOTAL), NOGRAV: sanitizeNum(s.NOGRAV) })) : [],
+                journal: Array.isArray(data.journal) ? data.journal.map((j: any) => ({ ...j, debe: sanitizeNum(j.debe), haber: sanitizeNum(j.haber) })) : [],
                 entities: Array.isArray(data.entities) ? data.entities : [],
                 costs: Array.isArray(data.costs) ? data.costs : [],
                 products: Array.isArray(data.products) ? data.products : [],
@@ -1350,7 +1352,7 @@ export const useStore = create<AppState>()(
                 fixedAssets: Array.isArray(data.fixedAssets) ? data.fixedAssets : [],
                 cashMovements: Array.isArray(data.cashMovements) ? data.cashMovements : [],
                 bankStatements: Array.isArray(data.bankStatements) ? data.bankStatements : [],
-                balanceInicial: Array.isArray(data.balanceInicial) ? data.balanceInicial : [],
+                balanceInicial: Array.isArray(data.balanceInicial) ? data.balanceInicial.map((b: any) => ({ ...b, debe: sanitizeNum(b.debe), haber: sanitizeNum(b.haber), monto: sanitizeNum(b.monto) })) : [],
                 asientos: Array.isArray(data.asientos) ? data.asientos : [],
                 glosasHabituales: Array.isArray(data.glosasHabituales) ? data.glosasHabituales : [],
                 movimientosData: Array.isArray(data.movimientosData) ? data.movimientosData : [],
@@ -1391,9 +1393,23 @@ export const useStore = create<AppState>()(
         const data = await electron.dbGetWorkspaceData(ruc);
         const wsInfo = get().workspaces.find(w => w.ruc === ruc);
         if (wsInfo) {
-          // Ensure plan is not empty
+          const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
+
+          // Ensure plan is not empty and numeric fields are Numbers
           if (!data.plan || data.plan.length === 0) {
             data.plan = INITIAL_PLAN;
+          }
+          if (Array.isArray(data.journal)) {
+            data.journal = data.journal.map((j: any) => ({ ...j, debe: sanitizeNum(j.debe), haber: sanitizeNum(j.haber) }));
+          }
+          if (Array.isArray(data.purchases)) {
+            data.purchases = data.purchases.map((p: any) => ({ ...p, SUBTOT: sanitizeNum(p.SUBTOT), IGV: sanitizeNum(p.IGV), TOTAL: sanitizeNum(p.TOTAL), NOGRAV: sanitizeNum(p.NOGRAV) }));
+          }
+          if (Array.isArray(data.sales)) {
+            data.sales = data.sales.map((s: any) => ({ ...s, SUBTOT: sanitizeNum(s.SUBTOT), IGV: sanitizeNum(s.IGV), TOTAL: sanitizeNum(s.TOTAL), NOGRAV: sanitizeNum(s.NOGRAV) }));
+          }
+          if (Array.isArray(data.balanceInicial)) {
+            data.balanceInicial = data.balanceInicial.map((b: any) => ({ ...b, debe: sanitizeNum(b.debe), haber: sanitizeNum(b.haber), monto: sanitizeNum(b.monto) }));
           }
           set({ currentCompany: wsInfo, ...data, plan: sortPlan(data.plan || []), activeTab: 'EMPRESA' });
           await get().seedInitialGlosas();
