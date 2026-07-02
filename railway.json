@@ -6,6 +6,7 @@
   "deploy": {
     "startCommand": "node server/app.js",
     "restartPolicyType": "ON_FAILURE",
-    "numReplicas": 1
+    "numReplicas": 1,
+    "region": "us-east1"
   }
 }
