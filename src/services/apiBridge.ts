@@ -65,9 +65,31 @@ export const webApiBridge = {
         const res = await api.delete(`/api/db/workspaces/${ruc}`);
         return res.data;
     },
-    dbGetWorkspaceData: async (ruc: string) => {
-        const res = await api.get(`/api/db/workspaces/${ruc}?t=${Date.now()}`);
+    dbGetWorkspaceData: async (ruc: string, options?: { period?: string; page?: number; limit?: number }) => {
+        const params = new URLSearchParams({ t: Date.now().toString() });
+        if (options?.period) params.append('period', options.period);
+        if (options?.page) params.append('page', options.page.toString());
+        if (options?.limit) params.append('limit', options.limit.toString());
+        const res = await api.get(`/api/db/workspaces/${ruc}?${params.toString()}`);
         return res.data.data;
+    },
+    dbGetPurchases: async (ruc: string, period?: string, page = 1, limit = 500) => {
+        const params = new URLSearchParams({ ruc, page: page.toString(), limit: limit.toString() });
+        if (period) params.append('period', period);
+        const res = await api.get(`/api/db/purchases?${params.toString()}`);
+        return res.data.data || [];
+    },
+    dbGetSales: async (ruc: string, period?: string, page = 1, limit = 500) => {
+        const params = new URLSearchParams({ ruc, page: page.toString(), limit: limit.toString() });
+        if (period) params.append('period', period);
+        const res = await api.get(`/api/db/sales?${params.toString()}`);
+        return res.data.data || [];
+    },
+    dbGetJournal: async (ruc: string, period?: string, page = 1, limit = 1000) => {
+        const params = new URLSearchParams({ ruc, page: page.toString(), limit: limit.toString() });
+        if (period) params.append('period', period);
+        const res = await api.get(`/api/db/journal?${params.toString()}`);
+        return res.data.data || [];
     },
     dbExecute: async (sql: string, params?: any[]) => {
         // Convertir ? a $1, $2, $3 para PostgreSQL

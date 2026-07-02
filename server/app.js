@@ -155,26 +155,101 @@ app.post('/api/db/workspaces', async (req, res) => {
 
 app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
     try {
-        const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}`;
+        const period = req.query.period || req.query.periodo || null;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 1000;
+
+        const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}_${period || 'all'}_${page}_${limit}`;
         
         // Verificar cache
         let data = cacheService.get(cacheKey);
         
         if (!data) {
             // Si no está en cache, consultar DB
-            data = await db.getWorkspaceData(req.params.ruc, req.targetUserId);
+            data = await db.getWorkspaceData(req.params.ruc, req.targetUserId, { period, page, limit });
             cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
         }
         
         // Enviar respuesta inmediatamente
         res.json({ success: true, data });
-        
-        // --- AUTO-SYNC DESACTIVADO ---
-        // El auto-sync ahora se maneja desde el frontend mediante auto-click de botones
-        // Esto evita problemas de sincronización y es más confiable
-        
     } catch (error) {
         console.error('[DB ERROR] Error en getWorkspaceData:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Modular query endpoints with period filter and pagination
+app.get('/api/db/purchases', async (req, res) => {
+    try {
+        const { ruc, workspace_id, period, page = 1, limit = 500 } = req.query;
+        const targetRuc = ruc || workspace_id;
+        const userId = req.targetUserId;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        let queryText = 'SELECT * FROM purchases WHERE workspace_id = $1 AND user_id = $2';
+        let queryParams = [targetRuc, userId];
+
+        if (period) {
+            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
+            queryParams.push(`%${period}%`);
+        }
+
+        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(parseInt(limit), offset);
+
+        const rows = await db.queryAll(queryText, queryParams);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/db/sales', async (req, res) => {
+    try {
+        const { ruc, workspace_id, period, page = 1, limit = 500 } = req.query;
+        const targetRuc = ruc || workspace_id;
+        const userId = req.targetUserId;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        let queryText = 'SELECT * FROM sales WHERE workspace_id = $1 AND user_id = $2';
+        let queryParams = [targetRuc, userId];
+
+        if (period) {
+            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
+            queryParams.push(`%${period}%`);
+        }
+
+        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(parseInt(limit), offset);
+
+        const rows = await db.queryAll(queryText, queryParams);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/db/journal', async (req, res) => {
+    try {
+        const { ruc, workspace_id, period, page = 1, limit = 1000 } = req.query;
+        const targetRuc = ruc || workspace_id;
+        const userId = req.targetUserId;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+
+        let queryText = 'SELECT * FROM journal WHERE workspace_id = $1 AND user_id = $2';
+        let queryParams = [targetRuc, userId];
+
+        if (period) {
+            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
+            queryParams.push(`%${period}%`);
+        }
+
+        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(parseInt(limit), offset);
+
+        const rows = await db.queryAll(queryText, queryParams);
+        res.json({ success: true, data: rows });
+    } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
