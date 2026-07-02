@@ -502,8 +502,13 @@ export interface AppState extends WorkspaceState {
   setBuzonMensajes: (mensajes: BuzonMensaje[]) => void;
   markBuzonMensajeAsRead: (id: string) => void;
   centralizeSireRecords: (ruc: string, records: any[], proceso: string) => Promise<void>;
-  autoCentralizeAllProposals: (ruc: string, proceso: string) => Promise<void>;
   syncMaintenance: () => Promise<void>;
+  
+  // --- H-01: Estado de Sincronización Asíncrona de Fondo ---
+  syncStatus: 'idle' | 'saving' | 'saved' | 'error';
+  setSyncStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  enqueueAutoSave: (key: string, saveTask: () => Promise<void>, delayMs?: number) => void;
+
   
   // --- Mejora #2 & #5: Control de Períodos y Obsoleto (stale) ---
   periodsList: any[];
@@ -1293,6 +1298,31 @@ export const useStore = create<AppState>()(
       originalAdminCompany: null,
       originalAdminWorkspaceData: null,
       financeNotes: null,
+      syncStatus: 'idle',
+      setSyncStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => set({ syncStatus: status }),
+      enqueueAutoSave: (key: string, saveTask: () => Promise<void>, delayMs = 1500) => {
+        set({ syncStatus: 'saving' });
+        if ((window as any)._autoSaveTimers?.[key]) {
+          clearTimeout((window as any)._autoSaveTimers[key]);
+        }
+        if (!(window as any)._autoSaveTimers) {
+          (window as any)._autoSaveTimers = {};
+        }
+        (window as any)._autoSaveTimers[key] = setTimeout(async () => {
+          try {
+            await saveTask();
+            set({ syncStatus: 'saved' });
+            setTimeout(() => {
+              if (get().syncStatus === 'saved') {
+                set({ syncStatus: 'idle' });
+              }
+            }, 2500);
+          } catch (err) {
+            console.error(`[AUTOSAVE ERROR] Failed saving key ${key}:`, err);
+            set({ syncStatus: 'error' });
+          }
+        }, delayMs);
+      },
       deferredTaxComputation: null,
       
       // --- Lifecycle ---
@@ -2263,7 +2293,7 @@ export const useStore = create<AppState>()(
         }
       },
 
-      autoCentralizeAllProposals: async (ruc, proceso) => {
+      autoCentralizeAllProposals: async (ruc: string, proceso: string) => {
         const records = proceso === 'Generar RCE' ? get().purchases : get().sales;
         const propuestas = records.filter(r => r.estado_sire === 'Propuesta');
         if (propuestas.length > 0) {
@@ -2613,6 +2643,7 @@ export const useStore = create<AppState>()(
         const ruc = get().currentCompany?.ruc || '';
         if (ruc) {
           const startTime = Date.now();
+          set({ syncStatus: 'saving' });
           console.log('[SYNC] 🔄 Iniciando sincronización workspace...', {
             ruc,
             timestamp: new Date().toISOString()
@@ -2630,7 +2661,14 @@ export const useStore = create<AppState>()(
               asientos: data.asientos?.length || 0
             });
             
-            if (data) set({ ...data });
+            if (data) {
+              set({ ...data, syncStatus: 'saved' });
+              setTimeout(() => {
+                if (get().syncStatus === 'saved') {
+                  set({ syncStatus: 'idle' });
+                }
+              }, 2500);
+            }
           } catch (e) {
             const errorTime = Date.now() - startTime;
             console.error('[SYNC] ❌ Error en sincronización:', {
@@ -2638,6 +2676,7 @@ export const useStore = create<AppState>()(
               errorTime: `${errorTime}ms`,
               ruc
             });
+            set({ syncStatus: 'error' });
           }
         }
       },

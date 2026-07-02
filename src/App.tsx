@@ -80,7 +80,9 @@ import {
   FileSearch,
   TrendingUp,
   FileSpreadsheet,
-  LogOut
+  LogOut,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 // ─── Types ───
@@ -203,7 +205,8 @@ const App: React.FC = () => {
     setShowCompanyConfig, 
     currentCompany,
     isInspectingUser,
-    stopInspectingWorkspace
+    stopInspectingWorkspace,
+    syncStatus
   } = useStore();
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const token = localStorage.getItem('softcontable_token');
@@ -907,6 +910,27 @@ const App: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
+            {/* Sync Status Badge (H-01) */}
+            {syncStatus !== 'idle' && (
+              <div className="flex items-center text-[10px] font-black uppercase tracking-wider transition-all duration-300">
+                {syncStatus === 'saving' && (
+                  <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg animate-pulse">
+                    <Loader2 size={12} className="animate-spin" /> Guardando...
+                  </span>
+                )}
+                {syncStatus === 'saved' && (
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                    <CheckCircle2 size={12} /> Guardado
+                  </span>
+                )}
+                {syncStatus === 'error' && (
+                  <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg">
+                    <AlertCircle size={12} /> Error al guardar
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Notifications */}
             <button
               onClick={() => setActiveTab('BUZON')}
