@@ -1,7 +1,16 @@
 import axios from 'axios';
 
 // Detectar si estamos en Railway o Localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+let API_BASE_URL = (import.meta.env.VITE_API_URL || '').trim();
+
+// 🔧 SANITIZACIÓN DE DOMINIO (Fallback Inteligente):
+// Si VITE_API_URL contiene el dominio de ejemplo ficticio 'softcontable.up.railway.app'
+// o si estamos en la web servidos por el mismo Express server, usamos rutas relativas ('')
+// para que Axios consuma automáticamente el dominio real de Railway desde el que navega el usuario.
+if (API_BASE_URL.includes('softcontable.up.railway.app')) {
+    console.warn('[API BRIDGE] ⚠️ Dominio de ejemplo detectado en VITE_API_URL. Usando rutas relativas al mismo origen.');
+    API_BASE_URL = '';
+}
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
