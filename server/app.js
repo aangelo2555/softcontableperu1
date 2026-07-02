@@ -315,6 +315,161 @@ app.post('/api/db/execute', async (req, res) => {
     }
 });
 
+// --- FASE 1: ENDPOINTS REST DEDICADOS (Abstracción de Dialecto SQL) ---
+
+// Batch Purchases (Guardar lista de compras)
+app.post('/api/db/purchases/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const p of items) {
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO purchases (
+                            id, workspace_id, user_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono,
+                            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, car, estado_sire
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+                        ON CONFLICT (id) DO UPDATE SET
+                            registro = EXCLUDED.registro, fecha = EXCLUDED.fecha, fecVcto = EXCLUDED.fecVcto,
+                            tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie, numero = EXCLUDED.numero,
+                            doc_tipo = EXCLUDED.doc_tipo, doc_num = EXCLUDED.doc_num, nombre = EXCLUDED.nombre,
+                            tipOper = EXCLUDED.tipOper, tipOperCode = EXCLUDED.tipOperCode, ctaGasto = EXCLUDED.ctaGasto,
+                            ctaAbono = EXCLUDED.ctaAbono, moneda = EXCLUDED.moneda, tc = EXCLUDED.tc, bi = EXCLUDED.bi,
+                            igv = EXCLUDED.igv, noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, total = EXCLUDED.total,
+                            glosa = EXCLUDED.glosa, detraccion = EXCLUDED.detraccion, car = EXCLUDED.car, estado_sire = EXCLUDED.estado_sire
+                    `, [
+                        p.id, workspace_id, userId, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero,
+                        p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono,
+                        p.moneda || 'SOLES', p.tc || 0, p.bi || 0, p.igv || 0, p.noGravada || 0, p.isc || 0,
+                        p.total || 0, p.glosa || '', p.detraccion || 0, p.car || '', p.estado_sire || 'Local'
+                    ]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO purchases (
+                            id, workspace_id, user_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaGasto, ctaAbono,
+                            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, car, estado_sire
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        p.id, workspace_id, userId, p.registro, p.fecha, p.fecVcto, p.tipo_doc, p.serie, p.numero,
+                        p.doc_tipo, p.doc_num, p.nombre, p.tipOper, p.tipOperCode, p.ctaGasto, p.ctaAbono,
+                        p.moneda || 'SOLES', p.tc || 0, p.bi || 0, p.igv || 0, p.noGravada || 0, p.isc || 0,
+                        p.total || 0, p.glosa || '', p.detraccion || 0, p.car || '', p.estado_sire || 'Local'
+                    ]);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH PURCHASES ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Batch Sales (Guardar lista de ventas)
+app.post('/api/db/sales/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const v of items) {
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO sales (
+                            id, workspace_id, user_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaCargo, ctaIngreso,
+                            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, car, estado_sire
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+                        ON CONFLICT (id) DO UPDATE SET
+                            registro = EXCLUDED.registro, fecha = EXCLUDED.fecha, fecVcto = EXCLUDED.fecVcto,
+                            tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie, numero = EXCLUDED.numero,
+                            doc_tipo = EXCLUDED.doc_tipo, doc_num = EXCLUDED.doc_num, nombre = EXCLUDED.nombre,
+                            tipOper = EXCLUDED.tipOper, tipOperCode = EXCLUDED.tipOperCode, ctaCargo = EXCLUDED.ctaCargo,
+                            ctaIngreso = EXCLUDED.ctaIngreso, moneda = EXCLUDED.moneda, tc = EXCLUDED.tc, bi = EXCLUDED.bi,
+                            igv = EXCLUDED.igv, noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, total = EXCLUDED.total,
+                            glosa = EXCLUDED.glosa, detraccion = EXCLUDED.detraccion, car = EXCLUDED.car, estado_sire = EXCLUDED.estado_sire
+                    `, [
+                        v.id, workspace_id, userId, v.registro, v.fecha, v.fecVcto, v.tipo_doc, v.serie, v.numero,
+                        v.doc_tipo, v.doc_num, v.nombre, v.tipOper, v.tipOperCode, v.ctaCargo, v.ctaIngreso,
+                        v.moneda || 'SOLES', v.tc || 0, v.bi || 0, v.igv || 0, v.noGravada || 0, v.isc || 0,
+                        v.total || 0, v.glosa || '', v.detraccion || 0, v.car || '', v.estado_sire || 'Local'
+                    ]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO sales (
+                            id, workspace_id, user_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                            doc_tipo, doc_num, nombre, tipOper, tipOperCode, ctaCargo, ctaIngreso,
+                            moneda, tc, bi, igv, noGravada, isc, total, glosa, detraccion, car, estado_sire
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        v.id, workspace_id, userId, v.registro, v.fecha, v.fecVcto, v.tipo_doc, v.serie, v.numero,
+                        v.doc_tipo, v.doc_num, v.nombre, v.tipOper, v.tipOperCode, v.ctaCargo, v.ctaIngreso,
+                        v.moneda || 'SOLES', v.tc || 0, v.bi || 0, v.igv || 0, v.noGravada || 0, v.isc || 0,
+                        v.total || 0, v.glosa || '', v.detraccion || 0, v.car || '', v.estado_sire || 'Local'
+                    ]);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH SALES ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Batch Journal (Guardar libro diario)
+app.post('/api/db/journal/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const j of items) {
+                const descCol = USE_POSTGRES ? 'descripcion' : 'desc';
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO journal (id, workspace_id, user_id, source, asiento, fecha, glosa, cta, descripcion, debe, haber, medio_pago, nro_transaccion, razon_social)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                        ON CONFLICT (id) DO UPDATE SET
+                            source = EXCLUDED.source, asiento = EXCLUDED.asiento, fecha = EXCLUDED.fecha,
+                            glosa = EXCLUDED.glosa, cta = EXCLUDED.cta, descripcion = EXCLUDED.descripcion,
+                            debe = EXCLUDED.debe, haber = EXCLUDED.haber, medio_pago = EXCLUDED.medio_pago,
+                            nro_transaccion = EXCLUDED.nro_transaccion, razon_social = EXCLUDED.razon_social
+                    `, [j.id, workspace_id, userId, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc || j.descripcion || '', j.debe || 0, j.haber || 0, j.medio_pago || null, j.nro_transaccion || null, j.razon_social || null]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO journal (id, workspace_id, user_id, source, asiento, fecha, glosa, cta, desc, debe, haber, medio_pago, nro_transaccion, razon_social)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [j.id, workspace_id, userId, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc || j.descripcion || '', j.debe || 0, j.haber || 0, j.medio_pago || null, j.nro_transaccion || null, j.razon_social || null]);
+                }
+            }
+        });
+
+        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH JOURNAL ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.post('/api/db/backup', async (req, res) => {
     try {
         const normalizedEmail = (req.user?.email || '').trim().toLowerCase();

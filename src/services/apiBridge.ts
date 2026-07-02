@@ -75,6 +75,18 @@ export const webApiBridge = {
         const res = await api.post('/api/db/execute', { sql: convertedSQL, params: params || [] });
         return res.data;
     },
+    dbSavePurchasesBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/purchases/batch', { workspace_id, items });
+        return res.data;
+    },
+    dbSaveSalesBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/sales/batch', { workspace_id, items });
+        return res.data;
+    },
+    dbSaveJournalBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/journal/batch', { workspace_id, items });
+        return res.data;
+    },
     dbQuery: async (sql: string, params?: any[]) => {
         // Convertir ? a $1, $2, $3 para PostgreSQL
         const convertedSQL = convertSQLitePlaceholdersToPostgres(sql);
