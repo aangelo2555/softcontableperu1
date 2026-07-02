@@ -5,50 +5,7 @@
  */
 
 const { Pool } = require('pg');
-const crypto = require('crypto');
-
-// Encryption (mantener compatibilidad con SQLite)
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'softcontable-2026-secret-key-change-this';
-const algorithm = 'aes-256-cbc';
-
-function encrypt(text) {
-    if (!text) return null;
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32), iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
-}
-
-function decrypt(text) {
-    if (!text) return '';
-    if (text === 'null') return '';
-    
-    // Convertir Buffer a string si es necesario
-    if (Buffer.isBuffer(text)) {
-        text = text.toString('utf8');
-    }
-    
-    // Verificar que sea string
-    if (typeof text !== 'string') {
-        console.error('[DECRYPT ERROR] Expected string, got:', typeof text);
-        return '';
-    }
-    
-    try {
-        const parts = text.split(':');
-        if (parts.length !== 2) return '';
-        const iv = Buffer.from(parts[0], 'hex');
-        const encryptedText = parts[1];
-        const decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32), iv);
-        let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-        return decrypted;
-    } catch (e) {
-        console.error('[DECRYPT ERROR]', e.message);
-        return '';
-    }
-}
+const { encrypt, decrypt } = require('./cryptoUtils');
 
 // Connection Pool
 const pool = new Pool({

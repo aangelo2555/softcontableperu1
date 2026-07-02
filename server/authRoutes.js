@@ -3,7 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const dbManager = require('./databaseServer');
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026';
 

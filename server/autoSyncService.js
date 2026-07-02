@@ -5,8 +5,8 @@
  */
 
 const buzonHandler = require('../main/buzonHandler');
-const sireHandler = require('../modulo/sireHandler');
-const db = require('./databaseServer');
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const db = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
 
 class AutoSyncService {
   constructor() {

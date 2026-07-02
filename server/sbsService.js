@@ -1,5 +1,5 @@
-const https = require('https');
-const dbManager = require('./databaseServer');
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
 
 function fetchExchangeRateFromApi(date) {
     return new Promise((resolve) => {
