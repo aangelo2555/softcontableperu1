@@ -2435,7 +2435,17 @@ app.get('/api/health', (req, res) => {
 // --- Static Files & SPA Routing (DESPUÉS de todas las rutas API) ---
 
 const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
+app.use(express.static(distPath, {
+    maxAge: '1y',
+    etag: true,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+    }
+}));
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));

@@ -7,13 +7,16 @@
 const { Pool } = require('pg');
 const { encrypt, decrypt } = require('./cryptoUtils');
 
-// Connection Pool
+// Connection Pool optimizado para alta concurrencia (50-100 usuarios simultáneos)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 20, // 20 conexiones máximo
+    max: 30, // 30 conexiones activas máximo por nodo Express
+    min: 4,  // 4 conexiones calientes en standby
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 20000, // Prevenir consultas colgadas de más de 20s
+    keepAlive: true
 });
 
 // Event listeners
