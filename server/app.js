@@ -110,7 +110,8 @@ const inspectMiddleware = (req, res, next) => {
 };
 
 // --- Rutas Protegidas ---
-app.use('/api/db', authMiddleware, inspectMiddleware);
+const dbRoutes = require('./routes/dbRoutes');
+app.use('/api/db', authMiddleware, inspectMiddleware, dbRoutes);
 app.use('/api/buzon', authMiddleware, inspectMiddleware);
 app.use('/api/sire', authMiddleware, inspectMiddleware);
 

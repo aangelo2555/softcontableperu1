@@ -389,6 +389,8 @@ const db = {
             GROUP BY u.id, u.email, u.name, u.role, u.created_at
             ORDER BY u.created_at DESC
         `, []);
+    },
+
     // --- User management ---
     getUserByEmail: async (email) => {
         const normalizedEmail = email ? email.trim().toLowerCase() : '';
