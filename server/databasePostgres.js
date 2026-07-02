@@ -439,11 +439,22 @@ const db = {
     },
     
     // Admin functions
+    createSuggestion: async (s) => {
+        return query(`
+            INSERT INTO suggestions (id, user_id, type, title, description, status)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        `, [s.id, s.user_id, s.type || 'SUGGESTION', s.title || s.view_context || '', s.description || s.user_comment || '', s.status || 'pending']);
+    },
+
     getSuggestions: async () => {
         const result = await query('SELECT * FROM suggestions ORDER BY created_at DESC', []);
         return result.rows;
     },
-    
+
+    resolveSuggestion: async (id) => {
+        return query('UPDATE suggestions SET status = \'RESUELTO\', resolved_at = NOW() WHERE id = $1', [id]);
+    },
+
     getAdminUsersSummary: async () => {
         const result = await query(`
             SELECT 
@@ -458,6 +469,7 @@ const db = {
             GROUP BY u.id, u.email, u.name, u.role, u.created_at
             ORDER BY u.created_at DESC
         `, []);
+        return result.rows;
     },
 
     // --- User management ---
@@ -474,6 +486,115 @@ const db = {
             [u.id, normalizedEmail, u.password, u.name, u.role || 'user']
         );
         return result;
+    },
+
+    // --- CCC Metrics ---
+    getCCCMetrics: async (ruc, userId) => {
+        const querySaldo = async (ctaPrefix) => {
+            const res = await query(`
+                SELECT COALESCE(SUM(debe), 0) - COALESCE(SUM(haber), 0) as saldo 
+                FROM journal 
+                WHERE workspace_id = $1 AND user_id = $2 AND cta LIKE $3
+            `, [ruc, userId, `${ctaPrefix}%`]);
+            return parseFloat(res.rows[0]?.saldo || 0);
+        };
+
+        const inventario = await querySaldo('20');
+        const cobrar = await querySaldo('12');
+        const pagar = Math.abs(await querySaldo('42'));
+        const ventas = Math.abs(await querySaldo('70'));
+        const compras = await querySaldo('60');
+
+        return {
+            dio: ventas > 0 ? (inventario / (ventas / 360)) : 0,
+            dso: ventas > 0 ? (cobrar / (ventas / 360)) : 0,
+            dpo: compras > 0 ? (pagar / (compras / 360)) : 0
+        };
+    },
+
+    // --- Balance Inicial ---
+    saveBalanceInicial: async (ruc, userId, item) => {
+        return query(`
+            INSERT INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (id) DO UPDATE SET
+                cta = EXCLUDED.cta,
+                descripcion = EXCLUDED.descripcion,
+                debe = EXCLUDED.debe,
+                haber = EXCLUDED.haber
+        `, [item.id, ruc, userId, item.cta, item.desc || item.descripcion || '', item.debe || 0, item.haber || 0]);
+    },
+
+    saveBalanceInicialBulk: async (ruc, userId, items) => {
+        return db.transaction(async (client) => {
+            for (const item of items) {
+                await client.query(`
+                    INSERT INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ON CONFLICT (id) DO UPDATE SET
+                        cta = EXCLUDED.cta,
+                        descripcion = EXCLUDED.descripcion,
+                        debe = EXCLUDED.debe,
+                        haber = EXCLUDED.haber
+                `, [item.id, ruc, userId, item.cta, item.desc || item.descripcion || '', item.debe || 0, item.haber || 0]);
+            }
+        });
+    },
+
+    deleteBalanceInicial: async (ruc, userId, id) => {
+        return query('DELETE FROM balance_inicial WHERE id = $1 AND workspace_id = $2 AND user_id = $3', [id, ruc, userId]);
+    },
+
+    // --- Finance Notes & Deferred Tax ---
+    getFinanceNotes: async (ruc, periodo, userId) => {
+        const res = await query('SELECT * FROM finance_notes WHERE workspace_id = $1 AND periodo = $2 AND user_id = $3', [ruc, periodo, userId]);
+        return res.rows[0] || null;
+    },
+
+    saveFinanceNotes: async (ruc, periodo, notesJson, userId) => {
+        const jsonStr = typeof notesJson === 'string' ? notesJson : JSON.stringify(notesJson);
+        return query(`
+            INSERT INTO finance_notes (workspace_id, periodo, notes_json, user_id)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (workspace_id, periodo, user_id) DO UPDATE SET
+                notes_json = EXCLUDED.notes_json
+        `, [ruc, periodo, jsonStr, userId]);
+    },
+
+    getDeferredTax: async (ruc, periodo, userId) => {
+        const res = await query('SELECT * FROM deferred_tax_computations WHERE workspace_id = $1 AND periodo = $2 AND user_id = $3', [ruc, periodo, userId]);
+        return res.rows[0] || null;
+    },
+
+    saveDeferredTax: async (ruc, periodo, computationJson, userId) => {
+        const jsonStr = typeof computationJson === 'string' ? computationJson : JSON.stringify(computationJson);
+        return query(`
+            INSERT INTO deferred_tax_computations (workspace_id, periodo, computation_json, user_id)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (workspace_id, periodo, user_id) DO UPDATE SET
+                computation_json = EXCLUDED.computation_json
+        `, [ruc, periodo, jsonStr, userId]);
+    },
+
+    saveCertificado: async (ruc, userId, pfxBuffer, password) => {
+        return query(`
+            UPDATE workspaces
+            SET certificado_pfx = $1, certificado_pass = $2
+            WHERE ruc = $3 AND user_id = $4
+        `, [pfxBuffer, encrypt(password), ruc, userId]);
+    },
+
+    getCertificado: async (ruc, userId) => {
+        const res = await query(`
+            SELECT certificado_pfx, certificado_pass FROM workspaces
+            WHERE ruc = $1 AND user_id = $2
+        `, [ruc, userId]);
+        const row = res.rows[0];
+        if (!row || !row.certificado_pfx) return null;
+        return {
+            pfx: row.certificado_pfx,
+            pass: decrypt(row.certificado_pass)
+        };
     }
 };
 
@@ -1066,6 +1187,34 @@ async function ensureSchemaConstraints() {
                     );
                     CREATE INDEX IF NOT EXISTS idx_balance_inicial_workspace ON balance_inicial(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_balance_inicial_user ON balance_inicial(user_id);
+                `
+            },
+            {
+                name: 'finance_notes',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS finance_notes (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        periodo TEXT NOT NULL,
+                        notes_json TEXT,
+                        user_id TEXT NOT NULL,
+                        UNIQUE(workspace_id, periodo, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_finance_notes_workspace ON finance_notes(workspace_id, user_id);
+                `
+            },
+            {
+                name: 'deferred_tax_computations',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS deferred_tax_computations (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        periodo TEXT NOT NULL,
+                        computation_json TEXT,
+                        user_id TEXT NOT NULL,
+                        UNIQUE(workspace_id, periodo, user_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_deferred_tax_workspace ON deferred_tax_computations(workspace_id, user_id);
                 `
             }
         ];

@@ -114,8 +114,14 @@ const fmt = (n: number) => n !== 0 ? n.toLocaleString('en-US', { minimumFraction
 const fmtAlways = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
 const HHTTView: React.FC = () => {
-  const { currentCompany, plan, hhttAdjustments, setHhttAdjustment, staleVersions, syncStaleVersions, markSynced } = useStore();
-  const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
+  const store = useStore();
+  const currentCompany = store.currentCompany || {} as any;
+  const plan = Array.isArray(store.plan) ? store.plan : [];
+  const hhttAdjustments = store.hhttAdjustments || {};
+  const staleVersions = Array.isArray(store.staleVersions) ? store.staleVersions : [];
+  const rawJournal = Array.isArray(store.journal) ? store.journal : [];
+  const journal = rawJournal.filter(entry => entry.cta?.trim().toUpperCase() !== 'GLOSA');
+  const { setHhttAdjustment, syncStaleVersions, markSynced } = store;
   const [digits, setDigits] = useState<number>(100);
 
   const currentYear = currentCompany.period || '2025';
@@ -134,7 +140,7 @@ const HHTTView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const hhttStale = (staleVersions || []).find((x: any) => x.module === 'hhtt');
+  const hhttStale = staleVersions.find((x: any) => x.module === 'hhtt');
   const isStale = hhttStale?.is_stale === 1 || hhttStale?.is_stale === true;
   const staleSince = hhttStale?.stale_since;
 

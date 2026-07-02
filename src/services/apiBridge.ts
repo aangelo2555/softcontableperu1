@@ -195,8 +195,13 @@ export const webApiBridge = {
         return res.data.periods || [];
     },
     getStaleStatus: async (ruc: string, periodo: string) => {
-        const res = await api.get(`/api/periods/${ruc}/stale-status?periodo=${periodo}`);
-        return res.data.rows || [];
+        try {
+            const res = await api.get(`/api/periods/${ruc}/stale-status?periodo=${periodo}`);
+            return Array.isArray(res.data?.rows) ? res.data.rows : [];
+        } catch (e) {
+            console.error('[API BRIDGE] Error fetching stale status:', e);
+            return [];
+        }
     },
     closePeriod: async (ruc: string, payload: { periodo: string, tipo: string, notas?: string }) => {
         const res = await api.post(`/api/periods/${ruc}/close`, payload);

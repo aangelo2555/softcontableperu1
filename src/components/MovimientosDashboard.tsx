@@ -128,21 +128,23 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, isOverride, 
 
 // --- Componente Principal ---
 const MovimientosView: React.FC = () => {
+  const store = useStore();
+  const sales = Array.isArray(store.sales) ? store.sales : [];
+  const purchases = Array.isArray(store.purchases) ? store.purchases : [];
+  const movimientosData = Array.isArray(store.movimientosData) ? store.movimientosData : [];
+  const bankStatements = Array.isArray(store.bankStatements) ? store.bankStatements : [];
+  const journal = Array.isArray(store.journal) ? store.journal : [];
+  
   const { 
-    sales, 
-    purchases, 
     currentCompany, 
-    movimientosData, 
     upsertMovimientoData, 
     deleteMovimientoData,
-    bankStatements,
-    journal,
     loadBankStatements,
     importBankStatements,
     reconcileTransaction,
     unreconcileTransaction,
     autoMatchBank
-  } = useStore();
+  } = store;
 
   const [activeSubTab, setActiveSubTab] = useState<'fiscal' | 'bancos'>('fiscal');
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(new Date().getMonth());

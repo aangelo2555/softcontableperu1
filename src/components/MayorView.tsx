@@ -16,8 +16,13 @@ import PageHeader from './ui/PageHeader';
 const MONTHS = ['', 'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
 const MayorView: React.FC = () => {
-  const { currentCompany, plan, staleVersions, syncStaleVersions, markSynced } = useStore();
-  const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
+  const store = useStore();
+  const currentCompany = store.currentCompany || {} as any;
+  const plan = Array.isArray(store.plan) ? store.plan : [];
+  const staleVersions = Array.isArray(store.staleVersions) ? store.staleVersions : [];
+  const journal = Array.isArray(store.journal) ? store.journal.filter(entry => entry.cta?.trim().toUpperCase() !== 'GLOSA') : [];
+  const { syncStaleVersions, markSynced } = store;
+
   const [collapsedAccounts, setCollapsedAccounts] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,7 +44,7 @@ const MayorView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const mayorStale = (staleVersions || []).find((x: any) => x.module === 'mayor');
+  const mayorStale = staleVersions.find((x: any) => x.module === 'mayor');
   const isStale = mayorStale?.is_stale === 1 || mayorStale?.is_stale === true;
   const staleSince = mayorStale?.stale_since;
 

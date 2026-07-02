@@ -1339,18 +1339,23 @@ export const useStore = create<AppState>()(
               const safeData = {
                 ...data,
                 plan: data.plan && data.plan.length > 0 ? sortPlan(data.plan) : INITIAL_PLAN,
-                purchases: data.purchases || [],
-                sales: data.sales || [],
-                journal: data.journal || [],
-                entities: data.entities || [],
-                costs: data.costs || [],
-                products: data.products || [],
-                inventoryMovements: data.inventoryMovements || [],
-                employees: data.employees || [],
-                asientos: data.asientos || [],
-                glosasHabituales: data.glosasHabituales || [],
-                periodsList: data.periodsList || [],
-                staleVersions: data.staleVersions || []
+                purchases: Array.isArray(data.purchases) ? data.purchases : [],
+                sales: Array.isArray(data.sales) ? data.sales : [],
+                journal: Array.isArray(data.journal) ? data.journal : [],
+                entities: Array.isArray(data.entities) ? data.entities : [],
+                costs: Array.isArray(data.costs) ? data.costs : [],
+                products: Array.isArray(data.products) ? data.products : [],
+                inventoryMovements: Array.isArray(data.inventoryMovements) ? data.inventoryMovements : [],
+                employees: Array.isArray(data.employees) ? data.employees : [],
+                fixedAssets: Array.isArray(data.fixedAssets) ? data.fixedAssets : [],
+                cashMovements: Array.isArray(data.cashMovements) ? data.cashMovements : [],
+                bankStatements: Array.isArray(data.bankStatements) ? data.bankStatements : [],
+                balanceInicial: Array.isArray(data.balanceInicial) ? data.balanceInicial : [],
+                asientos: Array.isArray(data.asientos) ? data.asientos : [],
+                glosasHabituales: Array.isArray(data.glosasHabituales) ? data.glosasHabituales : [],
+                movimientosData: Array.isArray(data.movimientosData) ? data.movimientosData : [],
+                periodsList: Array.isArray(data.periodsList) ? data.periodsList : [],
+                staleVersions: Array.isArray(data.staleVersions) ? data.staleVersions : []
               };
               set(safeData);
               await get().seedInitialPlan();
@@ -1371,8 +1376,10 @@ export const useStore = create<AppState>()(
             fixedAssets: [],
             cashMovements: [],
             bankStatements: [],
+            balanceInicial: [],
             asientos: [],
             glosasHabituales: [],
+            movimientosData: [],
             periodsList: [],
             staleVersions: []
           });
@@ -2066,9 +2073,10 @@ export const useStore = create<AppState>()(
         if (!ruc || !periodo) return [];
         try {
           const rows = await webApiBridge.getStaleStatus(ruc, periodo);
+          const safeRows = Array.isArray(rows) ? rows : [];
           // Actualizar estado en store
-          set({ staleVersions: rows });
-          return rows;
+          set({ staleVersions: safeRows });
+          return safeRows;
         } catch (e) {
           console.error('[STORE] Error al sincronizar stale versions:', e);
           return [];
@@ -2539,7 +2547,7 @@ export const useStore = create<AppState>()(
         await electron.dbExecute(`DELETE FROM movimientos_data WHERE workspace_id = ? AND period = ? AND month = ? AND section = ? AND key = ?`, 
           [ruc, period, month, section, key]);
         
-        const filtered = get().movimientosData.filter(m => 
+        const filtered = (get().movimientosData || []).filter(m => 
           !(m.month === month && m.section === section && m.key === key && m.period === period)
         );
         set({ movimientosData: filtered });
@@ -2557,7 +2565,7 @@ export const useStore = create<AppState>()(
           VALUES (?, ?, ?, ?, ?, ?)
         `, [fullData.workspace_id, fullData.period, fullData.month, fullData.section, fullData.key, fullData.value]);
         
-        const currentList = get().movimientosData;
+        const currentList = get().movimientosData || [];
         const filtered = currentList.filter(m => 
           !(m.month === fullData.month && m.section === fullData.section && m.key === fullData.key && m.period === period)
         );

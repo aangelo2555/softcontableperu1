@@ -19,8 +19,12 @@ const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?
 );
 
 const EgypView: React.FC = () => {
-  const { currentCompany, staleVersions, syncStaleVersions, markSynced } = useStore();
-  const journal = useStore().journal.filter(entry => entry.cta.trim().toUpperCase() !== 'GLOSA');
+  const store = useStore();
+  const currentCompany = store.currentCompany || {} as any;
+  const staleVersions = Array.isArray(store.staleVersions) ? store.staleVersions : [];
+  const rawJournal = Array.isArray(store.journal) ? store.journal : [];
+  const journal = rawJournal.filter(entry => entry.cta?.trim().toUpperCase() !== 'GLOSA');
+  const { syncStaleVersions, markSynced } = store;
   const [viewMode, setViewMode] = useState<'FUNCION' | 'NATURALEZA'>('FUNCION');
 
   const currentYear = currentCompany.period || '2025';
@@ -39,7 +43,7 @@ const EgypView: React.FC = () => {
     syncStaleVersions(periodStr);
   }, [periodStr, syncStaleVersions]);
 
-  const eeffStale = (staleVersions || []).find((x: any) => x.module === 'eeff');
+  const eeffStale = staleVersions.find((x: any) => x.module === 'eeff');
   const isStale = eeffStale?.is_stale === 1 || eeffStale?.is_stale === true;
   const staleSince = eeffStale?.stale_since;
 
