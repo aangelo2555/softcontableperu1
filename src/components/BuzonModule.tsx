@@ -128,10 +128,11 @@ const BuzonView: React.FC = () => {
           <base href="https://ww1.sunat.gob.pe/">
           <style>
             html, body { 
-              background-color: #f0f2f5 !important; 
+              background-color: #ffffff !important; 
               padding: 0;
               margin: 0;
               height: 100%;
+              min-height: 100%;
               overflow: auto;
             }
             .document-wrapper {
@@ -139,32 +140,30 @@ const BuzonView: React.FC = () => {
               color: #1a202c !important; 
               width: 100%;
               margin: 0 auto;
-              padding: 1rem;
+              padding: 0.5rem;
               min-height: 100%;
               box-sizing: border-box;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-              border: 1px solid #e2e8f0;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-              line-height: 1.6;
+              line-height: 1.5;
               overflow-wrap: break-word;
               word-wrap: break-word;
             }
-            img { max-width: 100%; height: auto; margin: 10px 0; }
+            img { max-width: 100%; height: auto; margin: 5px 0; }
             a { color: #2b6cb0 !important; text-decoration: underline !important; font-weight: 500; }
-            table { border-collapse: collapse; width: 100% !important; max-width: 100% !important; margin: 1.5rem 0; font-size: 0.85rem; table-layout: fixed; overflow: hidden; }
-            th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+            table { border-collapse: collapse; width: 100% !important; max-width: 100% !important; margin: 0.5rem 0; font-size: 0.85rem; }
+            th, td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
             th { background-color: #f7fafc; font-weight: 700; }
-            .inlined-iframe-content { margin-top: 1rem; }
-            /* Estilizar los iframes embebidos de SUNAT para no desbordar */
+            .inlined-iframe-content { margin-top: 0.5rem; }
+            /* Estilizar los iframes embebidos de SUNAT para expandirse totalmente */
             iframe {
               width: 100% !important;
               max-width: 100% !important;
-              height: 500px !important;
-              max-height: 60vh !important;
+              min-height: 700px !important;
+              height: 100% !important;
+              max-height: none !important;
               border: 1px solid #e2e8f0 !important;
-              border-radius: 8px !important;
-              margin-top: 10px !important;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+              border-radius: 6px !important;
+              margin-top: 5px !important;
               display: block;
             }
             /* Prevenir que elementos anchos desborden el contenedor */
@@ -579,26 +578,26 @@ const BuzonView: React.FC = () => {
             }`}>
                 {selectedMessage ? (
                   <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
-                      {/* Header fijo ampliado (Doble de altura para lectura cómoda en Desktop y Móvil) */}
-                      <div className="p-4 px-4 sm:p-5 sm:px-6 min-h-[90px] sm:min-h-[105px] border-b border-app-border flex justify-between items-center gap-3 shrink-0 bg-app-surface/30">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {/* Header fijo ultra-compacto (para dar máximo espacio vertical al cuadro del mensaje) */}
+                      <div className="p-1.5 px-2.5 sm:px-3 border-b border-app-border flex justify-between items-center gap-2 shrink-0 bg-app-surface/40 min-h-[34px]">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
                           <button
                             onClick={() => setSelectedMessage(null)}
-                            className="md:hidden p-2 hover:bg-app-bg border border-app-border rounded-xl text-app-text transition-all shrink-0 flex items-center justify-center cursor-pointer"
+                            className="md:hidden p-1 hover:bg-app-bg border border-app-border rounded text-app-text transition-all shrink-0 flex items-center justify-center cursor-pointer"
                             title="Regresar a la bandeja"
                           >
-                            <ChevronLeft size={18} />
+                            <ChevronLeft size={13} />
                           </button>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[9px] sm:text-[10px] font-black text-pld-blue uppercase tracking-[0.2em] mb-1 block">
-                              ASUNTO DEL MENSAJE
+                          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                            <span className="text-[8px] font-black text-pld-blue uppercase tracking-wider shrink-0">
+                              ASUNTO:
                             </span>
-                            <h2 className="text-sm sm:text-base md:text-lg font-black text-app-text leading-snug uppercase break-words whitespace-normal">
+                            <h2 className="text-[9px] sm:text-[10px] md:text-xs font-bold text-app-text leading-tight uppercase truncate">
                               {selectedMessage.asunto}
                             </h2>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                            <button 
                              onClick={async () => {
                                if (!activeBrowserId) return;
@@ -614,31 +613,31 @@ const BuzonView: React.FC = () => {
                                }
                                setLoadingDetalle(false);
                              }}
-                             className="p-2 hover:bg-pld-blue/10 text-pld-blue rounded-xl transition-colors border border-app-border/50 hover:border-pld-blue/30 cursor-pointer"
+                             className="p-1 hover:bg-pld-blue/10 text-pld-blue rounded transition-colors border border-app-border/40 hover:border-pld-blue/30 cursor-pointer"
                              title="Refrescar contenido"
                            >
-                             <Loader2 size={15} className={loadingDetalle ? 'animate-spin' : ''} />
+                             <Loader2 size={12} className={loadingDetalle ? 'animate-spin' : ''} />
                            </button>
-                           <div className="bg-app-bg px-2.5 py-1 rounded-xl border border-app-border shadow-xs">
-                               <span className="text-[9px] sm:text-[10px] font-bold text-app-muted uppercase font-mono">{selectedMessage.fecha}</span>
+                           <div className="bg-app-bg px-1.5 py-0.5 rounded border border-app-border">
+                               <span className="text-[8px] font-bold text-app-muted uppercase font-mono">{selectedMessage.fecha}</span>
                            </div>
                         </div>
                       </div>
 
-                      {/* Cuerpo scrollable que contiene el iframe */}
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2">
+                      {/* Cuadro donde se encuentra el mensaje (Extendido al doble de altura) */}
+                      <div className="flex-1 min-h-[550px] sm:min-h-[650px] md:min-h-[750px] flex flex-col overflow-hidden p-1 sm:p-1.5 h-full">
                         {loadingDetalle ? (
                           <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-3">
                              <Loader2 size={28} className="animate-spin" />
                              <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
                           </div>
                         ) : detalleHtml || selectedMessage.contenido ? (
-                          <div className="flex-1 min-h-0 bg-white dark:bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border w-full h-full">
+                          <div className="flex-1 min-h-[520px] sm:min-h-[620px] md:min-h-[720px] bg-white rounded-lg overflow-hidden shadow-sm border border-app-border w-full h-full flex flex-col">
                             <iframe 
                               key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
                               id="buzon-iframe"
                               title="Contenido del Mensaje"
-                              className="w-full h-full border-none bg-white block"
+                              className="w-full h-full flex-1 border-none bg-white block min-h-[500px]"
                               srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
                               sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
                             />
