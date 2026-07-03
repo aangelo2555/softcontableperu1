@@ -707,66 +707,86 @@ const db = {
 
     // --- Persistencia Cloud de Archivos SIRE (ZIP/XLSX/TXT) ---
     saveSireFile: async (ruc, userId, fileData) => {
-        const id = fileData.id || `${ruc}_${fileData.nombre}`;
-        const fecha = fileData.fecha || new Date().toLocaleString('es-PE');
-        const sql = `
-            INSERT INTO sire_files (id, workspace_id, user_id, nombre, periodo, proceso, fecha, size_bytes, content_base64)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (id) DO UPDATE SET
-                fecha = EXCLUDED.fecha,
-                size_bytes = EXCLUDED.size_bytes,
-                content_base64 = EXCLUDED.content_base64;
-        `;
-        await query(sql, [
-            id,
-            ruc,
-            userId || 'SYSTEM',
-            fileData.nombre,
-            fileData.periodo || '',
-            fileData.proceso || '',
-            fecha,
-            fileData.size || fileData.size_bytes || 0,
-            fileData.content_base64
-        ]);
-        return { success: true, id };
+        try {
+            const id = fileData.id || `${ruc}_${fileData.nombre}`;
+            const fecha = fileData.fecha || new Date().toLocaleString('es-PE');
+            const sql = `
+                INSERT INTO sire_files (id, workspace_id, user_id, nombre, periodo, proceso, fecha, size_bytes, content_base64)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (id) DO UPDATE SET
+                    fecha = EXCLUDED.fecha,
+                    size_bytes = EXCLUDED.size_bytes,
+                    content_base64 = EXCLUDED.content_base64;
+            `;
+            await query(sql, [
+                id,
+                ruc,
+                userId || 'SYSTEM',
+                fileData.nombre,
+                fileData.periodo || '',
+                fileData.proceso || '',
+                fecha,
+                fileData.size || fileData.size_bytes || 0,
+                fileData.content_base64
+            ]);
+            return { success: true, id };
+        } catch (error) {
+            console.error('[POSTGRES] Error guardando sire_file:', error.message);
+            return { success: false, error: error.message };
+        }
     },
 
     getSireFiles: async (ruc, userId) => {
-        const sql = `
-            SELECT id, workspace_id, nombre, periodo, proceso, fecha, size_bytes as size
-            FROM sire_files
-            WHERE workspace_id = $1 AND (user_id = $2 OR user_id = 'SYSTEM')
-            ORDER BY created_at DESC
-        `;
-        const res = await query(sql, [ruc, userId]);
-        return res.rows.map(r => ({
-            id: r.id,
-            nombre: r.nombre,
-            fecha: r.fecha,
-            size: Number(r.size || 0),
-            periodo: r.periodo,
-            proceso: r.proceso
-        }));
+        try {
+            const sql = `
+                SELECT id, workspace_id, nombre, periodo, proceso, fecha, size_bytes as size
+                FROM sire_files
+                WHERE workspace_id = $1 AND (user_id = $2 OR user_id = 'SYSTEM')
+                ORDER BY created_at DESC
+            `;
+            const res = await query(sql, [ruc, userId]);
+            return res.rows.map(r => ({
+                id: r.id,
+                nombre: r.nombre,
+                fecha: r.fecha,
+                size: Number(r.size || 0),
+                periodo: r.periodo,
+                proceso: r.proceso
+            }));
+        } catch (error) {
+            console.error('[POSTGRES] Error consultando sire_files:', error.message);
+            return [];
+        }
     },
 
     getSireFileContent: async (nombreOrId, ruc, userId) => {
-        const sql = `
-            SELECT content_base64, nombre
-            FROM sire_files
-            WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
-            LIMIT 1
-        `;
-        const res = await query(sql, [nombreOrId, ruc]);
-        return res.rows[0] || null;
+        try {
+            const sql = `
+                SELECT content_base64, nombre
+                FROM sire_files
+                WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
+                LIMIT 1
+            `;
+            const res = await query(sql, [nombreOrId, ruc]);
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error obteniendo contenido sire_file:', error.message);
+            return null;
+        }
     },
 
     deleteSireFile: async (nombreOrId, ruc, userId) => {
-        const sql = `
-            DELETE FROM sire_files
-            WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
-        `;
-        await query(sql, [nombreOrId, ruc]);
-        return { success: true };
+        try {
+            const sql = `
+                DELETE FROM sire_files
+                WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
+            `;
+            await query(sql, [nombreOrId, ruc]);
+            return { success: true };
+        } catch (error) {
+            console.error('[POSTGRES] Error eliminando sire_file:', error.message);
+            return { success: false, error: error.message };
+        }
     }
 };
 
@@ -1436,6 +1456,25 @@ async function ensureSchemaConstraints() {
                         UNIQUE(workspace_id, periodo, user_id)
                     );
                     CREATE INDEX IF NOT EXISTS idx_deferred_tax_workspace ON deferred_tax_computations(workspace_id, user_id);
+                `
+            },
+            {
+                name: 'sire_files',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS sire_files (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        nombre TEXT NOT NULL,
+                        periodo TEXT,
+                        proceso TEXT,
+                        fecha TEXT,
+                        size_bytes NUMERIC DEFAULT 0,
+                        content_base64 TEXT,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_sire_files_workspace ON sire_files(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_sire_files_user ON sire_files(user_id);
                 `
             }
         ];
