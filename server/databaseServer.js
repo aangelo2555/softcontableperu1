@@ -364,6 +364,18 @@ db.exec(`
         PRIMARY KEY(workspace_id, periodo, user_id),
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS buzon_messages (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        fecha TEXT,
+        asunto TEXT,
+        estado TEXT,
+        tiene_adjunto INTEGER DEFAULT 0,
+        contenido TEXT,
+        updated_at TEXT,
+        user_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_buzon_workspace ON buzon_messages(workspace_id);
 `);
 
 // --- MIGRACIÓN PLAN_GLOBAL A MULTI-USUARIO ---

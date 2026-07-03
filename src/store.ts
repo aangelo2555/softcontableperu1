@@ -2772,41 +2772,101 @@ export const useStore = create<AppState>()(
 
       setBuzonMensajes: (mensajes, ruc) => {
         set({ buzonMensajes: mensajes });
-        // Persistir en localStorage por RUC
         const targetRuc = ruc || get().currentCompany?.ruc;
         if (targetRuc) {
           try {
             localStorage.setItem(`buzon_${targetRuc}`, JSON.stringify(mensajes));
-            console.log(`[BUZON PERSIST] Guardados ${mensajes.length} mensajes para RUC ${targetRuc}`);
+            console.log(`[BUZON PERSIST] Guardados ${mensajes.length} mensajes en localStorage para RUC ${targetRuc}`);
           } catch (e) {
             console.warn('[BUZON PERSIST] Error guardando en localStorage:', e);
           }
+
+          // Persistir asíncronamente en la Base de Datos (Cloud DB / Postgres / SQLite)
+          (async () => {
+            try {
+              const electron = (window as any).electronAPI || (await import('./services/apiBridge')).webApiBridge;
+              if (electron?.dbExecute) {
+                for (const m of mensajes) {
+                  await electron.dbExecute(
+                    `INSERT OR REPLACE INTO buzon_messages (id, workspace_id, fecha, asunto, estado, tiene_adjunto, contenido) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    [m.id, targetRuc, m.fecha || '', m.asunto || '', m.estado || 'no_leido', m.tieneAdjunto ? 1 : 0, m.contenido || null]
+                  );
+                }
+                console.log(`[BUZON DB PERSIST] Sincronizados ${mensajes.length} mensajes en la base de datos para RUC ${targetRuc}`);
+              }
+            } catch (err) {
+              console.warn('[BUZON DB PERSIST ERROR]', err);
+            }
+          })();
         }
       },
       markBuzonMensajeAsRead: (id) => {
         const updated = get().buzonMensajes.map(m => m.id === id ? { ...m, estado: 'leido' as const } : m);
         set({ buzonMensajes: updated });
-        // Persistir cambio de estado
         const ruc = get().currentCompany?.ruc;
         if (ruc) {
           try {
             localStorage.setItem(`buzon_${ruc}`, JSON.stringify(updated));
           } catch (e) { /* silent */ }
+
+          (async () => {
+            try {
+              const electron = (window as any).electronAPI || (await import('./services/apiBridge')).webApiBridge;
+              if (electron?.dbExecute) {
+                await electron.dbExecute(
+                  `UPDATE buzon_messages SET estado = ? WHERE id = ? AND workspace_id = ?`,
+                  ['leido', id, ruc]
+                );
+              }
+            } catch (err) { /* silent */ }
+          })();
         }
       },
-      loadBuzonFromStorage: (ruc: string) => {
+      loadBuzonFromStorage: async (ruc: string) => {
+        // 1. Carga ultra rápida de localStorage si está disponible
+        let loadedLocal = false;
         try {
           const stored = localStorage.getItem(`buzon_${ruc}`);
           if (stored) {
             const mensajes = JSON.parse(stored) as BuzonMensaje[];
-            set({ buzonMensajes: mensajes });
-            console.log(`[BUZON PERSIST] Cargados ${mensajes.length} mensajes desde localStorage para RUC ${ruc}`);
-          } else {
-            set({ buzonMensajes: [] });
+            if (Array.isArray(mensajes) && mensajes.length > 0) {
+              set({ buzonMensajes: mensajes });
+              loadedLocal = true;
+              console.log(`[BUZON PERSIST] Cargados ${mensajes.length} mensajes desde localStorage para RUC ${ruc}`);
+            }
           }
         } catch (e) {
           console.warn('[BUZON PERSIST] Error leyendo localStorage:', e);
-          set({ buzonMensajes: [] });
+        }
+
+        // 2. Consulta y sincronización con la Base de Datos Cloud (PostgreSQL / SQLite)
+        try {
+          const electron = (window as any).electronAPI || (await import('./services/apiBridge')).webApiBridge;
+          if (electron?.dbExecute) {
+            const res = await electron.dbExecute(
+              `SELECT id, fecha, asunto, estado, tiene_adjunto, contenido FROM buzon_messages WHERE workspace_id = ?`,
+              [ruc]
+            );
+            const rows = Array.isArray(res) ? res : (res?.data || res?.result || []);
+            if (Array.isArray(rows) && rows.length > 0) {
+              const dbMensajes: BuzonMensaje[] = rows.map((r: any) => ({
+                id: r.id,
+                fecha: r.fecha || '',
+                asunto: r.asunto || '',
+                estado: r.estado === 'leido' ? 'leido' : 'no_leido',
+                tieneAdjunto: Boolean(r.tiene_adjunto || r.tieneadjunto),
+                contenido: r.contenido || undefined
+              }));
+              set({ buzonMensajes: dbMensajes });
+              localStorage.setItem(`buzon_${ruc}`, JSON.stringify(dbMensajes));
+              console.log(`[BUZON DB LOAD] Sincronizados ${dbMensajes.length} mensajes desde la Base de Datos para RUC ${ruc}`);
+            } else if (!loadedLocal) {
+              set({ buzonMensajes: [] });
+            }
+          }
+        } catch (e) {
+          console.warn('[BUZON DB LOAD ERROR]', e);
+          if (!loadedLocal) set({ buzonMensajes: [] });
         }
       },
       clearBuzonStorage: (ruc: string) => {
@@ -2814,6 +2874,14 @@ export const useStore = create<AppState>()(
           localStorage.removeItem(`buzon_${ruc}`);
           console.log(`[BUZON PERSIST] Limpiado buzón de RUC ${ruc}`);
         } catch (e) { /* silent */ }
+        (async () => {
+          try {
+            const electron = (window as any).electronAPI || (await import('./services/apiBridge')).webApiBridge;
+            if (electron?.dbExecute) {
+              await electron.dbExecute(`DELETE FROM buzon_messages WHERE workspace_id = ?`, [ruc]);
+            }
+          } catch (e) { /* silent */ }
+        })();
         set({ buzonMensajes: [] });
       },
       

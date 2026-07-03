@@ -100,7 +100,7 @@ function translateSqliteToPostgres(sql, params = []) {
         } else if (tableName === 'period_versions') {
             // period_versions tiene constraint único en workspace_id, periodo, module, user_id
             conflictColumns = 'workspace_id, periodo, module, user_id';
-        } else if (['purchases', 'sales', 'journal', 'honorarios', 'entities', 'costs', 'maintenance', 'products', 'employees', 'fixed_assets'].includes(tableName)) {
+        } else if (['purchases', 'sales', 'journal', 'honorarios', 'entities', 'costs', 'maintenance', 'products', 'employees', 'fixed_assets', 'buzon_messages'].includes(tableName)) {
             // Para otras tablas, solo ID
             conflictColumns = 'id';
         }
@@ -927,6 +927,23 @@ async function ensureSchemaConstraints() {
                         created_by TEXT,
                         user_id TEXT
                     );
+                `
+            },
+            {
+                name: 'buzon_messages',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS buzon_messages (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        fecha TEXT,
+                        asunto TEXT,
+                        estado TEXT,
+                        tiene_adjunto INTEGER DEFAULT 0,
+                        contenido TEXT,
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        user_id TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_buzon_workspace ON buzon_messages(workspace_id);
                 `
             },
             {
