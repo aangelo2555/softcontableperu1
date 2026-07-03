@@ -357,9 +357,9 @@ class SunatApiClient {
         throw new Error('El ticket fue procesado con errores en SUNAT');
       }
 
-      // Solo si se han realizado al menos 15 intentos (>=30 segs) y SUNAT no cambió el código de estado pero ya generó archivos de reporte
-      if (intento >= 15 && resultado.archivoReporte && resultado.archivoReporte.length > 0) {
-        logger.info('Ticket contiene archivos de reporte tras múltiples intentos (>=15), considerando como completado');
+      // Si se han realizado al menos 3 intentos (>=7 segs) y SUNAT no cambió el código de estado pero ya generó archivos de reporte
+      if (intento >= 3 && resultado.archivoReporte && resultado.archivoReporte.length > 0) {
+        logger.info('Ticket contiene archivos de reporte tras intentos iniciales (>=3), considerando como completado');
         return resultado;
       }
 

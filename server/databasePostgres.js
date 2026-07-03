@@ -608,6 +608,9 @@ const db = {
     saveSirePurchases: async (ruc, records, userId) => {
         if (!records || records.length === 0) return;
         return db.transaction(async (client) => {
+            // Limpiar propuestas anteriores del SIRE para este RUC para evitar acumular registros obsoletos o duplicados
+            await client.query(`DELETE FROM purchases WHERE workspace_id = $1 AND estado_sire = 'Propuesta'`, [ruc]);
+
             const chunkSize = 50;
             for (let i = 0; i < records.length; i += chunkSize) {
                 const chunk = records.slice(i, i + chunkSize);
@@ -651,6 +654,9 @@ const db = {
     saveSireSales: async (ruc, records, userId) => {
         if (!records || records.length === 0) return;
         return db.transaction(async (client) => {
+            // Limpiar propuestas anteriores del SIRE para este RUC para evitar acumular registros obsoletos o duplicados
+            await client.query(`DELETE FROM sales WHERE workspace_id = $1 AND estado_sire = 'Propuesta'`, [ruc]);
+
             const chunkSize = 50;
             for (let i = 0; i < records.length; i += chunkSize) {
                 const chunk = records.slice(i, i + chunkSize);
