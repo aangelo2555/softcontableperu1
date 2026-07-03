@@ -122,7 +122,6 @@ const BuzonView: React.FC = () => {
   };
 
   const generateSrcDoc = (content: string) => {
-// ... (rest of generateSrcDoc)
     if (!content) return '';
     const secureContent = content.replace(/http:\/\/([a-z0-9-]+\.)*sunat\.gob\.pe/g, 'https://$1sunat.gob.pe');
     return `
@@ -132,11 +131,12 @@ const BuzonView: React.FC = () => {
           <meta charset="UTF-8">
           <base href="https://ww1.sunat.gob.pe/">
           <style>
-            body { 
+            html, body { 
               background-color: #f0f2f5 !important; 
               padding: 0;
               margin: 0;
-              min-height: 100vh;
+              height: 100%;
+              overflow: auto;
             }
             .document-wrapper {
               background-color: white !important;
@@ -144,28 +144,37 @@ const BuzonView: React.FC = () => {
               width: 100%;
               margin: 0 auto;
               padding: 1rem;
-              min-height: 100vh;
+              min-height: 100%;
+              box-sizing: border-box;
               box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
               border: 1px solid #e2e8f0;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               line-height: 1.6;
+              overflow-wrap: break-word;
+              word-wrap: break-word;
             }
             img { max-width: 100%; height: auto; margin: 10px 0; }
             a { color: #2b6cb0 !important; text-decoration: underline !important; font-weight: 500; }
-            table { border-collapse: collapse; width: 100% !important; margin: 1.5rem 0; font-size: 0.85rem; }
-            th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+            table { border-collapse: collapse; width: 100% !important; max-width: 100% !important; margin: 1.5rem 0; font-size: 0.85rem; table-layout: fixed; overflow: hidden; }
+            th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; overflow: hidden; text-overflow: ellipsis; }
             th { background-color: #f7fafc; font-weight: 700; }
             .inlined-iframe-content { margin-top: 1rem; }
-            /* Estilizar los iframes embebidos de SUNAT para ocupar todo el ancho y alto visible */
+            /* Estilizar los iframes embebidos de SUNAT para no desbordar */
             iframe {
               width: 100% !important;
-              height: 680px !important;
+              max-width: 100% !important;
+              height: 500px !important;
+              max-height: 60vh !important;
               border: 1px solid #e2e8f0 !important;
               border-radius: 8px !important;
               margin-top: 10px !important;
               box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+              display: block;
             }
-            /* Scrollbar estilizada para el iframe body si fuera necesario */
+            /* Prevenir que elementos anchos desborden el contenedor */
+            * { max-width: 100%; box-sizing: border-box; }
+            pre, code { white-space: pre-wrap; word-break: break-all; }
+            /* Scrollbar estilizada */
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: #f1f5f9; }
             ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
@@ -580,12 +589,13 @@ const BuzonView: React.FC = () => {
         </div>
 
         {/* Right: Message Content */}
-        <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm p-4 ${
+        <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl shadow-sm overflow-hidden ${
           selectedMessage ? 'flex' : 'hidden md:flex'
         }`}>
             {selectedMessage ? (
-              <div className="flex flex-col h-full animate-in zoom-in-95 fade-in duration-300">
-                  <div className="mb-2 border-b border-app-border pb-2 flex justify-between items-start">
+              <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
+                  {/* Header fijo */}
+                  <div className="p-4 border-b border-app-border flex justify-between items-start shrink-0">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <button
                         onClick={() => setSelectedMessage(null)}
@@ -603,7 +613,7 @@ const BuzonView: React.FC = () => {
                         </h2>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                        <button 
                          onClick={async () => {
                            if (!activeBrowserId) return;
@@ -629,59 +639,62 @@ const BuzonView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-2">
-                    <div className="prose prose-invert max-w-none flex flex-col h-full">
-                      {loadingDetalle ? (
-                        <div className="h-full flex flex-col items-center justify-center text-pld-blue space-y-4">
-                           <Loader2 size={32} className="animate-spin" />
-                           <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
-                        </div>
-                      ) : detalleHtml || selectedMessage.contenido ? (
-                        <div className="flex-1 min-h-[350px] md:min-h-[500px] h-full bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border">
-                          <iframe 
-                            key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
-                            id="buzon-iframe"
-                            title="Contenido del Mensaje"
-                            className="w-full h-full border-none bg-white block"
-                            srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
-                            sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
-                          />
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center bg-gray-900/30 rounded-xl border border-dashed border-gray-700/50 flex flex-col items-center justify-center min-h-[300px]">
-                          <div className="bg-gray-800/50 p-3 rounded-full mb-3">
-                             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                             </svg>
-                          </div>
-                          <p className="text-gray-400 font-medium">Contenido no disponible</p>
-                          <p className="text-gray-500 text-xs mt-1">Este mensaje se encuentra en formato PDF o no tiene cuerpo de texto.</p>
-                        </div>
-                      )}
-                      
-                      <div className="mt-4 opacity-50">
-                          <h5 className="text-[9px] font-black uppercase text-pld-blue mb-2">Información de Seguridad</h5>
-                          <ul className="space-y-1">
-                            <li className="flex items-start gap-2 text-[10px]">
-                                <CheckCircle2 size={12} className="text-pld-blue shrink-0 mt-0.5" />
-                                <span>Canal de comunicación encriptado con Servidores SUNAT.</span>
-                            </li>
-                          </ul>
+                  {/* Cuerpo scrollable que contiene el iframe */}
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
+                    {loadingDetalle ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-4">
+                         <Loader2 size={32} className="animate-spin" />
+                         <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
                       </div>
-                    </div>
+                    ) : detalleHtml || selectedMessage.contenido ? (
+                      <div className="flex-1 min-h-0 bg-gray-100 dark:bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border">
+                        <iframe 
+                          key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
+                          id="buzon-iframe"
+                          title="Contenido del Mensaje"
+                          className="w-full h-full border-none bg-white block"
+                          style={{ minHeight: '300px' }}
+                          srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
+                          sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-900/30 rounded-xl border border-dashed border-gray-700/50">
+                        <div className="bg-gray-800/50 p-3 rounded-full mb-3">
+                           <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                           </svg>
+                        </div>
+                        <p className="text-gray-400 font-medium">Contenido no disponible</p>
+                        <p className="text-gray-500 text-xs mt-1">Este mensaje se encuentra en formato PDF o no tiene cuerpo de texto.</p>
+                      </div>
+                    )}
                   </div>
 
-                  {selectedMessage.tieneAdjunto && (
-                    <div className="mt-2 pt-2 border-t border-app-border">
-                        <button 
-                          onClick={() => handleDownload(selectedMessage.id)}
-                          className="w-full py-2 bg-pld-blue/10 border border-pld-blue/30 text-pld-blue font-bold uppercase tracking-widest text-[9px] rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center justify-center gap-2 active:scale-95"
-                        >
-                          <Download size={14} />
-                          Descargar Constancia / Adjunto
-                        </button>
+                  {/* Footer fijo */}
+                  <div className="shrink-0 p-4 pt-0 space-y-2">
+                    <div className="opacity-50">
+                        <h5 className="text-[9px] font-black uppercase text-pld-blue mb-1">Información de Seguridad</h5>
+                        <ul>
+                          <li className="flex items-start gap-2 text-[10px]">
+                              <CheckCircle2 size={12} className="text-pld-blue shrink-0 mt-0.5" />
+                              <span>Canal de comunicación encriptado con Servidores SUNAT.</span>
+                          </li>
+                        </ul>
                     </div>
-                  )}
+
+                    {selectedMessage.tieneAdjunto && (
+                      <div className="pt-2 border-t border-app-border">
+                          <button 
+                            onClick={() => handleDownload(selectedMessage.id)}
+                            className="w-full py-2 bg-pld-blue/10 border border-pld-blue/30 text-pld-blue font-bold uppercase tracking-widest text-[9px] rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center justify-center gap-2 active:scale-95"
+                          >
+                            <Download size={14} />
+                            Descargar Constancia / Adjunto
+                          </button>
+                      </div>
+                    )}
+                  </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-app-muted space-y-6 opacity-30">
