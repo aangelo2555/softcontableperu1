@@ -1332,9 +1332,17 @@ export const useStore = create<AppState>()(
       initApp: async () => {
         try {
           const workspaces = await electron.dbGetWorkspaces();
-          set({ workspaces: workspaces || [] });
+          const wsList = Array.isArray(workspaces) ? workspaces : [];
+          set({ workspaces: wsList });
           
-          const currentRuc = get().currentCompany?.ruc;
+          let currentRuc = get().currentCompany?.ruc;
+          // Si la empresa actual en memoria no pertenece a las empresas del usuario autenticado, auto-seleccionar la primera del usuario
+          if (wsList.length > 0 && (!currentRuc || !wsList.some((w: any) => w.ruc === currentRuc))) {
+            const firstWs = wsList[0];
+            set({ currentCompany: firstWs });
+            currentRuc = firstWs.ruc;
+          }
+
           if (currentRuc) {
             const data = await electron.dbGetWorkspaceData(currentRuc);
             if (data) {
@@ -2823,6 +2831,12 @@ export const useStore = create<AppState>()(
         }
       },
       loadBuzonFromStorage: async (ruc: string) => {
+        if (!ruc) return;
+        const isElectron = !!(window as any).electronAPI;
+        const token = localStorage.getItem('softcontable_token');
+        // No realizar llamadas HTTP si no hay token de autenticación (en pantalla de login)
+        if (!isElectron && !token) return;
+
         // 1. Carga ultra rápida de localStorage si está disponible
         let loadedLocal = false;
         try {

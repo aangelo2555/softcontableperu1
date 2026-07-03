@@ -460,6 +460,7 @@ const App: React.FC = () => {
   const previousRucRef = useRef<string | null>(null);
   
   useEffect(() => {
+    if (!isLoggedIn) return;
     const ruc = currentCompany.ruc;
     if (!ruc) return;
 
