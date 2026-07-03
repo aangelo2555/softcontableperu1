@@ -1234,12 +1234,24 @@ async function ensureSchemaConstraints() {
                         product_id TEXT,
                         fecha TEXT,
                         tipo TEXT,
+                        tipo_operacion TEXT,
+                        tipo_doc TEXT,
+                        serie TEXT,
+                        numero TEXT,
                         cantidad NUMERIC DEFAULT 0,
                         costo_unitario NUMERIC DEFAULT 0,
+                        cantidad_in NUMERIC DEFAULT 0,
+                        costo_unit_in NUMERIC DEFAULT 0,
+                        total_in NUMERIC DEFAULT 0,
+                        cantidad_out NUMERIC DEFAULT 0,
+                        costo_unit_out NUMERIC DEFAULT 0,
+                        total_out NUMERIC DEFAULT 0,
+                        reference_id TEXT,
                         user_id TEXT NOT NULL
                     );
                     CREATE INDEX IF NOT EXISTS idx_inventory_workspace ON inventory_movements(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_inventory_user ON inventory_movements(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_inventory_ref ON inventory_movements(reference_id);
                 `
             },
             {
@@ -1431,8 +1443,31 @@ async function ensureSchemaConstraints() {
         for (const table of tables) {
             await pool.query(table.schema);
         }
+
+        const alterStatements = [
+            `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
+            `ALTER TABLE sales ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_id TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_operacion TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_doc TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS serie TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS numero TEXT;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS cantidad_in NUMERIC DEFAULT 0;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS costo_unit_in NUMERIC DEFAULT 0;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_in NUMERIC DEFAULT 0;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS cantidad_out NUMERIC DEFAULT 0;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS costo_unit_out NUMERIC DEFAULT 0;`,
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_out NUMERIC DEFAULT 0;`
+        ];
+        for (const stmt of alterStatements) {
+            try {
+                await pool.query(stmt);
+            } catch (e) {
+                // Ignorar si la columna ya existe
+            }
+        }
         
-        console.log('[POSTGRES] ✅ Schema y constraints verificados');
+        console.log('[POSTGRES] ✅ Schema, columnas y constraints verificados');
     } catch (error) {
         console.error('[POSTGRES] Error verificando constraints:', error.message);
     }
