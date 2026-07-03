@@ -4,9 +4,6 @@ import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, 
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 
-// Cache global persistente que sobrevive al desmontaje del componente (navegación por pestañas)
-const globalBuzonCache: Record<string, string> = {};
-
 // Registro global de procesos de sincronización activos por RUC para mantener el estado al cambiar de pestaña
 interface SyncState {
   loading: boolean;
@@ -18,7 +15,7 @@ const globalSyncListeners: Record<string, (state: SyncState) => void> = {};
 
 const BuzonView: React.FC = () => {
   const isElectron = !!(window as any).electronAPI;
-  const { workspaces, currentCompany, buzonMensajes, setBuzonMensajes, markBuzonMensajeAsRead } = useStore();
+  const { workspaces, currentCompany, buzonMensajes, setBuzonMensajes, markBuzonMensajeAsRead, clearBuzonStorage, loadBuzonFromStorage } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
@@ -44,13 +41,13 @@ const BuzonView: React.FC = () => {
 
 
 
-  // Sincronizar activeBrowserId cuando cambia selectedRuc
+  // Sincronizar activeBrowserId y cargar buzón persistido cuando cambia selectedRuc
   useEffect(() => {
     const savedId = sessionStorage.getItem(`activeBuzonBrowserId_${selectedRuc}`);
     setActiveBrowserId(savedId);
     
-    // 🔧 FIX: Solo limpiar estado local al cambiar de empresa
-    // NO limpiar buzonMensajes porque el auto-sync global los cargará
+    // Cargar mensajes persistidos para la empresa seleccionada
+    loadBuzonFromStorage(selectedRuc);
     console.log('[BUZON] Cambiando a empresa:', selectedRuc);
     setSelectedMessage(null); // Limpiar mensaje seleccionado
     setDetalleHtml(null); // Limpiar detalle
@@ -108,14 +105,12 @@ const BuzonView: React.FC = () => {
       if ((window as any).electronAPI?.buzonCerrarTodas) {
         await (window as any).electronAPI.buzonCerrarTodas();
       }
-      setBuzonMensajes([]);
+      clearBuzonStorage(selectedRuc);
       setSelectedMessage(null);
       setDetalleHtml(null);
       updateBrowserId(null);
       setStatusText('');
       setError(null);
-      // Limpiar caché global de notificaciones
-      Object.keys(globalBuzonCache).forEach(key => delete globalBuzonCache[key]);
     } catch (e) {
       console.error("Error al cerrar sesión:", e);
     }
@@ -210,8 +205,8 @@ const BuzonView: React.FC = () => {
 
   useEffect(() => {
     if (selectedMessage) {
-      if (globalBuzonCache[selectedMessage.id]) {
-        setDetalleHtml(globalBuzonCache[selectedMessage.id]);
+      if (selectedMessage.contenido) {
+        setDetalleHtml(selectedMessage.contenido);
         setLoadingDetalle(false);
         return;
       }
@@ -227,11 +222,11 @@ const BuzonView: React.FC = () => {
             });
             if (res.success && res.html) {
               setDetalleHtml(res.html);
-              globalBuzonCache[selectedMessage.id] = res.html;
+              const updated = buzonMensajes.map(m => m.id === selectedMessage.id ? { ...m, contenido: res.html } : m);
+              setBuzonMensajes(updated, selectedRuc);
             } else {
               const fallback = selectedMessage.contenido || '<center style="padding:20px;color:#d32f2f">No se pudo extraer el contenido HTML de este mensaje.</center>';
               setDetalleHtml(fallback);
-              globalBuzonCache[selectedMessage.id] = fallback;
             }
           } catch (e) {
             console.error("Error extrayendo HTML:", e);
@@ -274,7 +269,7 @@ const BuzonView: React.FC = () => {
         });
         
         if (result.success) {
-           setBuzonMensajes(result.mensajes);
+           setBuzonMensajes(result.mensajes, ruc);
            updateBrowserId(result.browserId);
            setSyncState(ruc, { loading: false, statusText: 'Sincronización finalizada correctamente' });
            toast.success('Buzón actualizado');
@@ -289,7 +284,7 @@ const BuzonView: React.FC = () => {
             setBuzonMensajes([
               { id: '900001', asunto: 'Resolución de Intendencia N° 023-2026', fecha: '28/03/2026', tieneAdjunto: true, estado: 'no_leido' },
               { id: '900002', asunto: 'Notificación de Orden de Pago', fecha: '25/03/2026', tieneAdjunto: true, estado: 'leido' }
-            ]);
+            ], ruc);
             setSyncState(ruc, { loading: false, statusText: '' });
           }, 1500);
         } else {
@@ -624,7 +619,8 @@ const BuzonView: React.FC = () => {
                            });
                            if (res.success && res.html) {
                              setDetalleHtml(res.html);
-                             globalBuzonCache[selectedMessage.id] = res.html;
+                             const updated = buzonMensajes.map(m => m.id === selectedMessage.id ? { ...m, contenido: res.html } : m);
+                             setBuzonMensajes(updated, selectedRuc);
                            }
                            setLoadingDetalle(false);
                          }}

@@ -373,6 +373,7 @@ export interface BuzonMensaje {
   fecha: string;
   tieneAdjunto: boolean;
   estado: 'no_leido' | 'leido';
+  contenido?: string; // HTML body del mensaje, persistido para no requerir re-fetch
   anexos?: { id: string; nombre: string }[];
 }
 
@@ -499,8 +500,10 @@ export interface AppState extends WorkspaceState {
   syncCurrentWorkspace: () => Promise<void>;
   restoreBackup: (data: any) => Promise<void>;
   dbExecute: (sql: string, params?: any[]) => Promise<any>;
-  setBuzonMensajes: (mensajes: BuzonMensaje[]) => void;
+  setBuzonMensajes: (mensajes: BuzonMensaje[], ruc?: string) => void;
   markBuzonMensajeAsRead: (id: string) => void;
+  loadBuzonFromStorage: (ruc: string) => void;
+  clearBuzonStorage: (ruc: string) => void;
   centralizeSireRecords: (ruc: string, records: any[], proceso: string) => Promise<void>;
   syncMaintenance: () => Promise<void>;
   
@@ -2767,10 +2770,52 @@ export const useStore = create<AppState>()(
         await get().syncCurrentWorkspace();
       },
 
-      setBuzonMensajes: (mensajes) => set({ buzonMensajes: mensajes }),
-      markBuzonMensajeAsRead: (id) => set((s) => ({
-        buzonMensajes: s.buzonMensajes.map(m => m.id === id ? { ...m, estado: 'leido' } : m)
-      })),
+      setBuzonMensajes: (mensajes, ruc) => {
+        set({ buzonMensajes: mensajes });
+        // Persistir en localStorage por RUC
+        const targetRuc = ruc || get().currentCompany?.ruc;
+        if (targetRuc) {
+          try {
+            localStorage.setItem(`buzon_${targetRuc}`, JSON.stringify(mensajes));
+            console.log(`[BUZON PERSIST] Guardados ${mensajes.length} mensajes para RUC ${targetRuc}`);
+          } catch (e) {
+            console.warn('[BUZON PERSIST] Error guardando en localStorage:', e);
+          }
+        }
+      },
+      markBuzonMensajeAsRead: (id) => {
+        const updated = get().buzonMensajes.map(m => m.id === id ? { ...m, estado: 'leido' as const } : m);
+        set({ buzonMensajes: updated });
+        // Persistir cambio de estado
+        const ruc = get().currentCompany?.ruc;
+        if (ruc) {
+          try {
+            localStorage.setItem(`buzon_${ruc}`, JSON.stringify(updated));
+          } catch (e) { /* silent */ }
+        }
+      },
+      loadBuzonFromStorage: (ruc: string) => {
+        try {
+          const stored = localStorage.getItem(`buzon_${ruc}`);
+          if (stored) {
+            const mensajes = JSON.parse(stored) as BuzonMensaje[];
+            set({ buzonMensajes: mensajes });
+            console.log(`[BUZON PERSIST] Cargados ${mensajes.length} mensajes desde localStorage para RUC ${ruc}`);
+          } else {
+            set({ buzonMensajes: [] });
+          }
+        } catch (e) {
+          console.warn('[BUZON PERSIST] Error leyendo localStorage:', e);
+          set({ buzonMensajes: [] });
+        }
+      },
+      clearBuzonStorage: (ruc: string) => {
+        try {
+          localStorage.removeItem(`buzon_${ruc}`);
+          console.log(`[BUZON PERSIST] Limpiado buzón de RUC ${ruc}`);
+        } catch (e) { /* silent */ }
+        set({ buzonMensajes: [] });
+      },
       
       syncMaintenance: async () => {
         const ruc = get().currentCompany?.ruc || '';

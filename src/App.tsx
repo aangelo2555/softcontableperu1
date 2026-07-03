@@ -455,86 +455,69 @@ const App: React.FC = () => {
   }, [activeTab, currentCompany, setActiveTab]);
 
   // ✨ AUTO-SINCRONIZACIÓN GLOBAL DEL BUZÓN
-  // Se ejecuta automáticamente cuando se selecciona una empresa con credenciales SOL
-  // Solo funciona en Desktop (Electron), throttling inteligente
+  // Carga mensajes persistidos en localStorage al iniciar.
+  // Solo ejecuta sync real cuando NO hay datos persistidos o al cambiar de empresa.
   const previousRucRef = useRef<string | null>(null);
   
   useEffect(() => {
-    const autoSyncBuzon = async () => {
-      // Solo en entorno Desktop (Electron)
-      const isElectron = !!(window as any).electronAPI;
-      if (!isElectron) {
-        return;
-      }
+    const ruc = currentCompany.ruc;
+    if (!ruc) return;
 
-      // Verificar que hay credenciales SOL válidas
-      const hasCredentials = currentCompany.sol_user && currentCompany.sol_pass;
-      if (!hasCredentials) {
-        return;
-      }
+    const isExplicitChange = previousRucRef.current !== null && 
+                             previousRucRef.current !== ruc;
+    previousRucRef.current = ruc;
 
-      // 🔧 FIX: Detectar si es un CAMBIO EXPLÍCITO de empresa
-      const isExplicitChange = previousRucRef.current !== null && 
-                               previousRucRef.current !== currentCompany.ruc;
-      
-      // Actualizar el ref con el RUC actual
-      previousRucRef.current = currentCompany.ruc;
+    // 1. Cargar buzón persistido desde localStorage para esta empresa
+    useStore.getState().loadBuzonFromStorage(ruc);
 
-      // Throttling: máximo 1 vez cada 10 minutos por empresa
-      // PERO: Omitir throttling si es un cambio explícito de empresa
-      const lastSyncKey = `lastBuzonSync_${currentCompany.ruc}`;
-      const lastSync = localStorage.getItem(lastSyncKey);
-      const now = Date.now();
-      
-      if (lastSync && !isExplicitChange) {
-        const elapsed = now - parseInt(lastSync);
-        const THROTTLE_MS = 10 * 60 * 1000; // 10 minutos
-        
-        if (elapsed < THROTTLE_MS) {
-          const remainingMin = Math.ceil((THROTTLE_MS - elapsed) / 60000);
-          console.log(`[AUTO SYNC GLOBAL] Throttling activo para ${currentCompany.ruc}. Próxima sync en ${remainingMin} min`);
-          console.log('[AUTO SYNC GLOBAL] 💡 Mostrando mensajes del caché local si existen');
-          return;
-        }
-      }
+    // 2. Si NO hay datos persistidos O es un cambio explícito de empresa → hacer sync
+    const stored = localStorage.getItem(`buzon_${ruc}`);
+    const hasStoredMessages = stored && JSON.parse(stored).length > 0;
 
-      // Mensaje especial si es cambio explícito
-      if (isExplicitChange) {
-        console.log(`[AUTO SYNC GLOBAL] 🔄 Cambio de empresa detectado. Omitiendo throttling...`);
-      }
+    if (hasStoredMessages && !isExplicitChange) {
+      console.log(`[AUTO SYNC GLOBAL] ✅ Buzón cargado desde almacenamiento local: ${JSON.parse(stored!).length} mensajes`);
+      return; // Ya tenemos datos, no necesitamos sincronizar
+    }
 
-      // Ejecutar auto-sincronización
-      console.log('[AUTO SYNC GLOBAL] Iniciando auto-sincronización para', currentCompany.ruc);
-      localStorage.setItem(lastSyncKey, now.toString());
-      
-      // Esperar 1 segundo antes de sincronizar (reducido de 2s)
-      setTimeout(async () => {
-        try {
-          if ((window as any).electronAPI?.buzonConsultar) {
-            const result = await (window as any).electronAPI.buzonConsultar({
-              ruc: currentCompany.ruc,
-              usuario: currentCompany.sol_user,
-              clave: currentCompany.sol_pass,
-              empresa: currentCompany.name,
-              email: ''
-            });
-            
-            if (result.success) {
-              // Actualizar el store con los mensajes sincronizados
-              useStore.getState().setBuzonMensajes(result.mensajes);
-              console.log(`[AUTO SYNC GLOBAL] ✅ Buzón sincronizado: ${result.mensajes.length} mensajes`);
-            } else {
-              console.log('[AUTO SYNC GLOBAL] ❌ Error:', result.error);
-            }
+    // Solo sincronizar en Desktop (Electron) con credenciales SOL
+    const isElectron = !!(window as any).electronAPI;
+    if (!isElectron) return;
+
+    const hasCredentials = currentCompany.sol_user && currentCompany.sol_pass;
+    if (!hasCredentials) return;
+
+    if (isExplicitChange) {
+      console.log(`[AUTO SYNC GLOBAL] 🔄 Cambio de empresa detectado → sincronizando buzón para ${ruc}`);
+    } else {
+      console.log(`[AUTO SYNC GLOBAL] 📭 Sin datos persistidos → sincronizando buzón para ${ruc}`);
+    }
+
+    // Ejecutar auto-sincronización con retardo breve
+    const timeoutId = setTimeout(async () => {
+      try {
+        if ((window as any).electronAPI?.buzonConsultar) {
+          const result = await (window as any).electronAPI.buzonConsultar({
+            ruc: currentCompany.ruc,
+            usuario: currentCompany.sol_user,
+            clave: currentCompany.sol_pass,
+            empresa: currentCompany.name,
+            email: ''
+          });
+          
+          if (result.success) {
+            useStore.getState().setBuzonMensajes(result.mensajes, ruc);
+            console.log(`[AUTO SYNC GLOBAL] ✅ Buzón sincronizado y persistido: ${result.mensajes.length} mensajes`);
+          } else {
+            console.log('[AUTO SYNC GLOBAL] ❌ Error:', result.error);
           }
-        } catch (error) {
-          console.error('[AUTO SYNC GLOBAL] Error en sincronización:', error);
         }
-      }, 1000); // Reducido de 2000ms a 1000ms
-    };
+      } catch (error) {
+        console.error('[AUTO SYNC GLOBAL] Error en sincronización:', error);
+      }
+    }, 1000);
 
-    autoSyncBuzon();
-  }, [currentCompany.ruc, currentCompany.sol_user, currentCompany.sol_pass]); // Se ejecuta cuando cambia la empresa o sus credenciales
+    return () => clearTimeout(timeoutId);
+  }, [currentCompany.ruc, currentCompany.sol_user, currentCompany.sol_pass]);
 
 
   const handleBackup = async () => {
