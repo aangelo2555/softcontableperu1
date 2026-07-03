@@ -1709,33 +1709,47 @@ app.post('/api/sire/generar-archivo', async (req, res) => {
 
 app.get('/api/sire/archivos', async (req, res) => {
     try {
-        const outputDir = sireDir;
-        if (!fs.existsSync(outputDir)) {
-            return res.json({ archivos: [] });
+        const ruc = req.query.ruc || req.query.workspace_id;
+        const targetUserId = req.targetUserId;
+        
+        let dbFiles = [];
+        if (db.getSireFiles && ruc) {
+            dbFiles = await db.getSireFiles(ruc, targetUserId);
         }
-        
-        let allFiles = [];
-        const walk = (dir) => {
-            if (!fs.existsSync(dir)) return;
-            const files = fs.readdirSync(dir);
-            files.forEach(file => {
-                const fullPath = path.join(dir, file);
-                if (fs.statSync(fullPath).isDirectory()) {
-                    walk(fullPath);
-                } else if (file.endsWith('.xlsx') || file.endsWith('.zip') || file.endsWith('.txt')) {
-                    const stats = fs.statSync(fullPath);
-                    allFiles.push({
-                        nombre: file,
-                        fecha: stats.mtime.toLocaleString('es-PE'),
-                        fullPath: fullPath,
-                        size: stats.size
-                    });
-                }
-            });
-        };
-        
-        walk(outputDir);
-        res.json({ archivos: allFiles.sort((a, b) => b.fecha.localeCompare(a.fecha)) });
+
+        let localFiles = [];
+        const outputDir = sireDir;
+        if (fs.existsSync(outputDir)) {
+            const walk = (dir) => {
+                if (!fs.existsSync(dir)) return;
+                const files = fs.readdirSync(dir);
+                files.forEach(file => {
+                    const fullPath = path.join(dir, file);
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        walk(fullPath);
+                    } else if (file.endsWith('.xlsx') || file.endsWith('.zip') || file.endsWith('.txt')) {
+                        if (!ruc || file.toUpperCase().includes(ruc.toUpperCase())) {
+                            const stats = fs.statSync(fullPath);
+                            localFiles.push({
+                                id: file,
+                                nombre: file,
+                                fecha: stats.mtime.toLocaleString('es-PE'),
+                                fullPath: fullPath,
+                                size: stats.size
+                            });
+                        }
+                    }
+                });
+            };
+            walk(outputDir);
+        }
+
+        const map = new Map();
+        localFiles.forEach(f => map.set(f.nombre, f));
+        dbFiles.forEach(f => map.set(f.nombre, f));
+
+        const allFiles = Array.from(map.values()).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+        res.json({ archivos: allFiles });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1744,8 +1758,14 @@ app.get('/api/sire/archivos', async (req, res) => {
 app.delete('/api/sire/archivos/:nombre', async (req, res) => {
     try {
         const nombre = req.params.nombre;
-        const outputDir = sireDir;
+        const ruc = req.query.ruc || req.body?.ruc;
+        const targetUserId = req.targetUserId;
         
+        if (db.deleteSireFile && ruc) {
+            await db.deleteSireFile(nombre, ruc, targetUserId);
+        }
+
+        const outputDir = sireDir;
         const findFile = (dir, target) => {
             if (!fs.existsSync(dir)) return null;
             const files = fs.readdirSync(dir);
@@ -1764,15 +1784,8 @@ app.delete('/api/sire/archivos/:nombre', async (req, res) => {
         const filePath = findFile(outputDir, nombre);
         if (filePath) {
             fs.unlinkSync(filePath);
-            if (nombre.endsWith('.txt')) {
-                const zipPath = filePath.replace('.txt', '.zip');
-                if (fs.existsSync(zipPath)) {
-                    fs.unlinkSync(zipPath);
-                }
-            }
-            return res.json({ success: true });
         }
-        res.status(404).json({ success: false, error: 'Archivo no encontrado' });
+        return res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1781,8 +1794,22 @@ app.delete('/api/sire/archivos/:nombre', async (req, res) => {
 app.get('/api/sire/archivos/:nombre/descargar', async (req, res) => {
     try {
         const nombre = req.params.nombre;
+        const ruc = req.query.ruc || req.query.workspace_id;
+        const targetUserId = req.targetUserId;
+
+        // 1. Intentar servir desde PostgreSQL si existe
+        if (db.getSireFileContent && ruc) {
+            const dbFile = await db.getSireFileContent(nombre, ruc, targetUserId);
+            if (dbFile && dbFile.content_base64) {
+                const buffer = Buffer.from(dbFile.content_base64, 'base64');
+                res.setHeader('Content-Type', nombre.endsWith('.zip') ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename="${nombre}"`);
+                return res.send(buffer);
+            }
+        }
+
+        // 2. Fallback a disco local
         const outputDir = sireDir;
-        
         const findFile = (dir, target) => {
             if (!fs.existsSync(dir)) return null;
             const files = fs.readdirSync(dir);
@@ -1800,10 +1827,10 @@ app.get('/api/sire/archivos/:nombre/descargar', async (req, res) => {
 
         const filePath = findFile(outputDir, nombre);
         if (filePath) {
-            res.download(filePath, nombre);
-        } else {
-            res.status(404).json({ success: false, error: 'Archivo no encontrado' });
+            return res.download(filePath, nombre);
         }
+
+        res.status(404).json({ success: false, error: 'Archivo no encontrado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

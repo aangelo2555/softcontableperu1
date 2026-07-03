@@ -693,6 +693,70 @@ const db = {
                 await client.query(sql, values);
             }
         });
+    },
+
+    // --- Persistencia Cloud de Archivos SIRE (ZIP/XLSX/TXT) ---
+    saveSireFile: async (ruc, userId, fileData) => {
+        const id = fileData.id || `${ruc}_${fileData.nombre}`;
+        const fecha = fileData.fecha || new Date().toLocaleString('es-PE');
+        const sql = `
+            INSERT INTO sire_files (id, workspace_id, user_id, nombre, periodo, proceso, fecha, size_bytes, content_base64)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (id) DO UPDATE SET
+                fecha = EXCLUDED.fecha,
+                size_bytes = EXCLUDED.size_bytes,
+                content_base64 = EXCLUDED.content_base64;
+        `;
+        await query(sql, [
+            id,
+            ruc,
+            userId || 'SYSTEM',
+            fileData.nombre,
+            fileData.periodo || '',
+            fileData.proceso || '',
+            fecha,
+            fileData.size || fileData.size_bytes || 0,
+            fileData.content_base64
+        ]);
+        return { success: true, id };
+    },
+
+    getSireFiles: async (ruc, userId) => {
+        const sql = `
+            SELECT id, workspace_id, nombre, periodo, proceso, fecha, size_bytes as size
+            FROM sire_files
+            WHERE workspace_id = $1 AND (user_id = $2 OR user_id = 'SYSTEM')
+            ORDER BY created_at DESC
+        `;
+        const res = await query(sql, [ruc, userId]);
+        return res.rows.map(r => ({
+            id: r.id,
+            nombre: r.nombre,
+            fecha: r.fecha,
+            size: Number(r.size || 0),
+            periodo: r.periodo,
+            proceso: r.proceso
+        }));
+    },
+
+    getSireFileContent: async (nombreOrId, ruc, userId) => {
+        const sql = `
+            SELECT content_base64, nombre
+            FROM sire_files
+            WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
+            LIMIT 1
+        `;
+        const res = await query(sql, [nombreOrId, ruc]);
+        return res.rows[0] || null;
+    },
+
+    deleteSireFile: async (nombreOrId, ruc, userId) => {
+        const sql = `
+            DELETE FROM sire_files
+            WHERE (id = $1 OR nombre = $1) AND workspace_id = $2
+        `;
+        await query(sql, [nombreOrId, ruc]);
+        return { success: true };
     }
 };
 
@@ -1035,6 +1099,26 @@ async function ensureSchemaConstraints() {
                         user_id TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_buzon_workspace ON buzon_messages(workspace_id);
+                `
+            },
+            {
+                name: 'sire_files',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS sire_files (
+                        id TEXT PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        nombre TEXT NOT NULL,
+                        periodo TEXT,
+                        proceso TEXT,
+                        fecha TEXT,
+                        size_bytes BIGINT DEFAULT 0,
+                        content_base64 TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_sire_files_ws ON sire_files(workspace_id, user_id);
+                    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS periodo_sire TEXT;
+                    ALTER TABLE sales ADD COLUMN IF NOT EXISTS periodo_sire TEXT;
                 `
             },
             {

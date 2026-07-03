@@ -61,16 +61,23 @@ const SireView: React.FC = () => {
     const allDocLocal = (proceso === 'Generar RCE' ? purchases : sales) as (PurchaseEntry | SaleEntry)[];
     
     // Filtrar por periodo (la fecha está en YYYY-MM-DD)
-    // Agregamos HELPER para comparación de fechas robusta
-    const isSamePeriod = (dateStr: string) => {
+    // Agregamos HELPER para comparación de fechas y período SIRE robusta
+    const isSamePeriod = (d: any) => {
+      if (!d) return false;
+      const explicitPeriod = d.periodo_sire || d.periodo;
+      if (explicitPeriod) {
+        const cleanP = String(explicitPeriod).replace('-', '');
+        const targetP = `${periodoAnio}${monthStr}`;
+        if (cleanP === targetP) return true;
+      }
+      
+      const dateStr = typeof d === 'string' ? d : d.fecha;
       if (!dateStr) return false;
-      // Formato YYYY-MM-DD o DD/MM/YYYY
       if (dateStr.includes('-')) {
         const [y, m] = dateStr.split('-');
         return y === String(periodoAnio) && m === monthStr;
       } else if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
-        // Puede ser DD/MM/YYYY o YYYY/MM/DD
         if (parts[0].length === 4) return parts[0] === String(periodoAnio) && parts[1] === monthStr;
         return parts[2] === String(periodoAnio) && parts[1] === monthStr;
       }
@@ -78,8 +85,8 @@ const SireView: React.FC = () => {
     };
     
     // Filtrar por periodo con la nueva lógica
-    const localInPeriod = allDocLocal.filter(d => isSamePeriod(d.fecha) && (d.estado_sire === 'Local' || d.estado_sire === 'Aceptado'));
-    const sunatInPeriod = allDocLocal.filter(d => isSamePeriod(d.fecha) && d.estado_sire === 'Propuesta');
+    const localInPeriod = allDocLocal.filter(d => isSamePeriod(d) && (d.estado_sire === 'Local' || d.estado_sire === 'Aceptado'));
+    const sunatInPeriod = allDocLocal.filter(d => isSamePeriod(d) && d.estado_sire === 'Propuesta');
 
     const result: any[] = [];
     const matchedLocalIds = new Set();
@@ -181,7 +188,7 @@ const SireView: React.FC = () => {
       // Usar API en web, Electron en desktop
       const docs = electron
         ? await electron.listarArchivosSire()
-        : await api.get('/sire/archivos', { params: { ruc: currentCompany.ruc } }).then((r: any) => r.data);
+        : await api.get('/sire/archivos', { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data.archivos || r.data);
       if (Array.isArray(docs)) setArchivos(docs);
     } catch (error) {
       console.error("Error cargando archivos:", error);
@@ -365,19 +372,47 @@ const SireView: React.FC = () => {
   };
 
   const handleDeleteArchivo = async (nombre: string) => {
-    if (!electron) return;
     if (!window.confirm(`¿Estás seguro de que deseas eliminar el archivo ${nombre}?`)) return;
     
     try {
-      const result = await electron.eliminarArchivoSire(nombre);
+      const result = electron 
+        ? await electron.eliminarArchivoSire(nombre)
+        : await api.delete(`/sire/archivos/${encodeURIComponent(nombre)}`, { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data);
+
       if (result.success) {
         toast.success('Archivo eliminado correctamente.');
         loadArchivos();
       } else {
-        toast.error(`Error: ${result.error}`);
+        toast.error(`Error: ${result.error || 'No se pudo eliminar'}`);
       }
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDescargarArchivo = async (nombre: string) => {
+    try {
+      if (electron) {
+        await electron.abrirArchivoSire(nombre);
+        return;
+      }
+      
+      const response = await api.get(`/sire/archivos/${encodeURIComponent(nombre)}/descargar`, {
+        params: { ruc: currentCompany?.ruc },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', nombre);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Descargando ${nombre}...`);
+    } catch (error: any) {
+      toast.error(`Error al descargar: ${error.message}`);
     }
   };
 
@@ -948,7 +983,7 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => electron.abrirArchivoSire(file.nombre)}
+                      onClick={() => handleDescargarArchivo(file.nombre)}
                       className="p-1.5 text-app-muted hover:text-emerald-500 bg-app-surface rounded-md border border-app-border transition-all"
                       title="Abrir/Descargar"
                     >

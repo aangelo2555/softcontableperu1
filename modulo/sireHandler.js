@@ -78,9 +78,27 @@ class SireHandler {
       if (resultado.success) {
         // Persistir en Base de Datos si hay registros
         if (resultado.datosRaw && resultado.datosRaw.data.length > 0) {
-          await this.persistirRegistrosSire(ruc, proceso, resultado.datosRaw, datos.userId);
+          await this.persistirRegistrosSire(ruc, proceso, resultado.datosRaw, datos.userId, periodoInicio);
         }
         
+        // Persistir archivo Excel en PostgreSQL sire_files
+        if (resultado.excelPath && fs.existsSync(resultado.excelPath) && this.db.saveSireFile) {
+          try {
+            const excelBuffer = fs.readFileSync(resultado.excelPath);
+            const fileName = path.basename(resultado.excelPath);
+            await this.db.saveSireFile(ruc, datos.userId, {
+              nombre: fileName,
+              periodo: String(periodoInicio),
+              proceso: proceso,
+              size: excelBuffer.length,
+              content_base64: excelBuffer.toString('base64')
+            });
+            logger.info(`Archivo ${fileName} persistido en PostgreSQL sire_files`);
+          } catch (e) {
+            logger.warn('Error guardando archivo Excel en PostgreSQL:', e);
+          }
+        }
+
         if (resultado.excelPath) {
           // Abrir Excel automáticamente (opcional, mantenemos por compatibilidad)
           await this.orchestrator.abrirExcelGenerado(resultado.excelPath);
@@ -101,10 +119,14 @@ class SireHandler {
   /**
    * Persiste los registros descargados del SIRE en la base de datos local
    */
-  async persistirRegistrosSire(ruc, proceso, datosRaw, userId) {
+  async persistirRegistrosSire(ruc, proceso, datosRaw, userId, periodo) {
     try {
       const { headers, data } = datosRaw;
-      
+      const strPeriodo = String(periodo || '');
+      const normalizedPeriod = strPeriodo.includes('-')
+        ? strPeriodo
+        : (strPeriodo.length === 6 ? `${strPeriodo.slice(0, 4)}-${strPeriodo.slice(4)}` : strPeriodo);
+
       const parseNum = (val) => {
         if (!val) return 0;
         // Limpiar símbolos de moneda y separadores de miles
@@ -131,6 +153,7 @@ class SireHandler {
           // Ventas (RVIE)
           return {
             id,
+            periodo_sire: normalizedPeriod,
             registro: 'SIRE',
             fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
             fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
@@ -155,6 +178,7 @@ class SireHandler {
           // Compras (RCE)
           return {
             id,
+            periodo_sire: normalizedPeriod,
             registro: 'SIRE',
             fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
             fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
