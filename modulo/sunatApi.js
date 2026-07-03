@@ -68,6 +68,22 @@ class SunatApiClient {
   }
 
   /**
+   * Extrae el número de ticket de una respuesta de error SUNAT (ej. error 42209 proceso en curso)
+   */
+  extraerTicketDeError(error) {
+    const errorData = error.response?.data;
+    if (!errorData) return null;
+
+    const errorStr = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+    const match = errorStr.match(/Ticket:\s*(\d+)/i) || errorStr.match(/numTicket["']?:\s*["']?(\d+)/i);
+    
+    if (match && match[1]) {
+      return match[1];
+    }
+    return null;
+  }
+
+  /**
    * Descarga propuesta de Registro de Compras Electrónico (RCE)
    */
   async descargarPropuestaCompras(periodo) {
@@ -100,6 +116,16 @@ class SunatApiClient {
       throw new Error('No se recibió número de ticket');
 
     } catch (error) {
+      const ticketExistente = this.extraerTicketDeError(error);
+      if (ticketExistente) {
+        logger.info('Se detectó ticket de propuesta RCE en curso en SUNAT', { numTicket: ticketExistente });
+        return {
+          success: true,
+          numTicket: ticketExistente,
+          ticketExistente: true
+        };
+      }
+
       logger.error('Error al descargar propuesta RCE', {
         error: error.message,
         response: error.response?.data
@@ -144,6 +170,16 @@ class SunatApiClient {
       throw new Error('No se recibió número de ticket');
 
     } catch (error) {
+      const ticketExistente = this.extraerTicketDeError(error);
+      if (ticketExistente) {
+        logger.info('Se detectó ticket de propuesta RVIE en curso en SUNAT', { numTicket: ticketExistente });
+        return {
+          success: true,
+          numTicket: ticketExistente,
+          ticketExistente: true
+        };
+      }
+
       logger.error('Error al descargar propuesta RVIE', {
         error: error.message,
         response: error.response?.data
