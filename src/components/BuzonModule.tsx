@@ -132,16 +132,19 @@ const BuzonView: React.FC = () => {
               padding: 0;
               margin: 0;
               height: 100%;
-              min-height: 100%;
-              overflow: auto;
+              width: 100%;
+              overflow-y: auto !important;
+              overflow-x: auto !important;
+              -webkit-overflow-scrolling: touch;
             }
             .document-wrapper {
               background-color: white !important;
               color: #1a202c !important; 
               width: 100%;
-              margin: 0 auto;
-              padding: 0.5rem;
+              max-width: 100%;
               min-height: 100%;
+              margin: 0 auto;
+              padding: 10px;
               box-sizing: border-box;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               line-height: 1.5;
@@ -154,17 +157,17 @@ const BuzonView: React.FC = () => {
             th, td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
             th { background-color: #f7fafc; font-weight: 700; }
             .inlined-iframe-content { margin-top: 0.5rem; }
-            /* Estilizar los iframes embebidos de SUNAT para expandirse totalmente */
+            /* Estilizar los iframes embebidos de SUNAT para permitir desplazamiento vertical continuo */
             iframe {
               width: 100% !important;
               max-width: 100% !important;
-              min-height: 700px !important;
+              min-height: 480px !important;
               height: 100% !important;
-              max-height: none !important;
               border: 1px solid #e2e8f0 !important;
               border-radius: 6px !important;
               margin-top: 5px !important;
               display: block;
+              overflow-y: auto !important;
             }
             /* Prevenir que elementos anchos desborden el contenedor */
             * { max-width: 100%; box-sizing: border-box; }
@@ -448,24 +451,24 @@ const BuzonView: React.FC = () => {
                 <span className="text-[9px] text-app-muted font-mono bg-app-bg px-2 py-0.5 rounded border border-app-border shrink-0">RUC: {selectedRuc}</span>
               </div>
               
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="relative w-36 sm:w-52">
-                  <span className="absolute top-1/2 -translate-y-1/2 text-app-muted left-2">
-                    <Search size={11} />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="relative w-24 sm:w-32 lg:w-36">
+                  <span className="absolute top-1/2 -translate-y-1/2 text-app-muted left-1.5 pointer-events-none">
+                    <Search size={10} />
                   </span>
                   <input
                     type="text"
-                    placeholder="BUSCAR RUC / CLIENTE..."
+                    placeholder="BUSCAR..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-app-bg hover:bg-app-hover border border-app-border rounded-lg pl-6 pr-2 py-1 text-[9px] font-bold uppercase text-app-text outline-none focus:border-pld-blue"
+                    className="w-full bg-app-bg hover:bg-app-hover border border-app-border rounded-md pl-5 pr-1 py-0.5 h-6 text-[8px] sm:text-[9px] font-bold uppercase text-app-text outline-none focus:border-pld-blue transition-all"
                   />
                 </div>
                 <button
                   onClick={() => setIsSelectorExpanded(!isSelectorExpanded)}
-                  className="px-2.5 py-1 bg-app-bg hover:bg-app-hover border border-app-border rounded-lg text-[9px] font-black uppercase text-app-text hover:text-pld-blue transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-0.5 h-6 bg-app-bg hover:bg-app-hover border border-app-border rounded-md text-[8px] sm:text-[9px] font-black uppercase text-app-text hover:text-pld-blue transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <Building2 size={11} />
+                  <Building2 size={10} />
                   <span>{isSelectorExpanded ? 'Ocultar' : 'Cambiar'}</span>
                 </button>
               </div>
@@ -624,20 +627,20 @@ const BuzonView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Cuadro donde se encuentra el mensaje (Extendido al doble de altura) */}
-                      <div className="flex-1 min-h-[550px] sm:min-h-[650px] md:min-h-[750px] flex flex-col overflow-hidden p-1 sm:p-1.5 h-full">
+                      {/* Cuadro donde se encuentra el mensaje (Flex-1 con scroll continuo perfecto) */}
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-1 sm:p-1.5 w-full h-full">
                         {loadingDetalle ? (
                           <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-3">
                              <Loader2 size={28} className="animate-spin" />
                              <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
                           </div>
                         ) : detalleHtml || selectedMessage.contenido ? (
-                          <div className="flex-1 min-h-[520px] sm:min-h-[620px] md:min-h-[720px] bg-white rounded-lg overflow-hidden shadow-sm border border-app-border w-full h-full flex flex-col">
+                          <div className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden shadow-sm border border-app-border w-full h-full relative">
                             <iframe 
                               key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
                               id="buzon-iframe"
                               title="Contenido del Mensaje"
-                              className="w-full h-full flex-1 border-none bg-white block min-h-[500px]"
+                              className="w-full h-full border-none bg-white block absolute inset-0"
                               srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
                               sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
                             />
