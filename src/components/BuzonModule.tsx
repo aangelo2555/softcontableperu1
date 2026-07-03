@@ -452,16 +452,16 @@ const BuzonView: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-1.5 shrink-0">
-                <div className="relative w-24 sm:w-32 lg:w-36">
-                  <span className="absolute top-1/2 -translate-y-1/2 text-app-muted left-1.5 pointer-events-none">
-                    <Search size={10} />
+                <div className="relative w-28 sm:w-36">
+                  <span className="absolute top-1/2 -translate-y-1/2 text-app-muted left-2 pointer-events-none">
+                    <Search size={11} />
                   </span>
                   <input
                     type="text"
-                    placeholder="BUSCAR..."
+                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-app-bg hover:bg-app-hover border border-app-border rounded-md pl-5 pr-1 py-0.5 h-6 text-[8px] sm:text-[9px] font-bold uppercase text-app-text outline-none focus:border-pld-blue transition-all"
+                    className="w-full bg-app-bg hover:bg-app-hover border border-app-border rounded-md pl-6 pr-2 py-0.5 h-6 text-[9px] sm:text-[10px] font-semibold text-app-text outline-none focus:border-pld-blue transition-all"
                   />
                 </div>
                 <button
