@@ -188,7 +188,7 @@ const SireView: React.FC = () => {
       // Usar API en web, Electron en desktop
       const docs = electron
         ? await electron.listarArchivosSire()
-        : await api.get('/sire/archivos', { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data.archivos || r.data);
+        : await api.get('/api/sire/archivos', { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data.archivos || r.data);
       if (Array.isArray(docs)) setArchivos(docs);
     } catch (error) {
       console.error("Error cargando archivos:", error);
@@ -250,7 +250,7 @@ const SireView: React.FC = () => {
       // Usar API en web, Electron en desktop
       const result = electron 
         ? await electron.ejecutarSire(payload)
-        : await api.post('/sire/ejecutar', payload).then((r: any) => r.data);
+        : await api.post('/api/sire/ejecutar', payload).then((r: any) => r.data);
 
       if (result.success) {
         // MEJORA #3: Ya no centraliza automáticamente, el usuario debe usar el botón "CENTRALIZAR"
@@ -295,7 +295,7 @@ const SireView: React.FC = () => {
       // Usar API en web, Electron en desktop
       const result = electron
         ? await electron.generarArchivoSire(payload)
-        : await api.post('/sire/generar-archivo', payload).then((r: any) => r.data);
+        : await api.post('/api/sire/generar-archivo', payload).then((r: any) => r.data);
 
       if (result.success) {
         toast.success(`Archivo generado: ${result.filename}`, { id: loadingToast });
@@ -377,7 +377,7 @@ const SireView: React.FC = () => {
     try {
       const result = electron 
         ? await electron.eliminarArchivoSire(nombre)
-        : await api.delete(`/sire/archivos/${encodeURIComponent(nombre)}`, { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data);
+        : await api.delete(`/api/sire/archivos/${encodeURIComponent(nombre)}`, { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data);
 
       if (result.success) {
         toast.success('Archivo eliminado correctamente.');
@@ -397,7 +397,7 @@ const SireView: React.FC = () => {
         return;
       }
       
-      const response = await api.get(`/sire/archivos/${encodeURIComponent(nombre)}/descargar`, {
+      const response = await api.get(`/api/sire/archivos/${encodeURIComponent(nombre)}/descargar`, {
         params: { ruc: currentCompany?.ruc },
         responseType: 'blob'
       });
@@ -419,7 +419,7 @@ const SireView: React.FC = () => {
   const handleRestoreFromHistorial = async (nombre: string) => {
     const loadingToast = toast.loading(`Cargando comprobantes de ${nombre} en Conciliación...`);
     try {
-      const res = await api.post('/sire/cargar-desde-historial', {
+      const res = await api.post('/api/sire/cargar-desde-historial', {
         nombre,
         ruc: currentCompany?.ruc
       });

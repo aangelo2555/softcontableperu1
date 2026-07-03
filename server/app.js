@@ -1678,6 +1678,14 @@ app.post('/api/buzon/descargar-archivo-constancia', async (req, res) => {
 
 // --- API Endpoints: SIRE ---
 
+// Middleware de compatibilidad para peticiones a /sire/*
+app.use((req, res, next) => {
+    if (req.url.startsWith('/sire/')) {
+        req.url = '/api' + req.url;
+    }
+    next();
+});
+
 app.post('/api/sire/ejecutar', async (req, res) => {
     try {
         console.log('[SIRE API] Petición de ejecución recibida:', {

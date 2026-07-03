@@ -81,6 +81,22 @@ class SireHandler {
           await this.persistirRegistrosSire(ruc, proceso, resultado.datosRaw, datos.userId, periodoInicio);
         }
         
+        // Persistir archivo ZIP original en PostgreSQL sire_files
+        if (resultado.zipBuffer && resultado.zipFilename && this.db.saveSireFile) {
+          try {
+            await this.db.saveSireFile(ruc, datos.userId, {
+              nombre: resultado.zipFilename,
+              periodo: String(periodoInicio),
+              proceso: proceso,
+              size: resultado.zipBuffer.length,
+              content_base64: Buffer.isBuffer(resultado.zipBuffer) ? resultado.zipBuffer.toString('base64') : Buffer.from(resultado.zipBuffer).toString('base64')
+            });
+            logger.info(`Archivo ZIP ${resultado.zipFilename} persistido en PostgreSQL sire_files`);
+          } catch (e) {
+            logger.warn('Error guardando archivo ZIP en PostgreSQL:', e);
+          }
+        }
+
         // Persistir archivo Excel en PostgreSQL sire_files
         if (resultado.excelPath && fs.existsSync(resultado.excelPath) && this.db.saveSireFile) {
           try {
@@ -369,16 +385,27 @@ WScript.Echo "Proceso SIRE completado"
       const periodMatch = nombreArchivo.match(/(20\d{4})/);
       const periodoRaw = periodMatch ? periodMatch[1] : '';
 
-      const XLSX = require('xlsx');
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      let dataRows = [];
 
-      // Omitir fila de encabezados si existe
-      const dataRows = (rows.length > 0 && typeof rows[0][0] === 'string' && isNaN(Number(rows[0][0]))) 
-        ? rows.slice(1) 
-        : rows;
+      if (nombreArchivo.toLowerCase().endsWith('.zip')) {
+        const FileProcessor = require('./fileProcessor');
+        const fp = new FileProcessor();
+        const zipRes = await fp.procesarZip(buffer, nombreArchivo);
+        if (zipRes && zipRes.datos && zipRes.datos.data) {
+          dataRows = zipRes.datos.data;
+        }
+      } else {
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // Omitir fila de encabezados si existe
+        dataRows = (rows.length > 0 && typeof rows[0][0] === 'string' && isNaN(Number(rows[0][0]))) 
+          ? rows.slice(1) 
+          : rows;
+      }
 
       const datosRaw = { headers: [], data: dataRows };
       await this.persistirRegistrosSire(ruc, proceso, datosRaw, userId, periodoRaw);

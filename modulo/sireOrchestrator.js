@@ -240,6 +240,8 @@ class SireOrchestrator {
       return {
         success: true,
         excelPath: excelResult.filepath,
+        zipBuffer: archivoResult.data,
+        zipFilename: archivoResult.filename,
         registros: procesarResult.datos.totalRegistros,
         datosRaw: procesarResult.datos
       };
