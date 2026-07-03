@@ -321,6 +321,74 @@ WScript.Echo "Proceso SIRE completado"
   verificarExcelSire() {
     return fs.existsSync(this.excelSirePath);
   }
+
+  /**
+   * Carga un archivo previamente guardado en el historial (XLSX o ZIP) directamente a la base de datos de Conciliación
+   */
+  async cargarArchivoEnConciliacion(ruc, nombreArchivo, userId) {
+    try {
+      let buffer = null;
+      // 1. Obtener contenido Base64 de la base de datos PostgreSQL si existe
+      if (this.db && this.db.getSireFileContent) {
+        const dbFile = await this.db.getSireFileContent(nombreArchivo, ruc, userId);
+        if (dbFile && dbFile.content_base64) {
+          buffer = Buffer.from(dbFile.content_base64, 'base64');
+        }
+      }
+
+      // 2. Fallback a disco local si no está en DB
+      if (!buffer) {
+        const outputDir = sireDir;
+        const findFile = (dir, target) => {
+          if (!fs.existsSync(dir)) return null;
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+            const fullPath = path.join(dir, file);
+            if (fs.statSync(fullPath).isDirectory()) {
+              const found = findFile(fullPath, target);
+              if (found) return found;
+            } else if (file === target) {
+              return fullPath;
+            }
+          }
+          return null;
+        };
+        const filePath = findFile(outputDir, nombreArchivo);
+        if (filePath && fs.existsSync(filePath)) {
+          buffer = fs.readFileSync(filePath);
+        }
+      }
+
+      if (!buffer) {
+        throw new Error(`No se encontró el contenido del archivo ${nombreArchivo}`);
+      }
+
+      // Determinar proceso (RCE vs RVIE) y período desde el nombre del archivo
+      const isRVIE = nombreArchivo.includes('RVIE');
+      const proceso = isRVIE ? 'Generar RVIE' : 'Generar RCE';
+      const periodMatch = nombreArchivo.match(/(20\d{4})/);
+      const periodoRaw = periodMatch ? periodMatch[1] : '';
+
+      const XLSX = require('xlsx');
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      // Omitir fila de encabezados si existe
+      const dataRows = (rows.length > 0 && typeof rows[0][0] === 'string' && isNaN(Number(rows[0][0]))) 
+        ? rows.slice(1) 
+        : rows;
+
+      const datosRaw = { headers: [], data: dataRows };
+      await this.persistirRegistrosSire(ruc, proceso, datosRaw, userId, periodoRaw);
+
+      return { success: true, count: dataRows.length, proceso, periodo: periodoRaw };
+    } catch (error) {
+      logger.error('Error cargando archivo en conciliación:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new SireHandler();

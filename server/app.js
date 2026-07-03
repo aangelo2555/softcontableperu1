@@ -1836,6 +1836,29 @@ app.get('/api/sire/archivos/:nombre/descargar', async (req, res) => {
     }
 });
 
+app.post('/api/sire/cargar-desde-historial', async (req, res) => {
+    try {
+        const { nombre, ruc } = req.body;
+        const targetUserId = req.targetUserId;
+        const targetRuc = ruc || req.body?.workspace_id;
+        
+        if (!nombre || !targetRuc) {
+            return res.status(400).json({ success: false, error: 'Faltan parámetros nombre o ruc' });
+        }
+
+        const sireHandlerInstance = require('../modulo/sireHandler');
+        const result = await sireHandlerInstance.cargarArchivoEnConciliacion(targetRuc, nombre, targetUserId);
+        
+        if (result.success) {
+            res.json({ success: true, count: result.count, message: `Se cargaron ${result.count} comprobantes en la propuesta de Conciliación` });
+        } else {
+            res.status(500).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // --- Middleware para verificar rol de Administrador ---
 const adminAuthMiddleware = (req, res, next) => {
     const normalizedEmail = (req.user?.email || '').trim().toLowerCase();

@@ -416,6 +416,25 @@ const SireView: React.FC = () => {
     }
   };
 
+  const handleRestoreFromHistorial = async (nombre: string) => {
+    const loadingToast = toast.loading(`Cargando comprobantes de ${nombre} en Conciliación...`);
+    try {
+      const res = await api.post('/sire/cargar-desde-historial', {
+        nombre,
+        ruc: currentCompany?.ruc
+      });
+      if (res.data.success) {
+        toast.success(res.data.message || 'Comprobantes cargados en Conciliación', { id: loadingToast });
+        await syncCurrentWorkspace();
+        setViewMode('comparacion');
+      } else {
+        toast.error(`Error: ${res.data.error}`, { id: loadingToast });
+      }
+    } catch (e: any) {
+      toast.error(`Error al cargar: ${e.message}`, { id: loadingToast });
+    }
+  };
+
   const handleCentralizeSelected = async () => {
     if (selectedIds.size === 0) {
       toast.error('Selecciona al menos un documento.');
@@ -880,14 +899,43 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                   {pagination.paginatedData.length === 0 && (
                     <tr>
                       <td colSpan={8} className="py-24 text-center">
-                        <div className="flex flex-col items-center opacity-30">
-                          <Filter size={48} strokeWidth={1} className="mb-4" />
-                          <p className="text-[12px] font-black uppercase tracking-[0.2em]">No se encontraron registros</p>
-                          <p className="text-[10px] font-bold mt-2 max-w-sm">
-                            Asegúrate de haber seleccionado el periodo correcto y haz clic en 
-                            <span className="text-blue-500 mx-1">DESCARGAR PROPUESTA</span> 
-                            para traer datos de SUNAT.
-                          </p>
+                        <div className="flex flex-col items-center">
+                          <Filter size={48} strokeWidth={1} className="mb-4 opacity-30" />
+                          <p className="text-[12px] font-black uppercase tracking-[0.2em] opacity-50">No se encontraron registros</p>
+                          
+                          {(() => {
+                            const currentPeriodStr = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
+                            const isProcessMatch = (fName: string) => proceso === 'Generar RCE' ? fName.includes('RCE') : fName.includes('RVIE');
+                            const matchingPeriodFile = archivos.find(f => {
+                              const nameUpper = f.nombre.toUpperCase();
+                              return isProcessMatch(nameUpper) && nameUpper.includes(currentPeriodStr);
+                            });
+
+                            if (matchingPeriodFile) {
+                              return (
+                                <div className="mt-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col items-center gap-2 max-w-md animate-fade-in shadow-lg">
+                                  <p className="text-[11px] font-black text-emerald-400">
+                                    💡 Se encontró el archivo descargado de este período en tu Historial ZIP:
+                                  </p>
+                                  <p className="text-[10px] font-mono text-app-text">{matchingPeriodFile.nombre}</p>
+                                  <button
+                                    onClick={() => handleRestoreFromHistorial(matchingPeriodFile.nombre)}
+                                    className="mt-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-105 cursor-pointer"
+                                  >
+                                    <RefreshCw size={14} /> Cargar Comprobantes en Conciliación
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <p className="text-[10px] font-bold mt-2 max-w-sm opacity-50">
+                                Asegúrate de haber seleccionado el periodo correcto y haz clic en 
+                                <span className="text-blue-500 mx-1">DESCARGAR PROPUESTA</span> 
+                                para traer datos de SUNAT.
+                              </p>
+                            );
+                          })()}
                         </div>
                       </td>
                     </tr>
@@ -981,17 +1029,25 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                     </div>
                     <p className="text-[9px] text-app-muted font-bold mt-1">{exactTime}</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => handleRestoreFromHistorial(file.nombre)}
+                      className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md text-[8.5px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer"
+                      title="Cargar comprobantes de este archivo en la pestaña Conciliación"
+                    >
+                      <Database size={11} />
+                      Restaurar
+                    </button>
                     <button 
                       onClick={() => handleDescargarArchivo(file.nombre)}
-                      className="p-1.5 text-app-muted hover:text-emerald-500 bg-app-surface rounded-md border border-app-border transition-all"
+                      className="p-1.5 text-app-muted hover:text-emerald-500 bg-app-surface rounded-md border border-app-border transition-all cursor-pointer"
                       title="Abrir/Descargar"
                     >
                       <Download size={12} />
                     </button>
                     <button 
                       onClick={() => handleDeleteArchivo(file.nombre)}
-                      className="p-1.5 text-app-muted hover:text-rose-500 bg-app-surface rounded-md border border-app-border transition-all"
+                      className="p-1.5 text-app-muted hover:text-rose-500 bg-app-surface rounded-md border border-app-border transition-all cursor-pointer"
                       title="Eliminar"
                     >
                       <Trash2 size={12} />
