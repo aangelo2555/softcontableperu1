@@ -602,6 +602,61 @@ const db = {
             pfx: row.certificado_pfx,
             pass: decrypt(row.certificado_pass)
         };
+    },
+
+    // --- SIRE Persistencia ---
+    saveSirePurchases: async (ruc, records, userId) => {
+        return db.transaction(async (client) => {
+            for (const r of records) {
+                await client.query(`
+                    INSERT INTO purchases (
+                        id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                        doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
+                        otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono,
+                        tipOper, tipOperCode, moneda, glosa, detraccion, user_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                    ON CONFLICT (id) DO UPDATE SET
+                        workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
+                        fecVcto = EXCLUDED.fecVcto, tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie,
+                        numero = EXCLUDED.numero, doc_tipo = EXCLUDED.doc_tipo, doc_num = EXCLUDED.doc_num,
+                        nombre = EXCLUDED.nombre, tc = EXCLUDED.tc, bi = EXCLUDED.bi, igv = EXCLUDED.igv,
+                        noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
+                        otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
+                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
+                `, [
+                    r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
+                    r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
+                    r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta',
+                    '6011', '4212', 'COMPRA INTERNA GRAVADA', '02', 'SOLES', 'POR LA COMPRA DE MERCADERIA', 0, userId
+                ]);
+            }
+        });
+    },
+
+    saveSireSales: async (ruc, records, userId) => {
+        return db.transaction(async (client) => {
+            for (const r of records) {
+                await client.query(`
+                    INSERT INTO sales (
+                        id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
+                        doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
+                        otros_tributos, total, car, estado_sire, user_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+                    ON CONFLICT (id) DO UPDATE SET
+                        workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
+                        fecVcto = EXCLUDED.fecVcto, tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie,
+                        numero = EXCLUDED.numero, doc_tipo = EXCLUDED.doc_tipo, doc_num = EXCLUDED.doc_num,
+                        nombre = EXCLUDED.nombre, tc = EXCLUDED.tc, bi = EXCLUDED.bi, igv = EXCLUDED.igv,
+                        noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
+                        otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
+                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
+                `, [
+                    r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
+                    r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
+                    r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta', userId
+                ]);
+            }
+        });
     }
 };
 

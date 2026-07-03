@@ -200,7 +200,26 @@ const SireView: React.FC = () => {
       return;
     }
 
-    const periodo = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
+    const monthStr = String(periodoMes + 1).padStart(2, '0');
+    const periodo = `${periodoAnio}${monthStr}`;
+    const periodoNombre = `${meses[periodoMes]} ${periodoAnio}`;
+
+    // ⚠️ ADVERTENCIA: Verificar si el periodo ya fue descargado previamente
+    const hasExistingSunatData = comparedData.some(item => item.sunat !== null);
+    const hasExistingFile = archivos.some(file => {
+      const nameUpper = file.nombre.toUpperCase();
+      return nameUpper.includes(currentCompany?.ruc || '') && nameUpper.includes(periodo);
+    });
+
+    if (hasExistingSunatData || hasExistingFile) {
+      const confirmText = `⚠️ ADVERTENCIA: El período ${periodoNombre} (${proceso === 'Generar RCE' ? 'Compras' : 'Ventas'}) ya fue descargado previamente.\n\n` +
+        `Si continúas, se volverá a sincronizar con SUNAT y se actualizarán los datos de la propuesta.\n\n` +
+        `¿Deseas continuar de todas formas?`;
+      if (!window.confirm(confirmText)) {
+        return;
+      }
+    }
+
     setIsRunning(true);
     const loadingToast = toast.loading(`Sincronizando con SUNAT para el periodo ${periodo}...`);
 
@@ -908,13 +927,23 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                     exactTime = `F: ${date.toLocaleDateString('es-PE')} - H: ${date.toLocaleTimeString('es-PE')}`;
                   }
                 }
+                const currentPeriodStr = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
+                const filePeriodMatch = file.nombre.match(/(20\d{4})/);
+                const filePeriodStr = filePeriodMatch ? filePeriodMatch[1] : '';
+                const isCurrentPeriodFile = filePeriodStr === currentPeriodStr;
+
                 return (
-                <div key={idx} className="bg-app-bg/50 border border-app-border hover:border-blue-500/30 rounded-xl p-3 flex items-center gap-3 group transition-all">
+                <div key={idx} className={`bg-app-bg/50 border rounded-xl p-3 flex items-center gap-3 group transition-all ${isCurrentPeriodFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-app-border hover:border-blue-500/30'}`}>
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${file.nombre.includes('RCE') ? 'bg-violet-500/10 text-violet-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                     <FileCheck size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-app-text truncate uppercase tracking-tight group-hover:text-blue-500 transition-colors">{file.nombre}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-[10px] font-black text-app-text truncate uppercase tracking-tight group-hover:text-blue-500 transition-colors">{file.nombre}</p>
+                      <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider ${isCurrentPeriodFile ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
+                        PERIODO DESCARGADO
+                      </span>
+                    </div>
                     <p className="text-[9px] text-app-muted font-bold mt-1">{exactTime}</p>
                   </div>
                   <div className="flex items-center gap-1">

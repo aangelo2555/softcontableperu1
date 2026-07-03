@@ -175,9 +175,9 @@ class SireHandler {
       });
 
       if (proceso === 'Generar RCE') {
-        this.db.saveSirePurchases(ruc, mappedRecords, userId);
+        await this.db.saveSirePurchases(ruc, mappedRecords, userId);
       } else {
-        this.db.saveSireSales(ruc, mappedRecords, userId);
+        await this.db.saveSireSales(ruc, mappedRecords, userId);
       }
 
       logger.info(`Persistidos ${mappedRecords.length} registros del SIRE para el RUC ${ruc}`);
