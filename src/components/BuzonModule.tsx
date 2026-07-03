@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Building2, Download, Loader2, LogOut, FileText } from 'lucide-react';
+import { Mail, Paperclip, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Building2, Download, Loader2, LogOut, FileText, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 
@@ -22,6 +22,7 @@ const BuzonView: React.FC = () => {
   const [detalleHtml, setDetalleHtml] = useState<string | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [selectedRuc, setSelectedRuc] = useState(currentCompany.ruc);
+  const [isSelectorExpanded, setIsSelectorExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const filteredWorkspaces = workspaces.filter(ws => {
     const name = ws?.name || '';
@@ -435,69 +436,61 @@ const BuzonView: React.FC = () => {
         }
       />
 
-      <div className="flex-1 overflow-y-auto md:overflow-hidden custom-scrollbar flex flex-col">
-        <div className="max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-4 md:gap-6 flex-1 min-h-0">
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="max-w-[1600px] w-full mx-auto p-2.5 md:p-3.5 flex flex-col gap-2.5 md:gap-3 flex-1 min-h-0">
           
           {/* Selector Horizontal de Empresas */}
-          <div className="bg-app-surface/60 border border-app-border rounded-2xl p-4 flex flex-col gap-3 shrink-0 shadow-sm backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-app-border/40">
-              <div className="flex items-center gap-2">
-                <Building2 size={14} className="text-pld-blue" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-app-text">Seleccionar Cliente para Consultar</span>
-                <span className="text-[9px] text-app-muted font-bold uppercase tracking-wider bg-app-bg px-2 py-0.5 rounded-lg border border-app-border ml-1">
-                  {filteredWorkspaces.length} {filteredWorkspaces.length === 1 ? 'coincidencia' : 'coincidencias'}
-                </span>
+          <div className="bg-app-surface/60 border border-app-border rounded-xl p-2.5 flex flex-col gap-2 shrink-0 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Building2 size={13} className="text-pld-blue shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-app-muted shrink-0 hidden sm:inline">Cliente Activo:</span>
+                <span className="text-[10px] font-black text-pld-blue uppercase truncate">{companyToUse.name}</span>
+                <span className="text-[9px] text-app-muted font-mono bg-app-bg px-2 py-0.5 rounded border border-app-border shrink-0">RUC: {selectedRuc}</span>
               </div>
               
-              {/* Barra de Búsqueda */}
-              <div className="relative w-full sm:w-64 shrink-0">
-                <span className="absolute top-1/2 -translate-y-1/2 text-app-muted" style={{ left: '0.75rem' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </span>
-                <input
-                  type="text"
-                  placeholder="BUSCAR POR NOMBRE O RUC..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ paddingLeft: '2.2rem' }}
-                  className="w-full bg-app-bg hover:bg-app-hover focus:bg-app-hover border border-app-border rounded-xl pr-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-app-text placeholder:text-app-muted focus:outline-none focus:ring-1 focus:ring-pld-blue/50 transition-all duration-200"
-                />
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="relative w-36 sm:w-52">
+                  <span className="absolute top-1/2 -translate-y-1/2 text-app-muted left-2">
+                    <Search size={11} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="BUSCAR RUC / CLIENTE..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-app-bg hover:bg-app-hover border border-app-border rounded-lg pl-6 pr-2 py-1 text-[9px] font-bold uppercase text-app-text outline-none focus:border-pld-blue"
+                  />
+                </div>
+                <button
+                  onClick={() => setIsSelectorExpanded(!isSelectorExpanded)}
+                  className="px-2.5 py-1 bg-app-bg hover:bg-app-hover border border-app-border rounded-lg text-[9px] font-black uppercase text-app-text hover:text-pld-blue transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Building2 size={11} />
+                  <span>{isSelectorExpanded ? 'Ocultar' : 'Cambiar'}</span>
+                </button>
               </div>
             </div>
-            
-            {filteredWorkspaces.length === 0 ? (
-              <div className="py-4 text-center text-[10px] font-black text-app-muted uppercase tracking-wider animate-pulse">
-                No se encontraron empresas con esos criterios.
-              </div>
-            ) : (
-              <div className="flex gap-2.5 overflow-x-auto pb-1.5 custom-scrollbar scroll-smooth">
+
+            {isSelectorExpanded && (
+              <div className="flex gap-2 overflow-x-auto pt-2 pb-1 custom-scrollbar border-t border-app-border/40 animate-in fade-in duration-200">
                 {filteredWorkspaces.map((ws) => {
                   const isSelected = ws.ruc === selectedRuc;
                   return (
                     <button
                       key={ws.ruc}
-                      onClick={() => setSelectedRuc(ws.ruc)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left shrink-0 transition-all duration-200 active:scale-98 cursor-pointer ${
+                      onClick={() => {
+                        setSelectedRuc(ws.ruc);
+                        setIsSelectorExpanded(false);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-left shrink-0 transition-all duration-200 cursor-pointer ${
                         isSelected
-                          ? 'bg-pld-blue/10 border-pld-blue text-pld-blue shadow-lg shadow-pld-blue/5'
+                          ? 'bg-pld-blue/10 border-pld-blue text-pld-blue font-bold shadow-sm'
                           : 'bg-app-bg hover:bg-app-hover border-app-border text-app-text'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg shrink-0 transition-colors ${
-                        isSelected ? 'bg-pld-blue text-white' : 'bg-app-surface text-app-muted'
-                      }`}>
-                        <Building2 size={14} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className={`text-[11px] font-black uppercase tracking-wide truncate max-w-[180px] sm:max-w-[240px] ${
-                          isSelected ? 'text-pld-blue' : 'text-app-text'
-                        }`}>
-                          {ws.name}
-                        </div>
-                        <div className="text-[9px] font-mono text-app-muted mt-0.5">
-                          RUC: {ws.ruc}
-                        </div>
-                      </div>
+                      <Building2 size={12} className={isSelected ? 'text-pld-blue' : 'text-app-muted'} />
+                      <div className="text-[10px] font-bold uppercase truncate max-w-[180px]">{ws.name}</div>
                     </button>
                   );
                 })}
@@ -506,200 +499,193 @@ const BuzonView: React.FC = () => {
           </div>
 
           {!isElectron && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-4 flex items-start gap-3 shadow-md animate-in slide-in-from-top duration-300">
-              <AlertCircle size={20} className="shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider">Modo Web Limitado</h4>
-                <p className="text-[11px] font-bold mt-1 text-red-500/80">
-                  La sincronización en vivo del buzón tributario SUNAT, extracción de notificaciones y descargas directas de constancias requieren la instalación del cliente de escritorio de SoftContable. En este entorno web SaaS, estas funciones automatizadas están restringidas.
-                </p>
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl px-3 py-1.5 flex items-center justify-between text-[10px] font-bold shrink-0 shadow-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertCircle size={14} className="shrink-0 text-amber-500" />
+                <span className="truncate">Modo Web: La auto-sincronización y descarga en vivo de constancias requieren la app de escritorio.</span>
               </div>
             </div>
           )}
 
-      {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl animate-in slide-in-from-top duration-300">
-           <AlertCircle size={20} />
-           <p className="text-xs font-bold uppercase">{error}</p>
-        </div>
-      )}
+          {error && (
+            <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl animate-in slide-in-from-top duration-300 shrink-0">
+               <AlertCircle size={16} />
+               <p className="text-xs font-bold uppercase">{error}</p>
+            </div>
+          )}
 
-      {/* Inbox Grid */}
-      <div className="flex flex-col md:flex-row flex-1 gap-4 md:gap-6 min-h-0">
-        
-        {/* Left: Message List */}
-        <div className={`w-full md:w-1/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl overflow-hidden shadow-sm ${
-          selectedMessage ? 'hidden md:flex' : 'flex'
-        }`}>
-          <div className="p-4 border-b border-app-border bg-app-surface/40 flex justify-between items-center">
-            <span className="text-[10px] font-black text-pld-blue uppercase tracking-widest">
-               Bandeja de Entrada ({buzonMensajes.length})
-            </span>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-            {buzonMensajes.length === 0 && !loading && (
-              <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4">
-                <Mail size={48} />
-                <span className="text-xs font-bold uppercase tracking-widest">Vacio</span>
+          {/* Inbox Grid */}
+          <div className="flex flex-col md:flex-row flex-1 gap-2.5 md:gap-3 min-h-0">
+            
+            {/* Left: Message List */}
+            <div className={`w-full md:w-1/3 flex flex-col bg-app-surface/20 border border-app-border rounded-xl overflow-hidden shadow-sm ${
+              selectedMessage ? 'hidden md:flex' : 'flex'
+            }`}>
+              <div className="p-3 border-b border-app-border bg-app-surface/40 flex justify-between items-center shrink-0">
+                <span className="text-[10px] font-black text-pld-blue uppercase tracking-widest">
+                   Bandeja de Entrada ({buzonMensajes.length})
+                </span>
               </div>
-            )}
-
-            {loading && buzonMensajes.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-pld-blue space-y-4">
-                <Loader2 size={32} className="animate-spin" />
-                <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Autenticando...</span>
-              </div>
-            )}
-
-            {buzonMensajes.map(msg => (
-              <button
-                key={msg.id}
-                onClick={() => {
-                  setSelectedMessage(msg);
-                  if (msg.estado === 'no_leido') markBuzonMensajeAsRead(msg.id);
-                }}
-                className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group ${
-                  selectedMessage?.id === msg.id 
-                  ? 'bg-pld-blue/10 border-pld-blue' 
-                  : 'bg-app-bg border-app-border hover:border-app-muted'
-                }`}
-              >
-                <div className="flex-1 min-w-0 pr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    {msg.estado === 'no_leido' && <div className="w-2 h-2 rounded-full bg-pld-blue" />}
-                    <span className="text-[9px] font-black text-app-muted uppercase">{msg.fecha}</span>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
+                {buzonMensajes.length === 0 && !loading && (
+                  <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-3 p-4">
+                    <Mail size={40} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Vacío</span>
                   </div>
-                  <h4 className={`text-sm truncate ${msg.estado === 'no_leido' ? 'font-black text-app-text' : 'font-medium text-app-text/70'}`}>
-                    {msg.asunto}
-                  </h4>
-                </div>
-                <div className="flex items-center gap-3">
-                  {msg.tieneAdjunto && <Paperclip size={14} className="text-pld-blue" />}
-                  <ChevronRight size={16} className={`text-app-muted group-hover:text-pld-blue transition-all ${selectedMessage?.id === msg.id ? 'translate-x-1' : ''}`} />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+                )}
 
-        {/* Right: Message Content */}
-        <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-2xl shadow-sm overflow-hidden ${
-          selectedMessage ? 'flex' : 'hidden md:flex'
-        }`}>
-            {selectedMessage ? (
-              <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
-                  {/* Header fijo */}
-                  <div className="p-4 border-b border-app-border flex justify-between items-start shrink-0">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <button
-                        onClick={() => setSelectedMessage(null)}
-                        className="md:hidden p-1.5 hover:bg-app-bg border border-app-border rounded-xl text-app-text transition-all shrink-0 flex items-center justify-center"
-                        title="Regresar a la bandeja"
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <div className="min-w-0">
-                        <span className="text-[8px] font-black text-pld-blue uppercase tracking-[0.2em] mb-0.5 block">
-                          Asunto del Mensaje
-                        </span>
-                        <h2 className="text-sm md:text-base font-black text-app-text leading-tight uppercase truncate">
-                          {selectedMessage.asunto}
-                        </h2>
+                {loading && buzonMensajes.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-pld-blue space-y-3 p-4">
+                    <Loader2 size={28} className="animate-spin" />
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Autenticando...</span>
+                  </div>
+                )}
+
+                {buzonMensajes.map(msg => (
+                  <button
+                    key={msg.id}
+                    onClick={() => {
+                      setSelectedMessage(msg);
+                      if (msg.estado === 'no_leido') markBuzonMensajeAsRead(msg.id);
+                    }}
+                    className={`w-full text-left p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+                      selectedMessage?.id === msg.id 
+                      ? 'bg-pld-blue/10 border-pld-blue' 
+                      : 'bg-app-bg border-app-border hover:border-app-muted'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0 pr-3">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        {msg.estado === 'no_leido' && <div className="w-2 h-2 rounded-full bg-pld-blue shrink-0" />}
+                        <span className="text-[9px] font-black text-app-muted uppercase">{msg.fecha}</span>
                       </div>
+                      <h4 className={`text-xs truncate ${msg.estado === 'no_leido' ? 'font-black text-app-text' : 'font-medium text-app-text/70'}`}>
+                        {msg.asunto}
+                      </h4>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                       <button 
-                         onClick={async () => {
-                           if (!activeBrowserId) return;
-                           setLoadingDetalle(true);
-                           const res = await (window as any).electronAPI.buzonExtraerDetalle({
-                             browserId: activeBrowserId,
-                             mensajeId: selectedMessage.id
-                           });
-                           if (res.success && res.html) {
-                             setDetalleHtml(res.html);
-                             const updated = buzonMensajes.map(m => m.id === selectedMessage.id ? { ...m, contenido: res.html } : m);
-                             setBuzonMensajes(updated, selectedRuc);
-                           }
-                           setLoadingDetalle(false);
-                         }}
-                         className="p-1.5 hover:bg-pld-blue/10 text-pld-blue rounded-lg transition-colors border border-transparent hover:border-pld-blue/20"
-                         title="Refrescar contenido"
-                       >
-                         <Loader2 size={14} className={loadingDetalle ? 'animate-spin' : ''} />
-                       </button>
-                       <div className="bg-app-bg px-2 py-0.5 rounded border border-app-border">
-                           <span className="text-[8px] font-bold text-app-muted uppercase">{selectedMessage.fecha}</span>
-                       </div>
+                      {msg.tieneAdjunto && <Paperclip size={13} className="text-pld-blue" />}
+                      <ChevronRight size={15} className={`text-app-muted group-hover:text-pld-blue transition-all ${selectedMessage?.id === msg.id ? 'translate-x-0.5' : ''}`} />
                     </div>
-                  </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                  {/* Cuerpo scrollable que contiene el iframe */}
-                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
-                    {loadingDetalle ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-4">
-                         <Loader2 size={32} className="animate-spin" />
-                         <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
-                      </div>
-                    ) : detalleHtml || selectedMessage.contenido ? (
-                      <div className="flex-1 min-h-0 bg-gray-100 dark:bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border">
-                        <iframe 
-                          key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
-                          id="buzon-iframe"
-                          title="Contenido del Mensaje"
-                          className="w-full h-full border-none bg-white block"
-                          style={{ minHeight: '300px' }}
-                          srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
-                          sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-900/30 rounded-xl border border-dashed border-gray-700/50">
-                        <div className="bg-gray-800/50 p-3 rounded-full mb-3">
-                           <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                           </svg>
-                        </div>
-                        <p className="text-gray-400 font-medium">Contenido no disponible</p>
-                        <p className="text-gray-500 text-xs mt-1">Este mensaje se encuentra en formato PDF o no tiene cuerpo de texto.</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Footer fijo */}
-                  <div className="shrink-0 p-4 pt-0 space-y-2">
-                    <div className="opacity-50">
-                        <h5 className="text-[9px] font-black uppercase text-pld-blue mb-1">Información de Seguridad</h5>
-                        <ul>
-                          <li className="flex items-start gap-2 text-[10px]">
-                              <CheckCircle2 size={12} className="text-pld-blue shrink-0 mt-0.5" />
-                              <span>Canal de comunicación encriptado con Servidores SUNAT.</span>
-                          </li>
-                        </ul>
-                    </div>
-
-                    {selectedMessage.tieneAdjunto && (
-                      <div className="pt-2 border-t border-app-border">
-                          <button 
-                            onClick={() => handleDownload(selectedMessage.id)}
-                            className="w-full py-2 bg-pld-blue/10 border border-pld-blue/30 text-pld-blue font-bold uppercase tracking-widest text-[9px] rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center justify-center gap-2 active:scale-95"
+            {/* Right: Message Content */}
+            <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-xl shadow-sm overflow-hidden min-h-0 ${
+              selectedMessage ? 'flex' : 'hidden md:flex'
+            }`}>
+                {selectedMessage ? (
+                  <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
+                      {/* Header fijo */}
+                      <div className="p-2.5 px-3 border-b border-app-border flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            onClick={() => setSelectedMessage(null)}
+                            className="md:hidden p-1 hover:bg-app-bg border border-app-border rounded-lg text-app-text transition-all shrink-0 flex items-center justify-center"
+                            title="Regresar a la bandeja"
                           >
-                            <Download size={14} />
-                            Descargar Constancia / Adjunto
+                            <ChevronLeft size={16} />
                           </button>
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-black text-pld-blue uppercase tracking-[0.2em] block">
+                              Asunto del Mensaje
+                            </span>
+                            <h2 className="text-xs md:text-sm font-black text-app-text leading-tight uppercase truncate">
+                              {selectedMessage.asunto}
+                            </h2>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                           <button 
+                             onClick={async () => {
+                               if (!activeBrowserId) return;
+                               setLoadingDetalle(true);
+                               const res = await (window as any).electronAPI.buzonExtraerDetalle({
+                                 browserId: activeBrowserId,
+                                 mensajeId: selectedMessage.id
+                               });
+                               if (res.success && res.html) {
+                                 setDetalleHtml(res.html);
+                                 const updated = buzonMensajes.map(m => m.id === selectedMessage.id ? { ...m, contenido: res.html } : m);
+                                 setBuzonMensajes(updated, selectedRuc);
+                               }
+                               setLoadingDetalle(false);
+                             }}
+                             className="p-1 hover:bg-pld-blue/10 text-pld-blue rounded-lg transition-colors border border-transparent hover:border-pld-blue/20"
+                             title="Refrescar contenido"
+                           >
+                             <Loader2 size={13} className={loadingDetalle ? 'animate-spin' : ''} />
+                           </button>
+                           <div className="bg-app-bg px-2 py-0.5 rounded border border-app-border">
+                               <span className="text-[8px] font-bold text-app-muted uppercase">{selectedMessage.fecha}</span>
+                           </div>
+                        </div>
                       </div>
-                    )}
+
+                      {/* Cuerpo scrollable que contiene el iframe */}
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2">
+                        {loadingDetalle ? (
+                          <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-3">
+                             <Loader2 size={28} className="animate-spin" />
+                             <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
+                          </div>
+                        ) : detalleHtml || selectedMessage.contenido ? (
+                          <div className="flex-1 min-h-0 bg-white dark:bg-gray-900/10 rounded-xl overflow-hidden shadow-inner border border-app-border w-full h-full">
+                            <iframe 
+                              key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
+                              id="buzon-iframe"
+                              title="Contenido del Mensaje"
+                              className="w-full h-full border-none bg-white block"
+                              srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
+                              sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-gray-900/30 rounded-xl border border-dashed border-gray-700/50">
+                            <div className="bg-gray-800/50 p-2.5 rounded-full mb-2">
+                               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                               </svg>
+                            </div>
+                            <p className="text-gray-400 font-medium text-xs">Contenido no disponible</p>
+                            <p className="text-gray-500 text-[10px] mt-0.5">Este mensaje se encuentra en formato PDF o no tiene cuerpo de texto.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer fijo ultra compacto */}
+                      <div className="shrink-0 p-2.5 pt-0 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[9px] text-app-muted px-1">
+                          <span className="flex items-center gap-1 font-bold">
+                            <CheckCircle2 size={11} className="text-pld-blue shrink-0" />
+                            Canal encriptado con Servidores SUNAT
+                          </span>
+                        </div>
+
+                        {selectedMessage.tieneAdjunto && (
+                          <div className="pt-1 border-t border-app-border">
+                              <button 
+                                onClick={() => handleDownload(selectedMessage.id)}
+                                className="w-full py-1.5 bg-pld-blue/10 border border-pld-blue/30 text-pld-blue font-bold uppercase tracking-widest text-[9px] rounded-lg hover:bg-pld-blue hover:text-white transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                              >
+                                <Download size={13} />
+                                Descargar Constancia / Adjunto
+                              </button>
+                          </div>
+                        )}
+                      </div>
                   </div>
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-app-muted space-y-6 opacity-30">
-                <Mail size={80} strokeWidth={1} />
-                <span className="text-sm font-black uppercase tracking-[0.3em]">Vista de Lectura</span>
-              </div>
-            )}
-        </div>
-      </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-app-muted space-y-4 opacity-30">
+                    <Mail size={64} strokeWidth={1} />
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">Vista de Lectura</span>
+                  </div>
+                )}
+            </div>
+          </div>
 
       {/* Modal Ver Constancias */}
       {showConstancias && (
