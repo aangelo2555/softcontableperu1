@@ -579,26 +579,26 @@ const BuzonView: React.FC = () => {
             }`}>
                 {selectedMessage ? (
                   <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
-                      {/* Header fijo */}
-                      <div className="p-2.5 px-3 border-b border-app-border flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-2 min-w-0">
+                      {/* Header fijo ampliado (Doble de altura para lectura cómoda en Desktop y Móvil) */}
+                      <div className="p-4 px-4 sm:p-5 sm:px-6 min-h-[90px] sm:min-h-[105px] border-b border-app-border flex justify-between items-center gap-3 shrink-0 bg-app-surface/30">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <button
                             onClick={() => setSelectedMessage(null)}
-                            className="md:hidden p-1 hover:bg-app-bg border border-app-border rounded-lg text-app-text transition-all shrink-0 flex items-center justify-center"
+                            className="md:hidden p-2 hover:bg-app-bg border border-app-border rounded-xl text-app-text transition-all shrink-0 flex items-center justify-center cursor-pointer"
                             title="Regresar a la bandeja"
                           >
-                            <ChevronLeft size={16} />
+                            <ChevronLeft size={18} />
                           </button>
-                          <div className="min-w-0">
-                            <span className="text-[8px] font-black text-pld-blue uppercase tracking-[0.2em] block">
-                              Asunto del Mensaje
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[9px] sm:text-[10px] font-black text-pld-blue uppercase tracking-[0.2em] mb-1 block">
+                              ASUNTO DEL MENSAJE
                             </span>
-                            <h2 className="text-xs md:text-sm font-black text-app-text leading-tight uppercase truncate">
+                            <h2 className="text-sm sm:text-base md:text-lg font-black text-app-text leading-snug uppercase break-words whitespace-normal">
                               {selectedMessage.asunto}
                             </h2>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
                            <button 
                              onClick={async () => {
                                if (!activeBrowserId) return;
@@ -614,13 +614,13 @@ const BuzonView: React.FC = () => {
                                }
                                setLoadingDetalle(false);
                              }}
-                             className="p-1 hover:bg-pld-blue/10 text-pld-blue rounded-lg transition-colors border border-transparent hover:border-pld-blue/20"
+                             className="p-2 hover:bg-pld-blue/10 text-pld-blue rounded-xl transition-colors border border-app-border/50 hover:border-pld-blue/30 cursor-pointer"
                              title="Refrescar contenido"
                            >
-                             <Loader2 size={13} className={loadingDetalle ? 'animate-spin' : ''} />
+                             <Loader2 size={15} className={loadingDetalle ? 'animate-spin' : ''} />
                            </button>
-                           <div className="bg-app-bg px-2 py-0.5 rounded border border-app-border">
-                               <span className="text-[8px] font-bold text-app-muted uppercase">{selectedMessage.fecha}</span>
+                           <div className="bg-app-bg px-2.5 py-1 rounded-xl border border-app-border shadow-xs">
+                               <span className="text-[9px] sm:text-[10px] font-bold text-app-muted uppercase font-mono">{selectedMessage.fecha}</span>
                            </div>
                         </div>
                       </div>
