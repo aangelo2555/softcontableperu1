@@ -144,12 +144,13 @@ const BuzonView: React.FC = () => {
               max-width: 100%;
               min-height: 100%;
               margin: 0 auto;
-              padding: 10px;
+              padding: 8px;
               box-sizing: border-box;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
               line-height: 1.5;
               overflow-wrap: break-word;
               word-wrap: break-word;
+              -webkit-overflow-scrolling: touch;
             }
             img { max-width: 100%; height: auto; margin: 5px 0; }
             a { color: #2b6cb0 !important; text-decoration: underline !important; font-weight: 500; }
@@ -161,13 +162,14 @@ const BuzonView: React.FC = () => {
             iframe {
               width: 100% !important;
               max-width: 100% !important;
-              min-height: 480px !important;
+              min-height: 420px !important;
               height: 100% !important;
               border: 1px solid #e2e8f0 !important;
               border-radius: 6px !important;
               margin-top: 5px !important;
               display: block;
               overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch;
             }
             /* Prevenir que elementos anchos desborden el contenedor */
             * { max-width: 100%; box-sizing: border-box; }
@@ -577,11 +579,11 @@ const BuzonView: React.FC = () => {
             </div>
 
             {/* Right: Message Content */}
-            <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-xl shadow-sm overflow-hidden min-h-0 ${
+            <div className={`w-full md:w-2/3 flex flex-col bg-app-surface/20 border border-app-border rounded-xl shadow-sm overflow-hidden min-h-[70vh] md:min-h-0 flex-1 ${
               selectedMessage ? 'flex' : 'hidden md:flex'
             }`}>
                 {selectedMessage ? (
-                  <div className="flex flex-col h-full min-h-0 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="flex flex-col h-full min-h-[70vh] md:min-h-0 animate-in zoom-in-95 fade-in duration-300">
                       {/* Header fijo ultra-compacto (para dar máximo espacio vertical al cuadro del mensaje) */}
                       <div className="p-1.5 px-2.5 sm:px-3 border-b border-app-border flex justify-between items-center gap-2 shrink-0 bg-app-surface/40 min-h-[34px]">
                         <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -629,19 +631,19 @@ const BuzonView: React.FC = () => {
                       </div>
 
                       {/* Cuadro donde se encuentra el mensaje (Flex-1 con scroll continuo perfecto) */}
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-1 sm:p-1.5 w-full h-full">
+                      <div className="flex-1 min-h-[60vh] md:min-h-0 flex flex-col overflow-hidden p-1 sm:p-1.5 w-full h-full">
                         {loadingDetalle ? (
                           <div className="flex-1 flex flex-col items-center justify-center text-pld-blue space-y-3">
                              <Loader2 size={28} className="animate-spin" />
                              <span className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Cargando Documento...</span>
                           </div>
                         ) : detalleHtml || selectedMessage.contenido ? (
-                          <div className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden shadow-sm border border-app-border w-full h-full relative">
+                          <div className="flex-1 min-h-[55vh] md:min-h-0 bg-white rounded-lg overflow-hidden shadow-sm border border-app-border w-full h-full relative">
                             <iframe 
                               key={`${selectedMessage.id}-${detalleHtml ? 'detail' : 'basic'}-${loadingDetalle}`}
                               id="buzon-iframe"
                               title="Contenido del Mensaje"
-                              className="w-full h-full border-none bg-white block absolute inset-0"
+                              className="w-full h-full min-h-[55vh] md:min-h-0 border-none bg-white block absolute inset-0"
                               srcDoc={generateSrcDoc(detalleHtml || selectedMessage.contenido)}
                               sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin allow-top-navigation"
                             />
