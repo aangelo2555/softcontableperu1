@@ -606,15 +606,34 @@ const db = {
 
     // --- SIRE Persistencia ---
     saveSirePurchases: async (ruc, records, userId) => {
+        if (!records || records.length === 0) return;
         return db.transaction(async (client) => {
-            for (const r of records) {
-                await client.query(`
+            const chunkSize = 50;
+            for (let i = 0; i < records.length; i += chunkSize) {
+                const chunk = records.slice(i, i + chunkSize);
+                const values = [];
+                const valueClauses = [];
+                let paramIndex = 1;
+
+                for (const r of chunk) {
+                    const rowParams = [
+                        r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
+                        r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
+                        r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta',
+                        '6011', '4212', 'COMPRA INTERNA GRAVADA', '02', 'SOLES', 'POR LA COMPRA DE MERCADERIA', 0, userId
+                    ];
+                    values.push(...rowParams);
+                    const placeholders = rowParams.map(() => `$${paramIndex++}`).join(', ');
+                    valueClauses.push(`(${placeholders})`);
+                }
+
+                const sql = `
                     INSERT INTO purchases (
                         id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
                         doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
                         otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono,
                         tipOper, tipOperCode, moneda, glosa, detraccion, user_id
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                    ) VALUES ${valueClauses.join(', ')}
                     ON CONFLICT (id) DO UPDATE SET
                         workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
                         fecVcto = EXCLUDED.fecVcto, tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie,
@@ -623,25 +642,39 @@ const db = {
                         noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
                         otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
                         estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
-                `, [
-                    r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
-                    r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
-                    r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta',
-                    '6011', '4212', 'COMPRA INTERNA GRAVADA', '02', 'SOLES', 'POR LA COMPRA DE MERCADERIA', 0, userId
-                ]);
+                `;
+                await client.query(sql, values);
             }
         });
     },
 
     saveSireSales: async (ruc, records, userId) => {
+        if (!records || records.length === 0) return;
         return db.transaction(async (client) => {
-            for (const r of records) {
-                await client.query(`
+            const chunkSize = 50;
+            for (let i = 0; i < records.length; i += chunkSize) {
+                const chunk = records.slice(i, i + chunkSize);
+                const values = [];
+                const valueClauses = [];
+                let paramIndex = 1;
+
+                for (const r of chunk) {
+                    const rowParams = [
+                        r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
+                        r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
+                        r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta', userId
+                    ];
+                    values.push(...rowParams);
+                    const placeholders = rowParams.map(() => `$${paramIndex++}`).join(', ');
+                    valueClauses.push(`(${placeholders})`);
+                }
+
+                const sql = `
                     INSERT INTO sales (
                         id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
                         doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
                         otros_tributos, total, car, estado_sire, user_id
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+                    ) VALUES ${valueClauses.join(', ')}
                     ON CONFLICT (id) DO UPDATE SET
                         workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
                         fecVcto = EXCLUDED.fecVcto, tipo_doc = EXCLUDED.tipo_doc, serie = EXCLUDED.serie,
@@ -650,11 +683,8 @@ const db = {
                         noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
                         otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
                         estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
-                `, [
-                    r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
-                    r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
-                    r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta', userId
-                ]);
+                `;
+                await client.query(sql, values);
             }
         });
     }

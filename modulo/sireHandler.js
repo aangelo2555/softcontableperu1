@@ -119,7 +119,14 @@ class SireHandler {
       
       // Mapeo dinámico basado en proceso (RCE vs RVIE)
       const mappedRecords = dataRows.map((row, index) => {
-        const id = `${ruc}-${proceso}-${Date.now()}-${index}`;
+        const tipoDoc = row[6] || '';
+        const serie = row[7] || '';
+        const numero = isRVIE ? (row[8] || '') : (row[9] || '');
+        const docNum = isRVIE ? (row[11] || '') : (row[12] || '');
+        const carVal = (row[3] || '').trim();
+        const docKey = carVal || `${tipoDoc}_${serie}_${numero}_${docNum}` || `ROW_${index}`;
+        const id = `${ruc}-${proceso}-${docKey}`;
+
         if (isRVIE) {
           // Ventas (RVIE)
           return {

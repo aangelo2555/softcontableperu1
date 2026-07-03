@@ -344,21 +344,22 @@ class SunatApiClient {
         tieneArchivos: resultado.archivoReporte?.length > 0
       });
 
-      // Estado 3 = Procesado exitosamente
-      if (resultado.estado === 3 || resultado.estado === '3') {
-        logger.info('Ticket procesado exitosamente');
+      const estStr = String(resultado.estado || '').trim();
+
+      // Estado 3, "3", "03" = Procesado exitosamente por SUNAT
+      if (estStr === '3' || estStr === '03' || estStr === '3.0' || estStr === 'PROCESADO' || estStr === 'TERMINADO') {
+        logger.info('Ticket procesado exitosamente por SUNAT', { estado: estStr, intento });
         return resultado;
       }
 
-      // Estado 4 = Error en procesamiento
-      if (resultado.estado === 4 || resultado.estado === '4') {
-        throw new Error('El ticket fue procesado con errores');
+      // Estado 4, "4", "04" = Error en procesamiento de SUNAT
+      if (estStr === '4' || estStr === '04' || estStr === 'ERROR') {
+        throw new Error('El ticket fue procesado con errores en SUNAT');
       }
 
-      // Si tiene archivos de reporte, considerar como exitoso
-      // (algunos tickets no cambian a estado 3 pero sí generan archivos)
-      if (resultado.archivoReporte && resultado.archivoReporte.length > 0) {
-        logger.info('Ticket tiene archivos de reporte, considerando como exitoso');
+      // Solo si se han realizado al menos 15 intentos (>=30 segs) y SUNAT no cambió el código de estado pero ya generó archivos de reporte
+      if (intento >= 15 && resultado.archivoReporte && resultado.archivoReporte.length > 0) {
+        logger.info('Ticket contiene archivos de reporte tras múltiples intentos (>=15), considerando como completado');
         return resultado;
       }
 
