@@ -452,6 +452,37 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // --- AI Assistant APIs ---
+    aiGenerate: async (premisa: string, companyContext: any, planContable: any[]) => {
+        const res = await api.post('/api/ai/generate', { premisa, companyContext, planContable });
+        return res.data;
+    },
+    aiGetKnowledge: async (filters?: { sector?: string; regimen?: string; categoria?: string; search?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.sector) params.append('sector', filters.sector);
+        if (filters?.regimen) params.append('regimen', filters.regimen);
+        if (filters?.categoria) params.append('categoria', filters.categoria);
+        if (filters?.search) params.append('search', filters.search);
+        const res = await api.get(`/api/ai/knowledge?${params.toString()}`);
+        return res.data;
+    },
+    aiSaveKnowledge: async (item: any) => {
+        const res = await api.post('/api/ai/knowledge', item);
+        return res.data;
+    },
+    aiUpdateKnowledge: async (id: string, item: any) => {
+        const res = await api.put(`/api/ai/knowledge/${id}`, item);
+        return res.data;
+    },
+    aiDeleteKnowledge: async (id: string) => {
+        const res = await api.delete(`/api/ai/knowledge/${id}`);
+        return res.data;
+    },
+    aiSeedKnowledge: async () => {
+        const res = await api.post('/api/ai/knowledge/seed');
+        return res.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

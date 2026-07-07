@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookText, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle, X, Edit2, PlusCircle, FileDown, Printer } from 'lucide-react';
+import { BookText, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle, X, Edit2, PlusCircle, FileDown, Printer, Bot } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { DataTable } from './DataTable';
@@ -14,6 +14,7 @@ import Toast from './shared/Toast';
 import type { ToastData } from './shared/Toast';
 import Modal from './shared/Modal';
 import DateInput from './shared/DateInput';
+import { AIChatPanel } from './AIChatPanel';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -70,6 +71,7 @@ const AsientosView: React.FC = () => {
   const [toast, setToast] = useState<ToastData | null>(null);
   const [suggestionCategory, setSuggestionCategory] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   const [pendingLines, setPendingLines] = useState<Omit<AsientoLine, 'id'>[]>([]);
   const [focusedField, setFocusedField] = useState<'debe' | 'haber' | null>(null);
   const [glosaModal, setGlosaModal] = useState<{ show: boolean, glosa: string, lines: any[] } | null>(null);
@@ -439,6 +441,14 @@ const AsientosView: React.FC = () => {
         badge={editingId ? <span className="ml-2 bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded text-[10px] font-bold">EDITANDO</span> : undefined}
         actions={
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowAIChat(!showAIChat)} 
+              className={`h-8 px-3 rounded-lg hover:opacity-95 transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider ${showAIChat ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/10' : 'bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border border-purple-500/20'}`}
+              title="Asistente IA Contable"
+            >
+              <Bot size={14} className={showAIChat ? 'animate-pulse' : ''} />
+              Asistente IA
+            </button>
             <button onClick={handleNavPrev} className="p-1.5 rounded-lg hover:bg-app-hover transition-colors" title="Anterior"><ChevronLeft size={15} className="text-app-muted" /></button>
             <span className="text-[11px] text-app-muted font-bold">{asientos.length} guardados</span>
             <button onClick={handleNavNext} className="p-1.5 rounded-lg hover:bg-app-hover transition-colors" title="Siguiente"><ChevronRight size={15} className="text-app-muted" /></button>
@@ -468,7 +478,9 @@ const AsientosView: React.FC = () => {
         }
       />
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-6xl mx-auto p-6 flex flex-col gap-5">
 
           {/* Header Data */}
@@ -872,6 +884,22 @@ const AsientosView: React.FC = () => {
           </div>
         }
       />
+
+        </div>
+        {showAIChat && (
+          <AIChatPanel
+            onClose={() => setShowAIChat(false)}
+            onApplyEntry={(generatedLines, glosa) => {
+              setLines(generatedLines);
+              setHeader(prev => ({ ...prev, glosa }));
+              const accounts = generatedLines.filter(l => l.cuenta !== 'GLOSA');
+              if (accounts.length > 0) {
+                setCurrentInput({ cuenta: accounts[0].cuenta, debe: '', haber: '' });
+              }
+            }}
+          />
+        )}
+      </div>
 
       {/* Modal de Confirmación de Glosa Habitual */}
       <Modal 

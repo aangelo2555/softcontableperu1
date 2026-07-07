@@ -42,6 +42,7 @@ import CCCDashboard from './components/CCCDashboard';
 import FinanceNotesView from './components/FinanceNotesView';
 import { Login } from './components/Login';
 import { AdminView } from './components/AdminView';
+import { AIKnowledgeView } from './components/AIKnowledgeView';
 import { SuggestionBox } from './components/SuggestionBox';
 import { ShieldCheck, AlertTriangle } from 'lucide-react';
 
@@ -185,6 +186,7 @@ const SIDEBAR_GROUPS: TabGroup[] = [
 const TAB_LABELS: Record<string, string> = {};
 SIDEBAR_GROUPS.forEach(g => g.items.forEach(i => { TAB_LABELS[i.id] = i.label; }));
 TAB_LABELS['BUZON'] = 'Buzón Electrónico';
+TAB_LABELS['AI_KNOWLEDGE'] = 'Base IA (RAG)';
 
 function findGroupForTab(tabId: string): string | null {
   for (const group of SIDEBAR_GROUPS) {
@@ -348,6 +350,7 @@ const App: React.FC = () => {
       case 'CCC': return <CCCDashboard />;
       case 'FINANCE_NOTES': return <FinanceNotesView />;
       case 'ADMIN': return <AdminView />;
+      case 'AI_KNOWLEDGE': return <AIKnowledgeView />;
       default: return <EmpresaView />;
     }
   };
@@ -579,6 +582,7 @@ const App: React.FC = () => {
         groupIcon: ShieldCheck,
         items: [
           { id: 'ADMIN', label: 'Panel Admin', icon: Settings },
+          { id: 'AI_KNOWLEDGE', label: 'Base IA (RAG)', icon: Database },
         ],
       });
     }

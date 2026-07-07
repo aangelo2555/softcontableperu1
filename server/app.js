@@ -2032,6 +2032,381 @@ app.get('/api/admin/user-workspace-data/:userId/:ruc', authMiddleware, adminAuth
     }
 });
 
+// --- Endpoints del Asistente IA Contable ---
+
+app.post('/api/ai/generate', authMiddleware, inspectMiddleware, async (req, res) => {
+    try {
+        const { premisa, companyContext, planContable } = req.body;
+        if (!premisa) {
+            return res.status(400).json({ success: false, error: 'La premisa contable es requerida.' });
+        }
+        if (!companyContext) {
+            return res.status(400).json({ success: false, error: 'El contexto de la empresa es requerido.' });
+        }
+        if (!planContable || !Array.isArray(planContable)) {
+            return res.status(400).json({ success: false, error: 'El plan contable es requerido.' });
+        }
+
+        const geminiService = require('./geminiService');
+        const result = await geminiService.generateAsiento(premisa, companyContext, planContable);
+        
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[AI ERROR] Error en generateAsiento:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/ai/knowledge', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const filters = {
+            sector: req.query.sector || null,
+            regimen: req.query.regimen || null,
+            categoria: req.query.categoria || null,
+            search: req.query.search || null
+        };
+        const cases = await db.getAIKnowledge(filters);
+        res.json({ success: true, data: cases });
+    } catch (error) {
+        console.error('[AI ERROR] Error en getAIKnowledge:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/ai/knowledge', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const result = await db.saveAIKnowledge(req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('[AI ERROR] Error en saveAIKnowledge:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put('/api/ai/knowledge/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const item = { ...req.body, id: req.params.id };
+        const result = await db.saveAIKnowledge(item);
+        res.json(result);
+    } catch (error) {
+        console.error('[AI ERROR] Error en updateAIKnowledge:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/ai/knowledge/:id', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const result = await db.deleteAIKnowledge(req.params.id);
+        res.json(result);
+    } catch (error) {
+        console.error('[AI ERROR] Error en deleteAIKnowledge:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/ai/knowledge/seed', authMiddleware, adminAuthMiddleware, async (req, res) => {
+    try {
+        const seedCases = [
+            {
+                id: "ak_seed_1",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 15",
+                categoria: "ANTICIPOS",
+                premisa: "Cobro de un anticipo de cliente por S/ 1,000 más IGV y emisión de la factura correspondiente.",
+                glosa: "COMERCIAL: ANTICIPOS RECIBIDOS DE CLIENTES",
+                asiento_json: [
+                    { cuenta: "1041", detalle: "CUENTAS CORRIENTES OPERATIVAS", debe: 1180, haber: 0 },
+                    { cuenta: "122", detalle: "ANTICIPOS DE CLIENTES", debe: 0, haber: 1000 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 0, haber: 180 }
+                ],
+                explicacion: "Por la recepción del efectivo y la facturación del anticipo según NIIF 15.",
+                tags: "anticipo, cliente, facturacion, igv, cobro"
+            },
+            {
+                id: "ak_seed_2",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 15",
+                categoria: "ANTICIPOS",
+                premisa: "Entrega de anticipo a proveedor local por S/ 1,000 más IGV, recepción de la factura de anticipo y realización del pago bancario.",
+                glosa: "COMERCIAL: ANTICIPOS A PROVEEDORES LOCALES",
+                asiento_json: [
+                    { cuenta: "422", detalle: "ANTICIPOS A PROVEEDORES", debe: 1000, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 180, haber: 0 },
+                    { cuenta: "4212", detalle: "EMITIDAS (LIQ. ANTICIPO)", debe: 0, haber: 1180 },
+                    { cuenta: "4212", detalle: "EMITIDAS (PAGO)", debe: 1180, haber: 0 },
+                    { cuenta: "1041", detalle: "CUENTAS CORRIENTES OPERATIVAS", debe: 0, haber: 1180 }
+                ],
+                explicacion: "Por el anticipo otorgado y la posterior cancelación con transferencia bancaria.",
+                tags: "anticipo, proveedor, factura, pago, igv"
+            },
+            {
+                id: "ak_seed_3",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIC 2",
+                categoria: "DEVOLUCIONES",
+                premisa: "Devolución de mercaderías al proveedor por valor de S/ 1,000 más IGV. Recepción de Nota de Crédito y extorno de mercadería del almacén.",
+                glosa: "COMERCIAL: DEVOLUCIÓN MERCADERÍA PROVEEDOR",
+                asiento_json: [
+                    { cuenta: "4212", detalle: "EMITIDAS (NC REVERSIÓN)", debe: 1180, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 0, haber: 180 },
+                    { cuenta: "6011", detalle: "MERCADERÍAS MANUFACTURADAS", debe: 0, haber: 1000 },
+                    { cuenta: "6111", detalle: "MERCADERÍAS MANUFACTURADAS", debe: 1000, haber: 0 },
+                    { cuenta: "20111", detalle: "COSTO (EXTORNO ALMACÉN)", debe: 0, haber: 1000 }
+                ],
+                explicacion: "Reversión de la compra y ajuste de inventarios en almacén bajo NIC 2.",
+                tags: "devolucion, proveedor, nota de credito, almacen, extorno"
+            },
+            {
+                id: "ak_seed_4",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 15",
+                categoria: "DESCUENTOS",
+                premisa: "Cobro de factura de S/ 1,000 concediendo un descuento por pronto pago del 5% (S/ 50) más su respectivo ajuste de IGV (S/ 9).",
+                glosa: "COMERCIAL: DESCUENTOS PRONTO PAGO CONCEDIDOS",
+                asiento_json: [
+                    { cuenta: "1041", detalle: "CUENTAS CORRIENTES OPERATIVAS", debe: 941, haber: 0 },
+                    { cuenta: "675", detalle: "DESCUENTOS CONCEDIDOS PRONTO PAGO", debe: 50, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA (REVERSIÓN)", debe: 9, haber: 0 },
+                    { cuenta: "1212", detalle: "EMITIDAS EN CARTERA", debe: 0, haber: 1000 }
+                ],
+                explicacion: "Descuento financiero otorgado al cliente y reducción proporcional del IGV.",
+                tags: "descuento, pronto pago, cobro, banco, nota de credito"
+            },
+            {
+                id: "ak_seed_5",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 15",
+                categoria: "GIFT CARDS",
+                premisa: "Venta y cobro de una Gift Card por valor de S/ 500 (pasivo). Posteriormente, el cliente realiza el canje de la Gift Card por mercadería, reconociendo el ingreso gravado con IGV.",
+                glosa: "COMERCIAL: VENTA Y CANJE DE GIFT CARDS",
+                asiento_json: [
+                    { cuenta: "1041", detalle: "CUENTAS CORRIENTES OPERATIVAS", debe: 500, haber: 0 },
+                    { cuenta: "122", detalle: "ANTICIPOS DE CLIENTES (GIFT CARDS)", debe: 0, haber: 500 },
+                    { cuenta: "122", detalle: "ANTICIPOS DE CLIENTES (CANJE)", debe: 500, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 0, haber: 76.27 },
+                    { cuenta: "701", detalle: "MERCADERÍAS", debe: 0, haber: 423.73 }
+                ],
+                explicacion: "Diferimiento del ingreso como pasivo por Gift Card y posterior reconocimiento tras el canje físico.",
+                tags: "gift card, anticipo, venta, canje, ingreso"
+            },
+            {
+                id: "ak_seed_6",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIC 2",
+                categoria: "PROMOCIONES",
+                premisa: "Entrega de muestras gratuitas a clientes con fines de promoción. El costo de la mercadería es S/ 100. Se calcula y asume el IGV por retiro de bienes (S/ 18) y se realiza el destino del gasto.",
+                glosa: "COMERCIAL: ENTREGA DE MUESTRAS GRATIS",
+                asiento_json: [
+                    { cuenta: "659", detalle: "OTROS GASTOS DE GESTIÓN (MUESTRAS)", debe: 100, haber: 0 },
+                    { cuenta: "6415", detalle: "IGV ASUMIDO (RETIRO BIENES)", debe: 18, haber: 0 },
+                    { cuenta: "20111", detalle: "COSTO (MERCADERÍA)", debe: 0, haber: 100 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 0, haber: 18 },
+                    { cuenta: "951", detalle: "GASTOS DE VENTAS", debe: 118, haber: 0 },
+                    { cuenta: "791", detalle: "CARGAS IMPUTABLES", debe: 0, haber: 118 }
+                ],
+                explicacion: "Retiro de bienes para fines publicitarios. El IGV es asumido por la empresa y considerado gasto deducible.",
+                tags: "muestras gratis, retiro de bienes, igv asumido, publicidad, costo"
+            },
+            {
+                id: "ak_seed_7",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 9",
+                categoria: "COBRANZA DUDOSA",
+                premisa: "Reconocimiento de la provisión de cobranza dudosa por S/ 1,000 tras agotar las gestiones de cobro. Posteriormente, se procede al castigo definitivo de la cuenta por cobrar incobrable.",
+                glosa: "COMERCIAL: COBRANZA DUDOSA Y CASTIGO",
+                asiento_json: [
+                    { cuenta: "6841", detalle: "ESTIMACIÓN CUENTAS COBRANZA DUDOSA", debe: 1000, haber: 0 },
+                    { cuenta: "1911", detalle: "FACTURAS POR COBRAR", debe: 0, haber: 1000 },
+                    { cuenta: "1911", detalle: "FACTURAS POR COBRAR", debe: 1000, haber: 0 },
+                    { cuenta: "1212", detalle: "EMITIDAS EN CARTERA", debe: 0, haber: 1000 }
+                ],
+                explicacion: "Pérdida crediticia esperada y su posterior castigo contra la cuenta por cobrar original según NIIF 9.",
+                tags: "cobranza dudosa, provision, castigo, cartera, incobrable"
+            },
+            {
+                id: "ak_seed_8",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIC 2",
+                categoria: "DESMEDROS",
+                premisa: "Reconocimiento del desmedro por mercadería obsoleta destruida ante Notario Público por un costo de S/ 2,000. Se provisiona el deterioro, se destina el gasto, y luego se da de baja la mercadería del almacén.",
+                glosa: "COMERCIAL: DESMEDRO CON ACTA NOTARIAL",
+                asiento_json: [
+                    { cuenta: "6851", detalle: "DESVALORIZACIÓN DE MERCADERÍAS", debe: 2000, haber: 0 },
+                    { cuenta: "2911", detalle: "MERCADERÍAS (DETERIORO)", debe: 0, haber: 2000 },
+                    { cuenta: "941", detalle: "GASTOS ADMINISTRATIVOS", debe: 2000, haber: 0 },
+                    { cuenta: "781", detalle: "CARGAS CUBIERTAS POR PROVISIONES", debe: 0, haber: 2000 },
+                    { cuenta: "2911", detalle: "MERCADERÍAS", debe: 2000, haber: 0 },
+                    { cuenta: "20111", detalle: "COSTO (BAJA DESTRUC.)", debe: 0, haber: 2000 }
+                ],
+                explicacion: "Pérdida por obsolescencia (desmedro) acreditada con acta notarial para su deducibilidad en el impuesto a la renta.",
+                tags: "desmedro, notario, destruccion, obsolescencia, baja de inventario"
+            },
+            {
+                id: "ak_seed_9",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "NIIF 16",
+                categoria: "ALQUILERES",
+                premisa: "Arrendamiento de local comercial para oficina de ventas por S/ 2,000. Se calcula la retención de impuesto a la renta de primera/segunda categoría del 5% (S/ 100) y se registra el pasivo neto de S/ 1,900 más el asiento de destino.",
+                glosa: "COMERCIAL: ALQUILER LOCAL - RETENCIÓN 5%",
+                asiento_json: [
+                    { cuenta: "6351", detalle: "ALQUILER DE EDIFICACIONES", debe: 2000, haber: 0 },
+                    { cuenta: "40172", detalle: "RETENCIONES 2DA CATEGORÍA", debe: 0, haber: 100 },
+                    { cuenta: "4699", detalle: "OTRAS CUENTAS POR PAGAR", debe: 0, haber: 1900 },
+                    { cuenta: "951", detalle: "GASTOS DE VENTAS", debe: 2000, haber: 0 },
+                    { cuenta: "791", detalle: "CARGAS IMPUTABLES", debe: 0, haber: 2000 }
+                ],
+                explicacion: "Gasto de arrendamiento con retención del 5% del impuesto a la renta a persona natural.",
+                tags: "alquiler, arrendamiento, retencion 5%, gasto, destino"
+            },
+            {
+                id: "ak_seed_10",
+                sector: "COMERCIAL",
+                regimen: "RG",
+                niif_norma: "Cierre de Ejercicio",
+                categoria: "CIERRE CONTABLE",
+                premisa: "Cierre contable anual del ejercicio comercial. Cancelación del costo de ventas contra la variación de inventarios, transferencia de compras al margen comercial, y cancelación de ventas al margen comercial.",
+                glosa: "COMERCIAL: CIERRE CONTABLE INTEGRAL",
+                asiento_json: [
+                    { cuenta: "6111", detalle: "VARIACIÓN DE INVENTARIOS", debe: 50000, haber: 0 },
+                    { cuenta: "69121", detalle: "COSTO DE VENTAS (CIERRE)", debe: 0, haber: 50000 },
+                    { cuenta: "801", detalle: "MARGEN COMERCIAL", debe: 50000, haber: 0 },
+                    { cuenta: "6011", detalle: "COMPRAS (CANCELACIÓN)", debe: 0, haber: 50000 },
+                    { cuenta: "70121", detalle: "VENTAS (CANCELACIÓN)", debe: 80000, haber: 0 },
+                    { cuenta: "801", detalle: "MARGEN COMERCIAL (SALDO)", debe: 0, haber: 80000 }
+                ],
+                explicacion: "Cancelación de cuentas de resultados de compras, ventas e inventarios para determinar el margen comercial del ejercicio.",
+                tags: "cierre contable, margen comercial, costo de ventas, compras, ventas"
+            },
+            {
+                id: "ak_seed_11",
+                sector: "INDUSTRIAL",
+                regimen: "RG",
+                niif_norma: "NIC 2",
+                categoria: "COSTO PRODUCCION",
+                premisa: "Consumo de materia prima por S/ 5,000 para el orden de producción en el departamento de corte. Se registra la variación por naturaleza y el destino al centro de costos de producción.",
+                glosa: "INDUSTRIAL: CONSUMO MATERIA PRIMA",
+                asiento_json: [
+                    { cuenta: "6121", detalle: "VARIACIÓN DE INVENTARIOS", debe: 5000, haber: 0 },
+                    { cuenta: "2411", detalle: "MATERIAS PRIMAS", debe: 0, haber: 5000 },
+                    { cuenta: "90111", detalle: "MATERIA PRIMA - DPTO CORTE", debe: 5000, haber: 0 },
+                    { cuenta: "791", detalle: "CARGAS IMPUTABLES", debe: 0, haber: 5000 }
+                ],
+                explicacion: "Consumo de materias primas para su transformación y su posterior asignación al costo de producción.",
+                tags: "materia prima, consumo, fabrica, variacion, destino"
+            },
+            {
+                id: "ak_seed_12",
+                sector: "INDUSTRIAL",
+                regimen: "RG",
+                niif_norma: "NIC 19",
+                categoria: "PLANILLAS",
+                premisa: "Planilla de sueldos de operarios de planta (Mano de Obra Directa - MOD) por S/ 3,000 de sueldo básico. Se calcula ESSALUD (9%), retención de AFP (13%), neto a pagar de S/ 2,610 y se destina el costo de producción.",
+                glosa: "INDUSTRIAL: PLANILLA OPERARIOS MOD",
+                asiento_json: [
+                    { cuenta: "6211", detalle: "SUELDOS Y SALARIOS", debe: 3000, haber: 0 },
+                    { cuenta: "6271", detalle: "ESSALUD", debe: 270, haber: 0 },
+                    { cuenta: "4031", detalle: "ESSALUD", debe: 0, haber: 270 },
+                    { cuenta: "417", detalle: "AFP (RETENCIÓN)", debe: 0, haber: 390 },
+                    { cuenta: "4111", detalle: "SUELDOS POR PAGAR", debe: 0, haber: 2610 },
+                    { cuenta: "90211", detalle: "MOD - DPTO CORTE", debe: 3270, haber: 0 },
+                    { cuenta: "791", detalle: "CARGAS IMPUTABLES", debe: 0, haber: 3270 }
+                ],
+                explicacion: "Registro del gasto por planilla de operarios y capitalización del costo de producción (mano de obra directa) bajo NIC 19.",
+                tags: "planilla, operarios, afp, essalud, mod, produccion"
+            },
+            {
+                id: "ak_seed_13",
+                sector: "INDUSTRIAL",
+                regimen: "RG",
+                niif_norma: "NIC 16",
+                categoria: "COSTO PRODUCCION",
+                premisa: "Provisión de gastos indirectos de fabricación (CIF): energía eléctrica por S/ 800 más IGV y depreciación mensual de maquinarias de planta por S/ 1,200. Se registran los gastos y el destino a los costos de fábrica.",
+                glosa: "INDUSTRIAL: CIF Y DEPRECIACIÓN",
+                asiento_json: [
+                    { cuenta: "6361", detalle: "ENERGÍA ELÉCTRICA", debe: 800, haber: 0 },
+                    { cuenta: "6814", detalle: "DEPRECIACIÓN PPE", debe: 1200, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 144, haber: 0 },
+                    { cuenta: "4212", detalle: "EMITIDAS", debe: 0, haber: 944 },
+                    { cuenta: "3952", detalle: "DEPRECIACIÓN MAQUINARIAS", debe: 0, haber: 1200 },
+                    { cuenta: "90311", detalle: "CIF - ENERGÍA Y DEPREC.", debe: 2000, haber: 0 },
+                    { cuenta: "791", detalle: "CARGAS IMPUTABLES", debe: 0, haber: 800 },
+                    { cuenta: "781", detalle: "CARGAS DEDUCIBLES", debe: 0, haber: 1200 }
+                ],
+                explicacion: "Reconocimiento de la depreciación fabril y costos indirectos de energía, destinándose al costo CIF de producción.",
+                tags: "cif, energia, depreciacion, maquinaria, fabrica"
+            },
+            {
+                id: "ak_seed_14",
+                sector: "INDUSTRIAL",
+                regimen: "RG",
+                niif_norma: "NIC 2",
+                categoria: "COSTO PRODUCCION",
+                premisa: "Terminación de la orden de producción. Se liquidan e ingresan al almacén productos manufacturados terminados por un costo de producción total acumulado de S/ 15,000.",
+                glosa: "INDUSTRIAL: LIQUIDACIÓN DE PRODUCCIÓN",
+                asiento_json: [
+                    { cuenta: "211", detalle: "PRODUCTOS MANUFACTURADOS", debe: 15000, haber: 0 },
+                    { cuenta: "7111", detalle: "PRODUCTOS MANUFACTURADOS", debe: 0, haber: 15000 }
+                ],
+                explicacion: "Ingreso de la producción terminada al almacén de productos terminados, cancelando la cuenta de variación de la producción (Clase 71).",
+                tags: "productos terminados, liquidacion, produccion, almacen, ingreso"
+            },
+            {
+                id: "ak_seed_15",
+                sector: "SERVICIOS",
+                regimen: "RG",
+                niif_norma: "NIC 19",
+                categoria: "HONORARIOS",
+                premisa: "Provisión del recibo por honorarios por asesoría legal y consultoría empresarial por S/ 2,000. Al superar el tope mínimo de S/ 1,500 se efectúa la retención de Impuesto a la Renta de 4ta categoría (8.0% = S/ 160) y neto de S/ 1,840.",
+                glosa: "SERVICIOS: HONORARIOS 4TA CATEGORÍA",
+                asiento_json: [
+                    { cuenta: "632", detalle: "ASESORÍA Y CONSULTORÍA", debe: 2000, haber: 0 },
+                    { cuenta: "40172", detalle: "RETENCIONES 4TA CATEGORÍA", debe: 0, haber: 160 },
+                    { cuenta: "424", detalle: "HONORARIOS POR PAGAR", debe: 0, haber: 1840 }
+                ],
+                explicacion: "Servicio prestado por un profesional independiente. Aplicación de la retención del impuesto a la renta del 8.0%.",
+                tags: "recibo por honorarios, retencion, cuarta categoria, consultoria, gasto"
+            },
+            {
+                id: "ak_seed_16",
+                sector: "SERVICIOS",
+                regimen: "RG",
+                niif_norma: "NIIF 15",
+                categoria: "INGRESOS",
+                premisa: "Emisión de factura por prestación de servicios de consultoría especializada por S/ 5,000 más IGV (total S/ 5,900). Se cobra el comprobante recibiendo el neto en cuenta corriente comercial (S/ 5,192) y el 12% de detracción (S/ 708) en la cuenta del Banco de la Nación.",
+                glosa: "SERVICIOS: FACTURACIÓN Y DETRACCIÓN 12%",
+                asiento_json: [
+                    { cuenta: "1212", detalle: "EMITIDAS EN CARTERA", debe: 5900, haber: 0 },
+                    { cuenta: "40111", detalle: "IGV - CUENTA PROPIA", debe: 0, haber: 900 },
+                    { cuenta: "7041", detalle: "PRESTACIÓN DE SERVICIOS", debe: 0, haber: 5000 },
+                    { cuenta: "1041", detalle: "CC OPERATIVAS (NETO)", debe: 5192, haber: 0 },
+                    { cuenta: "1042", detalle: "CC FINES ESPECÍFICOS (BN)", debe: 708, haber: 0 },
+                    { cuenta: "1212", detalle: "COBRO FACTURA", debe: 0, haber: 5900 }
+                ],
+                explicacion: "Reconocimiento de la venta de servicios y cobro neto bancario diferenciando el ingreso de fondos por detracción BN.",
+                tags: "detraccion, servicios, banco nacion, cobro, igv, factura"
+            }
+        ];
+
+        for (const c of seedCases) {
+            await db.saveAIKnowledge(c);
+        }
+
+        res.json({ success: true, count: seedCases.length });
+    } catch (error) {
+        console.error('[AI ERROR] Error en seedAIKnowledge:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // --- Sprint 5: IFRS/NIIF & NIC 12 Endpoints ---
 app.use('/api/finance', authMiddleware, inspectMiddleware);
 

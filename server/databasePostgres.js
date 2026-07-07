@@ -787,6 +787,101 @@ const db = {
             console.error('[POSTGRES] Error eliminando sire_file:', error.message);
             return { success: false, error: error.message };
         }
+    },
+
+    // --- AI Knowledge Base Functions ---
+    getAIKnowledge: async (filters = {}) => {
+        try {
+            let sql = `SELECT * FROM ai_knowledge_base WHERE activo = true`;
+            const params = [];
+            let paramIndex = 1;
+
+            if (filters.sector) {
+                sql += ` AND sector = $${paramIndex++}`;
+                params.push(filters.sector);
+            }
+            if (filters.regimen) {
+                sql += ` AND regimen = $${paramIndex++}`;
+                params.push(filters.regimen);
+            }
+            if (filters.categoria) {
+                sql += ` AND categoria = $${paramIndex++}`;
+                params.push(filters.categoria);
+            }
+            if (filters.search) {
+                sql += ` AND (premisa ILIKE $${paramIndex} OR tags ILIKE $${paramIndex} OR glosa ILIKE $${paramIndex})`;
+                params.push(`%${filters.search}%`);
+                paramIndex++;
+            }
+
+            sql += ` ORDER BY created_at DESC`;
+            const res = await query(sql, params);
+            return res.rows.map(r => {
+                let asiento = [];
+                try {
+                    asiento = typeof r.asiento_json === 'string' ? JSON.parse(r.asiento_json) : (r.asiento_json || []);
+                } catch (e) {
+                    asiento = [];
+                }
+                return {
+                    ...r,
+                    asiento_json: asiento
+                };
+            });
+        } catch (error) {
+            console.error('[POSTGRES] Error getting ai knowledge:', error.message);
+            return [];
+        }
+    },
+
+    saveAIKnowledge: async (item) => {
+        try {
+            const id = item.id || `ak_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const asientoStr = typeof item.asiento_json === 'string' ? item.asiento_json : JSON.stringify(item.asiento_json || []);
+            
+            const sql = `
+                INSERT INTO ai_knowledge_base (
+                    id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                    sector = EXCLUDED.sector,
+                    regimen = EXCLUDED.regimen,
+                    niif_norma = EXCLUDED.niif_norma,
+                    categoria = EXCLUDED.categoria,
+                    premisa = EXCLUDED.premisa,
+                    glosa = EXCLUDED.glosa,
+                    asiento_json = EXCLUDED.asiento_json,
+                    explicacion = EXCLUDED.explicacion,
+                    tags = EXCLUDED.tags,
+                    updated_at = NOW();
+            `;
+            await query(sql, [
+                id,
+                item.sector || 'COMERCIAL',
+                item.regimen || 'RG',
+                item.niif_norma || '',
+                item.categoria || 'GENERAL',
+                item.premisa,
+                item.glosa || '',
+                asientoStr,
+                item.explicacion || '',
+                item.tags || ''
+            ]);
+            return { success: true, id };
+        } catch (error) {
+            console.error('[POSTGRES] Error saving ai knowledge:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    deleteAIKnowledge: async (id) => {
+        try {
+            await query(`DELETE FROM ai_knowledge_base WHERE id = $1`, [id]);
+            return { success: true };
+        } catch (error) {
+            console.error('[POSTGRES] Error deleting ai knowledge:', error.message);
+            return { success: false, error: error.message };
+        }
     }
 };
 
@@ -1475,6 +1570,28 @@ async function ensureSchemaConstraints() {
                     );
                     CREATE INDEX IF NOT EXISTS idx_sire_files_workspace ON sire_files(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_sire_files_user ON sire_files(user_id);
+                `
+            },
+            {
+                name: 'ai_knowledge_base',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS ai_knowledge_base (
+                        id TEXT PRIMARY KEY,
+                        sector TEXT NOT NULL DEFAULT 'COMERCIAL',
+                        regimen TEXT NOT NULL DEFAULT 'RG',
+                        niif_norma TEXT DEFAULT '',
+                        categoria TEXT NOT NULL DEFAULT 'GENERAL',
+                        premisa TEXT NOT NULL,
+                        glosa TEXT NOT NULL,
+                        asiento_json TEXT NOT NULL,
+                        explicacion TEXT DEFAULT '',
+                        tags TEXT DEFAULT '',
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        activo BOOLEAN DEFAULT true
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_knowledge_sector ON ai_knowledge_base(sector);
+                    CREATE INDEX IF NOT EXISTS idx_ai_knowledge_regimen ON ai_knowledge_base(regimen);
                 `
             }
         ];
