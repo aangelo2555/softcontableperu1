@@ -4,10 +4,12 @@ const db = require('./databasePostgres');
 const p1 = 'AQ.Ab8RN6';
 const p2 = 'Jt4kk_z0OQNtMq-TA_';
 const p3 = 'fcuZObAefkg9L32F3a6nZjfVAw';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || (p1 + p2 + p3);
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-console.log(`[GEMINI SERVICE] Inicializado. Usando API Key: ${GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...${GEMINI_API_KEY.substring(GEMINI_API_KEY.length - 6)}` : 'VACÍA'}`);
+function getGeminiApiConfig() {
+    const key = process.env.GEMINI_API_KEY || (p1 + p2 + p3);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+    return { key, url };
+}
 
 /**
  * Realiza una búsqueda simple de palabras clave para recuperar casos contables similares.
@@ -75,6 +77,9 @@ async function postWithRetry(url, body, config, retries = 3, delay = 2000) {
  */
 async function generateAsiento(premisa, companyContext, planContable) {
     try {
+        const { key: activeKey, url: activeUrl } = getGeminiApiConfig();
+        console.log(`[GEMINI SERVICE] Procesando solicitud de generación. Usando API Key: ${activeKey ? `${activeKey.substring(0, 10)}...${activeKey.substring(activeKey.length - 6)}` : 'VACÍA'}`);
+
         const sector = companyContext.businessType || 'COMERCIAL';
         const regimen = companyContext.regimenTributario || 'RG';
 
@@ -206,7 +211,7 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
             }
         };
 
-        const response = await postWithRetry(GEMINI_API_URL, requestBody, {
+        const response = await postWithRetry(activeUrl, requestBody, {
             headers: {
                 'Content-Type': 'application/json'
             },
