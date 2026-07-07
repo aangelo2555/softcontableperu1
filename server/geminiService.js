@@ -156,16 +156,14 @@ REGLAS CONTABLES Y FISCALES OBLIGATORIAS:
 2. Usa EXCLUSIVAMENTE códigos de cuenta que existan en el Plan Contable provisto.
 3. Las cuentas contables deben tener una longitud mínima de 3 dígitos (idealmente 4 o 5 dígitos si están disponibles).
 4. Ninguna línea puede registrar montos en el debe y el haber de manera simultánea.
-5. El IGV en compras se registra según la segmentación de la Tabla 12 de SUNAT:
-   - 40111 (Destinado a operaciones gravadas)
-   - 40112 (Destinado a operaciones mixtas)
-   - 40113 (Destinado a operaciones no gravadas)
+5. Dinámica de la Cuenta 40 (IGV) en Compras/Gastos: El IGV en compras/gastos (cuentas 40111, 40112, 40113) es un crédito fiscal y SIEMPRE se registra debitado en el DEBE junto a la cuenta de compra/gasto de Clase 6 o activo de Clase 3. NUNCA registres la cuenta 40 en el HABER en un asiento de compra o provisión de gastos.
 6. El IGV en ventas se registra siempre en la cuenta 40112.
 7. Retención de Cuarta Categoría (Honorarios): Se aplica la cuenta 40172 (tasa del 8.0%) si el importe de la operación supera los S/ 1,500.00.
-8. Umbral NIIF 16 / NIC 16 (Capitalización): Si se adquiere un activo fijo y su valor supera 1/4 de UIT 2026 (S/ 1,375.00), capitalízalo en cuentas de Clase 3 (33x). Si es menor, regístralo como gasto (Clase 6).
+8. NIC 16 (Propiedades, Planta y Equipo) - Agrupación y Capitalización de Costos: Al adquirir un activo fijo que supere el umbral de 1/4 de UIT 2026 (S/ 1,375.00), capitalízalo en cuentas de Clase 3 (33x). Además, todos los costos directamente relacionados y necesarios para su adquisición y puesta en marcha (tales como fletes/transporte de activos, instalación, montaje, pruebas) deben ser capitalizados obligatoriamente dentro de la misma cuenta de activo de Clase 3 en lugar de registrarse como gastos de servicios independientes (Clase 6).
 9. El asiento resultante debe ser adecuado para el sector "${sector}" y régimen tributario "${regimen}".
 10. Utiliza una glosa general clara, descriptiva y en mayúsculas.
 11. Si la premisa del usuario es un saludo (como "hola", "buenos días"), un agradecimiento ("gracias"), una exclamación o elogio ("excelente", "perfecto", "buen trabajo"), o no contiene información suficiente ni intención de registrar un asiento contable: debes retornar obligatoriamente "lines": [], "glosa": "", "niif_norma": "", y en "explicacion" escribir una respuesta amable, atenta y profesional.
+12. Compras y Cuentas por Pagar: Toda compra/gasto o adquisición de activos fijos al crédito debe provisionar su respectiva cuenta por pagar (habitualmente 4212 para compras o 4654 para activos fijos) registrada en el HABER.
 
 FORMATO DE RETORNO OBLIGATORIO:
 Debes responder ÚNICAMENTE con un objeto JSON válido con la siguiente estructura (no agregues texto fuera de este bloque de código JSON, ni delimitadores markdown como \`\`\`json):
