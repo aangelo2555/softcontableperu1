@@ -53,6 +53,22 @@ async function retrieveSimilarCases(premisa, sector, regimen) {
 }
 
 /**
+ * Helper para realizar peticiones POST con reintentos automáticos ante error 429 (límite de cuota)
+ */
+async function postWithRetry(url, body, config, retries = 3, delay = 2000) {
+    try {
+        return await axios.post(url, body, config);
+    } catch (error) {
+        if (retries > 0 && error.response && error.response.status === 429) {
+            console.warn(`[GEMINI SERVICE] Límite 429 detectado. Reintentando en ${delay}ms... (Intentos restantes: ${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return postWithRetry(url, body, config, retries - 1, delay * 2);
+        }
+        throw error;
+    }
+}
+
+/**
  * Genera un asiento contable a partir de una premisa del usuario.
  */
 async function generateAsiento(premisa, companyContext, planContable) {
@@ -188,7 +204,7 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
             }
         };
 
-        const response = await axios.post(GEMINI_API_URL, requestBody, {
+        const response = await postWithRetry(GEMINI_API_URL, requestBody, {
             headers: {
                 'Content-Type': 'application/json'
             },
