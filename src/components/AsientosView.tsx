@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BookText, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle, X, Edit2, PlusCircle, FileDown, Printer, Bot } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -15,6 +15,7 @@ import type { ToastData } from './shared/Toast';
 import Modal from './shared/Modal';
 import DateInput from './shared/DateInput';
 import { AIChatPanel } from './AIChatPanel';
+import { webApiBridge } from '../services/apiBridge';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -74,6 +75,19 @@ const AsientosView: React.FC = () => {
   const [showAIChat, setShowAIChat] = useState(() => {
     return sessionStorage.getItem('softcontable_show_ai_chat') === 'true';
   });
+  const [saveToAi, setSaveToAi] = useState(false);
+
+  const isAdmin = useMemo(() => {
+    const token = localStorage.getItem('softcontable_token');
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const email = (payload.email || '').trim().toLowerCase();
+      return payload.role === 'admin' || email === 'aangelo2555@gmail.com' || email.startsWith('admin');
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     sessionStorage.setItem('softcontable_show_ai_chat', String(showAIChat));
@@ -253,6 +267,32 @@ const AsientosView: React.FC = () => {
     if (!balanced) { setToast({ type: 'error', message: `No cuadra. Diferencia: ${(totalDebe - totalHaber).toFixed(2)}` }); return; }
     if (!header.glosa.trim()) { setToast({ type: 'error', message: 'Ingrese una glosa.' }); return; }
     
+    // Save to AI Knowledge Base if toggled (Feedback Loop)
+    if (saveToAi) {
+      try {
+        const caseItem = {
+          sector: currentCompany?.businessType || 'COMERCIAL',
+          regimen: currentCompany?.regimenTributario || 'RG',
+          niif_norma: 'PCGE MANUAL',
+          categoria: 'MANUAL_LEARNING',
+          premisa: `Registro manual de asiento para: ${header.glosa}`,
+          glosa: header.glosa,
+          asiento_json: lines.map(l => ({
+            cuenta: l.cuenta,
+            detalle: l.detalle,
+            debe: Number(l.debe || 0),
+            haber: Number(l.haber || 0)
+          })),
+          explicacion: `Patrón contable aprendido mediante feedback loop desde el editor manual de asientos diarios para la empresa ${currentCompany?.name || 'Local'}.`,
+          tags: 'manual, feedback, training'
+        };
+        await webApiBridge.aiSaveKnowledge(caseItem);
+        setSaveToAi(false);
+      } catch (err: any) {
+        console.error('[AI FEEDBACK LOOP ERROR]:', err);
+      }
+    }
+
     if (editingId) {
       setAuditModal({
         show: true,
@@ -659,6 +699,22 @@ const AsientosView: React.FC = () => {
                 <input className="w-full text-center font-bold text-pld-blue bg-app-bg/50 border-none text-sm" value={header.mes} readOnly />
               </FormField>
             </div>
+
+            {isAdmin && (
+              <div className="mt-3 pt-3 border-t border-app-border/40 flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="saveToAiKnowledge" 
+                  checked={saveToAi} 
+                  onChange={(e) => setSaveToAi(e.target.checked)}
+                  className="w-4 h-4 text-pld-blue border-app-border rounded focus:ring-pld-blue/15 focus:ring-2 bg-app-bg cursor-pointer"
+                />
+                <label htmlFor="saveToAiKnowledge" className="text-xs font-bold text-app-muted cursor-pointer flex items-center gap-1.5 hover:text-app-text transition-colors select-none">
+                  <span>🤖 Guardar este asiento como patrón de aprendizaje de IA</span>
+                  <span className="text-[9px] bg-pld-blue/10 text-pld-blue px-1.5 py-0.5 rounded uppercase font-black tracking-wider">Feedback Loop</span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Line Input */}

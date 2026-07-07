@@ -3,6 +3,7 @@ import { Send, Bot, Sparkles, X, Loader2, CheckCircle, Database, HelpCircle, Ale
 import { webApiBridge } from '../services/apiBridge';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
+import { auditSuggestedAccounts } from '../engine/pcgeAuditor';
 
 interface AIChatPanelProps {
   onClose: () => void;
@@ -19,11 +20,15 @@ interface ChatMessage {
     asiento_json: { cuenta: string; detalle: string; debe: number; haber: number }[];
     explicacion?: string;
     niif_norma?: string;
+    asientos?: {
+      glosa: string;
+      lines: { cuenta: string; detalle: string; debe: number; haber: number }[];
+    }[];
   };
 }
 
 export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry }) => {
-  const { plan, currentCompany } = useStore();
+  const { plan, currentCompany, addAccount } = useStore();
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = sessionStorage.getItem('softcontable_ai_chat_messages');
     if (saved) {
@@ -125,7 +130,8 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
             glosa: aiData.glosa || 'ASIENTO GENERADO POR IA',
             asiento_json: aiData.asiento_json || aiData.lines || [],
             explicacion: aiData.explicacion,
-            niif_norma: aiData.niif_norma
+            niif_norma: aiData.niif_norma,
+            asientos: aiData.asientos || []
           }
         };
 
@@ -147,23 +153,59 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
     }
   };
 
-  const handleApply = (msgEntry: any) => {
-    if (!msgEntry || !msgEntry.asiento_json || msgEntry.asiento_json.length === 0) {
+  const handleApply = (msgEntry: any, specificAsiento?: any) => {
+    const targetGlosa = specificAsiento ? specificAsiento.glosa : msgEntry.glosa;
+    const targetLines = specificAsiento ? (specificAsiento.asiento_json || specificAsiento.lines) : (msgEntry.asiento_json || msgEntry.lines);
+
+    if (!targetLines || targetLines.length === 0) {
       toast.error('No hay líneas en este asiento para aplicar.');
       return;
     }
     
     // Mapear líneas para el draft contable
-    const mappedLines = msgEntry.asiento_json.map((l: any, idx: number) => ({
+    const mappedLines = targetLines.map((l: any, idx: number) => ({
       id: Date.now() + idx + Math.random(),
       cuenta: l.cuenta,
-      detalle: l.detalle || msgEntry.glosa,
+      detalle: l.detalle || targetGlosa,
       debe: Number(l.debe || 0),
       haber: Number(l.haber || 0)
     }));
 
-    onApplyEntry(mappedLines, msgEntry.glosa);
-    toast.success('¡Asiento aplicado al borrador actual! ⚡');
+    onApplyEntry(mappedLines, targetGlosa);
+    toast.success(`¡Asiento "${targetGlosa}" aplicado al borrador actual! ⚡`);
+  };
+
+  const handleApplyAllMerged = (msgEntry: any) => {
+    if (!msgEntry.asientos || msgEntry.asientos.length === 0) return;
+    
+    let allLines: any[] = [];
+    msgEntry.asientos.forEach((asiento: any) => {
+      const lines = asiento.lines || asiento.asiento_json || [];
+      lines.forEach((l: any) => {
+        allLines.push({
+          cuenta: l.cuenta,
+          detalle: l.detalle || asiento.glosa,
+          debe: l.debe,
+          haber: l.haber
+        });
+      });
+    });
+
+    if (allLines.length === 0) {
+      toast.error('No hay líneas para aplicar.');
+      return;
+    }
+
+    const mappedLines = allLines.map((l: any, idx: number) => ({
+      id: Date.now() + idx + Math.random(),
+      cuenta: l.cuenta,
+      detalle: l.detalle,
+      debe: Number(l.debe || 0),
+      haber: Number(l.haber || 0)
+    }));
+
+    onApplyEntry(mappedLines, msgEntry.glosa || 'ASIENTOS FUSIONADOS');
+    toast.success('¡Todos los asientos fusionados aplicados al borrador! ⚡');
   };
 
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -263,93 +305,238 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
                 </div>
 
                 {/* Mostrar Asiento Contable */}
-                {msg.entry && msg.entry.asiento_json && msg.entry.asiento_json.length > 0 && (
-                  <div className="mt-4 bg-app-bg/60 rounded-xl p-3 border border-app-border/40 font-sans text-app-text">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[9px] font-black uppercase text-pld-blue tracking-widest">
-                        PROPUESTA DE ASIENTO
-                      </span>
+                {msg.entry && (
+                  <div className="mt-4 flex flex-col gap-3 font-sans text-app-text">
+                    {/* Si tiene múltiples sub-asientos contables desglosados */}
+                    {msg.entry.asientos && msg.entry.asientos.length > 0 ? (
+                      msg.entry.asientos.map((asiento, subIdx) => {
+                        const subDebe = asiento.lines.reduce((sum, item) => sum + (Number(item.debe) || 0), 0);
+                        const subHaber = asiento.lines.reduce((sum, item) => sum + (Number(item.haber) || 0), 0);
+                        const subBalanced = Math.abs(subDebe - subHaber) < 0.01;
+
+                        return (
+                          <div key={subIdx} className="bg-app-bg/60 rounded-xl p-3 border border-app-border/40">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[9px] font-black uppercase text-pld-blue tracking-widest">
+                                ASIENTO {subIdx + 1}
+                              </span>
+                              {subBalanced && (
+                                <span className="text-[8px] bg-emerald-500/10 text-emerald-500 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                  PARTIDA DOBLE OK
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-[10px] font-extrabold mb-2.5 uppercase tracking-wider text-app-text/90">
+                              {asiento.glosa}
+                            </p>
+
+                            {/* Tabla de Cuentas */}
+                            <div className="overflow-x-auto rounded-lg border border-app-border/50 bg-app-surface/40">
+                              <table className="w-full text-[10px]">
+                                <thead>
+                                  <tr className="bg-app-bg/80 text-[8px] font-bold text-app-muted border-b border-app-border/50 uppercase">
+                                    <th className="p-1.5 text-center w-12">Cuenta</th>
+                                    <th className="p-1.5 text-left">Detalle</th>
+                                    <th className="p-1.5 text-right w-16">Debe</th>
+                                    <th className="p-1.5 text-right w-16">Haber</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {asiento.lines.map((l, i) => (
+                                    <tr key={i} className="border-b border-app-border/20 last:border-0 hover:bg-app-hover/30">
+                                      <td className="p-1.5 text-center font-mono font-black text-pld-blue">{l.cuenta}</td>
+                                      <td className="p-1.5 font-bold truncate max-w-[120px]">{l.detalle}</td>
+                                      <td className="p-1.5 text-right font-mono font-extrabold text-emerald-500">
+                                        {l.debe > 0 ? Number(l.debe).toFixed(2) : '-'}
+                                      </td>
+                                      <td className="p-1.5 text-right font-mono font-extrabold text-red-400">
+                                        {l.haber > 0 ? Number(l.haber).toFixed(2) : '-'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Totales */}
+                            <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-app-border/40 text-[10px]">
+                              <span className="font-extrabold text-[8px] text-app-muted">TOTAL:</span>
+                              <div className="text-right font-mono font-black text-app-text">
+                                S/ {subDebe.toFixed(2)}
+                              </div>
+                            </div>
+
+                            {/* Botón Aplicar a este asiento */}
+                            <div className="mt-3">
+                              <button
+                                onClick={() => handleApply(msg.entry, asiento)}
+                                className="w-full bg-gradient-to-r from-pld-blue to-blue-600 hover:from-pld-blue/95 hover:to-blue-600/95 text-white py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 active:scale-[0.98] transition-all shadow-sm"
+                              >
+                                <Sparkles size={10} />
+                                Aplicar Asiento {subIdx + 1}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      /* Retrocompatibilidad con asiento plano */
+                      msg.entry.asiento_json && msg.entry.asiento_json.length > 0 && (
+                        <div className="bg-app-bg/60 rounded-xl p-3 border border-app-border/40">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black uppercase text-pld-blue tracking-widest">
+                              PROPUESTA DE ASIENTO
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] font-extrabold mb-3 uppercase tracking-wider text-app-text/90">
+                            Glosa: {msg.entry.glosa}
+                          </p>
+
+                          <div className="overflow-x-auto rounded-lg border border-app-border/50 bg-app-surface/40">
+                            <table className="w-full text-[10px]">
+                              <thead>
+                                <tr className="bg-app-bg/80 text-[8px] font-bold text-app-muted border-b border-app-border/50 uppercase">
+                                  <th className="p-1.5 text-center w-12">Cuenta</th>
+                                  <th className="p-1.5 text-left">Detalle</th>
+                                  <th className="p-1.5 text-right w-16">Debe</th>
+                                  <th className="p-1.5 text-right w-16">Haber</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {msg.entry.asiento_json.map((l, i) => (
+                                  <tr key={i} className="border-b border-app-border/20 last:border-0 hover:bg-app-hover/30">
+                                    <td className="p-1.5 text-center font-mono font-black text-pld-blue">{l.cuenta}</td>
+                                    <td className="p-1.5 font-bold truncate max-w-[120px]">{l.detalle}</td>
+                                    <td className="p-1.5 text-right font-mono font-extrabold text-emerald-500">
+                                      {l.debe > 0 ? Number(l.debe).toFixed(2) : '-'}
+                                    </td>
+                                    <td className="p-1.5 text-right font-mono font-extrabold text-red-400">
+                                      {l.haber > 0 ? Number(l.haber).toFixed(2) : '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-app-border/40 text-[10px]">
+                            <span className="font-extrabold text-[8px] text-app-muted">TOTAL DEBE/HABER:</span>
+                            <div className="text-right font-mono font-black text-app-text">
+                              S/ {msg.entry.asiento_json.reduce((sum, item) => sum + (Number(item.debe) || 0), 0).toFixed(2)}
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <button
+                              onClick={() => handleApply(msg.entry)}
+                              className="w-full bg-gradient-to-r from-pld-blue to-blue-600 hover:from-pld-blue/95 hover:to-blue-600/95 text-white py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 active:scale-[0.98] transition-all shadow-sm"
+                            >
+                              <Sparkles size={10} />
+                              Aplicar al Asiento
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {/* Explicación general de NIIF y Base Legal */}
+                    <div className="bg-app-surface/60 rounded-xl p-3 border border-app-border/30 text-[10px] space-y-2 mt-1">
                       {msg.entry.niif_norma && (
-                        <span className="text-[9px] bg-pld-blue/10 text-pld-blue font-black px-1.5 py-0.5 rounded border border-pld-blue/20">
-                          {msg.entry.niif_norma}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-[9px] text-pld-blue uppercase">Normativa:</span>
+                          <span className="bg-pld-blue/5 text-pld-blue px-1.5 py-0.5 rounded border border-pld-blue/10 font-bold">{msg.entry.niif_norma}</span>
+                        </div>
+                      )}
+                      {msg.entry.explicacion && (
+                        <p className="text-app-muted leading-relaxed font-medium">
+                          {msg.entry.explicacion}
+                        </p>
                       )}
                     </div>
 
-                    <p className="text-[11px] font-extrabold mb-3 uppercase tracking-wider text-app-text/90">
-                      Glosa: {msg.entry.glosa}
-                    </p>
+                    {/* Auditoría de Cuentas del PCGE */}
+                    {(() => {
+                      const missing = auditSuggestedAccounts(msg.entry.asientos || [], msg.entry.asiento_json || [], plan);
+                      if (missing.length === 0) return null;
 
-                    {/* Tabla de Cuentas */}
-                    <div className="overflow-x-auto rounded-lg border border-app-border/50 bg-app-surface/40">
-                      <table className="w-full text-[10px]">
-                        <thead>
-                          <tr className="bg-app-bg/80 text-[8px] font-bold text-app-muted border-b border-app-border/50 uppercase">
-                            <th className="p-1.5 text-center w-12">Cuenta</th>
-                            <th className="p-1.5 text-left">Detalle</th>
-                            <th className="p-1.5 text-right w-16">Debe</th>
-                            <th className="p-1.5 text-right w-16">Haber</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {msg.entry.asiento_json.map((l, i) => (
-                            <tr key={i} className="border-b border-app-border/20 last:border-0 hover:bg-app-hover/30">
-                              <td className="p-1.5 text-center font-mono font-black text-pld-blue">{l.cuenta}</td>
-                              <td className="p-1.5 font-bold truncate max-w-[120px]">{l.detalle}</td>
-                              <td className="p-1.5 text-right font-mono font-extrabold text-emerald-500">
-                                {l.debe > 0 ? Number(l.debe).toFixed(2) : '-'}
-                              </td>
-                              <td className="p-1.5 text-right font-mono font-extrabold text-red-400">
-                                {l.haber > 0 ? Number(l.haber).toFixed(2) : '-'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                      return (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-[10px] space-y-2 mt-1">
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
+                            <AlertCircle size={12} />
+                            <span>Auditoría de Cuentas (PCGE)</span>
+                          </div>
+                          <p className="text-app-muted leading-relaxed font-medium">
+                            Las siguientes cuentas sugeridas por la IA no existen en tu catálogo de empresa:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 py-1">
+                            {missing.map((acc) => (
+                              <span key={acc.cta} className="bg-amber-500/5 text-amber-600 dark:text-amber-400 font-mono px-2 py-0.5 rounded border border-amber-500/20 font-bold" title={acc.description}>
+                                {acc.cta} (El. {acc.element})
+                              </span>
+                            ))}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                for (const acc of missing) {
+                                  await addAccount({
+                                    cta: acc.cta,
+                                    description: acc.description.toUpperCase(),
+                                    type: 'Balance',
+                                    reqCenCos: false,
+                                    amarreDebe: '',
+                                    amarreHaber: ''
+                                  });
+                                }
+                                toast.success('¡Cuentas creadas y sincronizadas en tu catálogo! ⚡');
+                              } catch (err: any) {
+                                toast.error(`Error al auto-crear cuentas: ${err.message}`);
+                              }
+                            }}
+                            className="w-full bg-amber-500/15 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 active:scale-[0.98] transition-all border border-amber-500/20 font-extrabold"
+                          >
+                            <Database size={10} />
+                            Auto-crear Cuentas Faltantes ({missing.length})
+                          </button>
+                        </div>
+                      );
+                    })()}
 
-                    {/* Totales */}
-                    <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-app-border/40 text-[10px]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        <span className="font-extrabold text-[9px] text-emerald-600 dark:text-emerald-400 uppercase">Partida Doble Ok</span>
-                      </div>
-                      <div className="text-right font-mono font-black text-app-text">
-                        S/ {msg.entry.asiento_json.reduce((sum, item) => sum + (Number(item.debe) || 0), 0).toFixed(2)}
-                      </div>
-                    </div>
-
-                    {/* Botones de acción del asiento */}
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => handleApply(msg.entry)}
-                        className="flex-1 bg-gradient-to-r from-pld-blue to-blue-600 hover:from-pld-blue/95 hover:to-blue-600/95 text-white py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-pld-blue/10 active:scale-[0.98] transition-all"
-                      >
-                        <Sparkles size={11} />
-                        Aplicar al Asiento
-                      </button>
+                    {/* Botones de control global de la respuesta (Entrenar IA, etc) */}
+                    <div className="flex gap-2 mt-1">
+                      {msg.entry.asientos && msg.entry.asientos.length > 1 && (
+                        <button
+                          onClick={() => handleApplyAllMerged(msg.entry)}
+                          className="flex-1 bg-app-surface hover:bg-app-hover border border-app-border text-app-text py-2 px-3 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-[0.98]"
+                        >
+                          <Sparkles size={10} />
+                          Aplicar Todo Fusionado
+                        </button>
+                      )}
 
                       {isAdmin && (
                         <button
                           onClick={() => handleSaveToKnowledge(msg.id, msg.entry, userQuery)}
                           disabled={savingId === msg.id || savedCases.has(msg.id)}
-                          className={`px-3 rounded-lg border text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all ${
+                          className={`px-3 py-2 rounded-lg border text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-[0.98] ${
                             savedCases.has(msg.id)
-                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              : 'bg-app-surface hover:bg-app-hover border-app-border text-app-muted hover:text-app-text'
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 flex-1'
+                              : 'bg-app-surface hover:bg-app-hover border-app-border text-app-muted hover:text-app-text flex-1'
                           }`}
                           title="Guardar este asiento como caso práctico RAG para entrenar a la IA"
                         >
                           {savingId === msg.id ? (
-                            <Loader2 size={12} className="animate-spin text-pld-blue" />
+                            <Loader2 size={11} className="animate-spin text-pld-blue" />
                           ) : savedCases.has(msg.id) ? (
                             <>
-                              <BookmarkCheck size={12} />
+                              <CheckCircle size={11} className="text-emerald-500" />
                               Entrenado
                             </>
                           ) : (
                             <>
-                              <Bookmark size={12} />
+                              <Database size={11} />
                               Entrenar IA
                             </>
                           )}

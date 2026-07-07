@@ -229,13 +229,24 @@ REGLAS CONTABLES Y FISCALES OBLIGATORIAS:
 FORMATO DE RETORNO OBLIGATORIO:
 Debes responder ÚNICAMENTE con un objeto JSON válido con la siguiente estructura (no agregues texto fuera de este bloque de código JSON, ni delimitadores markdown como \`\`\`json):
 {
-  "glosa": "GLOSA GENERAL DEL ASIENTO EN MAYÚSCULAS",
-  "lines": [
-    { "cuenta": "cuenta_PCGE", "detalle": "Denominación de la cuenta", "debe": monto_debe, "haber": monto_haber }
-  ],
+  "explicacion": "Explicación breve de la lógica contable y base legal/tributaria aplicada",
   "niif_norma": "Norma NIIF/NIC de referencia (ej: NIC 2, NIIF 16, NIIF 15)",
-  "explicacion": "Explicación breve de la lógica contable y base legal/tributaria aplicada"
-}`;
+  "asientos": [
+    {
+      "glosa": "GLOSA DE ESTE ASIENTO INDEPENDIENTE EN MAYÚSCULAS (ej: POR LA PROVISIÓN DE LA COMPRA)",
+      "lines": [
+        { "cuenta": "cuenta_PCGE", "detalle": "Denominación de la cuenta", "debe": monto_debe, "haber": monto_haber }
+      ]
+    }
+  ]
+}
+
+REGLAS DE DESAGREGACIÓN DE OPERACIONES POR SEPARADO:
+1. Toda operación compleja (compra al crédito, venta al crédito, planilla de sueldos, compra de activos fijos, arrendamiento financiero) debe ser desglosada estrictamente por separado en el arreglo "asientos".
+2. Asiento 1: PROVISIÓN (Obligación contable por naturaleza).
+3. Asiento 2: DESTINO (Si es un gasto de Clase 6, transferir a Clase 9 contra la 791; si es compra de existencias de Clase 60, transferir a Clase 2 contra la 61). Si no aplica gasto o compra de existencias, no incluir este asiento de destino.
+4. Asiento 3: CANCELACIÓN/PAGO/COBRO (Si la premisa del usuario indica que se pagó o cobró o liquidó la cuenta, registrar la salida/entrada de efectivo en la cuenta 10 contra la cuenta de Clase 12/41/42/46).
+5. Cada sub-asiento dentro del arreglo "asientos" debe cumplir de forma independiente y estricta con el principio de Partida Doble (suma del debe = suma del haber).`;
 
         const promptText = `
 PREMISA DEL USUARIO:
@@ -279,26 +290,43 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
         // Parsear el JSON retornado
         const result = JSON.parse(rawText.trim());
         
-        // Asignar IDs incrementales de forma segura y normalizar el nombre del arreglo
-        if (result.lines && Array.isArray(result.lines)) {
-            result.lines = result.lines.map((line, index) => ({
-                id: index + 1,
-                cuenta: line.cuenta || '',
-                detalle: line.detalle || '',
+        // Normalizar estructura al formato multi-asiento
+        if (!result.asientos || !Array.isArray(result.asientos)) {
+            // Retrocompatibilidad: Si retornó el formato plano anterior, lo envolvemos en un único asiento
+            const singleEntry = {
+                glosa: result.glosa || 'ASIENTO CONTABLE',
+                lines: result.lines || result.asiento_json || []
+            };
+            result.asientos = [singleEntry];
+        }
+
+        // Procesar y normalizar cada asiento
+        result.asientos = result.asientos.map(asiento => {
+            let lines = asiento.lines || asiento.asiento_json || [];
+            if (!Array.isArray(lines)) {
+                lines = [];
+            }
+            const normalizedLines = lines.map((line, idx) => ({
+                id: idx + 1,
+                cuenta: String(line.cuenta || '').trim(),
+                detalle: String(line.detalle || '').trim(),
                 debe: Number(line.debe || 0),
                 haber: Number(line.haber || 0)
             }));
-            result.asiento_json = result.lines;
-        } else if (result.asiento_json && Array.isArray(result.asiento_json)) {
-            result.asiento_json = result.asiento_json.map((line, index) => ({
-                id: index + 1,
-                cuenta: line.cuenta || '',
-                detalle: line.detalle || '',
-                debe: Number(line.debe || 0),
-                haber: Number(line.haber || 0)
-            }));
-            result.lines = result.asiento_json;
+            return {
+                glosa: String(asiento.glosa || 'ASIENTO CONTABLE').toUpperCase().trim(),
+                lines: normalizedLines,
+                asiento_json: normalizedLines
+            };
+        });
+
+        // Asegurar que las variables de compatibilidad a nivel raíz existan (usando el primer asiento)
+        if (result.asientos.length > 0) {
+            result.glosa = result.asientos[0].glosa;
+            result.lines = result.asientos[0].lines;
+            result.asiento_json = result.asientos[0].asiento_json;
         } else {
+            result.glosa = '';
             result.lines = [];
             result.asiento_json = [];
         }
