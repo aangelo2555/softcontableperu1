@@ -1596,10 +1596,6 @@ async function ensureSchemaConstraints() {
             }
         ];
         
-        for (const table of tables) {
-            await pool.query(table.schema);
-        }
-
         const alterStatements = [
             `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
             `ALTER TABLE sales ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
@@ -1615,11 +1611,27 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS costo_unit_out NUMERIC DEFAULT 0;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_out NUMERIC DEFAULT 0;`
         ];
+
+        // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)
         for (const stmt of alterStatements) {
             try {
                 await pool.query(stmt);
             } catch (e) {
-                // Ignorar si la columna ya existe
+                // Ignorar si la tabla no existe aún
+            }
+        }
+
+        // 2. Crear tablas
+        for (const table of tables) {
+            await pool.query(table.schema);
+        }
+
+        // 3. Ejecutar de nuevo para asegurar consistencia
+        for (const stmt of alterStatements) {
+            try {
+                await pool.query(stmt);
+            } catch (e) {
+                // Ignorar
             }
         }
         
