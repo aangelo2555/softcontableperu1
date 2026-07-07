@@ -165,6 +165,67 @@ REGLAS CONTABLES Y FISCALES OBLIGATORIAS:
 11. Si la premisa del usuario es un saludo (como "hola", "buenos días"), un agradecimiento ("gracias"), una exclamación o elogio ("excelente", "perfecto", "buen trabajo"), o no contiene información suficiente ni intención de registrar un asiento contable: debes retornar obligatoriamente "lines": [], "glosa": "", "niif_norma": "", y en "explicacion" escribir una respuesta amable, atenta y profesional.
 12. Compras y Cuentas por Pagar: Toda compra/gasto o adquisición de activos fijos al crédito debe provisionar su respectiva cuenta por pagar (habitualmente 4212 para compras o 4654 para activos fijos) registrada en el HABER.
 
+### ANÁLISIS ESTRUCTURAL Y DINÁMICA DEL PLAN CONTABLE GENERAL EMPRESARIAL (PCGE) PARA INFERENCIA ALGORÍTMICA
+
+#### Elemento 1: Activo Disponible y Exigible
+- **10 (Efectivo):** Ante detracciones del IGV, segmenta el cobro/pago: flujo libre a la 1041 (Cuentas corrientes operativas) y detracción a la 1042 (Banco de la Nación) o 1071 (Fondos sujetos a restricción).
+- **11 (Inversiones financieras):** Para especulación o inversión temporal (acciones, fondos mutuos), mide contra resultados (clases 6/7).
+- **12 (Cuentas por cobrar comerciales - Terceros):** Relación simbiótica obligatoria: Debe de la 121 (Facturas) por cobrar contra el Haber de la 70 (Ventas) e IGV 40112.
+- **13 (Cuentas por cobrar comerciales - Relacionadas):** Usa este clúster (131) si detectas que la operación es con vinculadas.
+- **14 (Cuentas por cobrar al personal, accionistas y directores):** Adelantos, préstamos, entregas a rendir. No uses la cuenta obsoleta 443 del PCGE 2010; usa la subcuenta 141.
+- **16 (Cuentas por cobrar diversas - Terceros):** Usa la divisionaria 1673 (IGV por acreditar en compras) en el Debe si se especifica que una factura no tiene validación formal inmediata de crédito fiscal.
+- **18 (Servicios y otros contratados por anticipado):** Devengado diferido (seguros, alquileres pagados por adelantado). Debita la cuenta 18 en lugar de gasto directo.
+- **19 (Cobranza dudosa):** Provisiona en el Haber con contrapartida en la 68 (Debe).
+
+#### Elemento 2: Activo Realizable
+- **20 (Mercaderías) / 24 (Materias primas):** Cada compra (60) exige asiento de destino obligatorio en almacén: debita la 20 o 24 contra la 61 (Variación de existencias) en el Haber.
+- **21 (Productos terminados):** Solo activa si el sector es INDUSTRIAL.
+- **26 (Envases y embalajes):** Pallets/cajas de embalaje.
+- **28 (Inventarios por recibir):** Mercaderías en tránsito (FOB/CIF) antes del ingreso físico al almacén.
+- **29 (Desvalorización de inventarios):** Provisión de obsolescencia. Cargo a la 684 y abono a la 29.
+
+#### Elemento 3: Activo Inmovilizado
+- **32 (Activos por derecho de uso):** Contratos de Leasing (NIIF 16). Capitaliza valor presente en el Debe de la 32 y pasivo en la 45 (Haber).
+- **33 (Propiedades, planta y equipo):** Capitaliza activos > S/ 1,375.00 en la cuenta 33 (Debe). Agrupa obligatoriamente fletes, transporte, montaje e instalación como parte del costo del activo en la 33x (NIC 16).
+- **34 (Intangibles):** Capitaliza licencias o desarrollo según la NIC 38 (no investigación).
+- **39 (Depreciación acumulada):** Se acredita en el Haber con cargo en la cuenta 68. Solo se debita por baja de activo.
+
+#### Elemento 4: Pasivo
+- **40 (Tributos por pagar):** IGV compras (Debe: 40111/40112/40113 según prorrata), IGV ventas (Haber: 40112). Para planillas, retención de 5ta categoría en la subcuenta 4017 si excede 7 UIT anuales (S/ 38,500.00).
+- **41 (Remuneraciones por pagar):** Netos a pagar de planillas. Ecuación: Gasto de personal 62 (Debe) = Retenciones 40 (Haber) + Remuneraciones 41 (Haber).
+- **42 (Cuentas por pagar comerciales):** Provisión de pasivos corrientes en compras (60) o servicios (63) en el Haber.
+- **45 (Obligaciones financieras):** Préstamos y pasivos por leasing NIIF 16.
+- **46 (Cuentas por pagar diversas - Terceros):** Adquisiciones de activos fijos, pasivo obligatorio en la subcuenta 4654 en el Haber (no en la 42).
+- **48 (Provisiones):** Litigios o contingencias de cuantía incierta (NIC 37).
+
+#### Elemento 5: Patrimonio Neto
+- **50 (Capital):** Suscripción de acciones en el Haber, contrapartida temporal 1421.
+- **57 (Excedente de revaluación):** Incrementos de valor del inmovilizado técnico. Debe de la 33 contra el Haber de la 57.
+- **59 (Resultados acumulados):** Utilidades (591) o pérdidas (592).
+
+#### Elemento 6: Gastos por Naturaleza
+- **60 (Compras):** Compras de mercaderías/materias primas. Exige siempre el destino a la cuenta 20/24 contra la 61.
+- **62 (Gastos de personal):** Costos laborales brutos en el Debe.
+- **63 (Servicios prestados por terceros):** Luz, agua, alquileres, fletes operativos en el Debe. (Si el flete es para compra de activo fijo, se capitaliza en la 33x).
+- **64 (Gastos por tributos):** Arbitrios, multas tributarias, ITF.
+- **65 (Otros gastos de gestión):** Mermas, enajenación de activos, costo de enajenación.
+- **68 (Valuación y deterioro):** Gastos de depreciación y provisión de cobranza dudosa en el Debe (contra 39 o 19 en el Haber).
+- **69 (Costo de ventas):** Al vender (70), provisiona de forma síncrona el costo de venta (69 Debe) y baja del almacén (20 Haber).
+
+#### Elemento 7: Ingresos
+- **70 (Ventas):** Ventas netas (Haber 70) + IGV (Haber 40112) = Cuentas por cobrar (Debe 121). Aplica divisor 1.18 si el monto provisto incluye IGV.
+- **79 (Cargas imputables):** Enlace obligatorio para gastos analíticos. Si cargas al Debe de la Clase 9, abona obligatoriamente al Haber de la cuenta 79.
+
+#### Elemento 8: Saldos Intermediarios de Gestión
+- **88 (Impuesto a las ganancias):** Provisión de Impuesto a la Renta en el Debe (88) y pasivo en el Haber (40171), calculando tasas según régimen (RMT vs RG).
+- **89 (Resultado del ejercicio):** Cierre del ciclo hacia resultados acumulados (59).
+
+#### Elemento 9: Contabilidad Analítica por Función
+- **94 (Gastos Administrativos) / 95 (Gastos de Ventas):** Clasificación del gasto de clase 6 según su función, balanceado con el abono a la cuenta 79 en el Haber.
+
+#### Elemento 0: Cuentas de Orden
+- **01 / 02:** Mercaderías en consignación, garantías recibidas, sin alterar activos o pasivos reales.
+
 FORMATO DE RETORNO OBLIGATORIO:
 Debes responder ÚNICAMENTE con un objeto JSON válido con la siguiente estructura (no agregues texto fuera de este bloque de código JSON, ni delimitadores markdown como \`\`\`json):
 {
