@@ -24,7 +24,34 @@ interface ChatMessage {
 
 export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry }) => {
   const { plan, currentCompany } = useStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = sessionStorage.getItem('softcontable_ai_chat_messages');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        }));
+      } catch (e) {
+        console.error('Error parsing saved chat messages:', e);
+      }
+    }
+    return [
+      {
+        id: 'welcome',
+        role: 'model',
+        content: `¡Hola! Soy tu **Asistente Contable IA**. 🧠✨
+
+Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asiento contable correspondiente usando el **Plan Contable General Empresarial (PCGE)** y aplicando las **normas NIIF/NIC**.
+
+*Ejemplo:*
+> "Cobro de factura por 5000 soles con retención del 8% de cuarta categoría"
+> "Consumo de materia prima por S/ 3,000 en fábrica"`,
+        timestamp: new Date()
+      }
+    ];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,23 +69,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     }
   }, []);
 
-  // Mensaje de bienvenida
   useEffect(() => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'model',
-        content: `¡Hola! Soy tu **Asistente Contable IA**. 🧠✨
-
-Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asiento contable correspondiente usando el **Plan Contable General Empresarial (PCGE)** y aplicando las **normas NIIF/NIC**.
-
-*Ejemplo:*
-> "Cobro de factura por 5000 soles con retención del 8% de cuarta categoría"
-> "Consumo de materia prima por S/ 3,000 en fábrica"`,
-        timestamp: new Date()
-      }
-    ]);
-  }, []);
+    sessionStorage.setItem('softcontable_ai_chat_messages', JSON.stringify(messages));
+  }, [messages]);
 
   // Auto-scroll al final del chat
   useEffect(() => {
@@ -110,7 +123,7 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
           timestamp: new Date(),
           entry: {
             glosa: aiData.glosa || 'ASIENTO GENERADO POR IA',
-            asiento_json: aiData.asiento_json || [],
+            asiento_json: aiData.asiento_json || aiData.lines || [],
             explicacion: aiData.explicacion,
             niif_norma: aiData.niif_norma
           }

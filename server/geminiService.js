@@ -219,7 +219,7 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
         // Parsear el JSON retornado
         const result = JSON.parse(rawText.trim());
         
-        // Asignar IDs incrementales de forma segura
+        // Asignar IDs incrementales de forma segura y normalizar el nombre del arreglo
         if (result.lines && Array.isArray(result.lines)) {
             result.lines = result.lines.map((line, index) => ({
                 id: index + 1,
@@ -228,6 +228,19 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
                 debe: Number(line.debe || 0),
                 haber: Number(line.haber || 0)
             }));
+            result.asiento_json = result.lines;
+        } else if (result.asiento_json && Array.isArray(result.asiento_json)) {
+            result.asiento_json = result.asiento_json.map((line, index) => ({
+                id: index + 1,
+                cuenta: line.cuenta || '',
+                detalle: line.detalle || '',
+                debe: Number(line.debe || 0),
+                haber: Number(line.haber || 0)
+            }));
+            result.lines = result.asiento_json;
+        } else {
+            result.lines = [];
+            result.asiento_json = [];
         }
 
         return result;

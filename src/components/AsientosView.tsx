@@ -71,7 +71,13 @@ const AsientosView: React.FC = () => {
   const [toast, setToast] = useState<ToastData | null>(null);
   const [suggestionCategory, setSuggestionCategory] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showAIChat, setShowAIChat] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(() => {
+    return sessionStorage.getItem('softcontable_show_ai_chat') === 'true';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('softcontable_show_ai_chat', String(showAIChat));
+  }, [showAIChat]);
   const [pendingLines, setPendingLines] = useState<Omit<AsientoLine, 'id'>[]>([]);
   const [focusedField, setFocusedField] = useState<'debe' | 'haber' | null>(null);
   const [glosaModal, setGlosaModal] = useState<{ show: boolean, glosa: string, lines: any[] } | null>(null);
