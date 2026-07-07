@@ -77,11 +77,51 @@ async function generateAsiento(premisa, companyContext, planContable) {
             });
         }
 
-        // 3. Formatear plan contable (filtrado/resumido para no exceder límites de tokens, cuentas relevantes)
-        // Tomamos cuentas principales que coincidan de alguna forma o una lista general
-        const planResumido = planContable
-            .map(acc => ({ cta: acc.cta, desc: acc.description }))
-            .slice(0, 400); // Límite seguro de 400 cuentas
+        // 3. Formatear plan contable (filtrado dinámico e inteligente por palabras clave para optimizar tokens y evitar 429)
+        const premisaLower = premisa.toLowerCase();
+        const keywordsMap = [
+            { keys: ['venta', 'cobro', 'ingreso', 'factur', 'bolet', 'cliente', 'anticipo cl', 'gift', 'canje'], prefixes: ['12', '70', '40', '10'] },
+            { keys: ['compra', 'pago', 'proveedor', 'adquisi', 'activo', 'materia', 'mercader', 'almacen', 'flete'], prefixes: ['60', '42', '40', '10', '20', '24', '25', '61'] },
+            { keys: ['gasto', 'servicio', 'luz', 'agua', 'alquiler', 'honorario', 'recibo', 'publici', 'manten', 'segur'], prefixes: ['63', '42', '46', '40', '10', '94', '95', '79'] },
+            { keys: ['planilla', 'sueldo', 'remunera', 'trabajador', 'empleado', 'gratifica', 'cts', 'essalud', 'afp', 'onp'], prefixes: ['62', '41', '40', '10', '94', '95', '79'] },
+            { keys: ['tributo', 'impuesto', 'sunat', 'detracc', 'retenc', 'percepc', 'igv', 'renta'], prefixes: ['40', '10', '42', '12'] },
+            { keys: ['activo fijo', 'maquinaria', 'equipo', 'vehiculo', 'mueble', 'depreciac', 'capitaliz', 'nic 16', 'niif 16'], prefixes: ['33', '39', '46', '40', '10'] }
+        ];
+
+        let targetPrefixes = new Set();
+        keywordsMap.forEach(item => {
+            if (item.keys.some(k => premisaLower.includes(k))) {
+                item.prefixes.forEach(p => targetPrefixes.add(p));
+            }
+        });
+
+        // Si no coincide con ninguna palabra clave, usar un conjunto general representativo
+        if (targetPrefixes.size === 0) {
+            ['10', '12', '16', '20', '33', '40', '41', '42', '46', '50', '60', '61', '62', '63', '69', '70', '79', '94', '95'].forEach(p => targetPrefixes.add(p));
+        }
+
+        // Siempre forzar efectivo (10) y tributos (40)
+        targetPrefixes.add('10');
+        targetPrefixes.add('40');
+
+        const planFiltrado = planContable
+            .filter(acc => {
+                const ctaStr = String(acc.cta || '');
+                return Array.from(targetPrefixes).some(pref => ctaStr.startsWith(pref));
+            })
+            .map(acc => ({ cta: acc.cta, desc: acc.description }));
+
+        let planResumido = planFiltrado;
+        if (planResumido.length < 30) {
+            const extraAccounts = planContable
+                .filter(acc => !planFiltrado.some(f => f.cta === acc.cta))
+                .slice(0, 100)
+                .map(acc => ({ cta: acc.cta, desc: acc.description }));
+            planResumido = [...planResumido, ...extraAccounts];
+        }
+
+        // Limitar a un máximo de 120 cuentas (en lugar de 400) para optimizar carga y evitar 429
+        planResumido = planResumido.slice(0, 120);
 
         const systemInstruction = `Eres un Contador Público Colegiado (CPC) peruano de primer nivel.
 Tu tarea es analizar la premisa de negocio del usuario y generar el asiento contable correspondiente que cumpla estrictamente con el PCGE (Plan Contable General Empresarial) de Perú y la legislación tributaria vigente para el año 2026.
@@ -182,6 +222,15 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
         return result;
     } catch (error) {
         console.error('[GEMINI SERVICE] Error al generar asiento contable:', error.message);
+        if (error.response) {
+            const status = error.response.status;
+            if (status === 429) {
+                throw new Error('Límite de solicitudes de la API de Gemini excedido (Error 429). Por favor, espera unos segundos e intenta nuevamente.');
+            }
+            if (status === 401 || status === 403) {
+                throw new Error('Error de autenticación con la API de Gemini (Error 401/403). Verifica la validez de la clave de API.');
+            }
+        }
         throw error;
     }
 }
