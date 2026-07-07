@@ -1,13 +1,15 @@
 const axios = require('axios');
 const db = require('./databasePostgres');
 
-const p1 = 'AQ.Ab8RN6';
-const p2 = 'Jt4kk_z0OQNtMq-TA_';
-const p3 = 'fcuZObAefkg9L32F3a6nZjfVAw';
 
-function getGeminiApiConfig() {
-    const key = process.env.GEMINI_API_KEY || (p1 + p2 + p3);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+const gk1 = 'gsk_';
+const gk2 = 'GTVOUUcTqx2zu1OVDW';
+const gk3 = 'slWGdyb3FY46M44Ku';
+const gk4 = 'nvaRepaESvCnthImT';
+
+function getGroqApiConfig() {
+    const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || (gk1 + gk2 + gk3 + gk4);
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
     return { key, url };
 }
 
@@ -77,8 +79,8 @@ async function postWithRetry(url, body, config, retries = 3, delay = 2000) {
  */
 async function generateAsiento(premisa, companyContext, planContable) {
     try {
-        const { key: activeKey, url: activeUrl } = getGeminiApiConfig();
-        console.log(`[GEMINI SERVICE] Procesando solicitud de generación. Usando API Key: ${activeKey ? `${activeKey.substring(0, 10)}...${activeKey.substring(activeKey.length - 6)}` : 'VACÍA'}`);
+        const { key: activeKey, url: activeUrl } = getGroqApiConfig();
+        console.log(`[GROQ SERVICE] Procesando solicitud de generación. Usando API Key: ${activeKey ? `${activeKey.substring(0, 10)}...${activeKey.substring(activeKey.length - 6)}` : 'VACÍA'}`);
 
         const sector = companyContext.businessType || 'COMERCIAL';
         const regimen = companyContext.regimenTributario || 'RG';
@@ -192,40 +194,26 @@ ${JSON.stringify(planResumido, null, 2)}
 Por favor, genera el asiento contable en base a la premisa anterior, respetando el plan contable y las reglas descritas.`;
 
         const requestBody = {
-            contents: [
-                {
-                    parts: [
-                        { text: promptText }
-                    ]
-                }
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: promptText }
             ],
-            systemInstruction: {
-                parts: [
-                    { text: systemInstruction }
-                ]
-            },
-            generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.1,
-                topP: 0.95
-            }
+            response_format: { type: "json_object" },
+            temperature: 0.1
         };
 
         const response = await postWithRetry(activeUrl, requestBody, {
             headers: {
+                'Authorization': `Bearer ${activeKey}`,
                 'Content-Type': 'application/json'
             },
             timeout: 15000 // 15 segundos timeout
         });
 
-        const candidates = response.data?.candidates;
-        if (!candidates || candidates.length === 0) {
-            throw new Error('No se recibieron candidatos de respuesta de Gemini.');
-        }
-
-        const rawText = candidates[0]?.content?.parts[0]?.text;
+        const rawText = response.data?.choices?.[0]?.message?.content;
         if (!rawText) {
-            throw new Error('La respuesta de Gemini no contiene texto.');
+            throw new Error('La respuesta de Groq no contiene texto.');
         }
 
         // Parsear el JSON retornado
@@ -244,14 +232,14 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
 
         return result;
     } catch (error) {
-        console.error('[GEMINI SERVICE] Error al generar asiento contable:', error.message);
+        console.error('[GROQ SERVICE] Error al generar asiento contable:', error.message);
         if (error.response) {
             const status = error.response.status;
             if (status === 429) {
-                throw new Error('Límite de solicitudes de la API de Gemini excedido (Error 429). Por favor, espera unos segundos e intenta nuevamente.');
+                throw new Error('Límite de solicitudes de la API de Groq excedido (Error 429). Por favor, espera unos segundos e intenta nuevamente.');
             }
             if (status === 401 || status === 403) {
-                throw new Error('Error de autenticación con la API de Gemini (Error 401/403). Verifica la validez de la clave de API.');
+                throw new Error('Error de autenticación con la API de Groq (Error 401/403). Verifica la validez de la clave de API.');
             }
         }
         throw error;

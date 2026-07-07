@@ -272,7 +272,7 @@ export const AIKnowledgeView: React.FC = () => {
             <Database size={48} className="text-app-muted mb-4 opacity-50" />
             <h4 className="text-sm font-black uppercase tracking-wider mb-2">Base de Conocimiento Vacía</h4>
             <p className="text-xs text-app-muted max-w-sm mb-6 leading-relaxed">
-              No se encontraron casos prácticos en la base de datos. Siembra los templates predefinidos o crea uno nuevo para empezar a alimentar a Gemini.
+              No se encontraron casos prácticos en la base de datos. Siembra los templates predefinidos o crea uno nuevo para empezar a alimentar a la IA.
             </p>
             <button
               onClick={handleSeed}
@@ -378,7 +378,7 @@ export const AIKnowledgeView: React.FC = () => {
           open={showModal}
           onClose={() => setShowModal(false)}
           title={editingItem.id ? 'Editar Caso Práctico RAG' : 'Nuevo Caso Práctico RAG'}
-          subtitle="Entrenamiento del Modelo Gemini"
+          subtitle="Entrenamiento del Modelo de IA"
           maxWidth="max-w-xl"
         >
           <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto custom-scrollbar pr-2">

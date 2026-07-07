@@ -210,7 +210,7 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
               Asistente Contable IA
               <Sparkles size={12} className="text-yellow-500 fill-yellow-500/20" />
             </h3>
-            <span className="text-[10px] text-app-muted font-bold block mt-0.5">Gemini 2.0 Flash + RAG Activo</span>
+            <span className="text-[10px] text-app-muted font-bold block mt-0.5">Groq Llama 3.3 + RAG Activo</span>
           </div>
         </div>
         
