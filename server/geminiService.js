@@ -7,6 +7,8 @@ const p3 = 'fcuZObAefkg9L32F3a6nZjfVAw';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || (p1 + p2 + p3);
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
+console.log(`[GEMINI SERVICE] Inicializado. Usando API Key: ${GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...${GEMINI_API_KEY.substring(GEMINI_API_KEY.length - 6)}` : 'VACÍA'}`);
+
 /**
  * Realiza una búsqueda simple de palabras clave para recuperar casos contables similares.
  * (Enfoque RAG)
