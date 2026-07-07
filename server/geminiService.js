@@ -165,6 +165,7 @@ REGLAS CONTABLES Y FISCALES OBLIGATORIAS:
 8. Umbral NIIF 16 / NIC 16 (Capitalización): Si se adquiere un activo fijo y su valor supera 1/4 de UIT 2026 (S/ 1,375.00), capitalízalo en cuentas de Clase 3 (33x). Si es menor, regístralo como gasto (Clase 6).
 9. El asiento resultante debe ser adecuado para el sector "${sector}" y régimen tributario "${regimen}".
 10. Utiliza una glosa general clara, descriptiva y en mayúsculas.
+11. Si la premisa del usuario es un saludo (como "hola", "buenos días"), un agradecimiento ("gracias"), una exclamación o elogio ("excelente", "perfecto", "buen trabajo"), o no contiene información suficiente ni intención de registrar un asiento contable: debes retornar obligatoriamente "lines": [], "glosa": "", "niif_norma": "", y en "explicacion" escribir una respuesta amable, atenta y profesional.
 
 FORMATO DE RETORNO OBLIGATORIO:
 Debes responder ÚNICAMENTE con un objeto JSON válido con la siguiente estructura (no agregues texto fuera de este bloque de código JSON, ni delimitadores markdown como \`\`\`json):
