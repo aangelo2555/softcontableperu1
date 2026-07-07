@@ -2,7 +2,7 @@ const axios = require('axios');
 const db = require('./databasePostgres');
 
 const p1 = 'AQ.Ab8RN6';
-const p2 = 't4kk_z0OQNtMq-TA_';
+const p2 = 'Jt4kk_z0OQNtMq-TA_';
 const p3 = 'fcuZObAefkg9L32F3a6nZjfVAw';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || (p1 + p2 + p3);
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
