@@ -46,13 +46,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
       {
         id: 'welcome',
         role: 'model',
-        content: `¡Hola! Soy tu **Asistente Contable IA**. 🧠✨
-
-Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asiento contable correspondiente usando el **Plan Contable General Empresarial (PCGE)** y aplicando las **normas NIIF/NIC**.
-
-*Ejemplo:*
-> "Cobro de factura por 5000 soles con retención del 8% de cuarta categoría"
-> "Consumo de materia prima por S/ 3,000 en fábrica"`,
+        content: `Bienvenido al **Asistente Contable IA**. Escribe la operación o caso de negocio que deseas registrar para generar el asiento contable correspondiente bajo el PCGE y las normas NIIF/NIC.`,
         timestamp: new Date()
       }
     ];
@@ -562,28 +556,7 @@ Escribe una premisa o caso de negocio en lenguaje natural, y generaré el asient
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Suggestions */}
-      {messages.length <= 1 && (
-        <div className="px-4 py-2 border-t border-app-border/40 bg-app-surface/50 flex flex-col gap-1.5">
-          <span className="text-[8px] font-black text-app-muted uppercase tracking-wider">Premisas de ejemplo rápidos</span>
-          <div className="flex flex-wrap gap-1">
-            {[
-              'Anticipo recibido de cliente por 1,000 + IGV',
-              'Provisión de planilla de operarios con ESSALUD y AFP',
-              'Destrucción de mercadería obsoleta con desmedro notarial',
-              'Servicio de consultoría facturado con detracción del 12%'
-            ].map((txt, i) => (
-              <button
-                key={i}
-                onClick={() => prefillSuggestion(txt)}
-                className="text-[9px] font-bold text-pld-blue bg-pld-blue/5 hover:bg-pld-blue/10 border border-pld-blue/10 px-2 py-1 rounded-lg text-left transition-colors truncate max-w-full"
-              >
-                {txt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* Input Form */}
       <form 

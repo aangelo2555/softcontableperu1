@@ -48,6 +48,7 @@ const AIKnowledgeManager: React.FC = () => {
   });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const loadData = async () => {
     try {
@@ -333,16 +334,41 @@ const AIKnowledgeManager: React.FC = () => {
                         <div className="text-[11px] text-app-muted font-medium">{item.premisa}</div>
                       </td>
                       <td className="px-4 py-3 md:px-6 md:py-4">
-                        <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto custom-scrollbar">
-                          {lines.map((l: any, i: number) => (
-                            <div key={i} className="text-[10px] font-mono flex items-center gap-1">
-                              <span className="font-bold text-pld-blue">{l.cuenta}</span>
-                              <span className="text-app-muted truncate max-w-[80px]">({l.detalle})</span>
-                              {l.debe > 0 && <span className="text-emerald-500 font-bold ml-auto">D: {l.debe}</span>}
-                              {l.haber > 0 && <span className="text-rose-500 font-bold ml-auto">H: {l.haber}</span>}
-                            </div>
-                          ))}
-                        </div>
+                        {expandedRows.has(item.id) ? (
+                          <div className="flex flex-col gap-1 max-h-[150px] overflow-y-auto custom-scrollbar">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = new Set(expandedRows);
+                                next.delete(item.id);
+                                setExpandedRows(next);
+                              }}
+                              className="text-[9px] font-black uppercase text-red-500 hover:underline mb-1.5 text-left flex items-center gap-0.5"
+                            >
+                              Ocultar Asiento ▲
+                            </button>
+                            {lines.map((l: any, i: number) => (
+                              <div key={i} className="text-[10px] font-mono flex items-center gap-1">
+                                <span className="font-bold text-pld-blue">{l.cuenta}</span>
+                                <span className="text-app-muted truncate max-w-[80px]">({l.detalle})</span>
+                                {l.debe > 0 && <span className="text-emerald-500 font-bold ml-auto">D: {l.debe}</span>}
+                                {l.haber > 0 && <span className="text-rose-500 font-bold ml-auto">H: {l.haber}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = new Set(expandedRows);
+                              next.add(item.id);
+                              setExpandedRows(next);
+                            }}
+                            className="bg-pld-blue/10 hover:bg-pld-blue/20 text-pld-blue px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all"
+                          >
+                            Ver Asiento ({lines.length} ctas) ▼
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3 md:px-6 md:py-4 text-right">
                         <div className="flex items-center justify-end gap-2">

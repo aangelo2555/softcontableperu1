@@ -32,6 +32,7 @@ export const AIKnowledgeView: React.FC = () => {
   // Modal de edición/creación
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<AIKnowledgeItem> | null>(null);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
 
   // Sub-formulario de líneas de asiento para el caso
   const [lines, setLines] = useState<{ cuenta: string; detalle: string; debe: number; haber: number }[]>([]);
@@ -309,63 +310,104 @@ export const AIKnowledgeView: React.FC = () => {
                   <p className="text-xs font-semibold text-app-text leading-relaxed italic">"{c.premisa}"</p>
                 </div>
 
-                {/* Asiento Table */}
-                <div className="rounded-xl border border-app-border bg-app-bg/25 overflow-hidden">
-                  <table className="w-full text-[10px]">
-                    <thead>
-                      <tr className="bg-app-surface text-[8px] font-bold text-app-muted border-b border-app-border uppercase">
-                        <th className="p-2 text-center w-12">Cuenta</th>
-                        <th className="p-2 text-left">Detalle</th>
-                        <th className="p-2 text-right w-16">Debe</th>
-                        <th className="p-2 text-right w-16">Haber</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {c.asiento_json?.map((l, i) => (
-                        <tr key={i} className="border-b border-app-border/10 last:border-0">
-                          <td className="p-2 text-center font-mono font-black text-pld-blue">{l.cuenta}</td>
-                          <td className="p-2 font-bold truncate max-w-[180px]">{l.detalle}</td>
-                          <td className="p-2 text-right font-mono font-extrabold text-emerald-500">
-                            {l.debe > 0 ? Number(l.debe).toFixed(2) : '-'}
-                          </td>
-                          <td className="p-2 text-right font-mono font-extrabold text-red-400">
-                            {l.haber > 0 ? Number(l.haber).toFixed(2) : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex justify-between items-center mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = new Set(expandedCardIds);
+                      if (next.has(c.id)) {
+                        next.delete(c.id);
+                      } else {
+                        next.add(c.id);
+                      }
+                      setExpandedCardIds(next);
+                    }}
+                    className="text-[10px] font-black uppercase text-pld-blue hover:text-pld-blue/80 flex items-center gap-1 transition-colors"
+                  >
+                    {expandedCardIds.has(c.id) ? 'Colapsar Caso ▲' : `Ver Detalle (${c.asiento_json?.length || 0} ctas) ▼`}
+                  </button>
+                  
+                  {!expandedCardIds.has(c.id) && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenEdit(c)}
+                        className="p-1 rounded bg-pld-blue/10 text-pld-blue hover:bg-pld-blue/20 transition-all"
+                        title="Editar Caso"
+                      >
+                        <Edit2 size={11} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+                        title="Eliminar Caso"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* Explicación */}
-                {c.explicacion && (
-                  <p className="text-[10px] font-bold text-app-muted leading-relaxed">
-                    💡 <span className="font-extrabold text-app-text">Explicación IA:</span> {c.explicacion}
-                  </p>
+                {expandedCardIds.has(c.id) && (
+                  <>
+                    {/* Asiento Table */}
+                    <div className="rounded-xl border border-app-border bg-app-bg/25 overflow-hidden animate-fade-in">
+                      <table className="w-full text-[10px]">
+                        <thead>
+                          <tr className="bg-app-surface text-[8px] font-bold text-app-muted border-b border-app-border uppercase">
+                            <th className="p-2 text-center w-12">Cuenta</th>
+                            <th className="p-2 text-left">Detalle</th>
+                            <th className="p-2 text-right w-16">Debe</th>
+                            <th className="p-2 text-right w-16">Haber</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {c.asiento_json?.map((l, i) => (
+                            <tr key={i} className="border-b border-app-border/10 last:border-0">
+                              <td className="p-2 text-center font-mono font-black text-pld-blue">{l.cuenta}</td>
+                              <td className="p-2 font-bold truncate max-w-[180px]">{l.detalle}</td>
+                              <td className="p-2 text-right font-mono font-extrabold text-emerald-500">
+                                {l.debe > 0 ? Number(l.debe).toFixed(2) : '-'}
+                              </td>
+                              <td className="p-2 text-right font-mono font-extrabold text-red-400">
+                                {l.haber > 0 ? Number(l.haber).toFixed(2) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Explicación */}
+                    {c.explicacion && (
+                      <p className="text-[10px] font-bold text-app-muted leading-relaxed animate-fade-in">
+                        💡 <span className="font-extrabold text-app-text">Explicación IA:</span> {c.explicacion}
+                      </p>
+                    )}
+
+                    {/* Acciones */}
+                    <div className="flex justify-between items-center mt-2 pt-3 border-t border-app-border/50 animate-fade-in">
+                      <span className="text-[9px] text-app-muted font-bold">
+                        Tags: {c.tags || 'sin tags'}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(c)}
+                          className="p-1.5 rounded-lg bg-pld-blue/10 text-pld-blue hover:bg-pld-blue/20 transition-all"
+                          title="Editar Caso"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+                          title="Eliminar Caso"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
-
-                {/* Acciones */}
-                <div className="flex justify-between items-center mt-2 pt-3 border-t border-app-border/50">
-                  <span className="text-[9px] text-app-muted font-bold">
-                    Tags: {c.tags || 'sin tags'}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenEdit(c)}
-                      className="p-1.5 rounded-lg bg-pld-blue/10 text-pld-blue hover:bg-pld-blue/20 transition-all"
-                      title="Editar Caso"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
-                      title="Eliminar Caso"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
