@@ -34,25 +34,27 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        }));
+        if (
+          parsed.length > 0 &&
+          parsed[0].id === 'welcome' &&
+          (parsed[0].content.includes('Ejemplo') || parsed[0].content.includes('Bienvenido al') || parsed[0].content.length > 100)
+        ) {
+          sessionStorage.removeItem('softcontable_ai_chat_messages');
+        } else {
+          return parsed.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          }));
+        }
       } catch (e) {
         console.error('Error parsing saved chat messages:', e);
       }
     }
-    return [
-      {
-        id: 'welcome',
-        role: 'model',
-        content: `Bienvenido al **Asistente Contable IA**. Escribe la operación o caso de negocio que deseas registrar para generar el asiento contable correspondiente bajo el PCGE y las normas NIIF/NIC.`,
-        timestamp: new Date()
-      }
-    ];
+    return [];
   });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [welcomeTyping, setWelcomeTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Determinar si el usuario es Admin
@@ -69,13 +71,33 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem('softcontable_ai_chat_messages', JSON.stringify(messages));
+    if (messages.length > 0) {
+      sessionStorage.setItem('softcontable_ai_chat_messages', JSON.stringify(messages));
+    }
   }, [messages]);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('softcontable_ai_chat_messages');
+    if (!saved || messages.length === 0) {
+      setWelcomeTyping(true);
+      const timer = setTimeout(() => {
+        const welcomeMessage: ChatMessage = {
+          id: 'welcome',
+          role: 'model',
+          content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
+          timestamp: new Date()
+        };
+        setMessages([welcomeMessage]);
+        setWelcomeTyping(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Auto-scroll al final del chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, welcomeTyping]);
 
   const handleSend = async (textToSend?: string) => {
     const queryText = (textToSend || input).trim();
@@ -243,7 +265,10 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
   };
 
   return (
-    <div className="w-full md:w-[450px] border-l border-app-border bg-app-surface flex flex-col h-full shadow-2xl relative animate-in slide-in-from-right duration-300 z-50">
+    <div 
+      className="w-full md:w-[450px] border-l border-app-border bg-app-surface flex flex-col h-full shadow-2xl relative animate-in slide-in-from-right duration-300 z-50"
+      style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}
+    >
       
       {/* Header */}
       <div className="p-4 border-b border-app-border bg-gradient-to-r from-pld-blue/10 via-purple-500/5 to-transparent flex items-center justify-between">
@@ -546,6 +571,16 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
             </div>
           );
         })}
+
+        {welcomeTyping && (
+          <div className="flex items-center gap-2 self-start bg-app-surface border border-app-border/70 p-3.5 rounded-2xl rounded-tl-none max-w-[80%] animate-fade-in">
+            <div className="flex gap-1.5 items-center py-1 px-1">
+              <span className="h-2 w-2 bg-pld-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+              <span className="h-2 w-2 bg-pld-blue rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+              <span className="h-2 w-2 bg-pld-blue rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            </div>
+          </div>
+        )}
 
         {loading && (
           <div className="flex items-center gap-2 self-start bg-app-surface border border-app-border/70 p-3 rounded-2xl rounded-tl-none max-w-[80%]">
