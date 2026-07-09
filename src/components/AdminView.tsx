@@ -26,6 +26,7 @@ import {
 const AIKnowledgeManager: React.FC = () => {
   const [knowledgeList, setKnowledgeList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [sectorFilter, setSectorFilter] = useState('');
   const [regimenFilter, setRegimenFilter] = useState('');
@@ -69,11 +70,14 @@ const AIKnowledgeManager: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, [sectorFilter, regimenFilter]);
+    if (isExpanded) {
+      loadData();
+    }
+  }, [isExpanded, sectorFilter, regimenFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsExpanded(true);
     loadData();
   };
 
@@ -228,7 +232,7 @@ const AIKnowledgeManager: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={sectorFilter}
-            onChange={(e) => setSectorFilter(e.target.value)}
+            onChange={(e) => { setSectorFilter(e.target.value); setIsExpanded(true); }}
             className="h-8 px-3 bg-app-bg border border-app-border rounded-lg text-[10px] font-black uppercase text-app-text outline-none"
           >
             <option value="">Todos los sectores</option>
@@ -239,7 +243,7 @@ const AIKnowledgeManager: React.FC = () => {
 
           <select
             value={regimenFilter}
-            onChange={(e) => setRegimenFilter(e.target.value)}
+            onChange={(e) => { setRegimenFilter(e.target.value); setIsExpanded(true); }}
             className="h-8 px-3 bg-app-bg border border-app-border rounded-lg text-[10px] font-black uppercase text-app-text outline-none"
           >
             <option value="">Todos los regímenes</option>
@@ -277,7 +281,23 @@ const AIKnowledgeManager: React.FC = () => {
 
       {/* Lista de Casos */}
       <div className="flex-1 overflow-y-auto custom-scrollbar border border-app-border bg-app-surface rounded-2xl shadow-sm pb-6">
-        {loading ? (
+        {!isExpanded ? (
+          <div className="max-w-xl mx-auto my-12 text-center p-8 bg-app-bg/30 border border-app-border/50 rounded-2xl animate-fade-in">
+            <div className="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Database size={24} />
+            </div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-app-text mb-2">Base de Conocimiento RAG</h4>
+            <p className="text-[10px] text-app-muted leading-relaxed mb-4">
+              Visualiza y administra las plantillas de entrenamiento para la Inteligencia Artificial contable. Haz clic abajo para expandir y cargar la base de datos completa.
+            </p>
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-600/10"
+            >
+              Cargar Base RAG
+            </button>
+          </div>
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-app-muted">
             <RefreshCw size={24} className="animate-spin text-blue-500" />
             <span className="text-xs font-bold uppercase tracking-wider">Cargando base de conocimiento...</span>

@@ -1448,6 +1448,10 @@ async function ensureSchemaConstraints() {
                         origen_modulo TEXT,
                         asiento_id_origen TEXT,
                         ejercicio INTEGER NOT NULL,
+                        tipo_comprobante TEXT,
+                        tipo_documento_identidad TEXT,
+                        serie_comprobante TEXT,
+                        numero_comprobante TEXT,
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW(),
                         ref_periodo TEXT,
@@ -1609,7 +1613,11 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_in NUMERIC DEFAULT 0;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS cantidad_out NUMERIC DEFAULT 0;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS costo_unit_out NUMERIC DEFAULT 0;`,
-            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_out NUMERIC DEFAULT 0;`
+            `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS total_out NUMERIC DEFAULT 0;`,
+            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS tipo_comprobante TEXT;`,
+            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS tipo_documento_identidad TEXT;`,
+            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS serie_comprobante TEXT;`,
+            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS numero_comprobante TEXT;`
         ];
 
         // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)

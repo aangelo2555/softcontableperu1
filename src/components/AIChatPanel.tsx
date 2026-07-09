@@ -37,9 +37,10 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
         if (
           parsed.length > 0 &&
           parsed[0].id === 'welcome' &&
-          (parsed[0].content.includes('Ejemplo') || parsed[0].content.includes('Bienvenido al') || parsed[0].content.length > 100)
+          parsed[0].content !== '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?'
         ) {
           sessionStorage.removeItem('softcontable_ai_chat_messages');
+          return [];
         } else {
           return parsed.map((m: any) => ({
             ...m,

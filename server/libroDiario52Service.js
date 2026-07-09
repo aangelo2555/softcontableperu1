@@ -144,8 +144,9 @@ function createLibroDiario52Service(db) {
         codigo_auxiliar, denominacion_auxiliar, centro_costos, moneda, tipo_cambio,
         fecha_tipo_cambio, monto_debe, monto_haber, indicador_operacion,
         dato_estructurado, estado, origen_modulo, asiento_id_origen, ejercicio,
-        columna_tabla9, grupo_tabla9
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        columna_tabla9, grupo_tabla9,
+        tipo_comprobante, tipo_documento_identidad, serie_comprobante, numero_comprobante
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
 
     const transaction = db.transaction((rows) => {
@@ -160,7 +161,8 @@ function createLibroDiario52Service(db) {
           l.monto_debe, l.monto_haber, l.indicador_operacion || null,
           l.dato_estructurado || null, l.estado || '1',
           l.origen_modulo || 'MANUAL', l.asiento_id_origen || null, ejercicio,
-          mapping.columna, mapping.grupo
+          mapping.columna, mapping.grupo,
+          l.tipo_comprobante || null, l.tipo_documento_identidad || null, l.serie_comprobante || null, l.numero_comprobante || null
         );
       }
     });
@@ -188,7 +190,23 @@ function createLibroDiario52Service(db) {
     const ctaGasto = (purchase.ctaGasto || '6011').trim();
     const ctaAbono = (purchase.ctaAbono || '4212').trim();
 
-    const baseLine = { periodo, cuo, fecha_operacion: fecha, glosa, moneda: '01', tipo_cambio: 0, estado: '1', origen_modulo: 'COMPRAS', asiento_id_origen: purchase.id };
+    const baseLine = { 
+      periodo, 
+      cuo, 
+      fecha_operacion: fecha, 
+      glosa, 
+      moneda: '01', 
+      tipo_cambio: 0, 
+      estado: '1', 
+      origen_modulo: 'COMPRAS', 
+      asiento_id_origen: purchase.id,
+      tipo_comprobante: purchase.tipo_doc || null,
+      tipo_documento_identidad: purchase.doc_tipo || null,
+      serie_comprobante: purchase.serie || null,
+      numero_comprobante: purchase.numero || null,
+      codigo_auxiliar: purchase.doc_num || null,
+      denominacion_auxiliar: purchase.nombre || null
+    };
 
     if (biCentimos > 0) {
       lineNum++;
@@ -308,7 +326,23 @@ function createLibroDiario52Service(db) {
     const ctaCargo = (sale.ctaCargo || '1212').trim();
     const ctaIngreso = (sale.ctaIngreso || '70111').trim();
 
-    const baseLine = { periodo, cuo, fecha_operacion: fecha, glosa, moneda: '01', tipo_cambio: 0, estado: '1', origen_modulo: 'VENTAS', asiento_id_origen: sale.id };
+    const baseLine = { 
+      periodo, 
+      cuo, 
+      fecha_operacion: fecha, 
+      glosa, 
+      moneda: '01', 
+      tipo_cambio: 0, 
+      estado: '1', 
+      origen_modulo: 'VENTAS', 
+      asiento_id_origen: sale.id,
+      tipo_comprobante: sale.tipo_doc || null,
+      tipo_documento_identidad: sale.doc_tipo || null,
+      serie_comprobante: sale.serie || null,
+      numero_comprobante: sale.numero || null,
+      codigo_auxiliar: sale.doc_num || null,
+      denominacion_auxiliar: sale.nombre || null
+    };
 
     // Debe: Cuentas por Cobrar
     if (totalCentimos > 0) {
@@ -500,32 +534,38 @@ function createLibroDiario52Service(db) {
     const balance = validarBalancePeriodo(workspaceId, userId, periodo);
     if (!balance.valido) throw new Error(`Existen ${balance.descuadrados.length} asiento(s) descuadrados. Corrija antes de exportar.`);
 
-    const asientos = obtenerAsientosPeriodo(workspaceId, userId, periodo);
-    if (asientos.length === 0) throw new Error('No hay asientos para el período indicado');
+    const seats = db.prepare(
+      `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+    ).all(workspaceId, userId, periodo);
+    if (seats.length === 0) throw new Error('No hay asientos para el período indicado');
 
-    const lines = asientos.map(a => [
-      a.periodo,
-      a.cuo,
-      a.correlativo_asiento,
-      a.fecha_operacion,
-      a.glosa,
-      a.ref_codigo_libro || '',
-      a.ref_periodo || '',
-      a.ref_cuo || '',
-      a.codigo_cuenta,
-      a.denominacion_cuenta,
-      a.codigo_auxiliar || '',
-      a.denominacion_auxiliar || '',
-      a.centro_costos || '',
-      a.moneda || '',
-      a.tipo_cambio ? Number(a.tipo_cambio).toFixed(3) : '',
-      a.fecha_tipo_cambio || '',
-      formatSoles(a.monto_debe),
-      formatSoles(a.monto_haber),
-      a.indicador_operacion || '',
-      a.dato_estructurado || '',
-      a.estado
-    ].join('|'));
+    const lines = seats.map(a => {
+      const fOperacion = a.fecha_operacion ? fechaToDD_MM_AAAA(a.fecha_operacion) : '';
+      
+      return [
+        a.periodo,                                       // 1. Periodo (AAAAMM00)
+        a.cuo,                                           // 2. CUO
+        a.correlativo_asiento,                           // 3. Correlativo del Asiento
+        a.codigo_cuenta,                                 // 4. Código Cuenta Contable
+        '',                                              // 5. Código Unidad de Operación (opcional)
+        a.centro_costos || '',                           // 6. Código Centro de Costos (opcional)
+        a.moneda === '01' ? 'PEN' : (a.moneda || 'PEN'), // 7. Tipo Moneda (Tabla 4, PEN para soles)
+        a.tipo_documento_identidad || '',               // 8. Tipo Doc Identidad Tercero (Tabla 21)
+        a.codigo_auxiliar || '',                         // 9. Número Doc Identidad Tercero
+        a.tipo_comprobante || '',                        // 10. Tipo Comprobante (Tabla 10)
+        a.serie_comprobante || '',                       // 11. Serie de Comprobante
+        a.numero_comprobante || '',                      // 12. Número de Comprobante
+        fOperacion,                                      // 13. Fecha de Operación (DD/MM/AAAA)
+        '',                                              // 14. Fecha de Vencimiento (opcional)
+        '',                                              // 15. Fecha de Inicio o del Pago (opcional)
+        a.glosa ? a.glosa.substring(0, 200) : '',        // 16. Glosa o Descripción
+        '',                                              // 17. Glosa Referencial (opcional)
+        formatSoles(a.monto_debe),                       // 18. Debe
+        formatSoles(a.monto_haber),                      // 19. Haber
+        a.dato_estructurado || '',                       // 20. Dato estructurado (CAR)
+        a.estado || '1'                                  // 21. Estado de la operación
+      ].join('|') + '|';
+    });
 
     return lines.join('\r\n');
   };
@@ -533,7 +573,7 @@ function createLibroDiario52Service(db) {
   // ── Nombre del archivo TXT ──
   const nombreArchivoTXT = (ruc, periodo) => {
     const periodoCorto = periodo.substring(0, 6);
-    return `LE${ruc}${periodoCorto}050200001.txt`;
+    return `LE${ruc}${periodoCorto}00050200001111.txt`;
   };
 
   // ── Generar TXT Formato 5.4 (Plan Contable) ──
@@ -541,18 +581,21 @@ function createLibroDiario52Service(db) {
     const plan = db.prepare(`SELECT * FROM plan_global WHERE user_id=? ORDER BY cta`).all(userId);
     const ejercicio = periodo.substring(0, 4);
     const lines = plan.map(p => [
-      `${ejercicio}0100`,
-      p.cta,
-      p.description || '',
-      p.cta.length <= 2 ? '01' : p.cta.length <= 3 ? '02' : p.cta.length <= 4 ? '03' : '04',
-      '1'
-    ].join('|'));
+      `${ejercicio}0100`,                                   // 1. Periodo
+      p.cta,                                                // 2. Código Cuenta
+      p.description ? p.description.substring(0, 100) : '', // 3. Descripción
+      '01',                                                 // 4. Código Catálogo (01 = PCGE)
+      '',                                                   // 5. Descripción Catálogo
+      '',                                                   // 6. Código Cuenta Corporativa
+      '',                                                   // 7. Descripción Cuenta Corporativa
+      '1'                                                   // 8. Estado (siempre 1)
+    ].join('|') + '|');
     return lines.join('\r\n');
   };
 
   const nombreArchivoTXT54 = (ruc, periodo) => {
     const periodoCorto = periodo.substring(0, 6);
-    return `LE${ruc}${periodoCorto}050400001.txt`;
+    return `LE${ruc}${periodoCorto}00050400001111.txt`;
   };
 
   // ── Reporte Mayor por Cuenta ──

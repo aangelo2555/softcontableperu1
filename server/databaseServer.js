@@ -531,6 +531,10 @@ db.exec(`
         origen_modulo         TEXT,
         asiento_id_origen     TEXT,
         ejercicio             INTEGER NOT NULL,
+        tipo_comprobante      TEXT,
+        tipo_documento_identidad TEXT,
+        serie_comprobante     TEXT,
+        numero_comprobante    TEXT,
         created_at            TEXT DEFAULT (datetime('now','localtime')),
         updated_at            TEXT DEFAULT (datetime('now','localtime')),
         CONSTRAINT chk_monto_positivo CHECK (monto_debe >= 0 AND monto_haber >= 0),
@@ -784,6 +788,10 @@ try {
     // Alter table to add physical format columns
     try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN columna_tabla9 TEXT;"); } catch(e) {}
     try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN grupo_tabla9 TEXT;"); } catch(e) {}
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN tipo_comprobante TEXT;"); } catch(e) {}
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN tipo_documento_identidad TEXT;"); } catch(e) {}
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN serie_comprobante TEXT;"); } catch(e) {}
+    try { db.exec("ALTER TABLE libro_diario_52 ADD COLUMN numero_comprobante TEXT;"); } catch(e) {}
 
     // Backfill mapping for existing rows
     db.exec(`

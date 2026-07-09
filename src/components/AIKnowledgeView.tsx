@@ -23,6 +23,7 @@ interface AIKnowledgeItem {
 export const AIKnowledgeView: React.FC = () => {
   const [cases, setCases] = useState<AIKnowledgeItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [filters, setFilters] = useState({
     sector: '',
     regimen: '',
@@ -53,11 +54,14 @@ export const AIKnowledgeView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadCases();
-  }, [filters.sector, filters.regimen]);
+    if (isExpanded) {
+      loadCases();
+    }
+  }, [isExpanded, filters.sector, filters.regimen]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsExpanded(true);
     loadCases();
   };
 
@@ -239,7 +243,7 @@ export const AIKnowledgeView: React.FC = () => {
           <select
             className="text-xs bg-app-bg border border-app-border rounded-xl px-3 py-2.5 font-bold text-app-text min-w-[140px]"
             value={filters.sector}
-            onChange={e => setFilters({ ...filters, sector: e.target.value })}
+            onChange={e => { setFilters({ ...filters, sector: e.target.value }); setIsExpanded(true); }}
           >
             <option value="">TODOS LOS SECTORES</option>
             <option value="COMERCIAL">COMERCIAL</option>
@@ -250,7 +254,7 @@ export const AIKnowledgeView: React.FC = () => {
           <select
             className="text-xs bg-app-bg border border-app-border rounded-xl px-3 py-2.5 font-bold text-app-text min-w-[140px]"
             value={filters.regimen}
-            onChange={e => setFilters({ ...filters, regimen: e.target.value })}
+            onChange={e => { setFilters({ ...filters, regimen: e.target.value }); setIsExpanded(true); }}
           >
             <option value="">TODOS LOS RÉGIMENES</option>
             <option value="RG">REGIMEN GENERAL (RG)</option>
@@ -263,7 +267,25 @@ export const AIKnowledgeView: React.FC = () => {
 
       {/* Cases List */}
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        {loading ? (
+        {!isExpanded ? (
+          <div className="max-w-2xl mx-auto my-12 bg-app-surface border border-app-border/60 rounded-2xl p-8 text-center shadow-lg animate-fade-in">
+            <div className="w-16 h-16 mx-auto mb-6 bg-pld-blue/10 rounded-full flex items-center justify-center text-pld-blue">
+              <Database size={32} />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-app-text mb-2">Base de Conocimiento RAG</h3>
+            <p className="text-xs text-app-muted leading-relaxed mb-6">
+              El motor de Inferencia Generativa Aumentada por Recuperación (RAG) guía a la Inteligencia Artificial mediante plantillas y reglas contables validadas del PCGE. Expande la base de datos para visualizar, editar o sembrar nuevos templates contables.
+            </p>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setIsExpanded(true)}
+              className="bg-pld-blue hover:opacity-95 font-bold uppercase tracking-wider text-xs px-8 py-3 mx-auto"
+            >
+              Cargar Base de Datos RAG
+            </Button>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-20 gap-2">
             <RefreshCw size={24} className="animate-spin text-pld-blue" />
             <span className="text-sm font-bold text-app-muted">Cargando base de conocimiento...</span>
