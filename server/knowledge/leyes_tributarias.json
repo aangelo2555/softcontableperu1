@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "lastUpdated": "2026-07-11",
+    "totalLeyes": 3
+  },
+  "cases": [
+    {
+      "id": "ley_igv_credito_fiscal",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Requisitos para el Crédito Fiscal del IGV",
+      "referencia": "Ley del IGV (Decreto Supremo N° 055-99-EF), Artículos 18 y 19",
+      "contenido": "Para tener derecho al crédito fiscal del IGV en compras se deben cumplir dos tipos de requisitos: 1. Sustanciales (Art. 18): Que la compra sea permitida como costo o gasto según la Ley del Impuesto a la Renta, y que se destine a operaciones gravadas con el IGV. 2. Formales (Art. 19): Que el IGV esté discriminado en el comprobante de pago, que este contenga los datos del emisor y adquirente (RUC, Razón Social), y que el comprobante haya sido anotado en el Registro de Compras dentro del plazo legal.",
+      "aplicacion_peru": "Si una compra se destina conjuntamente a operaciones gravadas y no gravadas, se debe aplicar el método de prorrata del IGV para determinar el crédito fiscal permitido, cargando el IGV no utilizable como costo o gasto (cuenta 64 o clase 2/3).",
+      "tags": "igv, compras, credito fiscal, requisito formal, sustancial, registro de compras, prorrata igv"
+    },
+    {
+      "id": "ley_ir_causalidad_gastos",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Principio de Causalidad del Gasto (Impuesto a la Renta)",
+      "referencia": "Ley del Impuesto a la Renta (D.S. N° 179-2004-EF), Artículo 37",
+      "contenido": "A fin de establecer la renta neta de tercera categoría, se deducirán de la renta bruta los gastos necesarios para producirla y mantener su fuente productora (principio de causalidad), en tanto la deducción no esté expresamente prohibida por ley. Ejemplos de gastos deducibles regulados: intereses de deudas, tributos sobre bienes productores, primas de seguros, pérdidas extraordinarias, gastos de personal (sueldos, aguinaldos), gastos de viaje y representación (sujetos a límites cuantitativos).",
+      "aplicacion_peru": "Los gastos deben cumplir también con los criterios de razonabilidad y proporcionalidad en relación con los ingresos de la empresa, y estar debidamente sustentados con comprobantes de pago autorizados (facturas, recibos por honorarios) y bancarizados si superan el monto de ley.",
+      "tags": "impuesto a la renta, gasto deducible, causalidad, deducibilidad, representacion, viajes, causalidad de gasto"
+    },
+    {
+      "id": "ley_bancarizacion",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Obligación de Medios de Pago (Bancarización)",
+      "referencia": "Ley para la Lucha contra la Evasión y para la Formalización de la Economía (Ley N° 28194), Artículos 3, 4 y 8",
+      "contenido": "Los pagos de obligaciones por sumas iguales o superiores a dos mil Soles (S/ 2,000.00) o quinientos Dólares Americanos ($ 500.00) deben realizarse utilizando exclusivamente Medios de Pago autorizados por el sistema financiero (transferencias de fondos, depósitos en cuenta, cheques no negociables, tarjetas de crédito/débito). El incumplimiento de esta norma impide al adquirente utilizar el crédito fiscal del IGV y el costo o gasto para efectos del Impuesto a la Renta.",
+      "aplicacion_peru": "El asiento contable de cancelación de facturas por importes altos debe identificar claramente el medio de pago mediante cuentas auxiliares bancarias de la divisionaria 104 y reflejarse en los libros contables con el código de medio de pago SUNAT respectivo.",
+      "tags": "bancarizacion, medios de pago, cheque, transferencia, deposito, limite 2000 soles, sunat, costo gasto"
+    }
+  ]
+}

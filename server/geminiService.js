@@ -1,5 +1,9 @@
 const axios = require('axios');
-const db = require('./databasePostgres');
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const db = USE_POSTGRES 
+    ? require('./databasePostgres')
+    : require('./databaseServer');
+const embeddingService = require('./embeddingService');
 
 
 const gk1 = 'gsk_';
@@ -13,48 +17,115 @@ function getGroqApiConfig() {
     return { key, url };
 }
 
+// Cosine similarity helper
+function cosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+    let dotProduct = 0.0;
+    let normA = 0.0;
+    let normB = 0.0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    if (normA === 0.0 || normB === 0.0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 /**
- * Realiza una búsqueda simple de palabras clave para recuperar casos contables similares.
- * (Enfoque RAG)
+ * Realiza una búsqueda semántica de vectores para recuperar casos contables y normativas similares.
+ * (Enfoque RAG Multi-capa)
  */
 async function retrieveSimilarCases(premisa, sector, regimen) {
     try {
-        // Obtener todos los casos del sector y régimen correspondientes
-        const cases = await db.getAIKnowledge({ sector, regimen });
-        if (!cases || cases.length === 0) return [];
+        // 1. Obtener todos los elementos activos de la base de conocimiento
+        const allItems = await db.getAIKnowledge();
+        if (!allItems || allItems.length === 0) return { cases: [], regs: [] };
 
-        const keywords = premisa
-            .toLowerCase()
-            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-            .split(/\s+/)
-            .filter(w => w.length > 3);
-
-        if (keywords.length === 0) {
-            return cases.slice(0, 3); // Retorna los primeros 3 por defecto
+        // 2. Intentar generar el embedding para la consulta del usuario
+        let queryEmbedding = null;
+        try {
+            await embeddingService.init();
+            queryEmbedding = await embeddingService.generateEmbedding(premisa);
+        } catch (e) {
+            console.warn('[GEMINI SERVICE] Error al generar embedding, usando fallback de palabras clave:', e.message);
         }
 
-        // Rankear casos por coincidencia de palabras clave en premisa, tags o glosa
-        const rankedCases = cases.map(c => {
-            let score = 0;
-            const textToSearch = `${c.premisa} ${c.tags} ${c.glosa}`.toLowerCase();
-            
-            keywords.forEach(kw => {
-                if (textToSearch.includes(kw)) {
-                    score += 1;
-                }
-            });
-            return { caseData: c, score };
-        });
+        let scoredItems = [];
 
-        // Ordenar por puntaje descendente y filtrar casos con score > 0 si es posible
-        rankedCases.sort((a, b) => b.score - a.score);
-        
-        return rankedCases
-            .slice(0, 4) // Tomar los top 4 casos
-            .map(item => item.caseData);
+        if (queryEmbedding) {
+            // A. BÚSQUEDA VECTORIAL (Semántica)
+            scoredItems = allItems.map(item => {
+                let score = 0;
+                if (item.embedding) {
+                    score = cosineSimilarity(queryEmbedding, item.embedding);
+                }
+                return { item, score };
+            });
+            // Ordenar por similitud de mayor a menor
+            scoredItems.sort((a, b) => b.score - a.score);
+        } else {
+            // B. FALLBACK: BÚSQUEDA POR PALABRAS CLAVE
+            const keywords = premisa
+                .toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .split(/\s+/)
+                .filter(w => w.length > 3);
+
+            scoredItems = allItems.map(item => {
+                let score = 0;
+                const textToSearch = `${item.premisa || ''} ${item.titulo || ''} ${item.contenido || ''} ${item.tags || ''} ${item.glosa || ''}`.toLowerCase();
+                
+                if (keywords.length > 0) {
+                    keywords.forEach(kw => {
+                        if (textToSearch.includes(kw)) {
+                            score += 1;
+                        }
+                    });
+                } else {
+                    score = 0.5; // score por defecto
+                }
+                return { item, score };
+            });
+            // Ordenar por coincidencia
+            scoredItems.sort((a, b) => b.score - a.score);
+        }
+
+        // 3. Separar en dos grupos:
+        // - Casos Prácticos (deben encajar con el sector y régimen)
+        // - Normativas (NIIF, Leyes, Sunat, Terminología, Reglas) que aporten fundamento legal
+        const cases = [];
+        const regs = [];
+
+        for (const scored of scoredItems) {
+            const item = scored.item;
+            const score = scored.score;
+
+            // Para búsquedas semánticas, filtramos coincidencias extremadamente irrelevantes
+            if (queryEmbedding && score < 0.20) continue;
+
+            if (item.tipo === 'CASO_PRACTICO') {
+                // Filtrar por sector y régimen si no es muy genérico, pero en búsqueda semántica
+                // podemos ser más flexibles si la similitud es alta (>0.7)
+                const matchSector = item.sector === sector || item.sector === 'TODOS';
+                const matchRegimen = item.regimen === regimen || item.regimen === 'TODOS';
+                
+                if (matchSector || score > 0.70) {
+                    cases.push({ ...item, similarity: score });
+                }
+            } else {
+                regs.push({ ...item, similarity: score });
+            }
+        }
+
+        return {
+            cases: cases.slice(0, 4), // Top 4 casos prácticos
+            regs: regs.slice(0, 4)    // Top 4 normativas/leyes relevantes
+        };
+
     } catch (error) {
-        console.error('[GEMINI SERVICE] Error retrieving similar cases:', error);
-        return [];
+        console.error('[GEMINI SERVICE] Error in retrieveSimilarCases RAG:', error);
+        return { cases: [], regs: [] };
     }
 }
 
@@ -85,20 +156,36 @@ async function generateAsiento(premisa, companyContext, planContable) {
         const sector = companyContext.businessType || 'COMERCIAL';
         const regimen = companyContext.regimenTributario || 'RG';
 
-        // 1. RAG: Obtener casos de referencia
-        const similarCases = await retrieveSimilarCases(premisa, sector, regimen);
+        // 1. RAG: Obtener casos y normativas de referencia
+        const { cases: similarCases, regs: similarRegs } = await retrieveSimilarCases(premisa, sector, regimen);
 
         // 2. Formatear casos de referencia para el prompt
         let examplesPrompt = '';
-        if (similarCases.length > 0) {
+        if (similarCases && similarCases.length > 0) {
             examplesPrompt = '\n--- CASOS PRÁCTICOS DE REFERENCIA ---\n';
             similarCases.forEach((c, idx) => {
-                examplesPrompt += `Caso ${idx + 1}:\n`;
-                examplesPrompt += `Premisa: ${c.premisa}\n`;
-                examplesPrompt += `Glosa Sugerida: ${c.glosa}\n`;
+                const simStr = c.similarity ? ` (Similitud Semántica: ${(c.similarity * 100).toFixed(0)}%)` : '';
+                examplesPrompt += `Caso ${idx + 1}${simStr}:\n`;
+                examplesPrompt += `Premisa: ${c.premisa || ''}\n`;
+                examplesPrompt += `Glosa Sugerida: ${c.glosa || ''}\n`;
                 examplesPrompt += `Asiento Contable (JSON): ${JSON.stringify(c.asiento_json, null, 2)}\n`;
                 if (c.niif_norma) examplesPrompt += `Norma NIIF Aplicada: ${c.niif_norma}\n`;
                 examplesPrompt += `------------------------------------\n`;
+            });
+        }
+
+        let regsPrompt = '';
+        if (similarRegs && similarRegs.length > 0) {
+            regsPrompt = '\n--- LEYES, NORMAS Y RESOLUCIONES SUNAT APLICABLES ---\n';
+            similarRegs.forEach((r, idx) => {
+                const simStr = r.similarity ? ` (Similitud Semántica: ${(r.similarity * 100).toFixed(0)}%)` : '';
+                regsPrompt += `Norma/Regla ${idx + 1}${simStr} [Capa: ${r.tipo}]:\n`;
+                regsPrompt += `Título: ${r.titulo}\n`;
+                regsPrompt += `Contenido: ${r.contenido || r.premisa || ''}\n`;
+                if (r.referencia) regsPrompt += `Referencia Legal: ${r.referencia}\n`;
+                if (r.aplicacion_peru) regsPrompt += `Aplicación en Perú: ${r.aplicacion_peru}\n`;
+                if (r.vigencia) regsPrompt += `Vigencia: ${r.vigencia}\n`;
+                regsPrompt += `------------------------------------\n`;
             });
         }
 
@@ -258,6 +345,7 @@ UIT 2026: S/ 5,500.00
 IGV: 18%
 
 ${examplesPrompt}
+${regsPrompt}
 
 --- PLAN CONTABLE DE LA EMPRESA ---
 ${JSON.stringify(planResumido, null, 2)}

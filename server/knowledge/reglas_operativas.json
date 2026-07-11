@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "lastUpdated": "2026-07-11",
+    "totalReglas": 4
+  },
+  "cases": [
+    {
+      "id": "regla_uit_2026",
+      "tipo": "REGLA_OPERATIVA",
+      "titulo": "Valor de la UIT para el Ejercicio 2026",
+      "referencia": "Decreto Supremo del Ministerio de Economía y Finanzas",
+      "contenido": "Para el ejercicio contable y fiscal del año 2026, el valor de la Unidad Impositiva Tributaria (UIT) está fijado en cinco mil quinientos Soles (S/ 5,500.00). Este valor sirve como base para determinar obligaciones, multas, escalas de tributos, límites de gastos deducibles y umbrales de capitalización de activos fijos.",
+      "tags": "uit, uit 2026, unidad impositiva tributaria, 5500 soles, limite tributario, multa, capitalizacion"
+    },
+    {
+      "id": "regla_retencion_cuarta_categoria",
+      "tipo": "REGLA_OPERATIVA",
+      "titulo": "Umbral y Tasa de Retención de Renta de Cuarta Categoría (Honorarios)",
+      "referencia": "Art. 74 de la Ley del Impuesto a la Renta y R.S. N° 225-2020/SUNAT",
+      "contenido": "Los pagos de recibos por honorarios emitidos por trabajadores independientes que superen el importe unitario de mil quinientos Soles (S/ 1,500.00) están sujetos a una retención del Impuesto a la Renta de cuarta categoría del ocho por ciento (8.0%), a menos que el emisor cuente con la constancia vigente de suspensión de retenciones de cuarta categoría emitida por la SUNAT. La cuenta de pasivo para registrar la retención es la 40172.",
+      "tags": "recibo por honorarios, cuarta categoria, retencion 8, limite 1500 soles, suspension retenciones, cuenta 40172"
+    },
+    {
+      "id": "regla_capitalizacion_activo_fijo",
+      "tipo": "REGLA_OPERATIVA",
+      "titulo": "Umbral de Capitalización de Bienes de Uso (Activo Fijo)",
+      "referencia": "Art. 23 del Reglamento de la Ley del Impuesto a la Renta",
+      "contenido": "El costo mínimo para que una adquisición de bien mueble pueda capitalizarse directamente como Propiedades, Planta y Equipo (activo fijo) es un cuarto (1/4) de la Unidad Impositiva Tributaria (UIT). Para el año 2026, 1/4 de UIT equivale a mil trescientos setenta y cinco Soles (S/ 1,375.00). Los bienes con costos inferiores a este monto pueden ser reconocidos directamente como gastos del ejercicio (cuenta de Clase 6), salvo cuando constituyan parte de una inversión inicial o grupo necesario.",
+      "tags": "capitalizacion activo, activo fijo gasto, limite 1375 soles, nic 16, un cuarto uit, costo de adquisicion"
+    },
+    {
+      "id": "regla_igv_tasa_general",
+      "tipo": "REGLA_OPERATIVA",
+      "titulo": "Tasa General del Impuesto General a las Ventas (IGV)",
+      "referencia": "Art. 17 de la Ley del IGV e ISC",
+      "contenido": "La tasa general del Impuesto General a las Ventas (IGV) aplicable en operaciones comerciales en el territorio nacional es del dieciocho por ciento (18.0%). Este porcentaje se compone de 16.0% correspondiente a la tasa general del IGV propiamente dicho y 2.0% correspondiente a la tasa de Impuesto de Promoción Municipal (IPM). La dinámica contable exige el abono en el Haber de la subcuenta 40111 para IGV cobrado en ventas, y el cargo en el Debe para el crédito fiscal en compras.",
+      "tags": "tasa igv, 18 por ciento, igv ipm, tasa general, impuesto general a las ventas, formula igv"
+    }
+  ]
+}

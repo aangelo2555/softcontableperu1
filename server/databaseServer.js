@@ -1248,6 +1248,40 @@ try {
     console.error('[DB ERROR] No se pudo crear balance_inicial:', e.message);
 }
 
+// --- Migración Forzada: Crear ai_knowledge_base si no existe ---
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_knowledge_base (
+            id TEXT PRIMARY KEY,
+            sector TEXT NOT NULL DEFAULT 'COMERCIAL',
+            regimen TEXT NOT NULL DEFAULT 'RG',
+            niif_norma TEXT DEFAULT '',
+            categoria TEXT NOT NULL DEFAULT 'GENERAL',
+            premisa TEXT DEFAULT '',
+            glosa TEXT DEFAULT '',
+            asiento_json TEXT DEFAULT '[]',
+            explicacion TEXT DEFAULT '',
+            tags TEXT DEFAULT '',
+            tipo TEXT NOT NULL DEFAULT 'CASO_PRACTICO',
+            titulo TEXT NOT NULL DEFAULT '',
+            contenido TEXT NOT NULL DEFAULT '',
+            referencia TEXT DEFAULT '',
+            vigencia TEXT DEFAULT '',
+            aplicacion_peru TEXT DEFAULT '',
+            embedding TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            activo INTEGER DEFAULT 1
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_sector ON ai_knowledge_base(sector);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_regimen ON ai_knowledge_base(regimen);
+        CREATE INDEX IF NOT EXISTS idx_ai_knowledge_tipo ON ai_knowledge_base(tipo);
+    `);
+    console.log('[DB] Tabla ai_knowledge_base verificada/creada.');
+} catch (e) {
+    console.error('[DB ERROR] No se pudo crear ai_knowledge_base:', e.message);
+}
+
 const dbManager = {
     // --- Gestión de Usuarios ---
     createUser: (u) => {
@@ -1603,6 +1637,110 @@ const dbManager = {
             pfx: row.certificado_pfx,
             pass: decrypt(row.certificado_pass)
         };
+    },
+    getAIKnowledge: (filters = {}) => {
+        try {
+            let sql = `SELECT * FROM ai_knowledge_base WHERE activo = 1`;
+            const params = [];
+
+            if (filters.tipo) {
+                sql += ` AND tipo = ?`;
+                params.push(filters.tipo);
+            }
+            if (filters.sector) {
+                sql += ` AND sector = ?`;
+                params.push(filters.sector);
+            }
+            if (filters.regimen) {
+                sql += ` AND regimen = ?`;
+                params.push(filters.regimen);
+            }
+            if (filters.categoria) {
+                sql += ` AND categoria = ?`;
+                params.push(filters.categoria);
+            }
+            if (filters.search) {
+                sql += ` AND (premisa LIKE ? OR tags LIKE ? OR glosa LIKE ? OR titulo LIKE ? OR contenido LIKE ?)`;
+                const term = `%${filters.search}%`;
+                params.push(term, term, term, term, term);
+            }
+
+            sql += ` ORDER BY created_at DESC`;
+            const rows = db.prepare(sql).all(...params);
+            return rows.map(r => {
+                let asiento = [];
+                try {
+                    asiento = typeof r.asiento_json === 'string' ? JSON.parse(r.asiento_json) : (r.asiento_json || []);
+                } catch (e) {
+                    asiento = [];
+                }
+                let emb = null;
+                if (r.embedding) {
+                    try {
+                        emb = typeof r.embedding === 'string' ? JSON.parse(r.embedding) : r.embedding;
+                    } catch (e) {
+                        emb = null;
+                    }
+                }
+                return {
+                    ...r,
+                    asiento_json: asiento,
+                    embedding: emb,
+                    activo: r.activo === 1
+                };
+            });
+        } catch (error) {
+            console.error('[SQLITE] Error getting ai knowledge:', error.message);
+            return [];
+        }
+    },
+
+    saveAIKnowledge: (item) => {
+        try {
+            const id = item.id || `ak_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const asientoStr = typeof item.asiento_json === 'string' ? item.asiento_json : JSON.stringify(item.asiento_json || []);
+            const embeddingStr = item.embedding ? (typeof item.embedding === 'string' ? item.embedding : JSON.stringify(item.embedding)) : null;
+
+            const stmt = db.prepare(`
+                INSERT OR REPLACE INTO ai_knowledge_base (
+                    id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags,
+                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `);
+            stmt.run(
+                id,
+                item.sector || 'COMERCIAL',
+                item.regimen || 'RG',
+                item.niif_norma || '',
+                item.categoria || 'GENERAL',
+                item.premisa || '',
+                item.glosa || '',
+                asientoStr,
+                item.explicacion || '',
+                item.tags || '',
+                item.tipo || 'CASO_PRACTICO',
+                item.titulo || '',
+                item.contenido || '',
+                item.referencia || '',
+                item.vigencia || '',
+                item.aplicacion_peru || '',
+                embeddingStr
+            );
+            return { success: true, id };
+        } catch (error) {
+            console.error('[SQLITE] Error saving ai knowledge:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    deleteAIKnowledge: (id) => {
+        try {
+            db.prepare(`DELETE FROM ai_knowledge_base WHERE id = ?`).run(id);
+            return { success: true };
+        } catch (error) {
+            console.error('[SQLITE] Error deleting ai knowledge:', error.message);
+            return { success: false, error: error.message };
+        }
     },
     rawDb: db
 };

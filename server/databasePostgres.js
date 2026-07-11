@@ -796,6 +796,10 @@ const db = {
             const params = [];
             let paramIndex = 1;
 
+            if (filters.tipo) {
+                sql += ` AND tipo = $${paramIndex++}`;
+                params.push(filters.tipo);
+            }
             if (filters.sector) {
                 sql += ` AND sector = $${paramIndex++}`;
                 params.push(filters.sector);
@@ -809,7 +813,7 @@ const db = {
                 params.push(filters.categoria);
             }
             if (filters.search) {
-                sql += ` AND (premisa ILIKE $${paramIndex} OR tags ILIKE $${paramIndex} OR glosa ILIKE $${paramIndex})`;
+                sql += ` AND (premisa ILIKE $${paramIndex} OR tags ILIKE $${paramIndex} OR glosa ILIKE $${paramIndex} OR titulo ILIKE $${paramIndex} OR contenido ILIKE $${paramIndex})`;
                 params.push(`%${filters.search}%`);
                 paramIndex++;
             }
@@ -823,9 +827,18 @@ const db = {
                 } catch (e) {
                     asiento = [];
                 }
+                let emb = null;
+                if (r.embedding) {
+                    try {
+                        emb = typeof r.embedding === 'string' ? JSON.parse(r.embedding) : r.embedding;
+                    } catch (e) {
+                        emb = null;
+                    }
+                }
                 return {
                     ...r,
-                    asiento_json: asiento
+                    asiento_json: asiento,
+                    embedding: emb
                 };
             });
         } catch (error) {
@@ -838,11 +851,13 @@ const db = {
         try {
             const id = item.id || `ak_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const asientoStr = typeof item.asiento_json === 'string' ? item.asiento_json : JSON.stringify(item.asiento_json || []);
+            const embeddingStr = item.embedding ? (typeof item.embedding === 'string' ? item.embedding : JSON.stringify(item.embedding)) : null;
             
             const sql = `
                 INSERT INTO ai_knowledge_base (
-                    id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                    id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags,
+                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
                 ON CONFLICT (id) DO UPDATE SET
                     sector = EXCLUDED.sector,
                     regimen = EXCLUDED.regimen,
@@ -853,6 +868,13 @@ const db = {
                     asiento_json = EXCLUDED.asiento_json,
                     explicacion = EXCLUDED.explicacion,
                     tags = EXCLUDED.tags,
+                    tipo = EXCLUDED.tipo,
+                    titulo = EXCLUDED.titulo,
+                    contenido = EXCLUDED.contenido,
+                    referencia = EXCLUDED.referencia,
+                    vigencia = EXCLUDED.vigencia,
+                    aplicacion_peru = EXCLUDED.aplicacion_peru,
+                    embedding = EXCLUDED.embedding,
                     updated_at = NOW();
             `;
             await query(sql, [
@@ -861,11 +883,18 @@ const db = {
                 item.regimen || 'RG',
                 item.niif_norma || '',
                 item.categoria || 'GENERAL',
-                item.premisa,
+                item.premisa || '',
                 item.glosa || '',
                 asientoStr,
                 item.explicacion || '',
-                item.tags || ''
+                item.tags || '',
+                item.tipo || 'CASO_PRACTICO',
+                item.titulo || '',
+                item.contenido || '',
+                item.referencia || '',
+                item.vigencia || '',
+                item.aplicacion_peru || '',
+                embeddingStr
             ]);
             return { success: true, id };
         } catch (error) {
@@ -1585,17 +1614,25 @@ async function ensureSchemaConstraints() {
                         regimen TEXT NOT NULL DEFAULT 'RG',
                         niif_norma TEXT DEFAULT '',
                         categoria TEXT NOT NULL DEFAULT 'GENERAL',
-                        premisa TEXT NOT NULL,
-                        glosa TEXT NOT NULL,
-                        asiento_json TEXT NOT NULL,
+                        premisa TEXT DEFAULT '',
+                        glosa TEXT DEFAULT '',
+                        asiento_json TEXT DEFAULT '[]',
                         explicacion TEXT DEFAULT '',
                         tags TEXT DEFAULT '',
+                        tipo TEXT NOT NULL DEFAULT 'CASO_PRACTICO',
+                        titulo TEXT NOT NULL DEFAULT '',
+                        contenido TEXT NOT NULL DEFAULT '',
+                        referencia TEXT DEFAULT '',
+                        vigencia TEXT DEFAULT '',
+                        aplicacion_peru TEXT DEFAULT '',
+                        embedding TEXT,
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW(),
                         activo BOOLEAN DEFAULT true
                     );
                     CREATE INDEX IF NOT EXISTS idx_ai_knowledge_sector ON ai_knowledge_base(sector);
                     CREATE INDEX IF NOT EXISTS idx_ai_knowledge_regimen ON ai_knowledge_base(regimen);
+                    CREATE INDEX IF NOT EXISTS idx_ai_knowledge_tipo ON ai_knowledge_base(tipo);
                 `
             }
         ];
@@ -1617,7 +1654,17 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS tipo_comprobante TEXT;`,
             `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS tipo_documento_identidad TEXT;`,
             `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS serie_comprobante TEXT;`,
-            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS numero_comprobante TEXT;`
+            `ALTER TABLE libro_diario_52 ADD COLUMN IF NOT EXISTS numero_comprobante TEXT;`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'CASO_PRACTICO';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS titulo TEXT NOT NULL DEFAULT '';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS contenido TEXT NOT NULL DEFAULT '';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS referencia TEXT DEFAULT '';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS vigencia TEXT DEFAULT '';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS aplicacion_peru TEXT DEFAULT '';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding TEXT;`,
+            `ALTER TABLE ai_knowledge_base ALTER COLUMN premisa DROP NOT NULL;`,
+            `ALTER TABLE ai_knowledge_base ALTER COLUMN glosa DROP NOT NULL;`,
+            `ALTER TABLE ai_knowledge_base ALTER COLUMN asiento_json DROP NOT NULL;`
         ];
 
         // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)
