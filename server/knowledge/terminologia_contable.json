@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "lastUpdated": "2026-07-11",
     "totalTerminos": 4
   },
@@ -11,7 +11,9 @@
       "titulo": "Principio del Devengado",
       "referencia": "Marco Conceptual de las NIIF y Art. 57 de la Ley del Impuesto a la Renta",
       "contenido": "Los efectos de las transacciones y demás sucesos se reconocen cuando ocurren (y no cuando se recibe o paga dinero u otro equivalente al efectivo), asimismo se registran en los libros contables y se informa sobre ellos en los estados financieros de los periodos con los cuales se relacionan. Es decir, los gastos se registran cuando surge la obligación legal o contractual de pago (por la prestación efectiva del servicio o recepción de bienes) y los ingresos cuando se transfiere el control de los bienes o se prestan los servicios, sin importar la fecha de cobro o pago.",
-      "tags": "devengado, reconocimiento gasto, reconocimiento ingreso, provision, periodo contable, devengo"
+      "tags": "devengado, reconocimiento gasto, reconocimiento ingreso, provision, periodo contable, devengo",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "term_partida_doble",
@@ -19,7 +21,9 @@
       "titulo": "Principio de Partida Doble",
       "referencia": "Ecuación Contable Fundamental: Activo = Pasivo + Patrimonio",
       "contenido": "Método fundamental de la contabilidad que establece que en cada transacción financiera intervienen al menos dos cuentas contables: una que recibe fondos (Debe) y otra que entrega fondos (Haber). La suma total de los importes debitados en el Debe debe ser matemáticamente idéntica a la suma total de los importes acreditados en el Haber. Ningún asiento contable puede quedar descuadrado. Toda cuenta deudor tiene su acreedor.",
-      "tags": "partida doble, cuadre contable, debe, haber, balance, ecuacion contable, cargo, abono"
+      "tags": "partida doble, cuadre contable, debe, haber, balance, ecuacion contable, cargo, abono",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "term_amarres_contables",
@@ -27,7 +31,9 @@
       "titulo": "Asientos de Destino y Amarres Contables",
       "referencia": "Dinámica del PCGE (Clase 6, Clase 9 y Cuenta 79)",
       "contenido": "En el Plan Contable General Empresarial (PCGE) peruano, las cuentas de gastos registradas por su naturaleza en la Clase 6 (ej: 62 Gastos de Personal, 63 Servicios Prestados por Terceros, 64 Gastos por Tributos, 65 Otros Gastos de Gestión) requieren ser clasificadas simultáneamente según su función dentro de la organización (Gastos Administrativos en la cuenta 94 o Gastos de Ventas en la cuenta 95), utilizando como cuenta de contrapartida o enlace la cuenta 79 (Cargas imputables a cuentas de costos y gastos). El asiento de amarre debita la Clase 9 y acredita la cuenta 791.",
-      "tags": "amarre, destino, cuenta 79, clase 9, gastos de administracion, gastos de ventas, naturaleza gasto, funcion gasto"
+      "tags": "amarre, destino, cuenta 79, clase 9, gastos de administracion, gastos de ventas, naturaleza gasto, funcion gasto",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "term_activo_inmovilizado",
@@ -35,7 +41,9 @@
       "titulo": "Activo Fijo o Propiedades, Planta y Equipo (PPE)",
       "referencia": "Elemento 3 del PCGE y NIC 16",
       "contenido": "Los activos inmovilizados representan bienes tangibles e intangibles adquiridos o producidos por la empresa que se destinan a la explotación de sus actividades, alquiler o fines administrativos de forma permanente, cuya vida útil estimada es superior a un año y no están destinados para la venta en el curso ordinario del negocio. Bajo el PCGE se registran en el Elemento 3 (cuentas 33, 34, 35) y su depreciación o amortización se acumula en la cuenta 39.",
-      "tags": "activo fijo, inmovilizado, propiedad planta equipo, elemento 3, depreciacion, maquinaria, maquinaria y equipo"
+      "tags": "activo fijo, inmovilizado, propiedad planta equipo, elemento 3, depreciacion, maquinaria, maquinaria y equipo",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
   ]
 }

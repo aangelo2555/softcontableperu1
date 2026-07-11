@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "lastUpdated": "2026-07-11",
     "totalNormas": 5
   },
@@ -12,7 +12,9 @@
       "referencia": "NIC 2, párrafos 6, 9, 28 y 34",
       "contenido": "Los inventarios se deben medir al costo o al valor neto realizable (VNR), el menor. El costo de los inventarios debe comprender todos los costos de compra, costos de conversión y otros costos en los que se haya incurrido para darles su condición y ubicación actuales. Las devoluciones y descuentos comerciales recibidos reducen el costo de compra. Los desmedros (obsolescencia física o comercial) deben reconocerse como un gasto en el periodo en que ocurren mediante provisión por desvalorización (cuenta 29).",
       "aplicacion_peru": "En Perú, los desmedros de existencias son deducibles tributariamente para el Impuesto a la Renta siempre que se destruyan ante Notario Público o Juez de Paz con comunicación previa a la SUNAT de al menos dos (2) días hábiles.",
-      "tags": "inventario, existencias, mercaderia, desmedro, obsolescencia, destruccion, notario, valor neto realizable, vnr, costo"
+      "tags": "inventario, existencias, mercaderia, desmedro, obsolescencia, destruccion, notario, valor neto realizable, vnr, costo",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "nic_16_ppe",
@@ -21,7 +23,9 @@
       "referencia": "NIC 16, párrafos 7, 15, 16 y 43",
       "contenido": "Un elemento de Propiedades, Planta y Equipo se reconocerá como activo si es probable que la entidad obtenga beneficios económicos futuros derivados del mismo y su costo pueda medirse con fiabilidad. El costo inicial comprende su precio de adquisición (incluidos aranceles e impuestos indirectos no recuperables) y cualquier costo directamente relacionado con la ubicación y puesta en marcha del activo (transporte/fletes, instalación, montaje, pruebas, honorarios profesionales). La depreciación inicia cuando el activo está disponible para su uso.",
       "aplicacion_peru": "En Perú, el Art. 23 del Reglamento de la Ley del Impuesto a la Renta permite registrar como gasto los activos fijos adquiridos cuyo costo por unidad no supere un cuarto (1/4) de la UIT vigente (para el año 2026 es S/ 1,375.00), a menos que formen parte de un conjunto o grupo de bienes necesarios para la actividad.",
-      "tags": "activo fijo, propiedad planta equipo, capitalizacion, flete, instalacion, montaje, depreciacion, vida util, uit, capitalizar"
+      "tags": "activo fijo, propiedad planta equipo, capitalizacion, flete, instalacion, montaje, depreciacion, vida util, uit, capitalizar",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "niif_15_ingresos",
@@ -30,7 +34,9 @@
       "referencia": "NIIF 15, modelo de 5 pasos",
       "contenido": "Los ingresos se reconocen cuando (o a medida que) la entidad transfiere el control de los bienes o servicios prometidos al cliente. El reconocimiento sigue 5 pasos: 1. Identificar el contrato, 2. Identificar las obligaciones de desempeño, 3. Determinar el precio de la transacción, 4. Asignar el precio a las obligaciones, 5. Reconocer el ingreso. Los pagos recibidos de clientes antes de que se transfieran los bienes o servicios representan una obligación de desempeño y se registran como pasivo bajo la cuenta anticipo de clientes (cuenta 122).",
       "aplicacion_peru": "Tributariamente, el devengo del ingreso comercial sigue reglas similares bajo el Art. 57 de la Ley del Impuesto a la Renta. La emisión de la factura de anticipo exige el cálculo y pago del IGV (18%) de forma inmediata, aunque la cuenta 70 de ingresos no se reconoce contablemente hasta la entrega de la mercadería o prestación de servicio.",
-      "tags": "ingreso, venta, anticipo, factura, servicio, obligacion desempeño, transferencia control, devengado"
+      "tags": "ingreso, venta, anticipo, factura, servicio, obligacion desempeño, transferencia control, devengado",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "niif_16_arrendamientos",
@@ -39,7 +45,9 @@
       "referencia": "NIIF 16, reconocimiento por el arrendatario",
       "contenido": "El arrendatario debe reconocer un activo por derecho de uso (cuenta 32) y un pasivo por arrendamiento (cuenta 45) en la fecha de inicio de todos los contratos de arrendamiento, excepto para arrendamientos a corto plazo (12 meses o menos) o activos de bajo valor. El pasivo se mide inicialmente al valor presente de los pagos de arrendamiento futuros descontados usando la tasa de interés implícita o incremental. El activo por derecho de uso se deprecia a lo largo de la vida útil o el plazo del arrendamiento.",
       "aplicacion_peru": "En Perú, los contratos de arrendamiento financiero (leasing) regulados por el Decreto Legislativo 299 permiten una depreciación acelerada en base al plazo del contrato si se cumplen los requisitos del Art. 18 de la citada ley.",
-      "tags": "leasing, arrendamiento, alquiler, derecho uso, pasivo financiero, depreciacion leasing, valor presente"
+      "tags": "leasing, arrendamiento, alquiler, derecho uso, pasivo financiero, depreciacion leasing, valor presente",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "niif_9_instrumentos_financieros",
@@ -48,7 +56,9 @@
       "referencia": "NIIF 9, Modelo de Pérdida Crediticia Esperada (PCE)",
       "contenido": "Las cuentas por cobrar comerciales se valoran inicialmente al precio de la transacción y posteriormente al costo amortizado. Se debe reconocer una corrección de valor por pérdidas crediticias esperadas (cobranza dudosa) desde el reconocimiento inicial del activo. El castigo definitivo de una cuenta incobrable se realiza cuando se agotan todas las acciones de cobro o existe imposibilidad física/financiera del deudor, extornando la cuenta por cobrar contra la estimación acumulada.",
       "aplicacion_peru": "Para deducir la provisión de cobranza dudosa en el Impuesto a la Renta (Art. 21 literal h del Reglamento de la Ley de IR), se requiere: 1. Demostrar la morosidad mediante documentos (cartas notariales, protestos, demandas), 2. Que haya transcurrido más de 12 meses desde el vencimiento, 3. Que esté debidamente especificada e identificada cada cuenta individualizada en el Libro de Inventarios y Balances.",
-      "tags": "cobranza dudosa, incobrable, castigo, provision, carta notarial, perdida crediticia esperada, cuentas por cobrar"
+      "tags": "cobranza dudosa, incobrable, castigo, provision, carta notarial, perdida crediticia esperada, cuentas por cobrar",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
   ]
 }

@@ -1269,6 +1269,9 @@ try {
             vigencia TEXT DEFAULT '',
             aplicacion_peru TEXT DEFAULT '',
             embedding TEXT,
+            vigente_desde TEXT DEFAULT '2026-01-01',
+            vigente_hasta TEXT DEFAULT '2099-12-31',
+            embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             activo INTEGER DEFAULT 1
@@ -1277,6 +1280,12 @@ try {
         CREATE INDEX IF NOT EXISTS idx_ai_knowledge_regimen ON ai_knowledge_base(regimen);
         CREATE INDEX IF NOT EXISTS idx_ai_knowledge_tipo ON ai_knowledge_base(tipo);
     `);
+    
+    // Ejecutar migraciones dinámicas si la tabla ya existía
+    try { db.exec("ALTER TABLE ai_knowledge_base ADD COLUMN vigente_desde TEXT DEFAULT '2026-01-01'"); } catch(e){}
+    try { db.exec("ALTER TABLE ai_knowledge_base ADD COLUMN vigente_hasta TEXT DEFAULT '2099-12-31'"); } catch(e){}
+    try { db.exec("ALTER TABLE ai_knowledge_base ADD COLUMN embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2'"); } catch(e){}
+    
     console.log('[DB] Tabla ai_knowledge_base verificada/creada.');
 } catch (e) {
     console.error('[DB ERROR] No se pudo crear ai_knowledge_base:', e.message);
@@ -1704,8 +1713,9 @@ const dbManager = {
             const stmt = db.prepare(`
                 INSERT OR REPLACE INTO ai_knowledge_base (
                     id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags,
-                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding,
+                    vigente_desde, vigente_hasta, embedding_model, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             `);
             stmt.run(
                 id,
@@ -1724,7 +1734,10 @@ const dbManager = {
                 item.referencia || '',
                 item.vigencia || '',
                 item.aplicacion_peru || '',
-                embeddingStr
+                embeddingStr,
+                item.vigente_desde || '2026-01-01',
+                item.vigente_hasta || '2099-12-31',
+                item.embedding_model || 'paraphrase-multilingual-MiniLM-L12-v2'
             );
             return { success: true, id };
         } catch (error) {

@@ -856,8 +856,9 @@ const db = {
             const sql = `
                 INSERT INTO ai_knowledge_base (
                     id, sector, regimen, niif_norma, categoria, premisa, glosa, asiento_json, explicacion, tags,
-                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+                    tipo, titulo, contenido, referencia, vigencia, aplicacion_peru, embedding,
+                    vigente_desde, vigente_hasta, embedding_model, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())
                 ON CONFLICT (id) DO UPDATE SET
                     sector = EXCLUDED.sector,
                     regimen = EXCLUDED.regimen,
@@ -875,6 +876,9 @@ const db = {
                     vigencia = EXCLUDED.vigencia,
                     aplicacion_peru = EXCLUDED.aplicacion_peru,
                     embedding = EXCLUDED.embedding,
+                    vigente_desde = EXCLUDED.vigente_desde,
+                    vigente_hasta = EXCLUDED.vigente_hasta,
+                    embedding_model = EXCLUDED.embedding_model,
                     updated_at = NOW();
             `;
             await query(sql, [
@@ -894,7 +898,10 @@ const db = {
                 item.referencia || '',
                 item.vigencia || '',
                 item.aplicacion_peru || '',
-                embeddingStr
+                embeddingStr,
+                item.vigente_desde || '2026-01-01',
+                item.vigente_hasta || '2099-12-31',
+                item.embedding_model || 'paraphrase-multilingual-MiniLM-L12-v2'
             ]);
             return { success: true, id };
         } catch (error) {
@@ -1626,6 +1633,9 @@ async function ensureSchemaConstraints() {
                         vigencia TEXT DEFAULT '',
                         aplicacion_peru TEXT DEFAULT '',
                         embedding TEXT,
+                        vigente_desde DATE DEFAULT '2026-01-01',
+                        vigente_hasta DATE DEFAULT '2099-12-31',
+                        embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2',
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW(),
                         activo BOOLEAN DEFAULT true
@@ -1664,7 +1674,10 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding TEXT;`,
             `ALTER TABLE ai_knowledge_base ALTER COLUMN premisa DROP NOT NULL;`,
             `ALTER TABLE ai_knowledge_base ALTER COLUMN glosa DROP NOT NULL;`,
-            `ALTER TABLE ai_knowledge_base ALTER COLUMN asiento_json DROP NOT NULL;`
+            `ALTER TABLE ai_knowledge_base ALTER COLUMN asiento_json DROP NOT NULL;`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS vigente_desde DATE DEFAULT '2026-01-01';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS vigente_hasta DATE DEFAULT '2099-12-31';`,
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2';`
         ];
 
         // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)

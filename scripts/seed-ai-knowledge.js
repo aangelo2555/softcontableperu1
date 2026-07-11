@@ -95,10 +95,13 @@ async function run() {
                     continue;
                 }
 
-                // Guardar en base de datos con el embedding generado
+                // Guardar en base de datos con el embedding generado y metadatos
                 const dbItem = {
                     ...item,
-                    embedding: embedding
+                    embedding: embedding,
+                    vigente_desde: item.vigente_desde || '2026-01-01',
+                    vigente_hasta: item.vigente_hasta || '2099-12-31',
+                    embedding_model: 'paraphrase-multilingual-MiniLM-L12-v2'
                 };
 
                 const res = await db.saveAIKnowledge(dbItem);

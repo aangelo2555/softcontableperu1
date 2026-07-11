@@ -2163,6 +2163,9 @@ app.post('/api/ai/knowledge/seed', authMiddleware, adminAuthMiddleware, async (r
                     glosa: item.glosa || '',
                     tags: item.tags || '',
                     embedding: embedding,
+                    vigente_desde: item.vigente_desde || '2026-01-01',
+                    vigente_hasta: item.vigente_hasta || '2099-12-31',
+                    embedding_model: 'paraphrase-multilingual-MiniLM-L12-v2',
                     activo: 1
                 };
 

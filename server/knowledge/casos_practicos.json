@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "lastUpdated": "2026-07-11",
-    "totalCases": 17
+    "totalCases": 22
   },
   "cases": [
     {
@@ -22,7 +22,9 @@
         { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 180 }
       ],
       "explicacion": "Por la recepción del efectivo y la facturación del anticipo según NIIF 15.",
-      "tags": "anticipo, cliente, facturacion, igv, cobro"
+      "tags": "anticipo, cliente, facturacion, igv, cobro",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_2",
@@ -43,7 +45,9 @@
         { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 0, "haber": 1180 }
       ],
       "explicacion": "Por el anticipo otorgado y la posterior cancelación con transferencia bancaria.",
-      "tags": "anticipo, proveedor, factura, pago, igv"
+      "tags": "anticipo, proveedor, factura, pago, igv",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_3",
@@ -64,7 +68,9 @@
         { "cuenta": "20111", "detalle": "COSTO (EXTORNO ALMACÉN)", "debe": 0, "haber": 1000 }
       ],
       "explicacion": "Reversión de la compra y ajuste de inventarios en almacén bajo NIC 2.",
-      "tags": "devolucion, proveedor, nota de credito, almacen, extorno"
+      "tags": "devolucion, proveedor, nota de credito, almacen, extorno",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_4",
@@ -84,7 +90,9 @@
         { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 0, "haber": 1000 }
       ],
       "explicacion": "Descuento financiero otorgado al cliente y reducción proporcional del IGV.",
-      "tags": "descuento, pronto pago, cobro, banco, nota de credito"
+      "tags": "descuento, pronto pago, cobro, banco, nota de credito",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_5",
@@ -105,7 +113,9 @@
         { "cuenta": "701", "detalle": "MERCADERÍAS", "debe": 0, "haber": 423.73 }
       ],
       "explicacion": "Diferimiento del ingreso como pasivo por Gift Card y posterior reconocimiento tras el canje físico.",
-      "tags": "gift card, anticipo, venta, canje, ingreso"
+      "tags": "gift card, anticipo, venta, canje, ingreso",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_6",
@@ -127,7 +137,9 @@
         { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 118 }
       ],
       "explicacion": "Retiro de bienes para fines publicitarios. El IGV es asumido por la empresa y considerado gasto deducible.",
-      "tags": "muestras gratis, retiro de bienes, igv asumido, publicidad, costo"
+      "tags": "muestras gratis, retiro de bienes, igv asumido, publicidad, costo",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_7",
@@ -147,7 +159,9 @@
         { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 0, "haber": 1000 }
       ],
       "explicacion": "Pérdida crediticia esperada y su posterior castigo contra la cuenta por cobrar original según NIIF 9.",
-      "tags": "cobranza dudosa, provision, castigo, cartera, incobrable"
+      "tags": "cobranza dudosa, provision, castigo, cartera, incobrable",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_8",
@@ -169,7 +183,9 @@
         { "cuenta": "20111", "detalle": "COSTO (BAJA DESTRUC.)", "debe": 0, "haber": 2000 }
       ],
       "explicacion": "Pérdida por obsolescencia (desmedro) acreditada con acta notarial para su deducibilidad en el impuesto a la renta.",
-      "tags": "desmedro, notario, destruccion, obsolescencia, baja de inventario"
+      "tags": "desmedro, notario, destruccion, obsolescencia, baja de inventario",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_9",
@@ -190,7 +206,9 @@
         { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 2000 }
       ],
       "explicacion": "Gasto de arrendamiento con retención del 5% del impuesto a la renta a persona natural.",
-      "tags": "alquiler, arrendamiento, retencion 5%, gasto, destino"
+      "tags": "alquiler, arrendamiento, retencion 5%, gasto, destino",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_10",
@@ -212,7 +230,9 @@
         { "cuenta": "801", "detalle": "MARGEN COMERCIAL (SALDO)", "debe": 0, "haber": 80000 }
       ],
       "explicacion": "Cancelación de cuentas de resultados de compras, ventas e inventarios para determinar el margen comercial del ejercicio.",
-      "tags": "cierre contable, margen comercial, costo de ventas, compras, ventas"
+      "tags": "cierre contable, margen comercial, costo de ventas, compras, ventas",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_11",
@@ -232,7 +252,9 @@
         { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 5000 }
       ],
       "explicacion": "Consumo de materias primas para su transformación y su posterior asignación al costo de producción.",
-      "tags": "materia prima, consumo, fabrica, variacion, destino"
+      "tags": "materia prima, consumo, fabrica, variacion, destino",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_12",
@@ -255,7 +277,9 @@
         { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 3270 }
       ],
       "explicacion": "Registro del gasto por planilla de operarios y capitalización del costo de producción (mano de obra directa) bajo NIC 19.",
-      "tags": "planilla, operarios, afp, essalud, mod, produccion"
+      "tags": "planilla, operarios, afp, essalud, mod, produccion",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_13",
@@ -279,7 +303,9 @@
         { "cuenta": "781", "detalle": "CARGAS DEDUCIBLES", "debe": 0, "haber": 1200 }
       ],
       "explicacion": "Reconocimiento de la depreciación fabril y costos indirectos de energía, destinándose al costo CIF de producción.",
-      "tags": "cif, energia, depreciacion, maquinaria, fabrica"
+      "tags": "cif, energia, depreciacion, maquinaria, fabrica",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_14",
@@ -297,7 +323,9 @@
         { "cuenta": "7111", "detalle": "PRODUCTOS MANUFACTURADOS", "debe": 0, "haber": 15000 }
       ],
       "explicacion": "Ingreso de la producción terminada al almacén de productos terminados, cancelando la cuenta de variación de la producción (Clase 71).",
-      "tags": "productos terminados, liquidacion, produccion, almacen, ingreso"
+      "tags": "productos terminados, liquidacion, produccion, almacen, ingreso",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_15",
@@ -316,7 +344,9 @@
         { "cuenta": "424", "detalle": "HONORARIOS POR PAGAR", "debe": 0, "haber": 1840 }
       ],
       "explicacion": "Servicio prestado por un profesional independiente. Aplicación de la retención del impuesto a la renta del 8.0%.",
-      "tags": "recibo por honorarios, retencion, cuarta categoria, consultoria, gasto"
+      "tags": "recibo por honorarios, retencion, cuarta categoria, consultoria, gasto",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_16",
@@ -338,7 +368,9 @@
         { "cuenta": "1212", "detalle": "COBRO FACTURA", "debe": 0, "haber": 5900 }
       ],
       "explicacion": "Reconocimiento de la venta de servicios y cobro neto bancario diferenciando el ingreso de fondos por detracción BN.",
-      "tags": "detraccion, servicios, banco nacion, cobro, igv, factura"
+      "tags": "detraccion, servicios, banco nacion, cobro, igv, factura",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ak_seed_17",
@@ -356,8 +388,124 @@
         { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 360, "haber": 0 },
         { "cuenta": "4654", "detalle": "PROPIEDADES, PLANTA Y EQUIPO - TERCEROS", "debe": 0, "haber": 2360 }
       ],
-      "explicacion": "Adquisición de equipo de cómputo para uso administrativo. Se capitaliza como propiedad, planta y equipo en la cuenta 3361 y se reconoce el pasivo en la cuenta 4654 bajo NIC 16.",
-      "tags": "activo fijo, laptop, computadora, compra, capitalizacion, nic 16"
+      "explicacion": "Adquisición de equipo de cómputo para uso administrativo. Se capitaliza como propiedad, planta y equipo en la cuenta 3361 and se reconoce el pasivo en la cuenta 4654 bajo NIC 16.",
+      "tags": "activo fijo, laptop, computadora, compra, capitalizacion, nic 16",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_18",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Compra de mercaderías al crédito con IGV",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 2",
+      "categoria": "COMPRAS",
+      "premisa": "Compra de mercaderías al crédito por S/ 5,000 más IGV y destino al almacén de mercaderías.",
+      "contenido": "Compra de mercaderías al crédito por S/ 5,000 más IGV y destino al almacén de mercaderías.",
+      "glosa": "COMERCIAL: COMPRA DE MERCADERÍAS",
+      "asiento_json": [
+        { "cuenta": "6011", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 5000, "haber": 0 },
+        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 900, "haber": 0 },
+        { "cuenta": "4212", "detalle": "EMITIDAS", "debe": 0, "haber": 5900 },
+        { "cuenta": "20111", "detalle": "COSTO (ALMACÉN)", "debe": 5000, "haber": 0 },
+        { "cuenta": "6111", "detalle": "VARIACIÓN MERCADERÍAS", "debe": 0, "haber": 5000 }
+      ],
+      "explicacion": "Asiento clásico de provisionamiento de compras e ingreso correspondiente al almacén bajo NIC 2.",
+      "tags": "compra, mercaderias, igv, credito, almacen, destino",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_19",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Venta de mercaderías al crédito con costo de ventas",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 15",
+      "categoria": "VENTAS",
+      "premisa": "Venta de mercaderías al crédito por S/ 8,000 más IGV y reconocimiento del costo de ventas asociado por S/ 4,000.",
+      "contenido": "Venta de mercaderías al crédito por S/ 8,000 más IGV y reconocimiento del costo de ventas asociado por S/ 4,000.",
+      "glosa": "COMERCIAL: VENTA Y COSTO DE VENTAS",
+      "asiento_json": [
+        { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 9440, "haber": 0 },
+        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 1440 },
+        { "cuenta": "70111", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 0, "haber": 8000 },
+        { "cuenta": "69111", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 4000, "haber": 0 },
+        { "cuenta": "20111", "detalle": "COSTO (SALIDA ALMACÉN)", "debe": 0, "haber": 4000 }
+      ],
+      "explicacion": "Ingreso por la venta al crédito y extorno simultáneo de mercadería por su valor de costo original.",
+      "tags": "venta, mercaderias, igv, costo de ventas, salida almacen",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_20",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Pago de planilla administrativa (sueldos empleados)",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 19",
+      "categoria": "PLANILLAS",
+      "premisa": "Registro de la planilla de sueldos del personal administrativo por S/ 4,000, deducción de AFP (13% = S/ 520), ESSALUD de cargo del empleador (9% = S/ 360), y neto a pagar (S/ 3,480) más destino del gasto.",
+      "contenido": "Registro de la planilla de sueldos del personal administrativo por S/ 4,000, deducción de AFP (13% = S/ 520), ESSALUD de cargo del empleador (9% = S/ 360), y neto a pagar (S/ 3,480) más destino del gasto.",
+      "glosa": "COMERCIAL: PLANILLA PERSONAL ADMINISTRACIÓN",
+      "asiento_json": [
+        { "cuenta": "6211", "detalle": "SUELDOS Y SALARIOS", "debe": 4000, "haber": 0 },
+        { "cuenta": "6271", "detalle": "REGIMEN DE PRESTACIONES DE SALUD", "debe": 360, "haber": 0 },
+        { "cuenta": "4031", "detalle": "ESSALUD", "debe": 0, "haber": 360 },
+        { "cuenta": "417", "detalle": "ADMINISTRADORAS DE FONDOS DE PENSIONES", "debe": 0, "haber": 520 },
+        { "cuenta": "4111", "detalle": "SUELDOS POR PAGAR", "debe": 0, "haber": 3480 },
+        { "cuenta": "941", "detalle": "GASTOS ADMINISTRATIVOS", "debe": 4360, "haber": 0 },
+        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 4360 }
+      ],
+      "explicacion": "Planilla del personal de administración. Se calculan las retenciones de fondos previsionales e impuestos patronales con destino a la cuenta de función 94.",
+      "tags": "planilla, sueldo, afp, essalud, administracion, gasto personal",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_21",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Depreciación mensual de activos fijos",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 16",
+      "categoria": "ACTIVO FIJO",
+      "premisa": "Registro de la depreciación mensual del equipo de transporte por S/ 800 y destino del gasto al área administrativa.",
+      "contenido": "Registro de la depreciación mensual del equipo de transporte por S/ 800 y destino del gasto al área administrativa.",
+      "glosa": "COMERCIAL: DEPRECIACIÓN MENSUAL TRANSPORTE",
+      "asiento_json": [
+        { "cuenta": "6814", "detalle": "DEPRECIACIÓN PROPIEDAD PLANTA Y EQUIPO", "debe": 800, "haber": 0 },
+        { "cuenta": "3913", "detalle": "DEPRECIACIÓN EQUIPO DE TRANSPORTE", "debe": 0, "haber": 800 },
+        { "cuenta": "941", "detalle": "GASTOS ADMINISTRATIVOS", "debe": 800, "haber": 0 },
+        { "cuenta": "781", "detalle": "CARGAS CUBIERTAS POR PROVISIONES", "debe": 0, "haber": 800 }
+      ],
+      "explicacion": "Desgaste del activo de transporte reconocido como gasto por naturaleza de depreciación y su destino por función en gastos administrativos.",
+      "tags": "depreciacion, transporte, activo fijo, desgaste, nic 16, destino depreciacion",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_22",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Préstamo bancario recibido con intereses",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 9",
+      "categoria": "FINANCIERO",
+      "premisa": "Ingreso a cuenta corriente de préstamo bancario recibido de S/ 10,000 netos, más S/ 1,200 por intereses diferidos (gastos por devengar).",
+      "contenido": "Ingreso a cuenta corriente de préstamo bancario recibido de S/ 10,000 netos, más S/ 1,200 por intereses diferidos (gastos por devengar).",
+      "glosa": "COMERCIAL: PRÉSTAMO BANCARIO E INTERESES",
+      "asiento_json": [
+        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 10000, "haber": 0 },
+        { "cuenta": "3711", "detalle": "INTERESES NO DEVENGADOS TERCEROS", "debe": 1200, "haber": 0 },
+        { "cuenta": "4511", "detalle": "INSTITUCIONES FINANCIERAS (PRESTAMO)", "debe": 0, "haber": 11200 }
+      ],
+      "explicacion": "Ingreso del monto del préstamo a bancos y reconocimiento diferido de los intereses cobrados que se devengarán a lo largo de la vigencia del crédito.",
+      "tags": "prestamo, banco, intereses, diferido, cuenta 45, cuenta 37",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
   ]
 }

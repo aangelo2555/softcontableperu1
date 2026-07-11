@@ -33,14 +33,79 @@ function cosineSimilarity(vecA, vecB) {
 }
 
 /**
+ * Encapsulación de la búsqueda vectorial semántica.
+ * Permite una fácil migración futura a búsquedas SQL nativas usando pgvector.
+ */
+function searchByVector(queryEmbedding, items) {
+    if (!queryEmbedding || !items) return [];
+    return items.map(item => {
+        let score = 0;
+        if (item.embedding) {
+            let emb = item.embedding;
+            if (typeof emb === 'string') {
+                try { emb = JSON.parse(emb); } catch (e) { emb = null; }
+            }
+            if (Array.isArray(emb)) {
+                score = cosineSimilarity(queryEmbedding, emb);
+            }
+        }
+        return { item, score };
+    });
+}
+
+/**
+ * Calcula el umbral adaptativo en base a la distribución estadística de similitudes.
+ */
+function calculateAdaptiveThreshold(scores) {
+    if (!scores || scores.length === 0) return 0.15;
+    
+    // Ordenar scores
+    const sorted = [...scores].sort((a, b) => a - b);
+    
+    // Mediana
+    let median = 0;
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+        median = (sorted[mid - 1] + sorted[mid]) / 2;
+    } else {
+        median = sorted[mid];
+    }
+    
+    // Desviación Estándar
+    const mean = scores.reduce((sum, val) => sum + val, 0) / scores.length;
+    const variance = scores.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / scores.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Umbral adaptativo: max(0.15, median - 0.5 * stdDev)
+    return Math.max(0.15, median - 0.5 * stdDev);
+}
+
+/**
  * Realiza una búsqueda semántica de vectores para recuperar casos contables y normativas similares.
- * (Enfoque RAG Multi-capa)
+ * (Enfoque RAG Multi-capa con Versionado Temporal, Filtro de Modelo y Umbral Adaptativo)
  */
 async function retrieveSimilarCases(premisa, sector, regimen) {
     try {
         // 1. Obtener todos los elementos activos de la base de conocimiento
         const allItems = await db.getAIKnowledge();
-        if (!allItems || allItems.length === 0) return { cases: [], regs: [] };
+        if (!allItems || allItems.length === 0) {
+            return { cases: [], regs: [], confidence: 'LOW', thresholdUsed: 0.15 };
+        }
+
+        // Filtrar por fecha de vigencia y modelo de embedding actual
+        const today = new Date().toISOString().slice(0, 10);
+        const currentModel = 'paraphrase-multilingual-MiniLM-L12-v2';
+
+        const activeItems = allItems.filter(item => {
+            // Validar modelo si se especifica
+            if (item.embedding_model && item.embedding_model !== currentModel) {
+                return false;
+            }
+            // Validar rango de vigencia temporal
+            const desde = item.vigente_desde || '2026-01-01';
+            const hasta = item.vigente_hasta || '2099-12-31';
+            return today >= desde && today <= hasta;
+        });
 
         // 2. Intentar generar el embedding para la consulta del usuario
         let queryEmbedding = null;
@@ -52,27 +117,37 @@ async function retrieveSimilarCases(premisa, sector, regimen) {
         }
 
         let scoredItems = [];
+        let confidence = 'LOW';
+        let thresholdUsed = 0.20;
 
         if (queryEmbedding) {
             // A. BÚSQUEDA VECTORIAL (Semántica)
-            scoredItems = allItems.map(item => {
-                let score = 0;
-                if (item.embedding) {
-                    score = cosineSimilarity(queryEmbedding, item.embedding);
-                }
-                return { item, score };
-            });
-            // Ordenar por similitud de mayor a menor
+            scoredItems = searchByVector(queryEmbedding, activeItems);
             scoredItems.sort((a, b) => b.score - a.score);
+
+            const allScores = scoredItems.map(si => si.score);
+            thresholdUsed = calculateAdaptiveThreshold(allScores);
+
+            const topScore = allScores[0] || 0;
+            if (topScore >= 0.50) {
+                confidence = 'HIGH';
+            } else if (topScore >= 0.30) {
+                confidence = 'MEDIUM';
+            } else {
+                confidence = 'LOW';
+            }
         } else {
             // B. FALLBACK: BÚSQUEDA POR PALABRAS CLAVE
+            confidence = 'LOW';
+            thresholdUsed = 0.5;
+
             const keywords = premisa
                 .toLowerCase()
                 .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
                 .split(/\s+/)
                 .filter(w => w.length > 3);
 
-            scoredItems = allItems.map(item => {
+            scoredItems = activeItems.map(item => {
                 let score = 0;
                 const textToSearch = `${item.premisa || ''} ${item.titulo || ''} ${item.contenido || ''} ${item.tags || ''} ${item.glosa || ''}`.toLowerCase();
                 
@@ -83,17 +158,14 @@ async function retrieveSimilarCases(premisa, sector, regimen) {
                         }
                     });
                 } else {
-                    score = 0.5; // score por defecto
+                    score = 0.5;
                 }
                 return { item, score };
             });
-            // Ordenar por coincidencia
             scoredItems.sort((a, b) => b.score - a.score);
         }
 
         // 3. Separar en dos grupos:
-        // - Casos Prácticos (deben encajar con el sector y régimen)
-        // - Normativas (NIIF, Leyes, Sunat, Terminología, Reglas) que aporten fundamento legal
         const cases = [];
         const regs = [];
 
@@ -101,12 +173,11 @@ async function retrieveSimilarCases(premisa, sector, regimen) {
             const item = scored.item;
             const score = scored.score;
 
-            // Para búsquedas semánticas, filtramos coincidencias extremadamente irrelevantes
-            if (queryEmbedding && score < 0.20) continue;
+            // Filtro por umbral
+            if (queryEmbedding && score < thresholdUsed) continue;
+            if (!queryEmbedding && score <= 0) continue;
 
             if (item.tipo === 'CASO_PRACTICO') {
-                // Filtrar por sector y régimen si no es muy genérico, pero en búsqueda semántica
-                // podemos ser más flexibles si la similitud es alta (>0.7)
                 const matchSector = item.sector === sector || item.sector === 'TODOS';
                 const matchRegimen = item.regimen === regimen || item.regimen === 'TODOS';
                 
@@ -119,13 +190,15 @@ async function retrieveSimilarCases(premisa, sector, regimen) {
         }
 
         return {
-            cases: cases.slice(0, 4), // Top 4 casos prácticos
-            regs: regs.slice(0, 4)    // Top 4 normativas/leyes relevantes
+            cases: cases.slice(0, 4),
+            regs: regs.slice(0, 4),
+            confidence,
+            thresholdUsed
         };
 
     } catch (error) {
         console.error('[GEMINI SERVICE] Error in retrieveSimilarCases RAG:', error);
-        return { cases: [], regs: [] };
+        return { cases: [], regs: [], confidence: 'LOW', thresholdUsed: 0.15 };
     }
 }
 
@@ -157,10 +230,13 @@ async function generateAsiento(premisa, companyContext, planContable) {
         const regimen = companyContext.regimenTributario || 'RG';
 
         // 1. RAG: Obtener casos y normativas de referencia
-        const { cases: similarCases, regs: similarRegs } = await retrieveSimilarCases(premisa, sector, regimen);
+        const { cases: similarCases, regs: similarRegs, confidence, thresholdUsed } = await retrieveSimilarCases(premisa, sector, regimen);
 
         // 2. Formatear casos de referencia para el prompt
         let examplesPrompt = '';
+        if (confidence === 'LOW') {
+            examplesPrompt += `\n⚠️ ATENCIÓN ASISTENTE: La búsqueda semántica retornó con confianza BAJA (LOW). Se sugiere basar las decisiones contables en las REGLAS CONTABLES Y FISCALES OBLIGATORIAS generales del sistema contable.\n`;
+        }
         if (similarCases && similarCases.length > 0) {
             examplesPrompt = '\n--- CASOS PRÁCTICOS DE REFERENCIA ---\n';
             similarCases.forEach((c, idx) => {
@@ -418,6 +494,27 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
             result.lines = [];
             result.asiento_json = [];
         }
+
+        // Agregar metadatos de trazabilidad RAG
+        result.ragMetadata = {
+            timestamp: new Date().toISOString(),
+            embeddingModel: 'paraphrase-multilingual-MiniLM-L12-v2',
+            ragConfidence: confidence,
+            thresholdUsed: thresholdUsed,
+            casesUsed: (similarCases || []).map(c => ({
+                id: c.id,
+                titulo: c.titulo,
+                similarity: c.similarity,
+                tipo: c.tipo
+            })),
+            regsUsed: (similarRegs || []).map(r => ({
+                id: r.id,
+                titulo: r.titulo,
+                similarity: r.similarity,
+                tipo: r.tipo,
+                vigencia: r.vigencia || null
+            }))
+        };
 
         return result;
     } catch (error) {

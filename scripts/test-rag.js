@@ -17,10 +17,13 @@ async function testQuery(query) {
     const regimen = 'RG';
     
     const start = Date.now();
-    const result = await geminiService.retrieveSimilarCases(query, sector, regimen);
+    const { cases, regs, confidence, thresholdUsed } = await geminiService.retrieveSimilarCases(query, sector, regimen);
     const duration = Date.now() - start;
     
-    console.log(`⏱️  Búsqueda completada en ${duration}ms\n`);
+    console.log(`⏱️  Búsqueda completada en ${duration}ms`);
+    console.log(`📊 Confianza RAG: ${confidence} | Umbral Usado: ${thresholdUsed.toFixed(4)}\n`);
+    
+    const result = { cases, regs };
     
     console.log(`🟢 [CASOS PRÁCTICOS DE REFERENCIA RETORNADOS]: ${result.cases.length}`);
     result.cases.forEach((c, idx) => {

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "lastUpdated": "2026-07-11",
-    "totalResoluciones": 3
+    "totalResoluciones": 6
   },
   "cases": [
     {
@@ -12,7 +12,9 @@
       "referencia": "Resolución de Superintendencia N° 183-2004/SUNAT y Texto Único Ordenado del D.Leg. 940",
       "contenido": "El SPOT consiste en la detracción (descuento) que realiza el adquirente de un porcentaje del precio de adquisición de ciertos bienes y servicios sujetos al régimen. Dicho monto se deposita en una cuenta corriente especial del Banco de la Nación del proveedor. El saldo de esta cuenta solo puede ser utilizado por el proveedor para pagar sus obligaciones tributarias con SUNAT. Si la factura supera la mitad de una UIT o el monto mínimo de S/ 700.00 (para servicios generales), se debe realizar la detracción obligatoriamente para poder ejercer el derecho al crédito fiscal y deducir el gasto.",
       "aplicacion_peru": "El porcentaje típico para servicios generales, consultoría o asesoría es del 12%. El registro contable del cobro de la factura debe dividirse: ingreso neto a la cuenta corriente del banco operativo (divisionaria 1041) e ingreso del porcentaje detraído a la cuenta corriente de detracciones en el Banco de la Nación (divisionaria 1042 o similar).",
-      "tags": "detraccion, spot, banco nacion, deposito, porcentaje 12, servicios generales, sunat"
+      "tags": "detraccion, spot, banco nacion, deposito, porcentaje 12, servicios generales, sunat",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "rs_regimen_retenciones_igv",
@@ -21,7 +23,9 @@
       "referencia": "Resolución de Superintendencia N° 037-2002/SUNAT y normas modificatorias",
       "contenido": "Es el régimen por el cual los sujetos designados por SUNAT como Agentes de Retención deben retener parte del IGV que les corresponde pagar a sus proveedores. El Agente de Retención entrega a SUNAT la suma retenida y emite un comprobante de retención al proveedor. La tasa de retención vigente es del tres por ciento (3.0%) del importe total de la operación (incluido el IGV). Se aplica únicamente en operaciones de venta de bienes, prestación de servicios o contratos de construcción cuyos importes superen los S/ 700.00.",
       "aplicacion_peru": "Para el proveedor sujeto a retención, el monto retenido constituye un saldo a favor que compensará contra el IGV mensual a pagar de su declaración jurada. El asiento del cobro de la factura registra el Debe de la 1041 por el 97% y el Debe de la divisionaria 40114 (IGV - Retenciones por aplicar) o 1629 por el 3%, cancelando el 100% de la cuenta 1212.",
-      "tags": "retencion igv, agente retencion, tasa 3, comprobante retencion, saldo a favor igv, cobro"
+      "tags": "retencion igv, agente retencion, tasa 3, comprobante retencion, saldo a favor igv, cobro",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "rs_regimen_percepciones_igv",
@@ -30,7 +34,42 @@
       "referencia": "Resolución de Superintendencia N° 128-2002/SUNAT y Ley N° 29173",
       "contenido": "Es un mecanismo por el cual el Agente de Percepción (generalmente grandes empresas distribuidoras o importadoras) cobra por adelantado a su cliente un porcentaje adicional sobre el precio de venta de ciertos bienes, destinado a cubrir el IGV que el cliente generará en sus ventas futuras. Las tasas de percepción vigentes son: 2.0% para la adquisición de bienes de consumo masivo (combustibles, gas licuado), 1.0% para adquisiciones generales y hasta 10.0% para la importación definitiva de bienes cuando el importador no cuenta con RUC activo o realiza importaciones esporádicas.",
       "aplicacion_peru": "Para el cliente percibido, el monto de percepción pagado se registra contablemente como un activo en la divisionaria 40115 (IGV - Percepciones por aplicar) o 1629, el cual se deduce del IGV mensual determinado en su declaración jurada mensual Formulario Virtual 621.",
-      "tags": "percepcion igv, agente percepcion, tasa 1, tasa 2, importacion, percepcion por aplicar, compras"
+      "tags": "percepcion igv, agente percepcion, tasa 1, tasa 2, importacion, percepcion por aplicar, compras",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "rs_libros_electronicos",
+      "tipo": "RESOLUCION_SUNAT",
+      "titulo": "Obligatoriedad de Libros y Registros Electrónicos (PLE / SIRE)",
+      "referencia": "Resoluciones de Superintendencia N° 286-2009/SUNAT, N° 361-2015/SUNAT y modificatorias",
+      "contenido": "Establece el cronograma y los sujetos obligados a llevar el Registro de Ventas e Ingresos y el Registro de Compras de manera electrónica utilizando el Programa de Libros Electrónicos (PLE) o el Sistema Integrado de Registros Electrónicos (SIRE). El SIRE genera propuestas automáticas de compras y ventas que deben ser aceptadas, reemplazadas o complementadas mensualmente.",
+      "aplicacion_peru": "En 2026, el uso del SIRE es generalizado para todos los contribuyentes del Régimen General, Régimen MYPE Tributario y Régimen Especial del IGV. Los asientos contables deben cuadrar de forma exacta con la propuesta SIRE para evitar inconsistencias y multas tributarias.",
+      "tags": "sire, ple, libros electronicos, registro de compras, registro de ventas, sunat, libros contables",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "rs_comprobantes_electronicos",
+      "tipo": "RESOLUCION_SUNAT",
+      "titulo": "Sistema de Emisión Electrónica de Comprobantes de Pago",
+      "referencia": "Resolución de Superintendencia N° 300-2014/SUNAT y normas de OSE/SEE",
+      "contenido": "Regula la emisión obligatoria de facturas, boletas de venta, notas de crédito, notas de débito y guías de remisión en formato electrónico (XML) a través de los sistemas SEE-SOL, SEE-MYPE, Facturador SUNAT o a través de Operadores de Servicios Electrónicos (OSE). Todo comprobante electrónico debe contar con una Constancia de Recepción (CDR) con estado aceptado para tener validez fiscal.",
+      "aplicacion_peru": "Los sistemas contables deben almacenar el identificador único (UBL) o el código hash de la firma digital de los XML recibidos y emitidos. Sin CDR aceptado, el gasto/costo y el crédito fiscal del IGV son nulos.",
+      "tags": "xml, cdr, ose, factura electronica, comprobante de pago, nota de credito, boleta electronica",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "rs_tasas_detraccion_diferenciadas",
+      "tipo": "RESOLUCION_SUNAT",
+      "titulo": "Tasas de Detracción (SPOT) Diferenciadas por Anexo",
+      "referencia": "Anexos 1, 2 y 3 de la R.S. 183-2004/SUNAT y modificatorias",
+      "contenido": "Define las tasas de detracción aplicables a las transacciones comerciales según la clasificación del bien o servicio: Anexo 1 (recursos hidrobiológicos, arena y piedra) tasa 4% o 10%; Anexo 2 (bienes agrícolas, madera, minerales no metálicos, oro) tasas de 1.5%, 4%, 10% o 12%; Anexo 3 (servicios de transporte de pasajeros/carga 4%, intermediación laboral 12%, arrendamiento de bienes 10%, servicios empresariales 12%, demás servicios gravados con el IGV 12%).",
+      "aplicacion_peru": "El transporte de carga terrestre tiene una tasa de detracción del 4% si el importe de la operación supera los S/ 400.00. Los servicios generales de consultoría, mantenimiento y construcción aplican el 12% con el umbral general de S/ 700.00.",
+      "tags": "tasas de detraccion, anexo spot, transporte de carga, intermediacion laboral, servicios 12, transportes 4",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "lastUpdated": "2026-07-11",
-    "totalLeyes": 3
+    "totalLeyes": 7
   },
   "cases": [
     {
@@ -12,7 +12,9 @@
       "referencia": "Ley del IGV (Decreto Supremo N° 055-99-EF), Artículos 18 y 19",
       "contenido": "Para tener derecho al crédito fiscal del IGV en compras se deben cumplir dos tipos de requisitos: 1. Sustanciales (Art. 18): Que la compra sea permitida como costo o gasto según la Ley del Impuesto a la Renta, y que se destine a operaciones gravadas con el IGV. 2. Formales (Art. 19): Que el IGV esté discriminado en el comprobante de pago, que este contenga los datos del emisor y adquirente (RUC, Razón Social), y que el comprobante haya sido anotado en el Registro de Compras dentro del plazo legal.",
       "aplicacion_peru": "Si una compra se destina conjuntamente a operaciones gravadas y no gravadas, se debe aplicar el método de prorrata del IGV para determinar el crédito fiscal permitido, cargando el IGV no utilizable como costo o gasto (cuenta 64 o clase 2/3).",
-      "tags": "igv, compras, credito fiscal, requisito formal, sustancial, registro de compras, prorrata igv"
+      "tags": "igv, compras, credito fiscal, requisito formal, sustancial, registro de compras, prorrata igv",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ley_ir_causalidad_gastos",
@@ -21,7 +23,9 @@
       "referencia": "Ley del Impuesto a la Renta (D.S. N° 179-2004-EF), Artículo 37",
       "contenido": "A fin de establecer la renta neta de tercera categoría, se deducirán de la renta bruta los gastos necesarios para producirla y mantener su fuente productora (principio de causalidad), en tanto la deducción no esté expresamente prohibida por ley. Ejemplos de gastos deducibles regulados: intereses de deudas, tributos sobre bienes productores, primas de seguros, pérdidas extraordinarias, gastos de personal (sueldos, aguinaldos), gastos de viaje y representación (sujetos a límites cuantitativos).",
       "aplicacion_peru": "Los gastos deben cumplir también con los criterios de razonabilidad y proporcionalidad en relación con los ingresos de la empresa, y estar debidamente sustentados con comprobantes de pago autorizados (facturas, recibos por honorarios) y bancarizados si superan el monto de ley.",
-      "tags": "impuesto a la renta, gasto deducible, causalidad, deducibilidad, representacion, viajes, causalidad de gasto"
+      "tags": "impuesto a la renta, gasto deducible, causalidad, deducibilidad, representacion, viajes, causalidad de gasto",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     },
     {
       "id": "ley_bancarizacion",
@@ -30,7 +34,53 @@
       "referencia": "Ley para la Lucha contra la Evasión y para la Formalización de la Economía (Ley N° 28194), Artículos 3, 4 y 8",
       "contenido": "Los pagos de obligaciones por sumas iguales o superiores a dos mil Soles (S/ 2,000.00) o quinientos Dólares Americanos ($ 500.00) deben realizarse utilizando exclusivamente Medios de Pago autorizados por el sistema financiero (transferencias de fondos, depósitos en cuenta, cheques no negociables, tarjetas de crédito/débito). El incumplimiento de esta norma impide al adquirente utilizar el crédito fiscal del IGV y el costo o gasto para efectos del Impuesto a la Renta.",
       "aplicacion_peru": "El asiento contable de cancelación de facturas por importes altos debe identificar claramente el medio de pago mediante cuentas auxiliares bancarias de la divisionaria 104 y reflejarse en los libros contables con el código de medio de pago SUNAT respectivo.",
-      "tags": "bancarizacion, medios de pago, cheque, transferencia, deposito, limite 2000 soles, sunat, costo gasto"
+      "tags": "bancarizacion, medios de pago, cheque, transferencia, deposito, limite 2000 soles, sunat, costo gasto",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ley_depreciacion_acelerada",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Depreciación Acelerada de Activos Fijos",
+      "referencia": "Artículos 38, 39 y 40 de la Ley del Impuesto a la Renta",
+      "contenido": "Los activos fijos se deprecian anualmente aplicando tasas máximas establecidas por SUNAT para propósitos fiscales (edificios 5%, maquinaria y equipo 20%, unidades de transporte 20%, equipos de cómputo 25%). Los contratos de arrendamiento financiero o normas específicas permiten la depreciación acelerada en base al plazo del contrato o bajo regímenes especiales de fomento a la inversión pública/privada.",
+      "aplicacion_peru": "Para el año 2026, la depreciación acelerada de bienes muebles y construcciones está permitida bajo esquemas temporales de reactivación económica siempre que se cumplan los requisitos de adquisición y puesta en marcha vigentes.",
+      "tags": "depreciacion, depreciacion acelerada, tasa depreciacion, activo fijo, sunat, vida util, nic 16",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ley_gastos_representacion",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Límite a los Gastos de Representación",
+      "referencia": "Artículo 37 inciso q de la Ley del Impuesto a la Renta",
+      "contenido": "Los gastos de representación propios del giro del negocio, tales como obsequios y atenciones a clientes o proveedores, son deducibles tributariamente hasta un límite del cero punto cinco por ciento (0.5%) de los ingresos brutos del ejercicio, con un tope máximo anual equivalente a cuarenta (40) Unidades Impositivas Tributarias (UIT).",
+      "aplicacion_peru": "En 2026, con la UIT fijada en S/ 5,500.00, el tope máximo de gastos de representación anual por empresa es de S/ 220,000.00. El exceso no es deducible y se adiciona tributariamente.",
+      "tags": "gastos de representacion, limite de gasto, atencion clientes, obsequio, uit 2026, deduccion",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ley_devengado_laboral",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Provisión de Vacaciones, CTS y Gratificaciones (Devengado Laboral)",
+      "referencia": "Artículo 37 inciso v de la Ley del Impuesto a la Renta",
+      "contenido": "Los gastos laborales por concepto de Compensación por Tiempo de Servicios (CTS), vacaciones y gratificaciones legales deben reconocerse bajo el principio del devengado (NIC 19). No obstante, para su deducibilidad tributaria frente al Impuesto a la Renta, deben ser pagados de forma efectiva dentro del plazo establecido para la presentación de la declaración jurada anual del ejercicio correspondiente.",
+      "aplicacion_peru": "Las vacaciones no gozadas devengan una indemnización vacacional que es gasto, y las provisiones mensuales de CTS (cuenta 4151) y Gratificaciones (cuenta 4114) se debitan en la cuenta de Clase 62.",
+      "tags": "cts, vacaciones, gratificaciones, planilla, gasto laboral, devengado, pago de planillas, nic 19",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ley_tasas_impuesto_renta",
+      "tipo": "LEY_TRIBUTARIA",
+      "titulo": "Tasas del Impuesto a la Renta de Tercera Categoría",
+      "referencia": "Artículo 55 de la Ley del Impuesto a la Renta y Régimen MYPE Tributario (RMT)",
+      "contenido": "Las empresas del Régimen General (RG) aplican una tasa flat del veintinueve punto cinco por ciento (29.5%) sobre su renta neta anual. Las empresas del Régimen MYPE Tributario (RMT) aplican una tasa progresiva acumulativa: dos por ciento (10.0%) sobre las primeras 15 UIT de renta neta, y veintinueve punto cinco por ciento (29.5%) sobre el exceso.",
+      "aplicacion_peru": "En 2026, el tramo del 10% del RMT aplica hasta una renta neta de S/ 82,500.00 (15 UIT x S/ 5,500.00). El cálculo se registra contablemente debitando la cuenta 881 y abonando la 40171.",
+      "tags": "impuesto a la renta, tasa de impuesto, regimen general, regimen mype tributario, rmt, 29.5 por ciento, cuenta 881",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
   ]
 }
