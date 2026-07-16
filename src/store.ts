@@ -1959,6 +1959,13 @@ export const useStore = create<AppState>()(
       seedInitialGlosas: async () => {
         const ruc = get().currentCompany?.ruc || '';
         if (!ruc) return;
+
+        // Evitar semillado de glosas desde el frontend en modo SaaS/Web
+        const globalElectron = (window as any).electronAPI;
+        if (globalElectron === webApiBridge) {
+          console.log('[STORE] Saltando semillado de glosas en el cliente (modo SaaS Web detectado)');
+          return;
+        }
         
         const existing = get().glosasHabituales;
         for (const seed of SEED_GLOSAS) {
@@ -1991,6 +1998,12 @@ export const useStore = create<AppState>()(
         const existing = get().plan;
         const electron = (window as any).electronAPI;
         if (!electron) return;
+
+        // Evitar semillado de plan desde el frontend en modo SaaS/Web
+        if (electron === webApiBridge) {
+          console.log('[STORE] Saltando semillado de plan en el cliente (modo SaaS Web detectado)');
+          return;
+        }
 
         // Si el plan tiene menos cuentas que el plan base 2026, inyectar las faltantes
         if (existing.length < INITIAL_PLAN.length) {
