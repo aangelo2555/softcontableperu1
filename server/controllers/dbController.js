@@ -46,12 +46,13 @@ const dbController = {
             const period = req.query.period || req.query.periodo || null;
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 1000;
+            const excludePlan = req.query.exclude_plan === 'true';
 
-            const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}_${period || 'all'}_${page}_${limit}`;
+            const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}_${period || 'all'}_${page}_${limit}_${excludePlan}`;
             
             let data = cacheService.get(cacheKey);
             if (!data) {
-                data = await db.getWorkspaceData(req.params.ruc, req.targetUserId, { period, page, limit });
+                data = await db.getWorkspaceData(req.params.ruc, req.targetUserId, { period, page, limit, excludePlan });
                 cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
             }
             

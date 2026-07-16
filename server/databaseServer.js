@@ -1338,7 +1338,7 @@ const dbManager = {
         db.prepare('DELETE FROM workspaces WHERE ruc = ? AND user_id = ?').run(ruc, userId);
     },
 
-    getWorkspaceData: (ruc, userId) => {
+    getWorkspaceData: (ruc, userId, options = {}) => {
         const wsInfo = db.prepare('SELECT * FROM workspaces WHERE ruc = ? AND user_id = ?').get(ruc, userId);
         if (!wsInfo) return null;
 
@@ -1349,63 +1349,66 @@ const dbManager = {
         const entities = db.prepare('SELECT * FROM entities WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         
         // --- Cargar plan contable del usuario o inicializarlo si no existe ---
-        let plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
-        
-        // Obtener el plan del sistema actual
-        const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
-        
-        // Si el plan del usuario está vacío o tiene menos cuentas que el plan del sistema,
-        // sincronizamos las cuentas faltantes de forma automática.
-        if (plan.length < systemPlan.length) {
-            console.log(`[DB] Sincronizando plan contable para el usuario ${userId} (${plan.length} < ${systemPlan.length} cuentas)...`);
-            try {
-                db.transaction(() => {
-                    const insertStmt = db.prepare(`
-                        INSERT OR IGNORE INTO plan_global (
-                            cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
-                            div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `);
-                    
-                    if (systemPlan.length === 0) {
-                        const planPath = path.join(__dirname, 'planContable.json');
-                        if (fs.existsSync(planPath)) {
-                            const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
-                            for (const p of fullPlan) {
+        let plan = [];
+        if (!options.excludePlan) {
+            plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
+            
+            // Obtener el plan del sistema actual
+            const systemPlan = db.prepare("SELECT * FROM plan_global WHERE user_id = 'system'").all();
+            
+            // Si el plan del usuario está vacío o tiene menos cuentas que el plan del sistema,
+            // sincronizamos las cuentas faltantes de forma automática.
+            if (plan.length < systemPlan.length) {
+                console.log(`[DB] Sincronizando plan contable para el usuario ${userId} (${plan.length} < ${systemPlan.length} cuentas)...`);
+                try {
+                    db.transaction(() => {
+                        const insertStmt = db.prepare(`
+                            INSERT OR IGNORE INTO plan_global (
+                                cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
+                                div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        `);
+                        
+                        if (systemPlan.length === 0) {
+                            const planPath = path.join(__dirname, 'planContable.json');
+                            if (fs.existsSync(planPath)) {
+                                const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+                                for (const p of fullPlan) {
+                                    insertStmt.run(
+                                        p.cta,
+                                        userId,
+                                        p.description,
+                                        p.type,
+                                        p.reqCenCos ? 1 : 0,
+                                        p.amarreDebe || null,
+                                        p.amarreHaber || null,
+                                        p.div !== undefined ? p.div : 1,
+                                        p.cta_cc1 || p.amarreDebe || null,
+                                        p.pct_cc1 !== undefined ? p.pct_cc1 : (p.amarreDebe ? 100.0 : 0.0),
+                                        p.cta_cc2 || null,
+                                        p.pct_cc2 || 0.0,
+                                        p.cta_cc3 || null,
+                                        p.pct_cc3 || 0.0,
+                                        p.destino_haber || p.amarreHaber || null,
+                                        p.niif18_category || null
+                                    );
+                                }
+                            }
+                        } else {
+                            for (const p of systemPlan) {
                                 insertStmt.run(
-                                    p.cta,
-                                    userId,
-                                    p.description,
-                                    p.type,
-                                    p.reqCenCos ? 1 : 0,
-                                    p.amarreDebe || null,
-                                    p.amarreHaber || null,
+                                    p.cta, userId, p.description, p.type, p.reqCenCos, p.amarreDebe, p.amarreHaber,
                                     p.div !== undefined ? p.div : 1,
-                                    p.cta_cc1 || p.amarreDebe || null,
-                                    p.pct_cc1 !== undefined ? p.pct_cc1 : (p.amarreDebe ? 100.0 : 0.0),
-                                    p.cta_cc2 || null,
-                                    p.pct_cc2 || 0.0,
-                                    p.cta_cc3 || null,
-                                    p.pct_cc3 || 0.0,
-                                    p.destino_haber || p.amarreHaber || null,
-                                    p.niif18_category || null
+                                    p.cta_cc1, p.pct_cc1, p.cta_cc2, p.pct_cc2, p.cta_cc3, p.pct_cc3, p.destino_haber, p.niif18_category
                                 );
                             }
                         }
-                    } else {
-                        for (const p of systemPlan) {
-                            insertStmt.run(
-                                p.cta, userId, p.description, p.type, p.reqCenCos, p.amarreDebe, p.amarreHaber,
-                                p.div !== undefined ? p.div : 1,
-                                p.cta_cc1, p.pct_cc1, p.cta_cc2, p.pct_cc2, p.cta_cc3, p.pct_cc3, p.destino_haber, p.niif18_category
-                            );
-                        }
-                    }
-                })();
-                plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
-            } catch (err) {
-                console.error('[DB ERROR] Error al sincronizar plan contable del usuario:', err.message);
+                    })();
+                    plan = db.prepare('SELECT * FROM plan_global WHERE user_id = ?').all(userId);
+                } catch (err) {
+                    console.error('[DB ERROR] Error al sincronizar plan contable del usuario:', err.message);
+                }
             }
         }
         

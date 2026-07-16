@@ -2703,7 +2703,7 @@ export const useStore = create<AppState>()(
           });
           
           try {
-            const data = await electron.dbGetWorkspaceData(ruc);
+            const data = await electron.dbGetWorkspaceData(ruc, { excludePlan: true });
             const loadTime = Date.now() - startTime;
             
             console.log('[SYNC] ✅ Sincronización completada', {

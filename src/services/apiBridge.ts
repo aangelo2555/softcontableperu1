@@ -75,11 +75,12 @@ export const webApiBridge = {
         const res = await api.delete(`/api/db/workspaces/${ruc}`);
         return res.data;
     },
-    dbGetWorkspaceData: async (ruc: string, options?: { period?: string; page?: number; limit?: number }) => {
+    dbGetWorkspaceData: async (ruc: string, options?: { period?: string; page?: number; limit?: number; excludePlan?: boolean }) => {
         const params = new URLSearchParams({ t: Date.now().toString() });
         if (options?.period) params.append('period', options.period);
         if (options?.page) params.append('page', options.page.toString());
         if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.excludePlan) params.append('exclude_plan', 'true');
         const res = await api.get(`/api/db/workspaces/${ruc}?${params.toString()}`);
         return res.data.data;
     },

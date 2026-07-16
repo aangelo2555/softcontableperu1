@@ -322,7 +322,7 @@ app.post('/api/db/execute', authMiddleware, inspectMiddleware, async (req, res) 
                     workspace: workspaceId
                 });
                 
-                cacheService.invalidate(`workspace_data_${workspaceId}_${req.targetUserId}`);
+                cacheService.invalidatePattern(`workspace_data_${workspaceId}_.*`);
                 cacheService.invalidate(`workspaces_${req.targetUserId}`);
             }
         }
@@ -385,7 +385,7 @@ app.post('/api/db/purchases/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH PURCHASES ERROR]', error);
@@ -442,7 +442,7 @@ app.post('/api/db/sales/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH SALES ERROR]', error);
@@ -481,7 +481,7 @@ app.post('/api/db/journal/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH JOURNAL ERROR]', error);
@@ -516,7 +516,7 @@ app.post('/api/db/entities/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH ENTITIES ERROR]', error);
@@ -554,7 +554,7 @@ app.post('/api/db/honorarios/batch', async (req, res) => {
             }
         });
 
-        cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
     } catch (error) {
         console.error('[DB BATCH HONORARIOS ERROR]', error);
@@ -608,7 +608,7 @@ app.delete('/api/db/purchases/:id', async (req, res) => {
         await db.run('DELETE FROM purchases WHERE id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `compra-${id}-%`]);
-            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+            cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
@@ -625,7 +625,7 @@ app.delete('/api/db/sales/:id', async (req, res) => {
         await db.run('DELETE FROM sales WHERE id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `venta-${id}-%`]);
-            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+            cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
@@ -654,7 +654,7 @@ app.delete('/api/db/asientos/:id', async (req, res) => {
         await db.run('DELETE FROM asientos WHERE id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `${id}-line-%`]);
-            cacheService.invalidate(`workspace_data_${workspace_id}_${userId}`);
+            cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
