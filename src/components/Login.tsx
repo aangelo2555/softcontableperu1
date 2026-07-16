@@ -442,7 +442,8 @@ export const Login: React.FC = () => {
                 }
             }
         } catch (error: any) {
-            toast.error('Error de conexión con el servidor');
+            const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
+            toast.error(errMsg);
         } finally {
             setIsLoading(false);
         }
