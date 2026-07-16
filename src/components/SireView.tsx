@@ -43,7 +43,7 @@ const SireView: React.FC = () => {
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // 🔧 FIX: Key para forzar re-render
 
-  const electron = (window as any).electronAPI && !(window as any).electronAPI.isWebBridge ? (window as any).electronAPI : null;
+  const electron = (window as any).electronAPI;
 
   // --- Memos First ---
   const comparedData = useMemo(() => {

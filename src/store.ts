@@ -2845,10 +2845,10 @@ export const useStore = create<AppState>()(
       },
       loadBuzonFromStorage: async (ruc: string) => {
         if (!ruc) return;
-        const isElectron = !!(window as any).electronAPI && !(window as any).electronAPI.isWebBridge;
+        const isWeb = !(window as any).electronAPI || (window as any).electronAPI.isWebBridge;
         const token = localStorage.getItem('softcontable_token');
-        // No realizar llamadas HTTP si no hay token de autenticación (en pantalla de login)
-        if (!isElectron && !token) return;
+        // No realizar llamadas HTTP si no hay token de autenticación en la web (pantalla de login)
+        if (isWeb && !token) return;
 
         // 1. Carga ultra rápida de localStorage si está disponible
         let loadedLocal = false;

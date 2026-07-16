@@ -14,7 +14,7 @@ const globalSyncState: Record<string, SyncState> = {};
 const globalSyncListeners: Record<string, (state: SyncState) => void> = {};
 
 const BuzonView: React.FC = () => {
-  const isElectron = !!(window as any).electronAPI && !(window as any).electronAPI.isWebBridge;
+  const isElectron = !!(window as any).electronAPI;
   const { workspaces, currentCompany, buzonMensajes, setBuzonMensajes, markBuzonMensajeAsRead, clearBuzonStorage, loadBuzonFromStorage } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
