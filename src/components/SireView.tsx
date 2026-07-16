@@ -183,12 +183,16 @@ const SireView: React.FC = () => {
 
   // --- Handlers ---
   const loadArchivos = async () => {
+    if (!currentCompany?.ruc) {
+      setArchivos([]);
+      return;
+    }
     setIsLoadingArchivos(true);
     try {
       // Usar API en web, Electron en desktop
       const docs = electron
         ? await electron.listarArchivosSire()
-        : await api.get('/api/sire/archivos', { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data.archivos || r.data);
+        : await api.get('/api/sire/archivos', { params: { ruc: currentCompany.ruc } }).then((r: any) => r.data.archivos || r.data);
       if (Array.isArray(docs)) setArchivos(docs);
     } catch (error) {
       console.error("Error cargando archivos:", error);
@@ -199,7 +203,7 @@ const SireView: React.FC = () => {
 
   useEffect(() => {
     loadArchivos();
-  }, []);
+  }, [currentCompany?.ruc]);
 
   const handleEjecutar = async () => {
     if (!currentCompany.sol_user || !currentCompany.sol_pass || !currentCompany.sunatClientId || !currentCompany.sunatClientSecret) {
@@ -213,9 +217,17 @@ const SireView: React.FC = () => {
 
     // ⚠️ ADVERTENCIA: Verificar si el periodo ya fue descargado previamente
     const hasExistingSunatData = comparedData.some(item => item.sunat !== null);
+    
+    const isProcessMatch = (fName: string) => 
+      proceso === 'Generar RCE' 
+        ? (fName.includes('RCE') || fName.includes('080400')) 
+        : (fName.includes('RVIE') || fName.includes('140400'));
+
     const hasExistingFile = archivos.some(file => {
       const nameUpper = file.nombre.toUpperCase();
-      return nameUpper.includes(currentCompany?.ruc || '') && nameUpper.includes(periodo);
+      return nameUpper.includes(currentCompany?.ruc || '') && 
+             nameUpper.includes(periodo) &&
+             isProcessMatch(nameUpper);
     });
 
     if (hasExistingSunatData || hasExistingFile) {
@@ -905,10 +917,17 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                           
                           {(() => {
                             const currentPeriodStr = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
-                            const isProcessMatch = (fName: string) => proceso === 'Generar RCE' ? fName.includes('RCE') : fName.includes('RVIE');
+                            const isProcessMatchLocal = (fName: string) => 
+                              proceso === 'Generar RCE' 
+                                ? (fName.includes('RCE') || fName.includes('080400')) 
+                                : (fName.includes('RVIE') || fName.includes('140400'));
+
                             const matchingPeriodFile = archivos.find(f => {
                               const nameUpper = f.nombre.toUpperCase();
-                              return isProcessMatch(nameUpper) && nameUpper.includes(currentPeriodStr);
+                              const rucFilter = currentCompany?.ruc || '';
+                              return isProcessMatchLocal(nameUpper) && 
+                                     nameUpper.includes(currentPeriodStr) &&
+                                     (!rucFilter || nameUpper.includes(rucFilter.toUpperCase()));
                             });
 
                             if (matchingPeriodFile) {
