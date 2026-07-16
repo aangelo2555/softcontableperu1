@@ -45,6 +45,7 @@ const cacheService = require('./cacheService');
 const helmet = require('helmet');
 
 const app = express();
+app.set('trust proxy', 1); // Confiar en el proxy de Railway para identificar la IP de origen en rate limiting
 const authRoutes = require('./authRoutes');
 const jwt = require('jsonwebtoken');
 

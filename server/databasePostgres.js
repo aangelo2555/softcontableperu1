@@ -88,22 +88,19 @@ function translateSqliteToPostgres(sql, params = []) {
         const columns = insertOrReplaceMatch[2].split(',').map(c => c.trim());
         
         // Determinar la primary key según la tabla
-        // Para PostgreSQL multi-tenant, usamos PRIMARY KEY compuesta
-        let primaryKey = 'id';
-        let conflictColumns = 'id';
-        
-        if (tableName === 'asientos') {
-            // Para asientos, solo usamos 'id' como conflict porque es la PK real
-            conflictColumns = 'id';
-        } else if (tableName === 'workspaces') {
-            conflictColumns = 'ruc, user_id';
-        } else if (tableName === 'period_versions') {
-            // period_versions tiene constraint único en workspace_id, periodo, module, user_id
-            conflictColumns = 'workspace_id, periodo, module, user_id';
-        } else if (['purchases', 'sales', 'journal', 'honorarios', 'entities', 'costs', 'maintenance', 'products', 'employees', 'fixed_assets', 'buzon_messages'].includes(tableName)) {
-            // Para otras tablas, solo ID
-            conflictColumns = 'id';
-        }
+        const getConflictColumns = (tbl) => {
+            const tblLower = tbl.toLowerCase();
+            if (tblLower === 'asientos') return 'id';
+            if (tblLower === 'workspaces') return 'ruc, user_id';
+            if (tblLower === 'period_versions') return 'workspace_id, periodo, module, user_id';
+            if (tblLower === 'plan_global') return 'cta, user_id';
+            if (tblLower === 'mapa_pcge_tabla9') return 'codigo_cuenta_prefijo';
+            if (tblLower === 'accounting_periods') return 'workspace_id, periodo, user_id';
+            if (tblLower === 'formato_54_plan_contable') return 'workspace_id, user_id, periodo, codigo_cuenta';
+            return 'id';
+        };
+
+        const conflictColumns = getConflictColumns(tableName);
         
         // Generar lista de actualizaciones excluyendo las PK
         const pkColumns = conflictColumns.split(',').map(c => c.trim());
@@ -136,13 +133,21 @@ function translateSqliteToPostgres(sql, params = []) {
         const insertOrIgnoreMatch = translatedSql.match(/INSERT OR IGNORE INTO (\w+)\s*\(([^)]+)\)/i);
         if (insertOrIgnoreMatch) {
             const tableName = insertOrIgnoreMatch[1];
-            let primaryKey = 'id';
-            if (tableName === 'workspaces') {
-                primaryKey = 'ruc, user_id';
-            }
+            const getConflictColumns = (tbl) => {
+                const tblLower = tbl.toLowerCase();
+                if (tblLower === 'asientos') return 'id';
+                if (tblLower === 'workspaces') return 'ruc, user_id';
+                if (tblLower === 'period_versions') return 'workspace_id, periodo, module, user_id';
+                if (tblLower === 'plan_global') return 'cta, user_id';
+                if (tblLower === 'mapa_pcge_tabla9') return 'codigo_cuenta_prefijo';
+                if (tblLower === 'accounting_periods') return 'workspace_id, periodo, user_id';
+                if (tblLower === 'formato_54_plan_contable') return 'workspace_id, user_id, periodo, codigo_cuenta';
+                return 'id';
+            };
+            const conflictColumns = getConflictColumns(tableName);
             
             translatedSql = translatedSql.replace(/INSERT OR IGNORE INTO/i, 'INSERT INTO');
-            translatedSql += ` ON CONFLICT (${primaryKey}) DO NOTHING`;
+            translatedSql += ` ON CONFLICT (${conflictColumns}) DO NOTHING`;
         }
     }
     
