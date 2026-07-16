@@ -689,7 +689,7 @@ const PlanillaView: React.FC = () => {
                     <td className="px-2 py-2 text-right">
                         <input 
                         type="number" 
-                        value={emp.jornal_diario?.toFixed(2)} 
+                        value={Number(emp.jornal_diario || 0).toFixed(2)} 
                         readOnly
                         className="bg-transparent border-none p-0 text-right text-app-muted focus:ring-0 w-full [appearance:textfield] outline-none"
                       />

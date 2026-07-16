@@ -6,10 +6,23 @@ const { v4: uuidv4 } = require('uuid');
 const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
 const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
 
+const rateLimit = require('express-rate-limit');
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    throw new Error('FATAL: La variable de entorno JWT_SECRET es obligatoria en producción por motivos de seguridad.');
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026';
 
+const authLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minuto
+    max: 5, // Limitar cada IP a 5 peticiones de login/registro por minuto
+    message: { success: false, error: 'Demasiados intentos de acceso desde esta IP, por favor intente de nuevo en un minuto.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // --- REGISTRO ---
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
     try {
         const { email, password, name } = req.body;
         console.log(`[AUTH] Intento de registro: ${email}`);
@@ -28,7 +41,7 @@ router.post('/register', async (req, res) => {
         const usersList = await dbManager.queryAll('SELECT COUNT(*) as count FROM users');
         const userCount = parseInt(usersList[0]?.count || 0);
         const normalizedEmail = email.trim().toLowerCase();
-        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin')) ? 'admin' : 'user';
+        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'admin' : 'user';
 
         const newUser = {
             id: uuidv4(),
@@ -47,7 +60,7 @@ router.post('/register', async (req, res) => {
 });
 
 // --- LOGIN ---
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         console.log(`[AUTH] Intento de login: ${email}`);
@@ -65,7 +78,7 @@ router.post('/login', async (req, res) => {
         }
 
         const normalizedEmail = user.email.trim().toLowerCase();
-        const role = (user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin')) ? 'admin' : 'user';
+        const role = (user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com') ? 'admin' : 'user';
 
         // Crear Token
         const token = jwt.sign(

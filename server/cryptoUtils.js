@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 
 // La clave debe venir de una variable de entorno en producción
+if (process.env.NODE_ENV === 'production' && !process.env.ENCRYPTION_KEY) {
+    throw new Error('FATAL: La variable de entorno ENCRYPTION_KEY es obligatoria en producción por motivos de seguridad.');
+}
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'softcontable_secret_key_32_chars_!!'; 
 const IV_LENGTH = 16;
 
@@ -18,7 +21,7 @@ function encrypt(text) {
         return Buffer.from(iv.toString('hex') + ':' + authTag + ':' + encrypted);
     } catch (error) {
         console.error('[CRYPTO] Error al cifrar:', error.message);
-        return Buffer.from(text); // Fallback
+        throw new Error('Error al cifrar datos: ' + error.message);
     }
 }
 

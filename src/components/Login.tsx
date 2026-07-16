@@ -365,12 +365,11 @@ export const Login: React.FC = () => {
 
     useEffect(() => {
         const savedEmail = localStorage.getItem('softcontable_rem_email');
-        const savedPass = localStorage.getItem('softcontable_rem_pass');
-        if (savedEmail || savedPass) {
+        if (savedEmail) {
             setFormData(prev => ({
                 ...prev,
-                email: savedEmail || '',
-                password: savedPass || ''
+                email: savedEmail,
+                password: ''
             }));
             setRememberMe(true);
         }
@@ -419,11 +418,11 @@ export const Login: React.FC = () => {
                     localStorage.setItem('softcontable_token', res.token);
                     if (rememberMe) {
                         localStorage.setItem('softcontable_rem_email', formData.email);
-                        localStorage.setItem('softcontable_rem_pass', formData.password);
                     } else {
                         localStorage.removeItem('softcontable_rem_email');
-                        localStorage.removeItem('softcontable_rem_pass');
                     }
+                    // Limpiar rem_pass residual si existiese por retrocompatibilidad
+                    localStorage.removeItem('softcontable_rem_pass');
                     window.location.reload();
                 } else {
                     toast.error(res.error || 'Error al iniciar sesión');
@@ -537,15 +536,15 @@ export const Login: React.FC = () => {
                                <div className="relative group">
                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" />
                                    <input 
-                                       type="text"
-                                       required
-                                       autoComplete="off"
-                                       placeholder="••••••••"
-                                       className="w-full glass-input rounded-xl py-3.5 pr-4 placeholder:text-slate-600 focus:outline-none"
-                                       style={{ paddingLeft: '3.25rem', WebkitTextSecurity: 'disc' } as any}
-                                       value={formData.password}
-                                       onChange={e => setFormData({...formData, password: e.target.value})}
-                                   />
+                                        type="password"
+                                        required
+                                        autoComplete="current-password"
+                                        placeholder="••••••••"
+                                        className="w-full glass-input rounded-xl py-3.5 pr-4 placeholder:text-slate-600 focus:outline-none"
+                                        style={{ paddingLeft: '3.25rem' }}
+                                        value={formData.password}
+                                        onChange={e => setFormData({...formData, password: e.target.value})}
+                                    />
                                </div>
                            </div>
 

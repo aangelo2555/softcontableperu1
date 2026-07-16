@@ -42,10 +42,21 @@ const ublService = require('./ublService');
 const autoSyncService = require('./autoSyncService');
 const cacheService = require('./cacheService');
 
+const helmet = require('helmet');
+
 const app = express();
 const authRoutes = require('./authRoutes');
 const jwt = require('jsonwebtoken');
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    throw new Error('FATAL: La variable de entorno JWT_SECRET es obligatoria en producción por motivos de seguridad.');
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026';
+
+// --- Seguridad: Helmet Middleware ---
+app.use(helmet({
+    contentSecurityPolicy: false, // Desactivar CSP estricto para evitar romper SPA React en producción/dev
+}));
 
 // --- Optimización #4: Compresión GZIP para reducir tamaño de respuestas ---
 app.use(compression({
@@ -53,8 +64,26 @@ app.use(compression({
     level: 6 // Nivel de compresión (1-9)
 }));
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// --- Configuración de CORS segura ---
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',') 
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Permitir peticiones sin origen (como apps móviles o herramientas de pruebas)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por la política de CORS de SOFTCONTABLE'));
+        }
+    },
+    credentials: true
+};
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- Health Check Endpoint (para Docker HEALTHCHECK y Railway) ---
 app.get('/api/health', (req, res) => {
@@ -97,7 +126,7 @@ const inspectMiddleware = (req, res, next) => {
     const inspectUserId = req.headers['x-inspect-user-id'];
     if (inspectUserId && req.user) {
         const normalizedEmail = (req.user.email || '').trim().toLowerCase();
-        const isAdmin = req.user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin');
+        const isAdmin = req.user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com';
         if (isAdmin) {
             req.targetUserId = inspectUserId;
         } else {
@@ -109,166 +138,63 @@ const inspectMiddleware = (req, res, next) => {
     next();
 };
 
+// --- Middleware para restringir endpoints de debug en producción ---
+const adminOnlyInProdMiddleware = (req, res, next) => {
+    const normalizedEmail = (req.user?.email || '').trim().toLowerCase();
+    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com';
+    if (process.env.NODE_ENV === 'production' && !isAdmin) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado. Este endpoint solo está disponible para administradores en producción.' });
+    }
+    next();
+};
+
 // --- Rutas Protegidas ---
-const dbRoutes = require('./routes/dbRoutes');
-app.use('/api/db', authMiddleware, inspectMiddleware, dbRoutes);
+app.use('/api/db', authMiddleware, inspectMiddleware);
 app.use('/api/buzon', authMiddleware, inspectMiddleware);
 app.use('/api/sire', authMiddleware, inspectMiddleware);
 
+const dbRoutes = require('./routes/dbRoutes');
+app.use('/api/db', dbRoutes);
+
 // --- API Endpoints: Database ---
 
-app.get('/api/db/workspaces', async (req, res) => {
-    try {
-        const cacheKey = `workspaces_${req.targetUserId}`;
-        
-        // Verificar cache
-        let workspaces = cacheService.get(cacheKey);
-        
-        if (!workspaces) {
-            // Si no está en cache, consultar DB
-            workspaces = await db.getWorkspaces(req.targetUserId);
-            cacheService.set(cacheKey, workspaces, 5 * 60 * 1000); // 5 minutos
+// --- Helper para sanitizar y validar consultas SQL dinámicas ---
+const isSafeSql = (sql, userRole) => {
+    const cleanSql = sql.trim().toUpperCase();
+    
+    // Bloquear DDL y comandos de control de base de datos
+    const dangerousKeywords = [
+        'DROP', 'ALTER', 'CREATE', 'TRUNCATE', 'RENAME', 'GRANT', 'REVOKE', 
+        'VACUUM', 'PRAGMA', 'EXPLAIN', 'COPY', 'LOAD', 'SHUTDOWN', 'ATTACH', 'DETACH'
+    ];
+    for (const kw of dangerousKeywords) {
+        const regex = new RegExp(`\\b${kw}\\b`, 'i');
+        if (regex.test(cleanSql)) {
+            return false;
         }
-        
-        res.json({ success: true, workspaces });
-    } catch (error) {
-        console.error('[DB ERROR] Error en getWorkspaces:', error);
-        res.status(500).json({ success: false, error: error.message });
     }
-});
-
-app.post('/api/db/workspaces', async (req, res) => {
-    try {
-        await db.saveWorkspace(req.body, req.targetUserId);
-        
-        // Invalidar cache de workspaces
-        cacheService.invalidate(`workspaces_${req.targetUserId}`);
-        cacheService.invalidate(`workspace_data_${req.body.ruc}_${req.targetUserId}`);
-        
-        // --- AUTO-SYNC DESACTIVADO ---
-        // El auto-sync ahora se maneja desde el frontend mediante auto-click de botones
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.get(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
-    try {
-        const period = req.query.period || req.query.periodo || null;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 1000;
-
-        const cacheKey = `workspace_data_${req.params.ruc}_${req.targetUserId}_${period || 'all'}_${page}_${limit}`;
-        
-        // Verificar cache
-        let data = cacheService.get(cacheKey);
-        
-        if (!data) {
-            // Si no está en cache, consultar DB
-            data = await db.getWorkspaceData(req.params.ruc, req.targetUserId, { period, page, limit });
-            cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 minutos
+    
+    // Evitar consultas a la tabla users por usuarios no administradores
+    if (cleanSql.includes('USERS') && userRole !== 'admin') {
+        const usersRegex = /\bUSERS\b/i;
+        if (usersRegex.test(cleanSql)) {
+            return false;
         }
-        
-        // Enviar respuesta inmediatamente
-        res.json({ success: true, data });
-    } catch (error) {
-        console.error('[DB ERROR] Error en getWorkspaceData:', error);
-        res.status(500).json({ success: false, error: error.message });
     }
-});
+    
+    return true;
+};
 
-// Modular query endpoints with period filter and pagination
-app.get('/api/db/purchases', async (req, res) => {
-    try {
-        const { ruc, workspace_id, period, page = 1, limit = 500 } = req.query;
-        const targetRuc = ruc || workspace_id;
-        const userId = req.targetUserId;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-
-        let queryText = 'SELECT * FROM purchases WHERE workspace_id = $1 AND user_id = $2';
-        let queryParams = [targetRuc, userId];
-
-        if (period) {
-            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
-            queryParams.push(`%${period}%`);
-        }
-
-        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-        queryParams.push(parseInt(limit), offset);
-
-        const rows = await db.queryAll(queryText, queryParams);
-        res.json({ success: true, data: rows });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.get('/api/db/sales', async (req, res) => {
-    try {
-        const { ruc, workspace_id, period, page = 1, limit = 500 } = req.query;
-        const targetRuc = ruc || workspace_id;
-        const userId = req.targetUserId;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-
-        let queryText = 'SELECT * FROM sales WHERE workspace_id = $1 AND user_id = $2';
-        let queryParams = [targetRuc, userId];
-
-        if (period) {
-            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
-            queryParams.push(`%${period}%`);
-        }
-
-        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-        queryParams.push(parseInt(limit), offset);
-
-        const rows = await db.queryAll(queryText, queryParams);
-        res.json({ success: true, data: rows });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.get('/api/db/journal', async (req, res) => {
-    try {
-        const { ruc, workspace_id, period, page = 1, limit = 1000 } = req.query;
-        const targetRuc = ruc || workspace_id;
-        const userId = req.targetUserId;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-
-        let queryText = 'SELECT * FROM journal WHERE workspace_id = $1 AND user_id = $2';
-        let queryParams = [targetRuc, userId];
-
-        if (period) {
-            queryText += ' AND fecha LIKE $' + (queryParams.length + 1);
-            queryParams.push(`%${period}%`);
-        }
-
-        queryText += ` ORDER BY fecha DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-        queryParams.push(parseInt(limit), offset);
-
-        const rows = await db.queryAll(queryText, queryParams);
-        res.json({ success: true, data: rows });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-app.delete(['/api/db/workspace/:ruc', '/api/db/workspaces/:ruc'], async (req, res) => {
-    try {
-        await db.deleteWorkspace(req.params.ruc, req.targetUserId);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('[DB ERROR] Error en delete:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/db/execute', async (req, res) => {
+app.post('/api/db/execute', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         let { sql } = req.body;
         let params = req.body.params || [];
+
+        // Validar e impedir inyección SQL peligrosa o consultas DDL/users no autorizadas
+        const userRole = req.user?.role;
+        if (!isSafeSql(sql, userRole)) {
+            return res.status(403).json({ success: false, error: 'Consulta SQL no permitida por razones de seguridad.' });
+        }
         
         // ✅ CONVERTIR $N a ? para SQLite
         if (!USE_POSTGRES) {
@@ -778,7 +704,7 @@ app.delete('/api/db/balance-inicial/:ruc/:id', async (req, res) => {
 });
 
 // --- ENDPOINT DE PRUEBA MANUAL PARA AUTO-SYNC ---
-app.post('/api/debug/force-auto-sync/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+app.post('/api/debug/force-auto-sync/:ruc', authMiddleware, inspectMiddleware, adminOnlyInProdMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         if (!ruc) {
@@ -812,7 +738,7 @@ app.post('/api/debug/force-auto-sync/:ruc', authMiddleware, inspectMiddleware, a
 });
 
 // --- Mejora #7: Endpoint de Estado de Auto-Sincronización (Debug) ---
-app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, adminOnlyInProdMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         if (!ruc) {
@@ -828,7 +754,7 @@ app.get('/api/debug/auto-sync-status/:ruc', authMiddleware, inspectMiddleware, a
 });
 
 // --- ENDPOINT PARA VERIFICAR CREDENCIALES ---
-app.get('/api/debug/check-credentials/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+app.get('/api/debug/check-credentials/:ruc', authMiddleware, inspectMiddleware, adminOnlyInProdMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         if (!ruc) {
@@ -869,7 +795,7 @@ app.get('/api/debug/check-credentials/:ruc', authMiddleware, inspectMiddleware, 
 });
 
 // --- ENDPOINT PARA RESETEAR THROTTLING ---
-app.post('/api/debug/reset-throttling/:ruc', authMiddleware, inspectMiddleware, async (req, res) => {
+app.post('/api/debug/reset-throttling/:ruc', authMiddleware, inspectMiddleware, adminOnlyInProdMiddleware, async (req, res) => {
     try {
         const { ruc } = req.params;
         if (!ruc) {
@@ -979,15 +905,21 @@ app.post('/api/db/query', authMiddleware, inspectMiddleware, async (req, res) =>
         let { sql } = req.body;
         let params = req.body.params || [];
         
+        // Solo permitir SELECT para seguridad
+        if (!sql.trim().toUpperCase().startsWith('SELECT')) {
+            return res.status(403).json({ success: false, error: 'Solo se permiten consultas SELECT en este endpoint.' });
+        }
+
+        // Validar e impedir inyección SQL peligrosa o consultas a users no autorizadas
+        const userRole = req.user?.role;
+        if (!isSafeSql(sql, userRole)) {
+            return res.status(403).json({ success: false, error: 'Consulta SQL no permitida por razones de seguridad.' });
+        }
+        
         // ✅ CONVERTIR $N a ? para SQLite
         if (!USE_POSTGRES) {
             // Reemplazar $1, $2, $3... con ?
             sql = sql.replace(/\$\d+/g, '?');
-        }
-        
-        // Solo permitir SELECT para seguridad
-        if (!sql.trim().toUpperCase().startsWith('SELECT')) {
-            return res.status(403).json({ success: false, error: 'Solo se permiten consultas SELECT en este endpoint.' });
         }
         
         // ─── INYECCIÓN DE USER_ID PARA SELECT QUERIES ───
@@ -1378,8 +1310,8 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         const { periodo, tipo, notas } = req.body; // periodo: YYYY-MM, tipo: MENSUAL|ANUAL
         const userId = req.targetUserId;
 
-        if (!periodo) {
-            return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
+        if (!periodo || !/^\d{4}(-\d{2})?$/.test(periodo)) {
+            return res.status(400).json({ success: false, error: 'Parámetro periodo inválido. Formato esperado: YYYY o YYYY-MM.' });
         }
 
         const dateFilter = (tipo === 'ANUAL')
@@ -1802,6 +1734,17 @@ app.delete('/api/sire/archivos/:nombre', async (req, res) => {
 app.get('/api/sire/archivos/:nombre/descargar', async (req, res) => {
     try {
         const nombre = req.params.nombre;
+
+        // Validar Path Traversal
+        if (nombre.includes('..') || nombre.includes('/') || nombre.includes('\\')) {
+            return res.status(400).json({ success: false, error: 'Nombre de archivo inválido' });
+        }
+        
+        // Validar formato básico del archivo
+        if (!/^[a-zA-Z0-9_\-\.]+$/.test(nombre)) {
+            return res.status(400).json({ success: false, error: 'Formato de nombre de archivo no permitido' });
+        }
+
         const ruc = req.query.ruc || req.query.workspace_id;
         const targetUserId = req.targetUserId;
 
@@ -1870,7 +1813,7 @@ app.post('/api/sire/cargar-desde-historial', async (req, res) => {
 // --- Middleware para verificar rol de Administrador ---
 const adminAuthMiddleware = (req, res, next) => {
     const normalizedEmail = (req.user?.email || '').trim().toLowerCase();
-    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com' || normalizedEmail.startsWith('admin');
+    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com';
     if (!isAdmin) {
         return res.status(403).json({ success: false, error: 'Acceso denegado. Se requieren privilegios de Administrador.' });
     }
@@ -2669,6 +2612,17 @@ app.post('/api/cache/clear', authMiddleware, (req, res) => {
     
     cacheService.clear();
     res.json({ success: true, message: 'Cache limpiado exitosamente' });
+});
+
+// --- Global Error Handler (S-14) ---
+app.use((err, req, res, next) => {
+    console.error('[UNHANDLED ERROR]:', err);
+    
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(err.status || 500).json({
+        success: false,
+        error: isProduction ? 'Ocurrió un error interno en el servidor.' : err.message
+    });
 });
 
 const PORT = process.env.PORT || 3001;

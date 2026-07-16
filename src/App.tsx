@@ -304,7 +304,7 @@ const App: React.FC = () => {
   const isAdmin = React.useMemo(() => {
     if (!userPayload) return false;
     const email = (userPayload.email || '').trim().toLowerCase();
-    return userPayload.role === 'admin' || email === 'aangelo2555@gmail.com' || email.startsWith('admin');
+    return userPayload.role === 'admin' || email === 'aangelo2555@gmail.com';
   }, [userPayload]);
 
   const userName = React.useMemo(() => {
