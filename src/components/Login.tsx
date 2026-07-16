@@ -355,6 +355,7 @@ export const Login: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [isStudentModeActive, setIsStudentModeActive] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [errorAlert, setErrorAlert] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -409,6 +410,7 @@ export const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setErrorAlert(null);
 
         try {
             if (isLogin) {
@@ -424,25 +426,37 @@ export const Login: React.FC = () => {
                     } else {
                         localStorage.removeItem('softcontable_rem_email');
                     }
-                    // Limpiar rem_pass residual si existiese por retrocompatibilidad
                     localStorage.removeItem('softcontable_rem_pass');
                     window.location.reload();
                 } else {
-                    toast.error(res.error || 'Error al iniciar sesión');
+                    const errMsg = res.error || 'Error al iniciar sesión';
+                    setErrorAlert(errMsg);
+                    toast.error(errMsg);
                 }
             } else {
                 const res = isStudentModeActive
                     ? await webApiBridge.authRegisterStudent(formData)
                     : await webApiBridge.authRegister(formData);
                 if (res.success) {
-                    toast.success(isStudentModeActive ? 'Registro de estudiante exitoso. Ya puedes iniciar sesión.' : 'Registro exitoso. Ahora puedes iniciar sesión.');
-                    setIsLogin(true);
+                    if (isStudentModeActive && res.token) {
+                        localStorage.setItem('softcontable_token', res.token);
+                        toast.success('🎓 ¡Registro de estudiante exitoso! Iniciando sesión automáticamente...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                        setIsLogin(true);
+                    }
                 } else {
-                    toast.error(res.error || 'Error al registrarse');
+                    const errMsg = res.error || 'Error al registrarse';
+                    setErrorAlert(errMsg);
+                    toast.error(errMsg);
                 }
             }
         } catch (error: any) {
             const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
+            setErrorAlert(errMsg);
             toast.error(errMsg);
         } finally {
             setIsLoading(false);
@@ -506,21 +520,27 @@ export const Login: React.FC = () => {
                             </span>
                             <button
                                 type="button"
-                                onClick={() => setIsStudentModeActive(!isStudentModeActive)}
+                                onClick={() => {
+                                    setIsStudentModeActive(!isStudentModeActive);
+                                    setErrorAlert(null);
+                                }}
                                 className={`text-[9px] font-black tracking-widest uppercase px-3 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer ${
                                     isStudentModeActive
                                         ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20'
                                         : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
                                 }`}
                             >
-                                {isStudentModeActive ? 'Ir a Profesional' : 'Acceso Estudiante'}
+                                {isStudentModeActive ? '← Volver a Profesional' : '🎓 Acceso Estudiante'}
                             </button>
                         </div>
                         
                         <div className="flex mb-8 bg-white/[0.02] p-1 rounded-2xl border border-white/[0.04]">
                             <button 
                                 type="button"
-                                onClick={() => setIsLogin(true)}
+                                onClick={() => {
+                                    setIsLogin(true);
+                                    setErrorAlert(null);
+                                }}
                                 className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
                                     isLogin 
                                         ? isStudentModeActive 
@@ -533,7 +553,10 @@ export const Login: React.FC = () => {
                             </button>
                             <button 
                                 type="button"
-                                onClick={() => setIsLogin(false)}
+                                onClick={() => {
+                                    setIsLogin(false);
+                                    setErrorAlert(null);
+                                }}
                                 className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
                                     !isLogin 
                                         ? isStudentModeActive 
@@ -547,6 +570,12 @@ export const Login: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-5">
+                            {errorAlert && (
+                                <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs py-3 px-4 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <span className="text-red-400 mt-0.5 text-sm">⚠️</span>
+                                    <div className="flex-1 font-medium leading-relaxed">{errorAlert}</div>
+                                </div>
+                            )}
                             {!isLogin && (
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider">Nombre Completo</label>
