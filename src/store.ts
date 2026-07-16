@@ -1961,8 +1961,8 @@ export const useStore = create<AppState>()(
         if (!ruc) return;
 
         // Evitar semillado de glosas desde el frontend en modo SaaS/Web
-        const globalElectron = (window as any).electronAPI;
-        if (globalElectron === webApiBridge) {
+        const electron = (window as any).electronAPI;
+        if (!electron || electron.isWebBridge) {
           console.log('[STORE] Saltando semillado de glosas en el cliente (modo SaaS Web detectado)');
           return;
         }
@@ -2000,7 +2000,7 @@ export const useStore = create<AppState>()(
         if (!electron) return;
 
         // Evitar semillado de plan desde el frontend en modo SaaS/Web
-        if (electron === webApiBridge) {
+        if (electron.isWebBridge) {
           console.log('[STORE] Saltando semillado de plan en el cliente (modo SaaS Web detectado)');
           return;
         }
@@ -2845,7 +2845,7 @@ export const useStore = create<AppState>()(
       },
       loadBuzonFromStorage: async (ruc: string) => {
         if (!ruc) return;
-        const isElectron = !!(window as any).electronAPI;
+        const isElectron = !!(window as any).electronAPI && !(window as any).electronAPI.isWebBridge;
         const token = localStorage.getItem('softcontable_token');
         // No realizar llamadas HTTP si no hay token de autenticación (en pantalla de login)
         if (!isElectron && !token) return;

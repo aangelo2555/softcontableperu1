@@ -51,6 +51,7 @@ function convertSQLitePlaceholdersToPostgres(sql: string): string {
 }
 
 export const webApiBridge = {
+    isWebBridge: true,
     // --- Auth API ---
     authLogin: async (credentials: any) => {
         const res = await api.post('/api/auth/login', credentials);
@@ -186,7 +187,7 @@ export const webApiBridge = {
     },
     analyticsCCCMetrics: async (ruc: string) => {
         const res = await api.get(`/api/db/analytics/ccc/${ruc}?t=${Date.now()}`);
-        return res.data.metrics;
+        return { success: res.data.success, data: res.data.metrics };
     },
     
     // --- Period Management & Invalidation ---
@@ -482,6 +483,7 @@ export const webApiBridge = {
         const res = await api.post('/api/ai/knowledge/seed');
         return res.data;
     },
+
 
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},

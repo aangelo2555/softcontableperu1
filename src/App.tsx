@@ -484,7 +484,7 @@ const App: React.FC = () => {
     }
 
     // Solo sincronizar en Desktop (Electron) con credenciales SOL
-    const isElectron = !!(window as any).electronAPI;
+    const isElectron = !!(window as any).electronAPI && !(window as any).electronAPI.isWebBridge;
     if (!isElectron) return;
 
     const hasCredentials = currentCompany.sol_user && currentCompany.sol_pass;
