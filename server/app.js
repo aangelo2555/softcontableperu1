@@ -69,19 +69,35 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',') 
     : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
 
-const corsOptions = {
-    origin: (origin, callback) => {
-        // Permitir peticiones sin origen (como apps móviles o herramientas de pruebas)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-            callback(null, true);
-        } else {
-            callback(new Error('No permitido por la política de CORS de SOFTCONTABLE'));
-        }
-    },
-    credentials: true
+const corsOptionsDelegate = (req, callback) => {
+    const origin = req.header('Origin');
+    const host = req.header('Host');
+    
+    // Si no hay origen (petición directa del mismo sitio sin cabecera Origin)
+    if (!origin) {
+        return callback(null, { origin: true, credentials: true });
+    }
+    
+    let originHost = '';
+    try {
+        originHost = new URL(origin).host;
+    } catch (e) {}
+    
+    const isSameOrigin = originHost === host;
+    const isRailway = originHost.endsWith('railway.app');
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      isSameOrigin || 
+                      isRailway || 
+                      process.env.NODE_ENV !== 'production';
+
+    if (isAllowed) {
+        callback(null, { origin: true, credentials: true });
+    } else {
+        // Denegar origen de forma segura sin provocar un error 500 en el servidor
+        callback(null, { origin: false });
+    }
 };
-app.use(cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
