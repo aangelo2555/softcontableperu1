@@ -7,6 +7,7 @@ const db = USE_POSTGRES ? require('../server/databasePostgres') : require('../se
 const SireOrchestrator = require('./sireOrchestrator');
 const SireFileGenerator = require('./sireFileGenerator');
 const excelReader = require('./excelReader');
+const { sireDir } = require('../server/storageConfig');
 
 class SireHandler {
   constructor() {
