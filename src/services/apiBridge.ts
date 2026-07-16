@@ -61,6 +61,10 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/register', userData);
         return res.data;
     },
+    authRegisterStudent: async (userData: any) => {
+        const res = await api.post('/api/auth/register-student', userData);
+        return res.data;
+    },
 
     // --- Database API ---
     dbGetWorkspaces: async () => {

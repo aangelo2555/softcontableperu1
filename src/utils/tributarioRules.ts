@@ -1,4 +1,5 @@
 import type { CompanyData } from '../store';
+import { isStudentMode } from '../store';
 
 /**
  * Interface que define el estado de obligatoriedad de los libros contables.
@@ -112,6 +113,21 @@ export function calcularObligacionesContables(
   return libros;
 }
 
+// Tabs habilitados para el Modo Estudiante (ciclo contable esencial)
+const STUDENT_ENABLED_TABS = new Set([
+  'EMPRESA',     // Panel de Práctica (StudentDashboard)
+  'PLAN',        // Plan Contable (referencia)
+  'DATOS',       // Tablas Generales
+  'COMPRAS',     // Registro simplificado
+  'VENTAS',      // Registro simplificado
+  'ASIENTOS',    // Asientos Diarios (módulo principal)
+  'HHTT',        // Balance de Comprobación
+  'EGYP',        // Estado de Resultados
+  'BALANCE',     // Situación Financiera
+  'DIARIO',      // Libro Diario
+  'MAYOR',       // Libro Mayor
+]);
+
 /**
  * Determina si un módulo/pestaña contable debe estar habilitado según las normas de SUNAT.
  * 
@@ -119,6 +135,11 @@ export function calcularObligacionesContables(
  * @param company Datos de la empresa activa
  */
 export function isTabEnabled(tabId: string, company: CompanyData | null | undefined): boolean {
+  // --- MODO ESTUDIANTE: whitelist fija, sin reglas SUNAT ---
+  if (isStudentMode()) {
+    return STUDENT_ENABLED_TABS.has(tabId);
+  }
+
   if (!company) return true;
 
   // Extraer variables de configuración (Sanitizadas)

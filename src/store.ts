@@ -1162,6 +1162,18 @@ function buildJournalEntries(
   return [];
 }
 
+// --- STUDENT MODE HELPER ---
+export const isStudentMode = (): boolean => {
+  try {
+    const token = localStorage.getItem('softcontable_token');
+    if (!token) return false;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role === 'estudiante';
+  } catch {
+    return false;
+  }
+};
+
 const checkPermission = (actionType: 'WRITE' | 'DELETE' | 'PERIOD_CONTROL'): boolean => {
   const token = localStorage.getItem('softcontable_token');
   if (!token) {
@@ -1175,6 +1187,17 @@ const checkPermission = (actionType: 'WRITE' | 'DELETE' | 'PERIOD_CONTROL'): boo
     const role = isAdmin ? 'contador' : (payload.role || 'user');
     
     if (role === 'contador') {
+      return true;
+    }
+    if (role === 'estudiante') {
+      if (actionType === 'DELETE') {
+        toast.error('🎓 Modo Estudiante: La eliminación está deshabilitada. En la práctica profesional, los registros contables no se eliminan.');
+        return false;
+      }
+      if (actionType === 'PERIOD_CONTROL') {
+        toast.error('🎓 Modo Estudiante: El control de períodos no está disponible en este modo.');
+        return false;
+      }
       return true;
     }
     if (role === 'gerente') {

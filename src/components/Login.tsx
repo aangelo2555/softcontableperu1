@@ -10,8 +10,10 @@ import {
     Building2, 
     Layers,
     PieChart,
-    FileText
+    FileText,
+    GraduationCap
 } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 
 const glassStyles = `
@@ -351,6 +353,7 @@ const showcaseViews = [
 
 export const Login: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
+    const [isStudentModeActive, setIsStudentModeActive] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
@@ -428,9 +431,11 @@ export const Login: React.FC = () => {
                     toast.error(res.error || 'Error al iniciar sesión');
                 }
             } else {
-                const res = await webApiBridge.authRegister(formData);
+                const res = isStudentModeActive
+                    ? await webApiBridge.authRegisterStudent(formData)
+                    : await webApiBridge.authRegister(formData);
                 if (res.success) {
-                    toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                    toast.success(isStudentModeActive ? 'Registro de estudiante exitoso. Ya puedes iniciar sesión.' : 'Registro exitoso. Ahora puedes iniciar sesión.');
                     setIsLogin(true);
                 } else {
                     toast.error(res.error || 'Error al registrarse');
@@ -477,20 +482,64 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Card de Login (Glassmorphic) */}
-                    <div className="glass-card p-8 rounded-[32px] shadow-2xl relative overflow-hidden group select-text">
+                    <div className={`glass-card p-8 rounded-[32px] shadow-2xl relative overflow-hidden group select-text transition-all duration-500 ${
+                        isStudentModeActive ? 'border-indigo-500/20 shadow-indigo-950/20' : ''
+                    }`}>
                         {/* Brillo de reflejo superior */}
-                        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                        <div className={`absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r ${
+                            isStudentModeActive ? 'from-transparent via-indigo-500/30 to-transparent' : 'from-transparent via-white/10 to-transparent'
+                        }`}></div>
+
+                        <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+                            <span className={`text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 ${
+                                isStudentModeActive ? 'text-indigo-400' : 'text-slate-400'
+                            }`}>
+                                {isStudentModeActive ? (
+                                    <>
+                                        <GraduationCap size={14} className="animate-pulse" />
+                                        Estudiantes
+                                    </>
+                                ) : (
+                                    'Profesional'
+                                )}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setIsStudentModeActive(!isStudentModeActive)}
+                                className={`text-[9px] font-black tracking-widest uppercase px-3 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer ${
+                                    isStudentModeActive
+                                        ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20'
+                                        : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                                }`}
+                            >
+                                {isStudentModeActive ? 'Ir a Profesional' : 'Acceso Estudiante'}
+                            </button>
+                        </div>
                         
                         <div className="flex mb-8 bg-white/[0.02] p-1 rounded-2xl border border-white/[0.04]">
                             <button 
+                                type="button"
                                 onClick={() => setIsLogin(true)}
-                                className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${isLogin ? 'bg-white text-slate-950 shadow-lg font-black' : 'text-slate-400 hover:text-slate-200'}`}
+                                className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
+                                    isLogin 
+                                        ? isStudentModeActive 
+                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20 font-black' 
+                                            : 'bg-white text-slate-950 shadow-lg font-black' 
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
                             >
                                 Ingresar
                             </button>
                             <button 
+                                type="button"
                                 onClick={() => setIsLogin(false)}
-                                className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${!isLogin ? 'bg-white text-slate-950 shadow-lg font-black' : 'text-slate-400 hover:text-slate-200'}`}
+                                className={`flex-1 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
+                                    !isLogin 
+                                        ? isStudentModeActive 
+                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20 font-black' 
+                                            : 'bg-white text-slate-950 shadow-lg font-black' 
+                                        : 'text-slate-400 hover:text-slate-200'
+                                }`}
                             >
                                 Registrarse
                             </button>
@@ -562,20 +611,27 @@ export const Login: React.FC = () => {
                                 </div>
                             )}
 
-                            <button 
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full bg-white hover:bg-slate-200 active:scale-[0.98] text-slate-950 font-bold py-4 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:pointer-events-none mt-4 cursor-pointer text-sm tracking-wider uppercase font-black"
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        {isLogin ? 'Entrar al Sistema' : 'Crear Cuenta'}
-                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </button>
+                             <button 
+                                 type="submit"
+                                 disabled={isLoading}
+                                 className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:pointer-events-none mt-4 cursor-pointer text-sm tracking-wider uppercase font-black ${
+                                     isStudentModeActive
+                                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-600/20'
+                                         : 'bg-white hover:bg-slate-200 active:scale-[0.98] text-slate-950'
+                                 }`}
+                             >
+                                 {isLoading ? (
+                                     <Loader2 className="w-5 h-5 animate-spin" />
+                                 ) : (
+                                     <>
+                                         {isLogin 
+                                             ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
+                                             : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta'
+                                         }
+                                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                     </>
+                                 )}
+                             </button>
                         </form>
 
                         {isLogin && (

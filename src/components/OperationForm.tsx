@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Tag, ReceiptText, Calculator, Zap, FileText, Package, Trash2, Edit, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { useStore, type PurchaseEntry, type SaleEntry } from '../store';
+import { useStore, isStudentMode, type PurchaseEntry, type SaleEntry } from '../store';
 import {
   TIPO_DOCS_COMPRAS, TIPO_DOCS_VENTAS,
   CTA_ABONO_COMPRAS, CTA_CARGO_VENTAS,
@@ -901,155 +901,157 @@ const OperationForm: React.FC<OperationFormProps> = ({ mode }) => {
             </div>
 
             {/* SECCIÓN 5: Tributos Especiales (SPOT, Retención, Percepción) */}
-            <div className="section-card relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-pld-magenta/5 blur-[40px] rounded-full pointer-events-none" />
-              <div className="section-card-header relative">
-                <ShieldCheck size={15} className="text-pld-magenta" />
-                <span>5. Tributos Especiales (SPOT, Retención, Percepción)</span>
-              </div>
-              <div className="flex flex-col gap-4 relative">
-                
-                {/* DETRACCIÓN SPOT */}
-                <div className="border border-app-border/40 p-3 rounded-lg bg-app-bg/25">
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="SPOT (Detracción)">
-                      <select 
-                        className="w-full text-sm font-bold" 
-                        value={form.spot_tipo} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          setForm(prev => ({ 
-                            ...prev, 
-                            spot_tipo: val,
-                            // Clear retencion if choosing detraction
-                            retencion_monto: val ? 0 : prev.retencion_monto,
-                            retencion_comprobante: val ? '' : prev.retencion_comprobante,
-                            retencion_fecha: val ? '' : prev.retencion_fecha
-                          }));
-                        }}
-                      >
-                        <option value="">NINGUNO</option>
-                        <option value="4%">4% (Servicios / Transportes)</option>
-                        <option value="10%">10% (Servicios Generales)</option>
-                        <option value="12%">12% (Otros contratos de const.)</option>
-                      </select>
-                    </FormField>
-                    <FormField label="Monto Detracción">
-                      <DecimalInput 
-                        className="w-full text-sm font-mono text-right font-bold bg-app-surface border border-app-border" 
-                        value={form.spot_monto} 
-                        onChange={v => setForm(prev => ({ ...prev, spot_monto: v }))} 
-                        readOnly={!!form.spot_tipo} // Read-only if auto-calculated
-                      />
-                    </FormField>
-                  </div>
-                  
-                  {form.spot_tipo && (
-                    <div className="grid grid-cols-2 gap-3 mt-3 animate-fade-in">
-                      <FormField label="Nº Constancia Depósito">
-                        <input 
-                          type="text" 
-                          placeholder="Nº Constancia"
-                          className="w-full text-sm font-mono" 
-                          value={form.spot_constancia} 
-                          onChange={e => setForm(prev => ({ ...prev, spot_constancia: e.target.value }))} 
-                        />
-                      </FormField>
-                      <FormField label="Fecha Pago Constancia">
-                        <DateInput 
-                          placeholder="DD/MM/YYYY"
-                          className="w-full text-sm font-mono" 
-                          value={form.spot_fecha} 
-                          onChange={v => setForm(prev => ({ ...prev, spot_fecha: v }))} 
-                        />
-                      </FormField>
-                      {mode === 'compra' && (!form.spot_constancia || !form.spot_fecha) && (
-                        <div className="col-span-2 mt-1 px-2.5 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded flex items-center gap-1.5 text-[9px] font-bold text-rose-500 uppercase">
-                          <AlertTriangle size={12} className="shrink-0" />
-                          <span>Crédito Fiscal IGV suspendido hasta registrar depósito</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+            {!isStudentMode() && (
+              <div className="section-card relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-pld-magenta/5 blur-[40px] rounded-full pointer-events-none" />
+                <div className="section-card-header relative">
+                  <ShieldCheck size={15} className="text-pld-magenta" />
+                  <span>5. Tributos Especiales (SPOT, Retención, Percepción)</span>
                 </div>
-
-                {/* RETENCIÓN IGV */}
-                <div className="border border-app-border/40 p-3 rounded-lg bg-app-bg/25">
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label={mode === 'compra' ? "Retención IGV (3%)" : "Retención Cliente (3%)"}>
-                      <DecimalInput 
-                        className="w-full text-sm font-mono text-right font-bold" 
-                        value={form.retencion_monto} 
-                        onChange={v => {
-                          setForm(prev => ({ 
-                            ...prev, 
-                            retencion_monto: v,
-                            // Clear spot if choosing retencion manually
-                            spot_tipo: v > 0 ? '' : prev.spot_tipo,
-                            spot_monto: v > 0 ? 0 : prev.spot_monto,
-                            spot_constancia: v > 0 ? '' : prev.spot_constancia,
-                            spot_fecha: v > 0 ? '' : prev.spot_fecha
-                          }));
-                        }} 
-                      />
-                    </FormField>
-                    {mode === 'compra' && !currentCompany?.agente_retencion && (
-                      <div className="flex items-center text-[9px] text-app-muted leading-tight uppercase font-medium">
-                        (Habilitar Agente de Retención en Panel Principal para cálculo automático)
-                      </div>
-                    )}
-                    {form.retencion_monto > 0 && (
-                      <div className="col-span-2 grid grid-cols-2 gap-3 mt-3 animate-fade-in">
-                        <FormField label="Nº Comprobante Retención">
+                <div className="flex flex-col gap-4 relative">
+                  
+                  {/* DETRACCIÓN SPOT */}
+                  <div className="border border-app-border/40 p-3 rounded-lg bg-app-bg/25">
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField label="SPOT (Detracción)">
+                        <select 
+                          className="w-full text-sm font-bold" 
+                          value={form.spot_tipo} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            setForm(prev => ({ 
+                              ...prev, 
+                              spot_tipo: val,
+                              // Clear retencion if choosing detraction
+                              retencion_monto: val ? 0 : prev.retencion_monto,
+                              retencion_comprobante: val ? '' : prev.retencion_comprobante,
+                              retencion_fecha: val ? '' : prev.retencion_fecha
+                            }));
+                          }}
+                        >
+                          <option value="">NINGUNO</option>
+                          <option value="4%">4% (Servicios / Transportes)</option>
+                          <option value="10%">10% (Servicios Generales)</option>
+                          <option value="12%">12% (Otros contratos de const.)</option>
+                        </select>
+                      </FormField>
+                      <FormField label="Monto Detracción">
+                        <DecimalInput 
+                          className="w-full text-sm font-mono text-right font-bold bg-app-surface border border-app-border" 
+                          value={form.spot_monto} 
+                          onChange={v => setForm(prev => ({ ...prev, spot_monto: v }))} 
+                          readOnly={!!form.spot_tipo} // Read-only if auto-calculated
+                        />
+                      </FormField>
+                    </div>
+                    
+                    {form.spot_tipo && (
+                      <div className="grid grid-cols-2 gap-3 mt-3 animate-fade-in">
+                        <FormField label="Nº Constancia Depósito">
                           <input 
                             type="text" 
-                            placeholder="Comprobante"
+                            placeholder="Nº Constancia"
                             className="w-full text-sm font-mono" 
-                            value={form.retencion_comprobante} 
-                            onChange={e => setForm(prev => ({ ...prev, retencion_comprobante: e.target.value }))} 
+                            value={form.spot_constancia} 
+                            onChange={e => setForm(prev => ({ ...prev, spot_constancia: e.target.value }))} 
                           />
                         </FormField>
-                        <FormField label="Fecha Comprobante">
+                        <FormField label="Fecha Pago Constancia">
                           <DateInput 
                             placeholder="DD/MM/YYYY"
                             className="w-full text-sm font-mono" 
-                            value={form.retencion_fecha} 
-                            onChange={v => setForm(prev => ({ ...prev, retencion_fecha: v }))} 
+                            value={form.spot_fecha} 
+                            onChange={v => setForm(prev => ({ ...prev, spot_fecha: v }))} 
                           />
                         </FormField>
+                        {mode === 'compra' && (!form.spot_constancia || !form.spot_fecha) && (
+                          <div className="col-span-2 mt-1 px-2.5 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded flex items-center gap-1.5 text-[9px] font-bold text-rose-500 uppercase">
+                            <AlertTriangle size={12} className="shrink-0" />
+                            <span>Crédito Fiscal IGV suspendido hasta registrar depósito</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
 
-                {/* PERCEPCIÓN IGV (Solo compras) */}
-                {mode === 'compra' && (
+                  {/* RETENCIÓN IGV */}
                   <div className="border border-app-border/40 p-3 rounded-lg bg-app-bg/25">
                     <div className="grid grid-cols-2 gap-3">
-                      <FormField label="Percepción IGV">
+                      <FormField label={mode === 'compra' ? "Retención IGV (3%)" : "Retención Cliente (3%)"}>
                         <DecimalInput 
                           className="w-full text-sm font-mono text-right font-bold" 
-                          value={form.percepcion_monto} 
-                          onChange={v => setForm(prev => ({ ...prev, percepcion_monto: v }))} 
+                          value={form.retencion_monto} 
+                          onChange={v => {
+                            setForm(prev => ({ 
+                              ...prev, 
+                              retencion_monto: v,
+                              // Clear spot if choosing retencion manually
+                              spot_tipo: v > 0 ? '' : prev.spot_tipo,
+                              spot_monto: v > 0 ? 0 : prev.spot_monto,
+                              spot_constancia: v > 0 ? '' : prev.spot_constancia,
+                              spot_fecha: v > 0 ? '' : prev.spot_fecha
+                            }));
+                          }} 
                         />
                       </FormField>
-                      {form.percepcion_monto > 0 && (
-                        <FormField label="Nº Comprobante Percepción">
-                          <input 
-                            type="text" 
-                            placeholder="Comprobante"
-                            className="w-full text-sm font-mono" 
-                            value={form.percepcion_comprobante} 
-                            onChange={e => setForm(prev => ({ ...prev, percepcion_comprobante: e.target.value }))} 
-                          />
-                        </FormField>
+                      {mode === 'compra' && !currentCompany?.agente_retencion && (
+                        <div className="flex items-center text-[9px] text-app-muted leading-tight uppercase font-medium">
+                          (Habilitar Agente de Retención en Panel Principal para cálculo automático)
+                        </div>
+                      )}
+                      {form.retencion_monto > 0 && (
+                        <div className="col-span-2 grid grid-cols-2 gap-3 mt-3 animate-fade-in">
+                          <FormField label="Nº Comprobante Retención">
+                            <input 
+                              type="text" 
+                              placeholder="Comprobante"
+                              className="w-full text-sm font-mono" 
+                              value={form.retencion_comprobante} 
+                              onChange={e => setForm(prev => ({ ...prev, retencion_comprobante: e.target.value }))} 
+                            />
+                          </FormField>
+                          <FormField label="Fecha Comprobante">
+                            <DateInput 
+                              placeholder="DD/MM/YYYY"
+                              className="w-full text-sm font-mono" 
+                              value={form.retencion_fecha} 
+                              onChange={v => setForm(prev => ({ ...prev, retencion_fecha: v }))} 
+                            />
+                          </FormField>
+                        </div>
                       )}
                     </div>
                   </div>
-                )}
 
+                  {/* PERCEPCIÓN IGV (Solo compras) */}
+                  {mode === 'compra' && (
+                    <div className="border border-app-border/40 p-3 rounded-lg bg-app-bg/25">
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField label="Percepción IGV">
+                          <DecimalInput 
+                            className="w-full text-sm font-mono text-right font-bold" 
+                            value={form.percepcion_monto} 
+                            onChange={v => setForm(prev => ({ ...prev, percepcion_monto: v }))} 
+                          />
+                        </FormField>
+                        {form.percepcion_monto > 0 && (
+                          <FormField label="Nº Comprobante Percepción">
+                            <input 
+                              type="text" 
+                              placeholder="Comprobante"
+                              className="w-full text-sm font-mono" 
+                              value={form.percepcion_comprobante} 
+                              onChange={e => setForm(prev => ({ ...prev, percepcion_comprobante: e.target.value }))} 
+                            />
+                          </FormField>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* ═══ Preview Asiento ═══ */}

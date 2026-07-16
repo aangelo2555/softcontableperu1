@@ -59,6 +59,47 @@ router.post('/register', authLimiter, async (req, res) => {
     }
 });
 
+// --- REGISTRO ESTUDIANTE ---
+router.post('/register-student', authLimiter, async (req, res) => {
+    try {
+        const { email, password, name } = req.body;
+        console.log(`[AUTH] Registro de estudiante: ${email}`);
+
+        const existingUser = await dbManager.getUserByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ success: false, error: 'El correo ya está registrado' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = {
+            id: uuidv4(),
+            email,
+            password: hashedPassword,
+            name,
+            role: 'estudiante'
+        };
+
+        await dbManager.createUser(newUser);
+
+        // Auto-login: generar token directamente
+        const token = jwt.sign(
+            { id: newUser.id, email: newUser.email, name: newUser.name, role: 'estudiante' },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: { id: newUser.id, email: newUser.email, name: newUser.name, role: 'estudiante' }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // --- LOGIN ---
 router.post('/login', authLimiter, async (req, res) => {
     try {
@@ -78,7 +119,11 @@ router.post('/login', authLimiter, async (req, res) => {
         }
 
         const normalizedEmail = user.email.trim().toLowerCase();
-        const role = (user.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com') ? 'admin' : 'user';
+        // Preserve estudiante role from DB; only promote to admin for admin emails
+        let role = user.role || 'user';
+        if (role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com') {
+            role = 'admin';
+        }
 
         // Crear Token
         const token = jwt.sign(
@@ -98,3 +143,4 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 module.exports = router;
+

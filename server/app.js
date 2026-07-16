@@ -179,6 +179,11 @@ app.use('/api/db', dbRoutes);
 const isSafeSql = (sql, userRole) => {
     const cleanSql = sql.trim().toUpperCase();
     
+    // Bloquear DELETE para estudiantes en consultas SQL directas
+    if (userRole === 'estudiante' && cleanSql.includes('DELETE')) {
+        return false;
+    }
+
     // Bloquear DDL y comandos de control de base de datos
     const dangerousKeywords = [
         'DROP', 'ALTER', 'CREATE', 'TRUNCATE', 'RENAME', 'GRANT', 'REVOKE', 
@@ -210,7 +215,35 @@ app.post('/api/db/execute', authMiddleware, inspectMiddleware, async (req, res) 
         // Validar e impedir inyección SQL peligrosa o consultas DDL/users no autorizadas
         const userRole = req.user?.role;
         if (!isSafeSql(sql, userRole)) {
-            return res.status(403).json({ success: false, error: 'Consulta SQL no permitida por razones de seguridad.' });
+            return res.status(403).json({ success: false, error: 'Consulta SQL no permitida por razones de seguridad (o bloqueada en modo estudiante).' });
+        }
+
+        // --- Validar límites para modo estudiante ---
+        if (userRole === 'estudiante') {
+            const cleanSql = sql.trim().toUpperCase();
+            if (cleanSql.includes('INSERT')) {
+                let targetTable = '';
+                if (cleanSql.includes('INTO PURCHASES')) targetTable = 'purchases';
+                else if (cleanSql.includes('INTO SALES')) targetTable = 'sales';
+                else if (cleanSql.includes('INTO JOURNAL') || cleanSql.includes('INTO ASIENTOS')) targetTable = 'journal';
+
+                if (targetTable) {
+                    const countRes = await db.queryAll(
+                        USE_POSTGRES 
+                            ? `SELECT COUNT(*) as count FROM ${targetTable} WHERE user_id = $1` 
+                            : `SELECT COUNT(*) as count FROM ${targetTable} WHERE user_id = ?`,
+                        [req.targetUserId]
+                    );
+                    const currentCount = parseInt(countRes[0]?.count || 0);
+                    const limit = (targetTable === 'purchases' || targetTable === 'sales') ? 50 : 250;
+                    if (currentCount >= limit) {
+                        return res.status(403).json({ 
+                            success: false, 
+                            error: `[Límite Excedido] En modo estudiante solo se permite un máximo de ${limit} registros en la tabla ${targetTable}.` 
+                        });
+                    }
+                }
+            }
         }
         
         // ✅ CONVERTIR $N a ? para SQLite
@@ -345,6 +378,23 @@ app.post('/api/db/purchases/batch', async (req, res) => {
             return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
         }
 
+        // --- Limite en modo estudiante ---
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            const countRes = await db.queryAll(
+                USE_POSTGRES 
+                    ? `SELECT COUNT(*) as count FROM purchases WHERE user_id = $1` 
+                    : `SELECT COUNT(*) as count FROM purchases WHERE user_id = ?`,
+                [userId]
+            );
+            const currentCount = parseInt(countRes[0]?.count || 0);
+            if (currentCount + items.length > 50) {
+                return res.status(403).json({ 
+                    error: `[Límite Excedido] En modo estudiante solo se permite un máximo de 50 compras. Tienes ${currentCount} registros registrados.` 
+                });
+            }
+        }
+
         await db.transaction(async (client) => {
             for (const p of items) {
                 if (USE_POSTGRES) {
@@ -402,6 +452,23 @@ app.post('/api/db/sales/batch', async (req, res) => {
             return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
         }
 
+        // --- Limite en modo estudiante ---
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            const countRes = await db.queryAll(
+                USE_POSTGRES 
+                    ? `SELECT COUNT(*) as count FROM sales WHERE user_id = $1` 
+                    : `SELECT COUNT(*) as count FROM sales WHERE user_id = ?`,
+                [userId]
+            );
+            const currentCount = parseInt(countRes[0]?.count || 0);
+            if (currentCount + items.length > 50) {
+                return res.status(403).json({ 
+                    error: `[Límite Excedido] En modo estudiante solo se permite un máximo de 50 ventas. Tienes ${currentCount} registros registrados.` 
+                });
+            }
+        }
+
         await db.transaction(async (client) => {
             for (const v of items) {
                 if (USE_POSTGRES) {
@@ -457,6 +524,23 @@ app.post('/api/db/journal/batch', async (req, res) => {
         const userId = req.targetUserId;
         if (!workspace_id || !Array.isArray(items)) {
             return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        // --- Limite en modo estudiante ---
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            const countRes = await db.queryAll(
+                USE_POSTGRES 
+                    ? `SELECT COUNT(*) as count FROM journal WHERE user_id = $1` 
+                    : `SELECT COUNT(*) as count FROM journal WHERE user_id = ?`,
+                [userId]
+            );
+            const currentCount = parseInt(countRes[0]?.count || 0);
+            if (currentCount + items.length > 250) {
+                return res.status(403).json({ 
+                    error: `[Límite Excedido] En modo estudiante solo se permite un máximo de 250 asientos/apuntes en el Libro Diario. Tienes ${currentCount} registros registrados.` 
+                });
+            }
         }
 
         await db.transaction(async (client) => {
@@ -571,6 +655,23 @@ app.post('/api/db/asientos/batch', async (req, res) => {
             return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
         }
 
+        // --- Limite en modo estudiante ---
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            const countRes = await db.queryAll(
+                USE_POSTGRES 
+                    ? `SELECT COUNT(*) as count FROM asientos WHERE user_id = $1` 
+                    : `SELECT COUNT(*) as count FROM asientos WHERE user_id = ?`,
+                [userId]
+            );
+            const currentCount = parseInt(countRes[0]?.count || 0);
+            if (currentCount + items.length > 250) {
+                return res.status(403).json({ 
+                    error: `[Límite Excedido] En modo estudiante solo se permite un máximo de 250 asientos. Tienes ${currentCount} registros registrados.` 
+                });
+            }
+        }
+
         await db.transaction(async (client) => {
             for (const a of items) {
                 const headerStr = typeof a.header === 'string' ? a.header : JSON.stringify(a.header || {});
@@ -602,6 +703,10 @@ app.post('/api/db/asientos/batch', async (req, res) => {
 // Delete Purchase by ID
 app.delete('/api/db/purchases/:id', async (req, res) => {
     try {
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
+        }
         const { id } = req.params;
         const { workspace_id } = req.query;
         const userId = req.targetUserId;
@@ -619,6 +724,10 @@ app.delete('/api/db/purchases/:id', async (req, res) => {
 // Delete Sale by ID
 app.delete('/api/db/sales/:id', async (req, res) => {
     try {
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
+        }
         const { id } = req.params;
         const { workspace_id } = req.query;
         const userId = req.targetUserId;
@@ -636,6 +745,10 @@ app.delete('/api/db/sales/:id', async (req, res) => {
 // Delete Honorarios by ID
 app.delete('/api/db/honorarios/:id', async (req, res) => {
     try {
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
+        }
         const { id } = req.params;
         const userId = req.targetUserId;
         await db.run('DELETE FROM honorarios WHERE id = $1 AND user_id = $2', [id, userId]);
@@ -648,6 +761,10 @@ app.delete('/api/db/honorarios/:id', async (req, res) => {
 // Delete Asiento by ID
 app.delete('/api/db/asientos/:id', async (req, res) => {
     try {
+        const userRole = req.user?.role;
+        if (userRole === 'estudiante') {
+            return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
+        }
         const { id } = req.params;
         const { workspace_id } = req.query;
         const userId = req.targetUserId;

@@ -44,7 +44,9 @@ import { Login } from './components/Login';
 import { AdminView } from './components/AdminView';
 import { AIKnowledgeView } from './components/AIKnowledgeView';
 import { SuggestionBox } from './components/SuggestionBox';
-import { ShieldCheck, AlertTriangle } from 'lucide-react';
+import StudentDashboard from './components/StudentDashboard';
+import { isStudentMode } from './store';
+import { ShieldCheck, AlertTriangle, GraduationCap } from 'lucide-react';
 
 import {
   LayoutDashboard,
@@ -183,13 +185,60 @@ const SIDEBAR_GROUPS: TabGroup[] = [
   },
 ];
 
+// Student Sidebar Config (11 modules)
+const STUDENT_SIDEBAR_GROUPS: TabGroup[] = [
+  {
+    groupLabel: 'Inicio',
+    groupIcon: GraduationCap,
+    items: [
+      { id: 'EMPRESA', label: 'Panel de Práctica', icon: GraduationCap },
+    ],
+  },
+  {
+    groupLabel: 'Archivos Maestros',
+    groupIcon: Briefcase,
+    items: [
+      { id: 'PLAN', label: 'Plan Contable', icon: Files },
+      { id: 'DATOS', label: 'Tablas Generales', icon: Database },
+    ],
+  },
+  {
+    groupLabel: 'Operaciones',
+    groupIcon: FileText,
+    items: [
+      { id: 'COMPRAS', label: 'Compras', icon: ShoppingCart },
+      { id: 'VENTAS', label: 'Ventas', icon: Tag },
+      { id: 'ASIENTOS', label: 'Asientos Diarios', icon: BookText },
+    ],
+  },
+  {
+    groupLabel: 'Libros Oficiales',
+    groupIcon: BookOpen,
+    items: [
+      { id: 'DIARIO', label: 'Libro Diario', icon: CalendarDays },
+      { id: 'MAYOR', label: 'Libro Mayor', icon: BarChart3 },
+    ],
+  },
+  {
+    groupLabel: 'Estados Financieros',
+    groupIcon: PieChart,
+    items: [
+      { id: 'HHTT', label: 'Balance de Comprobación', icon: Scale },
+      { id: 'EGYP', label: 'Estado de Resultados', icon: Calculator },
+      { id: 'BALANCE', label: 'Situación Financiera', icon: Landmark },
+    ],
+  },
+];
+
 const TAB_LABELS: Record<string, string> = {};
 SIDEBAR_GROUPS.forEach(g => g.items.forEach(i => { TAB_LABELS[i.id] = i.label; }));
+STUDENT_SIDEBAR_GROUPS.forEach(g => g.items.forEach(i => { TAB_LABELS[i.id] = i.label; }));
 TAB_LABELS['BUZON'] = 'Buzón Electrónico';
 TAB_LABELS['AI_KNOWLEDGE'] = 'Base IA (RAG)';
 
 function findGroupForTab(tabId: string): string | null {
-  for (const group of SIDEBAR_GROUPS) {
+  const groups = isStudentMode() ? STUDENT_SIDEBAR_GROUPS : SIDEBAR_GROUPS;
+  for (const group of groups) {
     if (group.items.some(item => item.id === tabId)) return group.groupLabel;
   }
   return null;
@@ -317,7 +366,7 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (activeTab) {
-      case 'EMPRESA': return <EmpresaView />;
+      case 'EMPRESA': return isStudentMode() ? <StudentDashboard /> : <EmpresaView />;
       case 'CLIENTES': return <ClientesView />;
       case 'PLAN': return <PlanView />;
       case 'VENTAS': return <VentasView />;
@@ -351,7 +400,7 @@ const App: React.FC = () => {
       case 'FINANCE_NOTES': return <FinanceNotesView />;
       case 'ADMIN': return <AdminView />;
       case 'AI_KNOWLEDGE': return <AIKnowledgeView />;
-      default: return <EmpresaView />;
+      default: return isStudentMode() ? <StudentDashboard /> : <EmpresaView />;
     }
   };
 
@@ -566,9 +615,9 @@ const App: React.FC = () => {
 
   const unreadBuzon = buzonMensajes?.filter(m => m.estado === 'no_leido').length ?? 0;
 
-
   const filteredGroups = React.useMemo(() => {
-    return SIDEBAR_GROUPS.map(group => {
+    const rawGroups = isStudentMode() ? STUDENT_SIDEBAR_GROUPS : SIDEBAR_GROUPS;
+    return rawGroups.map(group => {
       const items = group.items.filter(item => isTabEnabled(item.id, currentCompany));
       return { ...group, items };
     }).filter(group => group.items.length > 0);
@@ -667,8 +716,12 @@ const App: React.FC = () => {
                       isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
                     } ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
+                        ? isStudentMode()
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
+                          : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                        : isStudentMode()
+                          ? 'text-app-muted hover:bg-app-hover hover:text-indigo-500'
+                          : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -688,11 +741,17 @@ const App: React.FC = () => {
                   className={`flex items-center w-full rounded-lg transition-all text-[12px] font-bold tracking-wide uppercase ${
                     isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
                   } ${
-                    isActiveGroup && !isExpanded ? 'text-blue-600 bg-blue-50/50' : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
+                    isActiveGroup && !isExpanded
+                      ? isStudentMode()
+                        ? 'text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
+                        : 'text-blue-600 bg-blue-50/50'
+                      : isStudentMode()
+                        ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
+                        : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? 'text-blue-600' : 'text-app-muted'} />
+                    <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
                     {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
                   </div>
                   {!isSidebarCollapsed && (
@@ -712,8 +771,12 @@ const App: React.FC = () => {
                           onClick={() => setActiveTab(tab.id)}
                           className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${
                             isActive
-                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                              : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
+                              ? isStudentMode()
+                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
+                                : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                              : isStudentMode()
+                                ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
+                                : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
                           }`}
                         >
                           <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
@@ -731,12 +794,12 @@ const App: React.FC = () => {
         {/* User Profile & Logout (Full) */}
         <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate" translate="no">
+            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600 shadow-indigo-600/10' : 'from-blue-600 to-indigo-600 shadow-blue-600/10'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate`} translate="no">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-              <p className="text-[9px] text-blue-500 font-bold uppercase tracking-wider">Usuario</p>
+              <p className={`text-[9px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
             </div>
           </div>
           <button
@@ -750,7 +813,7 @@ const App: React.FC = () => {
 
         {/* User Profile & Logout (Collapsed) */}
         <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md shadow-blue-600/10 notranslate animate-fade-in" translate="no" title={userName}>
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600 shadow-indigo-600/10' : 'from-blue-600 to-indigo-600 shadow-blue-600/10'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate animate-fade-in`} translate="no" title={userName}>
             {userInitial}
           </div>
           <button
@@ -918,45 +981,48 @@ const App: React.FC = () => {
                 )}
               </div>
             )}
+            {!isStudentMode() && (
+              <>
+                {/* Notifications */}
+                <button
+                  onClick={() => setActiveTab('BUZON')}
+                  className="relative p-2 text-app-muted hover:text-blue-600 transition-colors"
+                  title="Buzón Electrónico"
+                >
+                  <Bell size={20} strokeWidth={1.5} />
+                  {unreadBuzon > 0 && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
+                  )}
+                </button>
 
-            {/* Notifications */}
-            <button
-              onClick={() => setActiveTab('BUZON')}
-              className="relative p-2 text-app-muted hover:text-blue-600 transition-colors"
-              title="Buzón Electrónico"
-            >
-              <Bell size={20} strokeWidth={1.5} />
-              {unreadBuzon > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
-              )}
-            </button>
+                {/* SIRE Button */}
+                <button
+                  onClick={() => setActiveTab('SIRE')}
+                  className={`p-2 transition-colors ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
+                  title="Módulo SIRE (Descargas API)"
+                >
+                  <CloudDownload size={20} strokeWidth={1.5} />
+                </button>
 
-            {/* SIRE Button */}
-            <button
-              onClick={() => setActiveTab('SIRE')}
-              className={`p-2 transition-colors ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
-              title="Módulo SIRE (Descargas API)"
-            >
-              <CloudDownload size={20} strokeWidth={1.5} />
-            </button>
-
-            {/* Backup Button */}
-            {isAdmin && (
-              <button
-                onClick={handleBackup}
-                disabled={isBackingUp}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${
-                  isBackingUp 
-                    ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed' 
-                    : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'
-                }`}
-                title="Crear copia de seguridad"
-              >
-                {isBackingUp ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
-                <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
-                  {isBackingUp ? 'Procesando...' : 'Backup'}
-                </span>
-              </button>
+                {/* Backup Button */}
+                {isAdmin && (
+                  <button
+                    onClick={handleBackup}
+                    disabled={isBackingUp}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${
+                      isBackingUp 
+                        ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed' 
+                        : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'
+                    }`}
+                    title="Crear copia de seguridad"
+                  >
+                    {isBackingUp ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
+                    <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
+                      {isBackingUp ? 'Procesando...' : 'Backup'}
+                    </span>
+                  </button>
+                )}
+              </>
             )}
 
             {/* Massive Excel Download */}
