@@ -6,6 +6,8 @@
 
 const { Pool, types } = require('pg');
 const { encrypt, decrypt } = require('./cryptoUtils');
+const fs = require('fs');
+const path = require('path');
 
 // Force node-postgres to return NUMERIC (1700) and FLOAT types as native Numbers to prevent string concatenation bugs
 types.setTypeParser(1700, val => val === null ? 0 : parseFloat(val));
@@ -291,6 +293,60 @@ const db = {
         
         // Plan contable del usuario
         let plan = await query('SELECT * FROM plan_global WHERE user_id = $1', [userId]);
+        
+        // Si el plan contable está vacío para este usuario en Postgres, realizar auto-semillado rápido (server-side seeding)
+        if (!plan.rows || plan.rows.length === 0) {
+            try {
+                const planPath = path.join(__dirname, 'planContable.json');
+                if (fs.existsSync(planPath)) {
+                    const fullPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+                    console.log(`[DB] Auto-semillado de plan contable para usuario ${userId} (${fullPlan.length} cuentas)...`);
+                    
+                    // Insertar en lotes de 100 para no exceder el límite de parámetros de PostgreSQL
+                    const batchSize = 100;
+                    for (let i = 0; i < fullPlan.length; i += batchSize) {
+                        const batch = fullPlan.slice(i, i + batchSize);
+                        const valueRows = [];
+                        const params = [userId];
+                        let paramIdx = 2;
+                        
+                        for (const p of batch) {
+                            valueRows.push(`($${paramIdx++}, $1, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
+                            params.push(
+                                p.cta,
+                                p.description || '',
+                                p.type || '',
+                                p.reqCenCos ? 1 : 0,
+                                p.amarreDebe || null,
+                                p.amarreHaber || null,
+                                p.div !== undefined ? p.div : 1,
+                                p.cta_cc1 || p.amarreDebe || null,
+                                p.pct_cc1 !== undefined ? p.pct_cc1 : (p.amarreDebe ? 100.0 : 0.0),
+                                p.cta_cc2 || null,
+                                p.pct_cc2 || 0.0,
+                                p.cta_cc3 || null,
+                                p.pct_cc3 || 0.0,
+                                p.destino_haber || p.amarreHaber || null,
+                                p.niif18_category || null
+                            );
+                        }
+                        
+                        const queryStr = `
+                            INSERT INTO plan_global (
+                                cta, user_id, description, type, reqCenCos, amarreDebe, amarreHaber,
+                                div, cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber, niif18_category
+                            ) VALUES ${valueRows.join(',')}
+                            ON CONFLICT (cta, user_id) DO NOTHING
+                        `;
+                        await query(queryStr, params);
+                    }
+                    console.log(`[DB] Auto-semillado de plan contable completado para usuario ${userId}`);
+                    plan = await query('SELECT * FROM plan_global WHERE user_id = $1', [userId]);
+                }
+            } catch (err) {
+                console.error('[DB ERROR] Error en auto-semillado de plan contable:', err);
+            }
+        }
         
         // Mapear asientos parseando header_json y lines_json
         const mapAsientos = (asientos.rows || []).map(a => {
