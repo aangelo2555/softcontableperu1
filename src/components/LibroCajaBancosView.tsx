@@ -364,7 +364,7 @@ const LibroCajaBancosView: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
-        <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-x-auto bg-app-surface custom-scrollbar">
+        <div className="w-full border border-app-border shadow-2xl rounded-lg overflow-x-auto bg-app-surface custom-scrollbar">
         <table id="libro-caja-table" className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface shadow-xl">
 
           {/* ──── THEAD ──── */}
@@ -376,12 +376,12 @@ const LibroCajaBancosView: React.FC = () => {
                   <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO<br />O CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
                   <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-16">FECHA DE<br />LA<br />OPERACIÓN</th>
                   <th rowSpan={2} className="px-2 py-3 border border-app-border text-center min-w-[220px]">DESCRIPCIÓN DE<br />LA OPERACIÓN</th>
-                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-blue-600/5">CUENTA CONTABLE ASOCIADA</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-app-hover/50">CUENTA CONTABLE ASOCIADA</th>
                   <th colSpan={2} className="px-2 py-2 border border-app-border text-center">SALDOS Y MOVIMIENTOS</th>
                 </tr>
                 <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
-                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-blue-600/5">CÓDIGO</th>
-                  <th className="px-2 py-2 border border-app-border text-center min-w-[130px] bg-blue-600/5">DENOMINACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-app-hover/30">CÓDIGO</th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[130px] bg-app-hover/30">DENOMINACIÓN</th>
                   <th className="px-2 py-2 border border-app-border text-center w-24">DEUDOR</th>
                   <th className="px-2 py-2 border border-app-border text-center w-24">ACREEDOR</th>
                 </tr>
@@ -391,8 +391,8 @@ const LibroCajaBancosView: React.FC = () => {
               <>
                 <tr className="bg-app-surface text-app-text text-[7.5px] font-black uppercase">
                   <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO O<br />CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
-                  <th colSpan={4} className="px-2 py-2 border border-app-border text-center bg-blue-600/5">OPERACIONES BANCARIAS</th>
-                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-indigo-600/5">CUENTA CONTABLE ASOCIADA</th>
+                  <th colSpan={4} className="px-2 py-2 border border-app-border text-center bg-app-hover/50">OPERACIONES BANCARIAS</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-app-hover/50">CUENTA CONTABLE ASOCIADA</th>
                   <th colSpan={2} className="px-2 py-2 border border-app-border text-center">SALDOS Y MOVIMIENTOS</th>
                 </tr>
                 <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
@@ -400,8 +400,8 @@ const LibroCajaBancosView: React.FC = () => {
                   <th className="px-2 py-2 border border-app-border text-center w-14">MEDIO<br />DE PAGO<br /><span className="text-[5.5px] opacity-70">(TABLA 1)</span></th>
                   <th className="px-2 py-2 border border-app-border text-center min-w-[150px]">DESCRIPCIÓN<br />DE LA<br />OPERACIÓN</th>
                   <th className="px-2 py-2 border border-app-border text-center min-w-[160px]">APELLIDOS Y NOMBRES,<br />DENOMINACIÓN<br />O RAZÓN SOCIAL</th>
-                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-indigo-600/5">CÓDIGO</th>
-                  <th className="px-2 py-2 border border-app-border text-center min-w-[100px] bg-indigo-600/5">DENOMINACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-app-hover/30">CÓDIGO</th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[100px] bg-app-hover/30">DENOMINACIÓN</th>
                   <th className="px-2 py-2 border border-app-border text-center w-24">DEUDOR</th>
                   <th className="px-2 py-2 border border-app-border text-center w-24">ACREEDOR</th>
                 </tr>
@@ -523,6 +523,7 @@ const LibroCajaBancosView: React.FC = () => {
         </table>
         </div>
       </div>
+      </div>
 
       {/* ═══ FOOTER INFO ═══ */}
       <div className="px-5 py-3 bg-app-surface border-t border-app-border flex justify-between items-center text-[8px] font-black uppercase text-app-muted print:hidden shrink-0">
@@ -545,8 +546,7 @@ const LibroCajaBancosView: React.FC = () => {
         </div>
       </div>
 
-        </div>
-      </div>
+    </div>
   );
 };
 

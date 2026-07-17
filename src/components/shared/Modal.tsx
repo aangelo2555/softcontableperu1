@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -14,7 +15,7 @@ interface ModalProps {
 const Modal: React.FC<ModalProps> = ({ open, onClose, title, subtitle, children, maxWidth = 'max-w-lg', accentColor }) => {
   if (!open) return null;
   
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div 
         className={`bg-app-surface w-full ${maxWidth} rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.4)] overflow-hidden border border-app-border animate-slide-up`} 
@@ -41,7 +42,8 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, subtitle, children,
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

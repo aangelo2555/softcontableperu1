@@ -1405,7 +1405,7 @@ app.get('/api/periods/:ruc', authMiddleware, inspectMiddleware, async (req, res)
     try {
         const { ruc } = req.params;
         const userId = req.targetUserId;
-        const periods = db.queryAll(
+        const periods = await db.queryAll(
             `SELECT * FROM accounting_periods WHERE workspace_id = ? AND user_id = ?`,
             [ruc, userId]
         );
@@ -1425,7 +1425,7 @@ app.get('/api/periods/:ruc/stale-status', authMiddleware, inspectMiddleware, asy
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo (YYYY-MM).' });
         }
-        const rows = db.queryAll(
+        const rows = await db.queryAll(
             `SELECT module, is_stale, stale_since, last_sync, version 
              FROM period_versions 
              WHERE workspace_id = ? AND user_id = ? AND periodo = ?`,
@@ -1456,30 +1456,32 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         const checks = [];
 
         // Check 1: Partida Doble Cuadrada
-        const journalBalance = db.queryAll(
+        const journalBalanceRows = await db.queryAll(
             `SELECT COALESCE(SUM(debe), 0) as total_debe, COALESCE(SUM(haber), 0) as total_haber
              FROM journal WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}`,
             [ruc, userId]
-        )[0] || { total_debe: 0, total_haber: 0 };
-        const diff = Math.abs(journalBalance.total_debe - journalBalance.total_haber);
+        );
+        const journalBalance = journalBalanceRows[0] || { total_debe: 0, total_haber: 0 };
+        const diff = Math.abs(Number(journalBalance.total_debe) - Number(journalBalance.total_haber));
         checks.push({
             id: 'PARTIDA_DOBLE',
             nombre: 'Partida Doble Cuadrada',
             descripcion: 'SUM(DEBE) = SUM(HABER) en el Libro Diario del período',
             ok: diff <= 0.01,
             detalle: diff <= 0.01
-                ? `Cuadrado: DEBE S/ ${journalBalance.total_debe.toFixed(2)} = HABER S/ ${journalBalance.total_haber.toFixed(2)}`
-                : `DESCUADRE: DEBE S/ ${journalBalance.total_debe.toFixed(2)} vs HABER S/ ${journalBalance.total_haber.toFixed(2)} (diff: S/ ${diff.toFixed(2)})`,
+                ? `Cuadrado: DEBE S/ ${Number(journalBalance.total_debe).toFixed(2)} = HABER S/ ${Number(journalBalance.total_haber).toFixed(2)}`
+                : `DESCUADRE: DEBE S/ ${Number(journalBalance.total_debe).toFixed(2)} vs HABER S/ ${Number(journalBalance.total_haber).toFixed(2)} (diff: S/ ${diff.toFixed(2)})`,
             bloqueante: true
         });
 
         // Check 2: SIRE sin riesgos críticos
-        const sireRisk = db.queryAll(
+        const sireRiskRows = await db.queryAll(
             `SELECT COUNT(*) as count FROM purchases
              WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}
                AND estado_sire IN ('RIESGO_CRITICO', 'RIESGO_ALTO')`,
             [ruc, userId]
-        )[0]?.count || 0;
+        );
+        const sireRisk = parseInt(sireRiskRows[0]?.count || 0, 10);
         checks.push({
             id: 'SIRE_LIMPIO',
             nombre: 'SIRE sin Riesgos Críticos',
@@ -1490,11 +1492,12 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         });
 
         // Check 3: Cuenta 40112 saldada (Uso común)
-        const prorrataIGV = db.queryAll(
+        const prorrataIGVRows = await db.queryAll(
             `SELECT COALESCE(SUM(debe) - SUM(haber), 0) as saldo
              FROM journal WHERE workspace_id = ? AND user_id = ? AND cta = '40112' AND ${dateFilter}`,
             [ruc, userId]
-        )[0]?.saldo || 0;
+        );
+        const prorrataIGV = Number(prorrataIGVRows[0]?.saldo || 0);
         checks.push({
             id: 'PRORRATA_IGV',
             nombre: 'Prorrata IGV Aplicada',
@@ -1505,29 +1508,31 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         });
 
         // Check 4: Depreciación cargada
-        const fixedAssets = db.queryAll(
+        const fixedAssetsRows = await db.queryAll(
             `SELECT COUNT(*) as total, SUM(CASE WHEN deprec_ejercicio > 0 THEN 1 ELSE 0 END) as con_deprec
              FROM fixed_assets WHERE workspace_id = ? AND user_id = ?`,
             [ruc, userId]
-        )[0] || { total: 0, con_deprec: 0 };
-        const sinDeprec = fixedAssets.total - fixedAssets.con_deprec;
+        );
+        const fixedAssets = fixedAssetsRows[0] || { total: 0, con_deprec: 0 };
+        const sinDeprec = parseInt(fixedAssets.total || 0, 10) - parseInt(fixedAssets.con_deprec || 0, 10);
         checks.push({
             id: 'DEPRECIACION',
             nombre: 'Depreciación Cargada',
             descripcion: 'Todos los activos fijos deben tener depreciación calculada',
-            ok: sinDeprec === 0 || fixedAssets.total === 0,
-            detalle: fixedAssets.total === 0 ? 'Sin activos fijos registrados' : (sinDeprec === 0 ? `${fixedAssets.total} activo(s) con depreciación OK` : `${sinDeprec} activo(s) sin depreciación`),
+            ok: sinDeprec === 0 || parseInt(fixedAssets.total || 0, 10) === 0,
+            detalle: parseInt(fixedAssets.total || 0, 10) === 0 ? 'Sin activos fijos registrados' : (sinDeprec === 0 ? `${fixedAssets.total} activo(s) con depreciación OK` : `${sinDeprec} activo(s) sin depreciación`),
             bloqueante: false
         });
 
         // Check 5: Tipo de Cambio SBS
-        const foreignDocs = db.queryAll(
+        const foreignDocsRows = await db.queryAll(
             `SELECT COUNT(*) as count FROM purchases
              WHERE workspace_id = ? AND user_id = ? AND ${dateFilter}
                AND moneda IS NOT NULL AND moneda != 'PEN' AND moneda != ''
                AND (tc IS NULL OR tc = 0 OR tc = 1)`,
             [ruc, userId]
-        )[0]?.count || 0;
+        );
+        const foreignDocs = parseInt(foreignDocsRows[0]?.count || 0, 10);
         checks.push({
             id: 'TC_SBS',
             nombre: 'TC SBS Ajustado',
@@ -1538,11 +1543,12 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         });
 
         // Check 6: Kárdex cuadrado
-        const kardexInconsistent = db.queryAll(
+        const kardexInconsistentRows = await db.queryAll(
             `SELECT COUNT(*) as count FROM inventory_movements
              WHERE workspace_id = ? AND user_id = ? AND total_saldo < 0`,
             [ruc, userId]
-        )[0]?.count || 0;
+        );
+        const kardexInconsistent = parseInt(kardexInconsistentRows[0]?.count || 0, 10);
         checks.push({
             id: 'KARDEX',
             nombre: 'Kárdex Cuadrado',
@@ -1557,7 +1563,7 @@ app.post('/api/periods/:ruc/close', authMiddleware, inspectMiddleware, async (re
         const canClose = blockers.length === 0;
 
         if (canClose) {
-            db.run(
+            await db.run(
                 `INSERT INTO accounting_periods (workspace_id, periodo, tipo, estado, cerrado_por, cerrado_at, notas, user_id)
                  VALUES (?, ?, ?, 'CERRADO', ?, CURRENT_TIMESTAMP, ?, ?)
                  ON CONFLICT(workspace_id, periodo, tipo, user_id)
@@ -1594,7 +1600,7 @@ app.post('/api/periods/:ruc/reopen', authMiddleware, inspectMiddleware, async (r
             return res.status(400).json({ success: false, error: 'Se requiere el parámetro periodo.' });
         }
 
-        db.run(
+        await db.run(
             `INSERT INTO accounting_periods (workspace_id, periodo, tipo, estado, user_id)
              VALUES (?, ?, ?, 'ABIERTO', ?)
              ON CONFLICT(workspace_id, periodo, tipo, user_id)

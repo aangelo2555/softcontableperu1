@@ -115,7 +115,11 @@ const MantenimientoView: React.FC = () => {
     { header: 'PERIODO', accessor: 'periodo' as any, className: 'w-24 font-mono text-pld-blue font-bold text-center' },
     { header: 'ANEXO', accessor: 'anexo' as any, className: 'w-20 font-mono text-center' },
     { header: 'DESCRIPCIÓN VOUCHER', accessor: 'descripcion' as any, className: 'uppercase font-bold tracking-tight px-4' },
-    { header: 'TOTAL S/', accessor: 'monto' as any, className: 'w-32 font-mono text-right font-black text-emerald-500 pr-6' },
+    {
+      header: 'TOTAL S/',
+      accessor: (row: MaintenanceRecord) => Number(row.monto || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      className: 'w-32 font-mono text-right font-black text-emerald-500 pr-6'
+    },
     {
       header: 'ACCIONES',
       accessor: (row: MaintenanceRecord) => (
