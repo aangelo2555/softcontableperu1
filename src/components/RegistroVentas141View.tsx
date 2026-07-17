@@ -294,52 +294,52 @@ const RegistroVentasView: React.FC = () => {
             {/* ──── THEAD: 3-row grouped headers ──── */}
             <thead className="sticky top-0 z-20">
               {/* ROW 1: Top-level groups */}
-              <tr className="bg-pld-magenta text-white text-[7.5px] font-black uppercase">
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-10">N°<br />CORREL</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-16">FECHA<br />EMISIÓN</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-16">FECHA<br />VCTO.</th>
-                <th colSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center">COMPROBANTE DE PAGO<br />O DOCUMENTO</th>
-                <th colSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center bg-pink-600/50">INFORMACIÓN DEL<br />CLIENTE</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-20 text-yellow-200">VALOR<br />FACTURADO<br />EXPORTACIÓN</th>
-                <th colSpan={2} className="px-1.5 py-2 border border-pink-700/50 text-center bg-pink-700/30">BASE IMPONIBLE<br />OP. GRAVADA</th>
-                <th colSpan={2} className="px-1.5 py-2 border border-pink-700/50 text-center">IMPORTE TOTAL<br />DE LA OPERACIÓN</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-14">ISC</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-16 text-yellow-200">IGV<br />Y/O IPM</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-14">OTROS<br />TRIBUTOS<br />Y CARGOS</th>
-                <th colSpan={2} className="px-1.5 py-2 border border-pink-700/50 text-center bg-yellow-200/20">IMPORTE<br />TOTAL</th>
-                <th rowSpan={3} className="px-1.5 py-2 border border-pink-700/50 text-center w-12">T.C.</th>
-                <th colSpan={4} className="px-1.5 py-2 border border-pink-700/50 text-center">REFERENCIA DEL COMPROBANTE<br />DE PAGO O DOC. QUE SE MODIFICA</th>
+              <tr className="bg-app-surface text-app-text text-[7.5px] font-black uppercase">
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-10">N°<br />CORREL</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-16">FECHA<br />EMISIÓN</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-16">FECHA<br />VCTO.</th>
+                <th colSpan={3} className="px-1.5 py-2 border border-app-border text-center">COMPROBANTE DE PAGO<br />O DOCUMENTO</th>
+                <th colSpan={3} className="px-1.5 py-2 border border-app-border text-center bg-rose-600/5">INFORMACIÓN DEL<br />CLIENTE</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-20">VALOR<br />FACTURADO<br />EXPORTACIÓN</th>
+                <th colSpan={2} className="px-1.5 py-2 border border-app-border text-center bg-indigo-600/5">BASE IMPONIBLE<br />OP. GRAVADA</th>
+                <th colSpan={2} className="px-1.5 py-2 border border-app-border text-center">IMPORTE TOTAL<br />DE LA OPERACIÓN</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-14">ISC</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-16">IGV<br />Y/O IPM</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-14">OTROS<br />TRIBUTOS<br />Y CARGOS</th>
+                <th colSpan={2} className="px-1.5 py-2 border border-app-border text-center bg-emerald-600/5">IMPORTE<br />TOTAL</th>
+                <th rowSpan={3} className="px-1.5 py-2 border border-app-border text-center w-12">T.C.</th>
+                <th colSpan={4} className="px-1.5 py-2 border border-app-border text-center">REFERENCIA DEL COMPROBANTE<br />DE PAGO O DOC. QUE SE MODIFICA</th>
               </tr>
 
               {/* ROW 2: Sub-groups */}
-              <tr className="bg-pld-magenta text-white text-[7px] font-black uppercase">
+              <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
                 {/* Comprobante sub */}
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-10">TIPO<br /><span className="text-[6px] opacity-70">(TABLA 10)</span></th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-12">SERIE</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-16">NÚMERO</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-10">TIPO<br /><span className="text-[6px] opacity-70">(TABLA 10)</span></th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-12">SERIE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-16">NÚMERO</th>
                 {/* Cliente sub */}
-                <th colSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center bg-pink-600/50">DOCUMENTO DE IDENTIDAD</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center min-w-[130px] bg-pink-600/50">APELLIDOS Y NOMBRES,<br />DENOMINACIÓN<br />O RAZÓN SOCIAL</th>
+                <th colSpan={2} className="px-1 py-1.5 border border-app-border text-center bg-rose-600/5">DOCUMENTO DE IDENTIDAD</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center min-w-[130px] bg-rose-600/5">APELLIDOS Y NOMBRES,<br />DENOMINACIÓN<br />O RAZÓN SOCIAL</th>
                 {/* BI Gravada */}
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-14 text-yellow-200">CUENTA<br />CONTABLE</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-20">BASE<br />IMPONIBLE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-14">CUENTA<br />CONTABLE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-20">BASE<br />IMPONIBLE</th>
                 {/* Operación */}
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-16">EXONERADA</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-16">INAFECTA</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-16">EXONERADA</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-16">INAFECTA</th>
                 {/* Importe Total */}
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-14 text-yellow-200 bg-app-surface/20">CUENTA<br />CONTABLE</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-20 bg-yellow-400 text-pink-900">IMPORTE<br />TOTAL<br />DEL<br />COMPROBANTE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-14">CUENTA<br />CONTABLE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-20">IMPORTE<br />TOTAL<br />DEL<br />COMPROBANTE</th>
                 {/* Referencia */}
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-16">FECHA</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-10">TIPO</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-12">SERIE</th>
-                <th rowSpan={2} className="px-1 py-1.5 border border-pink-700/50 text-center w-16">N° DEL<br />COMPROB.</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-16">FECHA</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-10">TIPO</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-12">SERIE</th>
+                <th rowSpan={2} className="px-1 py-1.5 border border-app-border text-center w-16">N° DEL<br />COMPROB.</th>
               </tr>
 
               {/* ROW 3: Doc identity sub-sub */}
-              <tr className="bg-pld-magenta text-white text-[7px] font-black uppercase">
-                <th className="px-1 py-1 border border-pink-700/50 text-center w-8 bg-pink-600/50">TIPO<br /><span className="text-[6px] opacity-70">(TABLA 2)</span></th>
-                <th className="px-1 py-1 border border-pink-700/50 text-center w-24 bg-pink-600/50">NÚMERO</th>
+              <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
+                <th className="px-1 py-1 border border-app-border text-center w-8 bg-rose-600/5">TIPO<br /><span className="text-[6px] opacity-70">(TABLA 2)</span></th>
+                <th className="px-1 py-1 border border-app-border text-center w-24 bg-rose-600/5">NÚMERO</th>
               </tr>
             </thead>
 
@@ -354,43 +354,43 @@ const RegistroVentasView: React.FC = () => {
               )}
 
               {filteredSales.map((s) => (
-                <tr key={s.id} className="hover:bg-pld-magenta/5 transition-colors border-b border-app-border/50">
+                <tr key={s.id} className="hover:bg-app-text/[0.03] transition-colors border-b border-app-border/50">
                   {/* N° Correlativo */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-pld-magenta">{s.registro}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-app-text">{s.registro}</td>
                   {/* Fecha Emisión */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center whitespace-nowrap italic">{s.fecha}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center whitespace-nowrap italic text-app-muted">{s.fecha}</td>
                   {/* Fecha Vcto */}
                   <td className="px-1.5 py-1 border-r border-app-border/40 text-center whitespace-nowrap text-app-muted italic">{s.fecVcto || ''}</td>
                   {/* Tipo Doc */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold opacity-70">{s.tipo_doc}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold opacity-70 text-app-text">{s.tipo_doc}</td>
                   {/* Serie */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center uppercase">{s.serie}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center uppercase text-app-muted">{s.serie}</td>
                   {/* Número */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-black">{s.numero}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-black text-app-text">{s.numero}</td>
                   {/* Doc Identidad Tipo */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center">{s.doc_tipo}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center text-app-muted">{s.doc_tipo}</td>
                   {/* Doc Identidad Número */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold">{s.doc_num}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-app-text">{s.doc_num}</td>
                   {/* Razón Social */}
                   <td className="px-1.5 py-1 border-r border-app-border/40 text-left uppercase font-sans text-[8px] font-bold truncate max-w-[160px] text-app-text" title={s.nombre}>{s.nombre}</td>
                   {/* Exportación */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right">{s.tipOperCode === '02' ? fmt(s.bi) : ''}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right text-app-text">{s.tipOperCode === '02' ? fmt(s.bi) : ''}</td>
                   {/* Cuenta Contable Ingreso */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-pld-magenta">{s.ctaIngreso || '70111'}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-app-text">{s.ctaIngreso || '70111'}</td>
                   {/* Base Imponible */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right font-black text-pld-blue">{fmt(s.bi)}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right font-black text-app-text">{fmt(s.bi)}</td>
                   {/* Exonerada */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right">{fmt(s.noGravada || 0)}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right text-app-muted">{fmt(s.noGravada || 0)}</td>
                   {/* Inafecta */}
                   <td className="px-1.5 py-1 border-r border-app-border/40 text-right"></td>
                   {/* ISC */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right">{fmt(s.isc || 0)}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right text-app-muted">{fmt(s.isc || 0)}</td>
                   {/* IGV */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right font-bold text-pld-blue">{fmt(s.igv)}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right font-bold text-app-text">{fmt(s.igv)}</td>
                   {/* Otros Tributos */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right">{fmt(s.otros_tributos || 0)}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-right text-app-muted">{fmt(s.otros_tributos || 0)}</td>
                   {/* Cuenta Contable Cargo */}
-                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-pld-magenta">{s.ctaCargo || '1212'}</td>
+                  <td className="px-1.5 py-1 border-r border-app-border/40 text-center font-bold text-app-text">{s.ctaCargo || '1212'}</td>
                   {/* Importe Total */}
                   <td className="px-1.5 py-1 border-r border-app-border/40 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">{fmt(s.total)}</td>
                   {/* T.C. */}
@@ -407,28 +407,28 @@ const RegistroVentasView: React.FC = () => {
             {/* ──── TFOOT: Totals ──── */}
             {filteredSales.length > 0 && (
               <tfoot className="sticky bottom-0 z-10 bg-app-surface">
-                <tr className="bg-pld-magenta/10 font-black text-[9px] border-t-2 border-pld-magenta">
-                  <td colSpan={9} className="px-3 py-2.5 border-r border-app-border text-right uppercase italic text-[8px] text-pld-magenta tracking-wider">TOTAL GENERAL S/</td>
+                <tr className="font-black text-[9px] border-t-2 border-app-border bg-app-surface">
+                  <td colSpan={9} className="px-3 py-2.5 border-r border-app-border text-right uppercase italic text-[8px] text-app-text tracking-wider">TOTAL GENERAL S/</td>
                   {/* Exportación */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right">{fmt(totals.exportacion)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-text">{fmt(totals.exportacion)}</td>
                   {/* Cuenta (vacío) */}
                   <td className="px-1.5 py-2.5 border-r border-app-border"></td>
                   {/* BI Gravada */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right bg-pld-blue text-white font-black">{fmtAlways(totals.bi)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-text font-black">{fmtAlways(totals.bi)}</td>
                   {/* Exonerada */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right">{fmt(totals.exonerada)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-muted">{fmt(totals.exonerada)}</td>
                   {/* Inafecta */}
                   <td className="px-1.5 py-2.5 border-r border-app-border text-right"></td>
                   {/* ISC */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right">{fmt(totals.isc)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-muted">{fmt(totals.isc)}</td>
                   {/* IGV */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right bg-pld-blue text-white font-black">{fmtAlways(totals.igv)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-text font-black">{fmtAlways(totals.igv)}</td>
                   {/* Otros */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right">{fmt(totals.otros)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-app-muted">{fmt(totals.otros)}</td>
                   {/* Cuenta (vacío) */}
                   <td className="px-1.5 py-2.5 border-r border-app-border"></td>
                   {/* Importe Total */}
-                  <td className="px-1.5 py-2.5 border-r border-app-border text-right bg-yellow-400 text-pink-900 font-black text-[10px] underline underline-offset-4">{fmtAlways(totals.total)}</td>
+                  <td className="px-1.5 py-2.5 border-r border-app-border text-right text-emerald-600 dark:text-emerald-400 font-black text-[10px] underline underline-offset-4">{fmtAlways(totals.total)}</td>
                   {/* T.C. + Referencia (vacío) */}
                   <td colSpan={5} className="px-1.5 py-2.5"></td>
                 </tr>

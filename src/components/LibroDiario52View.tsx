@@ -593,19 +593,19 @@ const LibroDiario52View: React.FC = () => {
           {activeTabSub === 'ple' ? (
             <table className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface">
               <thead>
-                <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">
-                  <th className="px-2 py-2 border border-pink-700/50 w-16">PERIODO</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-28">CUO</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-14">ASIENTO</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-20">FECHA OP</th>
-                  <th className="px-2 py-2 border border-pink-700/50 min-w-[200px]">GLOSA / DESCRIPCION</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-16">CUENTA</th>
-                  <th className="px-2 py-2 border border-pink-700/50 min-w-[120px]">DENOMINACION CUENTA</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-24">DEBE (S/)</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-24">HABER (S/)</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-20">ORIGEN</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-10">ESTADO</th>
-                  <th className="px-2 py-2 border border-pink-700/50 w-12">ACCIONES</th>
+                <tr className="bg-app-surface text-app-text text-[8px] font-black uppercase text-center">
+                  <th className="px-2 py-2 border border-app-border w-16">PERIODO</th>
+                  <th className="px-2 py-2 border border-app-border w-28">CUO</th>
+                  <th className="px-2 py-2 border border-app-border w-14">ASIENTO</th>
+                  <th className="px-2 py-2 border border-app-border w-20">FECHA OP</th>
+                  <th className="px-2 py-2 border border-app-border min-w-[200px]">GLOSA / DESCRIPCION</th>
+                  <th className="px-2 py-2 border border-app-border w-16">CUENTA</th>
+                  <th className="px-2 py-2 border border-app-border min-w-[120px]">DENOMINACION CUENTA</th>
+                  <th className="px-2 py-2 border border-app-border w-24">DEBE (S/)</th>
+                  <th className="px-2 py-2 border border-app-border w-24">HABER (S/)</th>
+                  <th className="px-2 py-2 border border-app-border w-20">ORIGEN</th>
+                  <th className="px-2 py-2 border border-app-border w-10">ESTADO</th>
+                  <th className="px-2 py-2 border border-app-border w-12">ACCIONES</th>
                 </tr>
               </thead>
               <tbody className="font-mono text-[9px] bg-app-surface">
@@ -618,32 +618,26 @@ const LibroDiario52View: React.FC = () => {
                 )}
 
                 {filteredEntries.map((e) => (
-                  <tr key={e.id} className="hover:bg-pld-magenta/5 transition-colors border-b border-app-border/40">
+                  <tr key={e.id} className="hover:bg-app-text/[0.03] transition-colors border-b border-app-border/40">
                     <td className="px-2 py-1.5 border-r border-app-border/30 text-center text-app-muted">{e.periodo}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 font-bold text-pld-magenta text-center">{e.cuo}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 font-bold text-app-text text-center">{e.cuo}</td>
                     <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.correlativo_asiento}</td>
                     <td className="px-2 py-1.5 border-r border-app-border/30 text-center">{e.fecha_operacion}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8.5px] truncate max-w-[280px]" title={e.glosa}>{e.glosa}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold text-pld-blue">{e.codigo_cuenta}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8px] truncate max-w-[140px]" title={e.denominacion_cuenta}>{e.denominacion_cuenta}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-emerald-400">{e.monto_debe > 0 ? fmt(e.monto_debe / 100) : ''}</td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-rose-400">{e.monto_haber > 0 ? fmt(e.monto_haber / 100) : ''}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8.5px] truncate max-w-[280px] text-app-text" title={e.glosa}>{e.glosa}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold text-app-text">{e.codigo_cuenta}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-left font-sans text-[8px] truncate max-w-[140px] text-app-muted" title={e.denominacion_cuenta}>{e.denominacion_cuenta}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-emerald-600 dark:text-emerald-400">{e.monto_debe > 0 ? fmt(e.monto_debe / 100) : ''}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-right font-black text-rose-600 dark:text-rose-400">{e.monto_haber > 0 ? fmt(e.monto_haber / 100) : ''}</td>
                     <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-sans font-bold text-[8px]">
-                      <span className={`px-1.5 py-0.5 rounded-full ${
-                        e.origen_modulo === 'COMPRAS' 
-                          ? 'bg-pld-magenta/10 text-pld-magenta' 
-                          : e.origen_modulo === 'VENTAS'
-                            ? 'bg-pld-blue/10 text-pld-blue'
-                            : 'bg-app-bg text-app-muted border border-app-border'
-                      }`}>
+                      <span className="px-1.5 py-0.5 rounded-full bg-app-bg text-app-muted border border-app-border">
                         {e.origen_modulo}
                       </span>
                     </td>
-                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold">{e.estado}</td>
+                    <td className="px-2 py-1.5 border-r border-app-border/30 text-center font-bold text-app-text">{e.estado}</td>
                     <td className="px-2 py-1.5 text-center">
                       <button
                         onClick={() => handleOpenCorrection(e.cuo)}
-                        className="p-1 text-app-muted hover:text-pld-magenta transition-colors bg-app-bg/50 border border-app-border rounded"
+                        className="p-1 text-app-muted hover:text-app-text transition-colors bg-app-bg/50 border border-app-border rounded"
                         title="Editar / Corregir Asiento (Estado 8 u 9)"
                       >
                         <Edit3 size={11} />
@@ -657,13 +651,13 @@ const LibroDiario52View: React.FC = () => {
             <table id="tabla9-pcge-table" className="min-w-[2800px] border-collapse text-[8px] border border-app-border bg-app-surface table-fixed">
               <thead>
                 {/* Row 1: Groups */}
-                <tr className="bg-pld-magenta text-white text-[8px] font-black uppercase text-center">
-                  <th colSpan={4} className="px-2 py-1.5 border border-pink-700/50">DATOS DE CABECERA</th>
-                  <th colSpan={18} className="px-2 py-1.5 border border-pink-700/50 bg-blue-950/40 text-blue-300">ACTIVO</th>
-                  <th colSpan={10} className="px-2 py-1.5 border border-pink-700/50 bg-emerald-950/40 text-emerald-300">PASIVO</th>
-                  <th colSpan={6} className="px-2 py-1.5 border border-pink-700/50 bg-amber-950/40 text-amber-300">PATRIMONIO</th>
-                  <th colSpan={22} className="px-2 py-1.5 border border-pink-700/50 bg-rose-950/40 text-rose-300">CUENTAS DE GASTOS (E6 / E9)</th>
-                  <th colSpan={10} className="px-2 py-1.5 border border-pink-700/50 bg-teal-950/40 text-teal-300">CUENTAS DE INGRESOS (E7)</th>
+                <tr className="bg-app-surface text-app-text text-[8px] font-black uppercase text-center">
+                  <th colSpan={4} className="px-2 py-1.5 border border-app-border">DATOS DE CABECERA</th>
+                  <th colSpan={18} className="px-2 py-1.5 border border-app-border bg-blue-600/5 text-app-text">ACTIVO</th>
+                  <th colSpan={10} className="px-2 py-1.5 border border-app-border bg-emerald-600/5 text-app-text">PASIVO</th>
+                  <th colSpan={6} className="px-2 py-1.5 border border-app-border bg-amber-600/5 text-app-text">PATRIMONIO</th>
+                  <th colSpan={22} className="px-2 py-1.5 border border-app-border bg-rose-600/5 text-app-text">CUENTAS DE GASTOS (E6 / E9)</th>
+                  <th colSpan={10} className="px-2 py-1.5 border border-app-border bg-teal-600/5 text-app-text">CUENTAS DE INGRESOS (E7)</th>
                 </tr>
                 {/* Row 2: Sub-columns */}
                 <tr className="bg-app-surface/90 text-app-text text-[7px] font-bold uppercase text-center font-mono">

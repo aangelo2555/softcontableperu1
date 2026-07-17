@@ -1,8 +1,8 @@
 {
   "metadata": {
     "version": "3.0",
-    "lastUpdated": "2026-07-11",
-    "totalCases": 22
+    "lastUpdated": "2026-07-17",
+    "totalCases": 32
   },
   "cases": [
     {
@@ -17,9 +17,24 @@
       "contenido": "Cobro de un anticipo de cliente por S/ 1,000 más IGV y emisión de la factura correspondiente.",
       "glosa": "COMERCIAL: ANTICIPOS RECIBIDOS DE CLIENTES",
       "asiento_json": [
-        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 1180, "haber": 0 },
-        { "cuenta": "122", "detalle": "ANTICIPOS DE CLIENTES", "debe": 0, "haber": 1000 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 180 }
+        {
+          "cuenta": "1041",
+          "detalle": "CUENTAS CORRIENTES OPERATIVAS",
+          "debe": 1180,
+          "haber": 0
+        },
+        {
+          "cuenta": "122",
+          "detalle": "ANTICIPOS DE CLIENTES",
+          "debe": 0,
+          "haber": 1000
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 180
+        }
       ],
       "explicacion": "Por la recepción del efectivo y la facturación del anticipo según NIIF 15.",
       "tags": "anticipo, cliente, facturacion, igv, cobro",
@@ -38,11 +53,36 @@
       "contenido": "Entrega de anticipo a proveedor local por S/ 1,000 más IGV, recepción de la factura de anticipo y realización del pago bancario.",
       "glosa": "COMERCIAL: ANTICIPOS A PROVEEDORES LOCALES",
       "asiento_json": [
-        { "cuenta": "422", "detalle": "ANTICIPOS A PROVEEDORES", "debe": 1000, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 180, "haber": 0 },
-        { "cuenta": "4212", "detalle": "EMITIDAS (LIQ. ANTICIPO)", "debe": 0, "haber": 1180 },
-        { "cuenta": "4212", "detalle": "EMITIDAS (PAGO)", "debe": 1180, "haber": 0 },
-        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 0, "haber": 1180 }
+        {
+          "cuenta": "422",
+          "detalle": "ANTICIPOS A PROVEEDORES",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 180,
+          "haber": 0
+        },
+        {
+          "cuenta": "4212",
+          "detalle": "EMITIDAS (LIQ. ANTICIPO)",
+          "debe": 0,
+          "haber": 1180
+        },
+        {
+          "cuenta": "4212",
+          "detalle": "EMITIDAS (PAGO)",
+          "debe": 1180,
+          "haber": 0
+        },
+        {
+          "cuenta": "1041",
+          "detalle": "CUENTAS CORRIENTES OPERATIVAS",
+          "debe": 0,
+          "haber": 1180
+        }
       ],
       "explicacion": "Por el anticipo otorgado y la posterior cancelación con transferencia bancaria.",
       "tags": "anticipo, proveedor, factura, pago, igv",
@@ -61,11 +101,36 @@
       "contenido": "Devolución de mercaderías al proveedor por valor de S/ 1,000 más IGV. Recepción de Nota de Crédito y extorno de mercadería del almacén.",
       "glosa": "COMERCIAL: DEVOLUCIÓN MERCADERÍA PROVEEDOR",
       "asiento_json": [
-        { "cuenta": "4212", "detalle": "EMITIDAS (NC REVERSIÓN)", "debe": 1180, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 180 },
-        { "cuenta": "6011", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 0, "haber": 1000 },
-        { "cuenta": "6111", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 1000, "haber": 0 },
-        { "cuenta": "20111", "detalle": "COSTO (EXTORNO ALMACÉN)", "debe": 0, "haber": 1000 }
+        {
+          "cuenta": "4212",
+          "detalle": "EMITIDAS (NC REVERSIÓN)",
+          "debe": 1180,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 180
+        },
+        {
+          "cuenta": "6011",
+          "detalle": "MERCADERÍAS MANUFACTURADAS",
+          "debe": 0,
+          "haber": 1000
+        },
+        {
+          "cuenta": "6111",
+          "detalle": "MERCADERÍAS MANUFACTURADAS",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "COSTO (EXTORNO ALMACÉN)",
+          "debe": 0,
+          "haber": 1000
+        }
       ],
       "explicacion": "Reversión de la compra y ajuste de inventarios en almacén bajo NIC 2.",
       "tags": "devolucion, proveedor, nota de credito, almacen, extorno",
@@ -84,10 +149,30 @@
       "contenido": "Cobro de factura de S/ 1,000 concediendo un descuento por pronto pago del 5% (S/ 50) más su respectivo ajuste de IGV (S/ 9).",
       "glosa": "COMERCIAL: DESCUENTOS PRONTO PAGO CONCEDIDOS",
       "asiento_json": [
-        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 941, "haber": 0 },
-        { "cuenta": "675", "detalle": "DESCUENTOS CONCEDIDOS PRONTO PAGO", "debe": 50, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA (REVERSIÓN)", "debe": 9, "haber": 0 },
-        { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 0, "haber": 1000 }
+        {
+          "cuenta": "1041",
+          "detalle": "CUENTAS CORRIENTES OPERATIVAS",
+          "debe": 941,
+          "haber": 0
+        },
+        {
+          "cuenta": "675",
+          "detalle": "DESCUENTOS CONCEDIDOS PRONTO PAGO",
+          "debe": 50,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA (REVERSIÓN)",
+          "debe": 9,
+          "haber": 0
+        },
+        {
+          "cuenta": "1212",
+          "detalle": "EMITIDAS EN CARTERA",
+          "debe": 0,
+          "haber": 1000
+        }
       ],
       "explicacion": "Descuento financiero otorgado al cliente y reducción proporcional del IGV.",
       "tags": "descuento, pronto pago, cobro, banco, nota de credito",
@@ -106,11 +191,36 @@
       "contenido": "Venta y cobro de una Gift Card por valor de S/ 500 (pasivo). Posteriormente, el cliente realiza el canje de la Gift Card por mercadería, reconociendo el ingreso gravado con IGV.",
       "glosa": "COMERCIAL: VENTA Y CANJE DE GIFT CARDS",
       "asiento_json": [
-        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 500, "haber": 0 },
-        { "cuenta": "122", "detalle": "ANTICIPOS DE CLIENTES (GIFT CARDS)", "debe": 0, "haber": 500 },
-        { "cuenta": "122", "detalle": "ANTICIPOS DE CLIENTES (CANJE)", "debe": 500, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 76.27 },
-        { "cuenta": "701", "detalle": "MERCADERÍAS", "debe": 0, "haber": 423.73 }
+        {
+          "cuenta": "1041",
+          "detalle": "CUENTAS CORRIENTES OPERATIVAS",
+          "debe": 500,
+          "haber": 0
+        },
+        {
+          "cuenta": "122",
+          "detalle": "ANTICIPOS DE CLIENTES (GIFT CARDS)",
+          "debe": 0,
+          "haber": 500
+        },
+        {
+          "cuenta": "122",
+          "detalle": "ANTICIPOS DE CLIENTES (CANJE)",
+          "debe": 500,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 76.27
+        },
+        {
+          "cuenta": "701",
+          "detalle": "MERCADERÍAS",
+          "debe": 0,
+          "haber": 423.73
+        }
       ],
       "explicacion": "Diferimiento del ingreso como pasivo por Gift Card y posterior reconocimiento tras el canje físico.",
       "tags": "gift card, anticipo, venta, canje, ingreso",
@@ -129,12 +239,42 @@
       "contenido": "Entrega de muestras gratuitas a clientes con fines de promoción. El costo de la mercadería es S/ 100. Se calcula y asume el IGV por retiro de bienes (S/ 18) y se realiza el destino del gasto.",
       "glosa": "COMERCIAL: ENTREGA DE MUESTRAS GRATIS",
       "asiento_json": [
-        { "cuenta": "659", "detalle": "OTROS GASTOS DE GESTIÓN (MUESTRAS)", "debe": 100, "haber": 0 },
-        { "cuenta": "6415", "detalle": "IGV ASUMIDO (RETIRO BIENES)", "debe": 18, "haber": 0 },
-        { "cuenta": "20111", "detalle": "COSTO (MERCADERÍA)", "debe": 0, "haber": 100 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 18 },
-        { "cuenta": "951", "detalle": "GASTOS DE VENTAS", "debe": 118, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 118 }
+        {
+          "cuenta": "659",
+          "detalle": "OTROS GASTOS DE GESTIÓN (MUESTRAS)",
+          "debe": 100,
+          "haber": 0
+        },
+        {
+          "cuenta": "6415",
+          "detalle": "IGV ASUMIDO (RETIRO BIENES)",
+          "debe": 18,
+          "haber": 0
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "COSTO (MERCADERÍA)",
+          "debe": 0,
+          "haber": 100
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 18
+        },
+        {
+          "cuenta": "951",
+          "detalle": "GASTOS DE VENTAS",
+          "debe": 118,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 118
+        }
       ],
       "explicacion": "Retiro de bienes para fines publicitarios. El IGV es asumido por la empresa y considerado gasto deducible.",
       "tags": "muestras gratis, retiro de bienes, igv asumido, publicidad, costo",
@@ -153,10 +293,30 @@
       "contenido": "Reconocimiento de la provisión de cobranza dudosa por S/ 1,000 tras agotar las gestiones de cobro. Posteriormente, se procede al castigo definitivo de la cuenta por cobrar incobrable.",
       "glosa": "COMERCIAL: COBRANZA DUDOSA Y CASTIGO",
       "asiento_json": [
-        { "cuenta": "6841", "detalle": "ESTIMACIÓN CUENTAS COBRANZA DUDOSA", "debe": 1000, "haber": 0 },
-        { "cuenta": "1911", "detalle": "FACTURAS POR COBRAR", "debe": 0, "haber": 1000 },
-        { "cuenta": "1911", "detalle": "FACTURAS POR COBRAR", "debe": 1000, "haber": 0 },
-        { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 0, "haber": 1000 }
+        {
+          "cuenta": "6841",
+          "detalle": "ESTIMACIÓN CUENTAS COBRANZA DUDOSA",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "cuenta": "1911",
+          "detalle": "FACTURAS POR COBRAR",
+          "debe": 0,
+          "haber": 1000
+        },
+        {
+          "cuenta": "1911",
+          "detalle": "FACTURAS POR COBRAR",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "cuenta": "1212",
+          "detalle": "EMITIDAS EN CARTERA",
+          "debe": 0,
+          "haber": 1000
+        }
       ],
       "explicacion": "Pérdida crediticia esperada y su posterior castigo contra la cuenta por cobrar original según NIIF 9.",
       "tags": "cobranza dudosa, provision, castigo, cartera, incobrable",
@@ -175,12 +335,42 @@
       "contenido": "Reconocimiento del desmedro por mercadería obsoleta destruida ante Notario Público por un costo de S/ 2,000. Se provisiona el deterioro, se destina el gasto, y luego se da de baja la mercadería del almacén.",
       "glosa": "COMERCIAL: DESMEDRO CON ACTA NOTARIAL",
       "asiento_json": [
-        { "cuenta": "6851", "detalle": "DESVALORIZACIÓN DE MERCADERÍAS", "debe": 2000, "haber": 0 },
-        { "cuenta": "2911", "detalle": "MERCADERÍAS (DETERIORO)", "debe": 0, "haber": 2000 },
-        { "cuenta": "941", "detalle": "GASTOS ADMINISTRATIVOS", "debe": 2000, "haber": 0 },
-        { "cuenta": "781", "detalle": "CARGAS CUBIERTAS POR PROVISIONES", "debe": 0, "haber": 2000 },
-        { "cuenta": "2911", "detalle": "MERCADERÍAS", "debe": 2000, "haber": 0 },
-        { "cuenta": "20111", "detalle": "COSTO (BAJA DESTRUC.)", "debe": 0, "haber": 2000 }
+        {
+          "cuenta": "6851",
+          "detalle": "DESVALORIZACIÓN DE MERCADERÍAS",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "2911",
+          "detalle": "MERCADERÍAS (DETERIORO)",
+          "debe": 0,
+          "haber": 2000
+        },
+        {
+          "cuenta": "941",
+          "detalle": "GASTOS ADMINISTRATIVOS",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "781",
+          "detalle": "CARGAS CUBIERTAS POR PROVISIONES",
+          "debe": 0,
+          "haber": 2000
+        },
+        {
+          "cuenta": "2911",
+          "detalle": "MERCADERÍAS",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "COSTO (BAJA DESTRUC.)",
+          "debe": 0,
+          "haber": 2000
+        }
       ],
       "explicacion": "Pérdida por obsolescencia (desmedro) acreditada con acta notarial para su deducibilidad en el impuesto a la renta.",
       "tags": "desmedro, notario, destruccion, obsolescencia, baja de inventario",
@@ -199,11 +389,36 @@
       "contenido": "Arrendamiento de local comercial para oficina de ventas por S/ 2,000. Se calcula la retención de impuesto a la renta de primera/segunda categoría del 5% (S/ 100) y se registra el pasivo neto de S/ 1,900 más el asiento de destino.",
       "glosa": "COMERCIAL: ALQUILER LOCAL - RETENCIÓN 5%",
       "asiento_json": [
-        { "cuenta": "6351", "detalle": "ALQUILER DE EDIFICACIONES", "debe": 2000, "haber": 0 },
-        { "cuenta": "40172", "detalle": "RETENCIONES 2DA CATEGORÍA", "debe": 0, "haber": 100 },
-        { "cuenta": "4699", "detalle": "OTRAS CUENTAS POR PAGAR", "debe": 0, "haber": 1900 },
-        { "cuenta": "951", "detalle": "GASTOS DE VENTAS", "debe": 2000, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 2000 }
+        {
+          "cuenta": "6351",
+          "detalle": "ALQUILER DE EDIFICACIONES",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40172",
+          "detalle": "RETENCIONES 2DA CATEGORÍA",
+          "debe": 0,
+          "haber": 100
+        },
+        {
+          "cuenta": "4699",
+          "detalle": "OTRAS CUENTAS POR PAGAR",
+          "debe": 0,
+          "haber": 1900
+        },
+        {
+          "cuenta": "951",
+          "detalle": "GASTOS DE VENTAS",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 2000
+        }
       ],
       "explicacion": "Gasto de arrendamiento con retención del 5% del impuesto a la renta a persona natural.",
       "tags": "alquiler, arrendamiento, retencion 5%, gasto, destino",
@@ -222,12 +437,42 @@
       "contenido": "Cierre contable anual del ejercicio comercial. Cancelación del costo de ventas contra la variación de inventarios, transferencia de compras al margen comercial, y cancelación de ventas al margen comercial.",
       "glosa": "COMERCIAL: CIERRE CONTABLE INTEGRAL",
       "asiento_json": [
-        { "cuenta": "6111", "detalle": "VARIACIÓN DE INVENTARIOS", "debe": 50000, "haber": 0 },
-        { "cuenta": "69121", "detalle": "COSTO DE VENTAS (CIERRE)", "debe": 0, "haber": 50000 },
-        { "cuenta": "801", "detalle": "MARGEN COMERCIAL", "debe": 50000, "haber": 0 },
-        { "cuenta": "6011", "detalle": "COMPRAS (CANCELACIÓN)", "debe": 0, "haber": 50000 },
-        { "cuenta": "70121", "detalle": "VENTAS (CANCELACIÓN)", "debe": 80000, "haber": 0 },
-        { "cuenta": "801", "detalle": "MARGEN COMERCIAL (SALDO)", "debe": 0, "haber": 80000 }
+        {
+          "cuenta": "6111",
+          "detalle": "VARIACIÓN DE INVENTARIOS",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "cuenta": "69121",
+          "detalle": "COSTO DE VENTAS (CIERRE)",
+          "debe": 0,
+          "haber": 50000
+        },
+        {
+          "cuenta": "801",
+          "detalle": "MARGEN COMERCIAL",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "cuenta": "6011",
+          "detalle": "COMPRAS (CANCELACIÓN)",
+          "debe": 0,
+          "haber": 50000
+        },
+        {
+          "cuenta": "70121",
+          "detalle": "VENTAS (CANCELACIÓN)",
+          "debe": 80000,
+          "haber": 0
+        },
+        {
+          "cuenta": "801",
+          "detalle": "MARGEN COMERCIAL (SALDO)",
+          "debe": 0,
+          "haber": 80000
+        }
       ],
       "explicacion": "Cancelación de cuentas de resultados de compras, ventas e inventarios para determinar el margen comercial del ejercicio.",
       "tags": "cierre contable, margen comercial, costo de ventas, compras, ventas",
@@ -246,10 +491,30 @@
       "contenido": "Consumo de materia prima por S/ 5,000 para el orden de producción en el departamento de corte. Se registra la variación por naturaleza y el destino al centro de costos de producción.",
       "glosa": "INDUSTRIAL: CONSUMO MATERIA PRIMA",
       "asiento_json": [
-        { "cuenta": "6121", "detalle": "VARIACIÓN DE INVENTARIOS", "debe": 5000, "haber": 0 },
-        { "cuenta": "2411", "detalle": "MATERIAS PRIMAS", "debe": 0, "haber": 5000 },
-        { "cuenta": "90111", "detalle": "MATERIA PRIMA - DPTO CORTE", "debe": 5000, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 5000 }
+        {
+          "cuenta": "6121",
+          "detalle": "VARIACIÓN DE INVENTARIOS",
+          "debe": 5000,
+          "haber": 0
+        },
+        {
+          "cuenta": "2411",
+          "detalle": "MATERIAS PRIMAS",
+          "debe": 0,
+          "haber": 5000
+        },
+        {
+          "cuenta": "90111",
+          "detalle": "MATERIA PRIMA - DPTO CORTE",
+          "debe": 5000,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 5000
+        }
       ],
       "explicacion": "Consumo de materias primas para su transformación y su posterior asignación al costo de producción.",
       "tags": "materia prima, consumo, fabrica, variacion, destino",
@@ -268,13 +533,48 @@
       "contenido": "Planilla de sueldos de operarios de planta (Mano de Obra Directa - MOD) por S/ 3,000 de sueldo básico. Se calcula ESSALUD (9%), retención de AFP (13%), neto a pagar de S/ 2,610 y se destina el costo de producción.",
       "glosa": "INDUSTRIAL: PLANILLA OPERARIOS MOD",
       "asiento_json": [
-        { "cuenta": "6211", "detalle": "SUELDOS Y SALARIOS", "debe": 3000, "haber": 0 },
-        { "cuenta": "6271", "detalle": "ESSALUD", "debe": 270, "haber": 0 },
-        { "cuenta": "4031", "detalle": "ESSALUD", "debe": 0, "haber": 270 },
-        { "cuenta": "417", "detalle": "AFP (RETENCIÓN)", "debe": 0, "haber": 390 },
-        { "cuenta": "4111", "detalle": "SUELDOS POR PAGAR", "debe": 0, "haber": 2610 },
-        { "cuenta": "90211", "detalle": "MOD - DPTO CORTE", "debe": 3270, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 3270 }
+        {
+          "cuenta": "6211",
+          "detalle": "SUELDOS Y SALARIOS",
+          "debe": 3000,
+          "haber": 0
+        },
+        {
+          "cuenta": "6271",
+          "detalle": "ESSALUD",
+          "debe": 270,
+          "haber": 0
+        },
+        {
+          "cuenta": "4031",
+          "detalle": "ESSALUD",
+          "debe": 0,
+          "haber": 270
+        },
+        {
+          "cuenta": "417",
+          "detalle": "AFP (RETENCIÓN)",
+          "debe": 0,
+          "haber": 390
+        },
+        {
+          "cuenta": "4111",
+          "detalle": "SUELDOS POR PAGAR",
+          "debe": 0,
+          "haber": 2610
+        },
+        {
+          "cuenta": "90211",
+          "detalle": "MOD - DPTO CORTE",
+          "debe": 3270,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 3270
+        }
       ],
       "explicacion": "Registro del gasto por planilla de operarios y capitalización del costo de producción (mano de obra directa) bajo NIC 19.",
       "tags": "planilla, operarios, afp, essalud, mod, produccion",
@@ -293,14 +593,54 @@
       "contenido": "Provisión de gastos indirectos de fabricación (CIF): energía eléctrica por S/ 800 más IGV y depreciación mensual de maquinarias de planta por S/ 1,200. Se registran los gastos y el destino a los costos de fábrica.",
       "glosa": "INDUSTRIAL: CIF Y DEPRECIACIÓN",
       "asiento_json": [
-        { "cuenta": "6361", "detalle": "ENERGÍA ELÉCTRICA", "debe": 800, "haber": 0 },
-        { "cuenta": "6814", "detalle": "DEPRECIACIÓN PPE", "debe": 1200, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 144, "haber": 0 },
-        { "cuenta": "4212", "detalle": "EMITIDAS", "debe": 0, "haber": 944 },
-        { "cuenta": "3952", "detalle": "DEPRECIACIÓN MAQUINARIAS", "debe": 0, "haber": 1200 },
-        { "cuenta": "90311", "detalle": "CIF - ENERGÍA Y DEPREC.", "debe": 2000, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 800 },
-        { "cuenta": "781", "detalle": "CARGAS DEDUCIBLES", "debe": 0, "haber": 1200 }
+        {
+          "cuenta": "6361",
+          "detalle": "ENERGÍA ELÉCTRICA",
+          "debe": 800,
+          "haber": 0
+        },
+        {
+          "cuenta": "6814",
+          "detalle": "DEPRECIACIÓN PPE",
+          "debe": 1200,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 144,
+          "haber": 0
+        },
+        {
+          "cuenta": "4212",
+          "detalle": "EMITIDAS",
+          "debe": 0,
+          "haber": 944
+        },
+        {
+          "cuenta": "3952",
+          "detalle": "DEPRECIACIÓN MAQUINARIAS",
+          "debe": 0,
+          "haber": 1200
+        },
+        {
+          "cuenta": "90311",
+          "detalle": "CIF - ENERGÍA Y DEPREC.",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 800
+        },
+        {
+          "cuenta": "781",
+          "detalle": "CARGAS DEDUCIBLES",
+          "debe": 0,
+          "haber": 1200
+        }
       ],
       "explicacion": "Reconocimiento de la depreciación fabril y costos indirectos de energía, destinándose al costo CIF de producción.",
       "tags": "cif, energia, depreciacion, maquinaria, fabrica",
@@ -319,8 +659,18 @@
       "contenido": "Terminación de la orden de producción. Se liquidan e ingresan al almacén productos manufacturados terminados por un costo de producción total acumulado de S/ 15,000.",
       "glosa": "INDUSTRIAL: LIQUIDACIÓN DE PRODUCCIÓN",
       "asiento_json": [
-        { "cuenta": "211", "detalle": "PRODUCTOS MANUFACTURADOS", "debe": 15000, "haber": 0 },
-        { "cuenta": "7111", "detalle": "PRODUCTOS MANUFACTURADOS", "debe": 0, "haber": 15000 }
+        {
+          "cuenta": "211",
+          "detalle": "PRODUCTOS MANUFACTURADOS",
+          "debe": 15000,
+          "haber": 0
+        },
+        {
+          "cuenta": "7111",
+          "detalle": "PRODUCTOS MANUFACTURADOS",
+          "debe": 0,
+          "haber": 15000
+        }
       ],
       "explicacion": "Ingreso de la producción terminada al almacén de productos terminados, cancelando la cuenta de variación de la producción (Clase 71).",
       "tags": "productos terminados, liquidacion, produccion, almacen, ingreso",
@@ -339,9 +689,24 @@
       "contenido": "Provisión del recibo por honorarios por asesoría legal y consultoría empresarial por S/ 2,000. Al superar el tope mínimo de S/ 1,500 se efectúa la retención de Impuesto a la Renta de 4ta categoría (8.0% = S/ 160) y neto de S/ 1,840.",
       "glosa": "SERVICIOS: HONORARIOS 4TA CATEGORÍA",
       "asiento_json": [
-        { "cuenta": "632", "detalle": "ASESORÍA Y CONSULTORÍA", "debe": 2000, "haber": 0 },
-        { "cuenta": "40172", "detalle": "RETENCIONES 4TA CATEGORÍA", "debe": 0, "haber": 160 },
-        { "cuenta": "424", "detalle": "HONORARIOS POR PAGAR", "debe": 0, "haber": 1840 }
+        {
+          "cuenta": "632",
+          "detalle": "ASESORÍA Y CONSULTORÍA",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40172",
+          "detalle": "RETENCIONES 4TA CATEGORÍA",
+          "debe": 0,
+          "haber": 160
+        },
+        {
+          "cuenta": "424",
+          "detalle": "HONORARIOS POR PAGAR",
+          "debe": 0,
+          "haber": 1840
+        }
       ],
       "explicacion": "Servicio prestado por un profesional independiente. Aplicación de la retención del impuesto a la renta del 8.0%.",
       "tags": "recibo por honorarios, retencion, cuarta categoria, consultoria, gasto",
@@ -360,12 +725,42 @@
       "contenido": "Emisión de factura por prestación de servicios de consultoría especializada por S/ 5,000 más IGV (total S/ 5,900). Se cobra el comprobante recibiendo el neto en cuenta corriente comercial (S/ 5,192) y el 12% de detracción (S/ 708) en la cuenta del Banco de la Nación.",
       "glosa": "SERVICIOS: FACTURACIÓN Y DETRACCIÓN 12%",
       "asiento_json": [
-        { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 5900, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 900 },
-        { "cuenta": "7041", "detalle": "PRESTACIÓN DE SERVICIOS", "debe": 0, "haber": 5000 },
-        { "cuenta": "1041", "detalle": "CC OPERATIVAS (NETO)", "debe": 5192, "haber": 0 },
-        { "cuenta": "1042", "detalle": "CC FINES ESPECÍFICOS (BN)", "debe": 708, "haber": 0 },
-        { "cuenta": "1212", "detalle": "COBRO FACTURA", "debe": 0, "haber": 5900 }
+        {
+          "cuenta": "1212",
+          "detalle": "EMITIDAS EN CARTERA",
+          "debe": 5900,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 900
+        },
+        {
+          "cuenta": "7041",
+          "detalle": "PRESTACIÓN DE SERVICIOS",
+          "debe": 0,
+          "haber": 5000
+        },
+        {
+          "cuenta": "1041",
+          "detalle": "CC OPERATIVAS (NETO)",
+          "debe": 5192,
+          "haber": 0
+        },
+        {
+          "cuenta": "1042",
+          "detalle": "CC FINES ESPECÍFICOS (BN)",
+          "debe": 708,
+          "haber": 0
+        },
+        {
+          "cuenta": "1212",
+          "detalle": "COBRO FACTURA",
+          "debe": 0,
+          "haber": 5900
+        }
       ],
       "explicacion": "Reconocimiento de la venta de servicios y cobro neto bancario diferenciando el ingreso de fondos por detracción BN.",
       "tags": "detraccion, servicios, banco nacion, cobro, igv, factura",
@@ -384,9 +779,24 @@
       "contenido": "Compra al crédito de una laptop para el área administrativa por S/ 2,000 más IGV. Al superar el umbral de 1/4 de UIT 2026, se capitaliza en la clase 3.",
       "glosa": "COMERCIAL: COMPRA LAPTOP ACTIVO FIJO",
       "asiento_json": [
-        { "cuenta": "3361", "detalle": "EQUIPOS PARA PROCESAMIENTO DE DATOS", "debe": 2000, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 360, "haber": 0 },
-        { "cuenta": "4654", "detalle": "PROPIEDADES, PLANTA Y EQUIPO - TERCEROS", "debe": 0, "haber": 2360 }
+        {
+          "cuenta": "3361",
+          "detalle": "EQUIPOS PARA PROCESAMIENTO DE DATOS",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 360,
+          "haber": 0
+        },
+        {
+          "cuenta": "4654",
+          "detalle": "PROPIEDADES, PLANTA Y EQUIPO - TERCEROS",
+          "debe": 0,
+          "haber": 2360
+        }
       ],
       "explicacion": "Adquisición de equipo de cómputo para uso administrativo. Se capitaliza como propiedad, planta y equipo en la cuenta 3361 and se reconoce el pasivo en la cuenta 4654 bajo NIC 16.",
       "tags": "activo fijo, laptop, computadora, compra, capitalizacion, nic 16",
@@ -405,11 +815,36 @@
       "contenido": "Compra de mercaderías al crédito por S/ 5,000 más IGV y destino al almacén de mercaderías.",
       "glosa": "COMERCIAL: COMPRA DE MERCADERÍAS",
       "asiento_json": [
-        { "cuenta": "6011", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 5000, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 900, "haber": 0 },
-        { "cuenta": "4212", "detalle": "EMITIDAS", "debe": 0, "haber": 5900 },
-        { "cuenta": "20111", "detalle": "COSTO (ALMACÉN)", "debe": 5000, "haber": 0 },
-        { "cuenta": "6111", "detalle": "VARIACIÓN MERCADERÍAS", "debe": 0, "haber": 5000 }
+        {
+          "cuenta": "6011",
+          "detalle": "MERCADERÍAS MANUFACTURADAS",
+          "debe": 5000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 900,
+          "haber": 0
+        },
+        {
+          "cuenta": "4212",
+          "detalle": "EMITIDAS",
+          "debe": 0,
+          "haber": 5900
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "COSTO (ALMACÉN)",
+          "debe": 5000,
+          "haber": 0
+        },
+        {
+          "cuenta": "6111",
+          "detalle": "VARIACIÓN MERCADERÍAS",
+          "debe": 0,
+          "haber": 5000
+        }
       ],
       "explicacion": "Asiento clásico de provisionamiento de compras e ingreso correspondiente al almacén bajo NIC 2.",
       "tags": "compra, mercaderias, igv, credito, almacen, destino",
@@ -428,11 +863,36 @@
       "contenido": "Venta de mercaderías al crédito por S/ 8,000 más IGV y reconocimiento del costo de ventas asociado por S/ 4,000.",
       "glosa": "COMERCIAL: VENTA Y COSTO DE VENTAS",
       "asiento_json": [
-        { "cuenta": "1212", "detalle": "EMITIDAS EN CARTERA", "debe": 9440, "haber": 0 },
-        { "cuenta": "40111", "detalle": "IGV - CUENTA PROPIA", "debe": 0, "haber": 1440 },
-        { "cuenta": "70111", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 0, "haber": 8000 },
-        { "cuenta": "69111", "detalle": "MERCADERÍAS MANUFACTURADAS", "debe": 4000, "haber": 0 },
-        { "cuenta": "20111", "detalle": "COSTO (SALIDA ALMACÉN)", "debe": 0, "haber": 4000 }
+        {
+          "cuenta": "1212",
+          "detalle": "EMITIDAS EN CARTERA",
+          "debe": 9440,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV - CUENTA PROPIA",
+          "debe": 0,
+          "haber": 1440
+        },
+        {
+          "cuenta": "70111",
+          "detalle": "MERCADERÍAS MANUFACTURADAS",
+          "debe": 0,
+          "haber": 8000
+        },
+        {
+          "cuenta": "69111",
+          "detalle": "MERCADERÍAS MANUFACTURADAS",
+          "debe": 4000,
+          "haber": 0
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "COSTO (SALIDA ALMACÉN)",
+          "debe": 0,
+          "haber": 4000
+        }
       ],
       "explicacion": "Ingreso por la venta al crédito y extorno simultáneo de mercadería por su valor de costo original.",
       "tags": "venta, mercaderias, igv, costo de ventas, salida almacen",
@@ -451,13 +911,48 @@
       "contenido": "Registro de la planilla de sueldos del personal administrativo por S/ 4,000, deducción de AFP (13% = S/ 520), ESSALUD de cargo del empleador (9% = S/ 360), y neto a pagar (S/ 3,480) más destino del gasto.",
       "glosa": "COMERCIAL: PLANILLA PERSONAL ADMINISTRACIÓN",
       "asiento_json": [
-        { "cuenta": "6211", "detalle": "SUELDOS Y SALARIOS", "debe": 4000, "haber": 0 },
-        { "cuenta": "6271", "detalle": "REGIMEN DE PRESTACIONES DE SALUD", "debe": 360, "haber": 0 },
-        { "cuenta": "4031", "detalle": "ESSALUD", "debe": 0, "haber": 360 },
-        { "cuenta": "417", "detalle": "ADMINISTRADORAS DE FONDOS DE PENSIONES", "debe": 0, "haber": 520 },
-        { "cuenta": "4111", "detalle": "SUELDOS POR PAGAR", "debe": 0, "haber": 3480 },
-        { "cuenta": "941", "detalle": "GASTOS ADMINISTRATIVOS", "debe": 4360, "haber": 0 },
-        { "cuenta": "791", "detalle": "CARGAS IMPUTABLES", "debe": 0, "haber": 4360 }
+        {
+          "cuenta": "6211",
+          "detalle": "SUELDOS Y SALARIOS",
+          "debe": 4000,
+          "haber": 0
+        },
+        {
+          "cuenta": "6271",
+          "detalle": "REGIMEN DE PRESTACIONES DE SALUD",
+          "debe": 360,
+          "haber": 0
+        },
+        {
+          "cuenta": "4031",
+          "detalle": "ESSALUD",
+          "debe": 0,
+          "haber": 360
+        },
+        {
+          "cuenta": "417",
+          "detalle": "ADMINISTRADORAS DE FONDOS DE PENSIONES",
+          "debe": 0,
+          "haber": 520
+        },
+        {
+          "cuenta": "4111",
+          "detalle": "SUELDOS POR PAGAR",
+          "debe": 0,
+          "haber": 3480
+        },
+        {
+          "cuenta": "941",
+          "detalle": "GASTOS ADMINISTRATIVOS",
+          "debe": 4360,
+          "haber": 0
+        },
+        {
+          "cuenta": "791",
+          "detalle": "CARGAS IMPUTABLES",
+          "debe": 0,
+          "haber": 4360
+        }
       ],
       "explicacion": "Planilla del personal de administración. Se calculan las retenciones de fondos previsionales e impuestos patronales con destino a la cuenta de función 94.",
       "tags": "planilla, sueldo, afp, essalud, administracion, gasto personal",
@@ -476,10 +971,30 @@
       "contenido": "Registro de la depreciación mensual del equipo de transporte por S/ 800 y destino del gasto al área administrativa.",
       "glosa": "COMERCIAL: DEPRECIACIÓN MENSUAL TRANSPORTE",
       "asiento_json": [
-        { "cuenta": "6814", "detalle": "DEPRECIACIÓN PROPIEDAD PLANTA Y EQUIPO", "debe": 800, "haber": 0 },
-        { "cuenta": "3913", "detalle": "DEPRECIACIÓN EQUIPO DE TRANSPORTE", "debe": 0, "haber": 800 },
-        { "cuenta": "941", "detalle": "GASTOS ADMINISTRATIVOS", "debe": 800, "haber": 0 },
-        { "cuenta": "781", "detalle": "CARGAS CUBIERTAS POR PROVISIONES", "debe": 0, "haber": 800 }
+        {
+          "cuenta": "6814",
+          "detalle": "DEPRECIACIÓN PROPIEDAD PLANTA Y EQUIPO",
+          "debe": 800,
+          "haber": 0
+        },
+        {
+          "cuenta": "3913",
+          "detalle": "DEPRECIACIÓN EQUIPO DE TRANSPORTE",
+          "debe": 0,
+          "haber": 800
+        },
+        {
+          "cuenta": "941",
+          "detalle": "GASTOS ADMINISTRATIVOS",
+          "debe": 800,
+          "haber": 0
+        },
+        {
+          "cuenta": "781",
+          "detalle": "CARGAS CUBIERTAS POR PROVISIONES",
+          "debe": 0,
+          "haber": 800
+        }
       ],
       "explicacion": "Desgaste del activo de transporte reconocido como gasto por naturaleza de depreciación y su destino por función en gastos administrativos.",
       "tags": "depreciacion, transporte, activo fijo, desgaste, nic 16, destino depreciacion",
@@ -498,14 +1013,2051 @@
       "contenido": "Ingreso a cuenta corriente de préstamo bancario recibido de S/ 10,000 netos, más S/ 1,200 por intereses diferidos (gastos por devengar).",
       "glosa": "COMERCIAL: PRÉSTAMO BANCARIO E INTERESES",
       "asiento_json": [
-        { "cuenta": "1041", "detalle": "CUENTAS CORRIENTES OPERATIVAS", "debe": 10000, "haber": 0 },
-        { "cuenta": "3711", "detalle": "INTERESES NO DEVENGADOS TERCEROS", "debe": 1200, "haber": 0 },
-        { "cuenta": "4511", "detalle": "INSTITUCIONES FINANCIERAS (PRESTAMO)", "debe": 0, "haber": 11200 }
+        {
+          "cuenta": "1041",
+          "detalle": "CUENTAS CORRIENTES OPERATIVAS",
+          "debe": 10000,
+          "haber": 0
+        },
+        {
+          "cuenta": "3711",
+          "detalle": "INTERESES NO DEVENGADOS TERCEROS",
+          "debe": 1200,
+          "haber": 0
+        },
+        {
+          "cuenta": "4511",
+          "detalle": "INSTITUCIONES FINANCIERAS (PRESTAMO)",
+          "debe": 0,
+          "haber": 11200
+        }
       ],
       "explicacion": "Ingreso del monto del préstamo a bancos y reconocimiento diferido de los intereses cobrados que se devengarán a lo largo de la vigencia del crédito.",
       "tags": "prestamo, banco, intereses, diferido, cuenta 45, cuenta 37",
       "vigente_desde": "2026-01-01",
       "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_23",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Compra de mercadería al crédito",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 2",
+      "categoria": "COMPRAS",
+      "premisa": "La empresa \"Comercial Andina S.A.C.\", del Régimen General, adquiere mercadería para su reventa por un valor de venta de S/ 50,000 más IGV (18%), según Factura Electrónica N° F001-1250, a 30 días de crédito con su proveedor \"Distribuidora Sur S.A.C.\" El bien ya fue recepcionado en almacén, por lo que corresponde reconocer el pasivo, el crédito fiscal y el ingreso de existencias vía cuenta transitoria 61.",
+      "contenido": "La empresa \"Comercial Andina S.A.C.\", del Régimen General, adquiere mercadería para su reventa por un valor de venta de S/ 50,000 más IGV (18%), según Factura Electrónica N° F001-1250, a 30 días de crédito con su proveedor \"Distribuidora Sur S.A.C.\" El bien ya fue recepcionado en almacén, por lo que corresponde reconocer el pasivo, el crédito fiscal y el ingreso de existencias vía cuenta transitoria 61.",
+      "glosa": "Provisión de compra de mercadería según F001-1250, proveedor Distribuidora Sur S.A.C., crédito 30 días.",
+      "asiento_json": [
+        {
+          "cuenta": "60111",
+          "detalle": "Mercaderías manufacturadas – Costo",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 9000,
+          "haber": 0
+        },
+        {
+          "cuenta": "42121",
+          "detalle": "Emitidas – Facturas por pagar (terceros)",
+          "debe": 0,
+          "haber": 59000
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "cuenta": "61111",
+          "detalle": "Variación de mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 50000
+        }
+      ],
+      "explicacion": "En el PCGE, la compra de bienes destinados a la venta se registra primero en la clase 6 (gasto por naturaleza) y luego se traslada a existencias (clase 2) mediante la cuenta 61 \"Variación de existencias\", lo cual permite mantener el control del costo de ventas por el método de inventario permanente o periódico según la política de la empresa. El IGV de la factura constituye crédito fiscal utilizable en el periodo, siempre que la operación cumpla los requisitos sustanciales y formales del artículo 18° y 19° de la Ley del IGV.",
+      "tags": "compra, mercaderia, credito, igv, costo, almacen, nic 2",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_24",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Venta al crédito en moneda extranjera y remedición al cierre",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 21",
+      "categoria": "VENTAS",
+      "premisa": "\"Importadora Nova S.A.C.\" vende mercadería a un cliente del exterior por USD 20,000, al contado 60 días, el 15 de noviembre de 2025 (TC venta SBS: 3.750). Al cierre del ejercicio, el 31 de diciembre de 2025, la cuenta por cobrar continúa pendiente y el tipo de cambio venta SBS es 3.820. Se pide registrar (a) la venta inicial y (b) el ajuste por diferencia de cambio al cierre, conforme a NIC 21 (partida monetaria).",
+      "contenido": "\"Importadora Nova S.A.C.\" vende mercadería a un cliente del exterior por USD 20,000, al contado 60 días, el 15 de noviembre de 2025 (TC venta SBS: 3.750). Al cierre del ejercicio, el 31 de diciembre de 2025, la cuenta por cobrar continúa pendiente y el tipo de cambio venta SBS es 3.820. Se pide registrar (a) la venta inicial y (b) el ajuste por diferencia de cambio al cierre, conforme a NIC 21 (partida monetaria).",
+      "glosa": "Venta de mercadería al exterior USD 20,000, cliente extranjero, TC 3.750 / Actualización de diferencia de cambio CxC al cierre 31.12.",
+      "asiento_json": [
+        {
+          "cuenta": "12121",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (no domiciliados)",
+          "debe": 75000,
+          "haber": 0
+        },
+        {
+          "cuenta": "70111",
+          "detalle": "Mercaderías manufacturadas – Terceros (venta exportación)",
+          "debe": 0,
+          "haber": 75000
+        },
+        {
+          "cuenta": "12121",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (no domiciliados)",
+          "debe": 1400,
+          "haber": 0
+        },
+        {
+          "cuenta": "77611",
+          "detalle": "Diferencia de cambio",
+          "debe": 0,
+          "haber": 1400
+        }
+      ],
+      "explicacion": "Bajo NIC 21, las partidas monetarias en moneda extranjera (como una cuenta por cobrar) deben remedirse a la fecha de cada estado de situación financiera utilizando el tipo de cambio de cierre. La diferencia resultante se reconoce en resultados del periodo. Para efectos tributarios, el artículo 61° de la Ley del Impuesto a la Renta y su reglamento establecen el uso del tipo de cambio venta cotización SBS para operaciones activas cobrables.",
+      "tags": "venta, moneda extranjera, exportacion, diferencia de cambio, cierre, nic 21",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_25",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Estimación de cobranza dudosa (modelo de pérdida esperada)",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 9",
+      "categoria": "COBRANZA DUDOSA",
+      "premisa": "\"Comercial Sur E.I.R.L.\" mantiene una cartera de cuentas por cobrar comerciales por S/ 180,000 al cierre del ejercicio. Aplicando la matriz de provisión simplificada de NIIF 9, estima una pérdida crediticia esperada del 4% sobre el total de la cartera. Adicionalmente, identifica que una factura específica de S/ 8,000 correspondiente a un cliente en proceso concursal (INDECOPI) debe calificar como cobranza dudosa deducible tributariamente, al cumplir los requisitos del inciso i) del artículo 37° de la LIR y el literal f) del artículo 21° de su Reglamento.",
+      "contenido": "\"Comercial Sur E.I.R.L.\" mantiene una cartera de cuentas por cobrar comerciales por S/ 180,000 al cierre del ejercicio. Aplicando la matriz de provisión simplificada de NIIF 9, estima una pérdida crediticia esperada del 4% sobre el total de la cartera. Adicionalmente, identifica que una factura específica de S/ 8,000 correspondiente a un cliente en proceso concursal (INDECOPI) debe calificar como cobranza dudosa deducible tributariamente, al cumplir los requisitos del inciso i) del artículo 37° de la LIR y el literal f) del artículo 21° de su Reglamento.",
+      "glosa": "Estimación de deterioro de cuentas por cobrar comerciales según matriz NIIF 9 / Provisión de cobranza dudosa – cliente en proceso concursal (deducible).",
+      "asiento_json": [
+        {
+          "cuenta": "68612",
+          "detalle": "Estimación de cuentas de cobranza dudosa – Terceros",
+          "debe": 7200,
+          "haber": 0
+        },
+        {
+          "cuenta": "19141",
+          "detalle": "Cuentas por cobrar comerciales – Terceros – Cobranza dudosa",
+          "debe": 0,
+          "haber": 7200
+        },
+        {
+          "cuenta": "68612",
+          "detalle": "Estimación de cuentas de cobranza dudosa – Terceros",
+          "debe": 8000,
+          "haber": 0
+        },
+        {
+          "cuenta": "19141",
+          "detalle": "Cuentas por cobrar comerciales – Terceros – Cobranza dudosa",
+          "debe": 0,
+          "haber": 8000
+        }
+      ],
+      "explicacion": "NIIF 9 reemplaza el modelo de \"pérdida incurrida\" por el de \"pérdida crediticia esperada\" (ECL). Es importante distinguir la provisión contable (based on ECL, no siempre deducible) de la provisión tributaria por cobranza dudosa, que exige requisitos formales específicos (discriminación en el listado de cobranza dudosa presentado a SUNAT, antigüedad, gestiones de cobro, o situación de quiebra/insolvencia declarada) para ser aceptada como gasto deducible del Impuesto a la Renta.",
+      "tags": "cobranza dudosa, estimacion, provision, matriz simplificada, indecopi, niif 9",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_26",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Desvalorización de existencias por obsolescencia",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIC 2",
+      "categoria": "DESVALORIZACION",
+      "premisa": "\"Bazar Los Andes S.A.C.\", acogida al Régimen MYPE Tributario, cuenta con mercadería de temporada (ropa de invierno) valorizada en libros en S/ 25,000, la cual, al cierre del ejercicio, tiene un valor neto de realización estimado de S/ 17,000 debido a obsolescencia y baja rotación. Corresponde reconocer la desvalorización conforme a NIC 2, la cual constituye un gasto no deducible en tanto no se cumpla el procedimiento de destrucción o baja ante notario/SUNAT establecido en el inciso c) del artículo 21° del Reglamento de la LIR.",
+      "contenido": "\"Bazar Los Andes S.A.C.\", acogida al Régimen MYPE Tributario, cuenta con mercadería de temporada (ropa de invierno) valorizada en libros en S/ 25,000, la cual, al cierre del ejercicio, tiene un valor neto de realización estimado de S/ 17,000 debido a obsolescencia y baja rotación. Corresponde reconocer la desvalorización conforme a NIC 2, la cual constituye un gasto no deducible en tanto no se cumpla el procedimiento de destrucción o baja ante notario/SUNAT establecido en el inciso c) del artículo 21° del Reglamento de la LIR.",
+      "glosa": "Provisión por desvalorización de existencias por obsolescencia – mercadería temporada invierno.",
+      "asiento_json": [
+        {
+          "cuenta": "69511",
+          "detalle": "Desvalorización de mercaderías",
+          "debe": 8000,
+          "haber": 0
+        },
+        {
+          "cuenta": "29111",
+          "detalle": "Desvalorización de mercaderías",
+          "debe": 0,
+          "haber": 8000
+        }
+      ],
+      "explicacion": "NIC 2 exige medir los inventarios al menor entre el costo y el valor neto de realización (VNR). La cuenta 29 \"Desvalorización de existencias\" es una cuenta de valuación (contra-activo) que no disminuye directamente el saldo de la cuenta 20. Para el Régimen MYPE Tributario, el reconocimiento contable es obligatorio, pero el efecto tributario se maneja vía adición temporal en la determinación del Impuesto a la Renta.",
+      "tags": "desvalorizacion, obsolescencia, ropa de invierno, vnr, nic 2, mype",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_27",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Venta con descuento comercial (rappel) y contraprestación variable",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIIF 15",
+      "categoria": "VENTAS",
+      "premisa": "\"Ferretería Central S.A.C.\" vende mercadería a un distribuidor mayorista por S/ 60,000 más IGV, y pacta contractualmente un descuento por volumen (rappel) del 5% si el cliente alcanza determinado nivel de compras trimestrales, lo cual la empresa estima altamente probable que ocurra. Conforme a NIIF 15, este descuento constituye una contraprestación variable que debe estimarse y reconocerse como una reducción del ingreso desde el inicio, no cuando se otorgue el descuento.",
+      "contenido": "\"Ferretería Central S.A.C.\" vende mercadería a un distribuidor mayorista por S/ 60,000 más IGV, y pacta contractualmente un descuento por volumen (rappel) del 5% si el cliente alcanza determinado nivel de compras trimestrales, lo cual la empresa estima altamente probable que ocurra. Conforme a NIIF 15, este descuento constituye una contraprestación variable que debe estimarse y reconocerse como una reducción del ingreso desde el inicio, no cuando se otorgue el descuento.",
+      "glosa": "Venta de mercadería con estimación de descuento por volumen (rappel) según NIIF 15.",
+      "asiento_json": [
+        {
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 70800,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 10800
+        },
+        {
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 57000
+        },
+        {
+          "cuenta": "44911",
+          "detalle": "Pasivo por contraprestación variable (rappel estimado)",
+          "debe": 0,
+          "haber": 3000
+        }
+      ],
+      "explicacion": "NIIF 15 exige reconocer el ingreso por el importe que refleje la contraprestación que la entidad espera tener derecho a recibir, lo que obliga a estimar descuentos variables (rappels) desde el reconocimiento inicial de la venta. Contablemente esto genera un pasivo distinto de la cuenta por cobrar comercial, el cual se liquidará contra la emisión de la nota de crédito correspondiente.",
+      "tags": "venta, rappel, descuento, contraprestacion variable, niif 15, mype",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_28",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Venta al contado y determinación de la cuota RER",
+      "sector": "COMERCIAL",
+      "regimen": "RER",
+      "niif_norma": "No aplica",
+      "categoria": "VENTAS",
+      "premisa": "\"Comercial Vega E.I.R.L.\", acogida al Régimen Especial de Renta (RER), realiza una venta al contado de mercadería (artículos de bazar) por S/ 3,500 más IGV, cobrada en efectivo. Al ser un contribuyente del RER, no determina Impuesto a la Renta anual sobre base neta, sino que tributa mensualmente una cuota fija del 1.5% sobre sus ingresos netos mensuales, además del IGV correspondiente.",
+      "contenido": "\"Comercial Vega E.I.R.L.\", acogida al Régimen Especial de Renta (RER), realiza una venta al contado de mercadería (artículos de bazar) por S/ 3,500 más IGV, cobrada en efectivo. Al ser un contribuyente del RER, no determina Impuesto a la Renta anual sobre base neta, sino que tributa mensualmente una cuota fija del 1.5% sobre sus ingresos netos mensuales, además del IGV correspondiente.",
+      "glosa": "Venta al contado de mercadería de bazar, cliente varios, comprobante F001-320.",
+      "asiento_json": [
+        {
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 4130,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 630
+        },
+        {
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 3500
+        },
+        {
+          "cuenta": "88111",
+          "detalle": "Impuesto a la renta – Régimen especial",
+          "debe": 52.5,
+          "haber": 0
+        },
+        {
+          "cuenta": "40171",
+          "detalle": "Renta de tercera categoría (RER)",
+          "debe": 0,
+          "haber": 52.5
+        }
+      ],
+      "explicacion": "En el RER no existe determinación de Impuesto a la Renta sobre utilidad neta ni ajustes por diferencias temporarias (NIC 12), dado que los sujetos acogidos suelen llevar contabilidad simplificada. No obstante, para mantener trazabilidad es recomendable registrar la cuota RER en una cuenta de gasto por impuesto (88) contra el pasivo tributario correspondiente (40.17).",
+      "tags": "venta, contado, rer, impuesto, cuota fija, pcge",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_29",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Compra y venta de mercadería sin derecho a crédito fiscal",
+      "sector": "COMERCIAL",
+      "regimen": "NRUS",
+      "niif_norma": "No aplica",
+      "categoria": "COMPRAS",
+      "premisa": "El señor Julio Ramos, persona natural con negocio unipersonal \"Bodega Ramos\", acogido al NRUS Categoría 1, compra mercadería de abarrotes por S/ 800 (con boleta de venta, sin desagregar IGV al no tener derecho a crédito fiscal) y en el mismo periodo vende mercadería al contado por S/ 1,200 mediante boletas de venta. Al estar en el NRUS, no existe obligación de llevar contabilidad completa, pero se ilustra el registro con fines de control interno gerencial, dado que el IGV pagado en la compra se incorpora al costo (no es crédito fiscal).",
+      "contenido": "El señor Julio Ramos, persona natural con negocio unipersonal \"Bodega Ramos\", acogido al NRUS Categoría 1, compra mercadería de abarrotes por S/ 800 (con boleta de venta, sin desagregar IGV al no tener derecho a crédito fiscal) y en el mismo periodo vende mercadería al contado por S/ 1,200 mediante boletas de venta. Al estar en el NRUS, no existe obligación de llevar contabilidad completa, pero se ilustra el registro con fines de control interno gerencial, dado que el IGV pagado en la compra se incorpora al costo (no es crédito fiscal).",
+      "glosa": "Compra de mercadería de abarrotes al contado, sin derecho a crédito fiscal (NRUS) / Venta al contado de mercadería, boletas de venta del día.",
+      "asiento_json": [
+        {
+          "cuenta": "60111",
+          "detalle": "Mercaderías – Costo (incluye IGV no recuperable)",
+          "debe": 800,
+          "haber": 0
+        },
+        {
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 800
+        },
+        {
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 1200,
+          "haber": 0
+        },
+        {
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 1200
+        }
+      ],
+      "explicacion": "Los sujetos del NRUS están exceptuados de llevar libros contables y no tienen derecho a utilizar crédito fiscal del IGV. El IGV consignado en los comprobantes de compra se convierte en un mayor costo de adquisición. El registro contable mostrado tiene exclusivamente valor de control gerencial interno.",
+      "tags": "compra, venta, nrus, boleta, credito fiscal, costo, control interno",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_30",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Arrendamiento de local comercial (reconocimiento de activo por derecho de uso)",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 16",
+      "categoria": "ALQUILERES",
+      "premisa": "\"Tiendas Barranca S.A.C.\" suscribe un contrato de arrendamiento de un local comercial por 3 años, con renta mensual de S/ 4,500 más IGV, sin opción de compra, sin incentivos del arrendador y con una tasa incremental de endeudamiento del 12% anual. Al no calificar como arrendamiento de corto plazo ni de bajo valor, corresponde reconocer un activo por derecho de uso y un pasivo por arrendamiento conforme a NIIF 16, en lugar de reconocer el gasto de alquiler de forma lineal.",
+      "contenido": "\"Tiendas Barranca S.A.C.\" suscribe un contrato de arrendamiento de un local comercial por 3 años, con renta mensual de S/ 4,500 más IGV, sin opción de compra, sin incentivos del arrendador y con una tasa incremental de endeudamiento del 12% anual. Al no calificar como arrendamiento de corto plazo ni de bajo valor, corresponde reconocer un activo por derecho de uso y un pasivo por arrendamiento conforme a NIIF 16, en lugar de reconocer el gasto de alquiler de forma lineal.",
+      "glosa": "Reconocimiento inicial de activo por derecho de uso y pasivo por arrendamiento – local comercial, contrato 36 meses / Registro de la cuota mensual (mes 1: capital + interés + IGV) / Depreciación del activo por derecho de uso.",
+      "asiento_json": [
+        {
+          "cuenta": "32611",
+          "detalle": "Activo por derecho de uso – Inmuebles",
+          "debe": 135700,
+          "haber": 0
+        },
+        {
+          "cuenta": "47211",
+          "detalle": "Pasivo por arrendamiento – Porción no corriente",
+          "debe": 0,
+          "haber": 100900
+        },
+        {
+          "cuenta": "47212",
+          "detalle": "Pasivo por arrendamiento – Porción corriente",
+          "debe": 0,
+          "haber": 34800
+        },
+        {
+          "cuenta": "47212",
+          "detalle": "Pasivo por arrendamiento – Porción corriente",
+          "debe": 3143,
+          "haber": 0
+        },
+        {
+          "cuenta": "67321",
+          "detalle": "Intereses por arrendamiento financiero/NIIF 16",
+          "debe": 1357,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 810,
+          "haber": 0
+        },
+        {
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 0,
+          "haber": 5310
+        },
+        {
+          "cuenta": "68141",
+          "detalle": "Depreciación – Activo por derecho de uso",
+          "debe": 3769.44,
+          "haber": 0
+        },
+        {
+          "cuenta": "39136",
+          "detalle": "Depreciación acumulada – Activo por derecho de uso",
+          "debe": 0,
+          "haber": 3769.44
+        }
+      ],
+      "explicacion": "NIIF 16 eliminó la distinción entre arrendamiento operativo y financiero para el arrendatario: salvo excepciones, todo arrendamiento genera un activo por derecho de uso y un pasivo financiero. El activo se deprecia en línea recta y el pasivo se amortiza aplicando el método del interés efectivo, separando capital e intereses. Tributariamente suele generar diferencias temporarias bajo NIC 12.",
+      "tags": "arrendamiento, alquiler, niif 16, derecho de uso, depreciacion, interes, general",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_31",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Provisión por garantía de productos vendidos",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 37",
+      "categoria": "PROVISIONES",
+      "premisa": "\"Electrodomésticos del Norte S.A.C.\" vende electrodomésticos con garantía comercial de 12 meses por defectos de fabricación. En base a la experiencia histórica, estima que el 2% de sus ventas del ejercicio (S/ 900,000) generará reclamos cubiertos por garantía, con un costo de reparación/reposición equivalente. Corresponde reconocer una provisión por garantías conforme a NIC 37, al existir una obligación presente, ser probable la salida de recursos y poder estimarse fiablemente el monto.",
+      "contenido": "\"Electrodomésticos del Norte S.A.C.\" vende electrodomésticos con garantía comercial de 12 meses por defectos de fabricación. En base a la experiencia histórica, estima que el 2% de sus ventas del ejercicio (S/ 900,000) generará reclamos cubiertos por garantía, con un costo de reparación/reposición equivalente. Corresponde reconocer una provisión por garantías conforme a NIC 37, al existir una obligación presente, ser probable la salida de recursos y poder estimarse fiablemente el monto.",
+      "glosa": "Provisión por garantía de productos vendidos – estimación histórica de reclamos (2% de ventas) / Uso de la provisión por atención de reclamo.",
+      "asiento_json": [
+        {
+          "cuenta": "68312",
+          "detalle": "Provisión para garantías otorgadas",
+          "debe": 18000,
+          "haber": 0
+        },
+        {
+          "cuenta": "48212",
+          "detalle": "Provisión para garantías otorgadas",
+          "debe": 0,
+          "haber": 18000
+        },
+        {
+          "cuenta": "48212",
+          "detalle": "Provisión para garantías otorgadas",
+          "debe": 650,
+          "haber": 0
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 650
+        }
+      ],
+      "explicacion": "NIC 37 exige el reconocimiento de una provisión por garantía al concurrir una obligación presente por suceso pasado, ser probable la salida de recursos y estimarse fiablemente. Tributariamente, conforme al artículo 44° inciso f) de la LIR, estas provisiones no admitidas expresamente por ley constituyen adiciones en la determinación de la renta neta imponible, generando diferencias temporarias bajo NIC 12.",
+      "tags": "garantia, provision, electrodomesticos, nic 37, pasivo contingente, general",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_32",
+      "tipo": "CASO_PRACTICO",
+      "titulo": "Devolución de mercadería vendida (nota de crédito)",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIIF 15",
+      "categoria": "DEVOLUCIONES",
+      "premisa": "\"Distribuidora Los Pinos S.A.C.\" había vendido mercadería a un cliente por S/ 12,000 más IGV al crédito. Días después, el cliente devuelve el 100% de la mercadería por defectos de calidad, y la empresa emite la nota de crédito correspondiente conforme al Reglamento de Comprobantes de Pago. Corresponde revertir el ingreso, el IGV y reingresar la mercadería a almacén al costo original.",
+      "contenido": "\"Distribuidora Los Pinos S.A.C.\" había vendido mercadería a un cliente por S/ 12,000 más IGV al crédito. Días después, el cliente devuelve el 100% de la mercadería por defectos de calidad, y la empresa emite la nota de crédito correspondiente conforme al Reglamento de Comprobantes de Pago. Corresponde revertir el ingreso, el IGV y reingresar la mercadería a almacén al costo original.",
+      "glosa": "Devolución de mercadería vendida por defectos de calidad, nota de crédito N° FC01-045 / Reingreso de mercadería devuelta al almacén al costo original.",
+      "asiento_json": [
+        {
+          "cuenta": "70611",
+          "detalle": "Devoluciones sobre ventas – Terceros",
+          "debe": 12000,
+          "haber": 0
+        },
+        {
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 2160,
+          "haber": 0
+        },
+        {
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 14160
+        },
+        {
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 7500,
+          "haber": 0
+        },
+        {
+          "cuenta": "69111",
+          "detalle": "Costo de mercaderías – Terceros (reversión)",
+          "debe": 0,
+          "haber": 7500
+        }
+      ],
+      "explicacion": "La cuenta 70.6 \"Devoluciones sobre ventas\" se presenta deduciendo el ingreso bruto en el estado de resultados, permitiendo dar seguimiento al volumen de devoluciones. Simultáneamente, se revierte el costo de ventas reconociendo el retorno físico al almacén. El IGV de la operación original se anula mediante la nota de crédito.",
+      "tags": "devolucion, nota de credito, reversión venta, costo de ventas, calidad, mype",
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_33",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 2",
+      "categoria": "COMPRAS",
+      "titulo": "Importación de mercadería y venta posterior",
+      "premisa": "\"Import Trade Perú S.A.C.\" importa mercadería (autopartes) desde China por valor FOB de USD 15,000 (TC 3.780). Contrata flete internacional por USD 1,200 y seguro por USD 150. Al nacionalizar, paga Ad-Valorem (6%) e IGV de importación (18%) sobre la base CIF, más un agente de aduanas que cobra S/ 850 más IGV por su servicio. Posteriormente vende el 100% del lote nacionalizado por S/ 95,000 más IGV al crédito.",
+      "glosa": "Importación de mercadería (autopartes) desde proveedor del exterior, FOB USD 15,000.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "60911",
+          "detalle": "Mercaderías – Costo de compras en tránsito",
+          "debe": 61803,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "46911",
+          "detalle": "Otras cuentas por pagar diversas – Proveedor del exterior",
+          "debe": 0,
+          "haber": 61803
+        },
+        {
+          "linea": 3,
+          "cuenta": "60911",
+          "detalle": "Mercaderías – Costo de compras en tránsito (Ad-Valorem)",
+          "debe": 3708.18,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (IGV de importación)",
+          "debe": 11792.01,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "63231",
+          "detalle": "Servicios prestados por terceros – Agentes de aduana",
+          "debe": 850,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (IGV factura agente)",
+          "debe": 153,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 16503.19
+        },
+        {
+          "linea": 8,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 65511.18,
+          "haber": 0
+        },
+        {
+          "linea": 9,
+          "cuenta": "61911",
+          "detalle": "Variación de mercaderías – Compras en tránsito",
+          "debe": 0,
+          "haber": 65511.18
+        },
+        {
+          "linea": 10,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 112100,
+          "haber": 0
+        },
+        {
+          "linea": 11,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 17100
+        },
+        {
+          "linea": 12,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 95000
+        },
+        {
+          "linea": 13,
+          "cuenta": "69111",
+          "detalle": "Costo de mercaderías – Terceros",
+          "debe": 65511.18,
+          "haber": 0
+        },
+        {
+          "linea": 14,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 65511.18
+        }
+      ],
+      "explicacion": "Conforme al párrafo 11 de la NIC 2, el costo de los inventarios comprende todos los costos de compra (precio, aranceles de importación y otros impuestos no recuperables), más los costos de transporte, manejo y otros directamente atribuibles a la adquisición. El IGV de importación sí es recuperable como crédito fiscal (no forma parte del costo), a diferencia del Ad-Valorem que sí integra el costo por no ser recuperable. Es de vital importancia validar la base imponible del IGV de importación (CIF + Ad-Valorem).",
+      "tags": "importacion, FOB, flete, seguro, ad-valorem, IGV, costo, venta, costo de ventas",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_34",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIIF 9 / SUNAT",
+      "categoria": "VENTAS",
+      "titulo": "Venta sujeta a detracción del IGV, depósito y aplicación del fondo",
+      "premisa": "\"Comercializadora Vallejo S.A.C.\" vende mercadería afecta al sistema de detracciones (bien incluido en el Anexo 2 de la R.S. 183-2004/SUNAT, tasa 10%) por S/ 40,000 más IGV a un cliente que es agente de detracción. El cliente deposita el 10% del importe total de la operación (incluido IGV) en la cuenta de detracciones del Banco de la Nación de la empresa vendedora, y cancela el saldo remanente mediante transferencia. Posteriormente, la empresa utiliza parte de los fondos depositados en su cuenta de detracciones para el pago de sus obligaciones tributarias (IGV e IR) del periodo.",
+      "glosa": "Venta de mercadería sujeta a SPOT (detracción 10%) según F001-880.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 47200,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 7200
+        },
+        {
+          "linea": 3,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 40000
+        },
+        {
+          "linea": 4,
+          "cuenta": "10412",
+          "detalle": "Cuentas corrientes – Depósitos en cuenta de detracciones (Banco de la Nación)",
+          "debe": 4720,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 4720
+        },
+        {
+          "linea": 6,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 42480,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 42480
+        },
+        {
+          "linea": 8,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 4000,
+          "haber": 0
+        },
+        {
+          "linea": 9,
+          "cuenta": "10412",
+          "detalle": "Cuentas corrientes – Depósitos en cuenta de detracciones (Banco de la Nación)",
+          "debe": 0,
+          "haber": 4000
+        }
+      ],
+      "explicacion": "El sistema de detracciones es un mecanismo administrativo de recaudación anticipada: el monto depositado en la cuenta del Banco de la Nación del proveedor constituye un activo de disponibilidad restringida (subcuenta específica dentro de la cuenta 10.4), que únicamente puede destinarse al pago de tributos administrados por SUNAT.",
+      "tags": "detraccion, SPOT, Banco de la Nacion, IGV, tributos, cobro, venta",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_35",
+      "sector": "COMERCIAL",
+      "regimen": "RER",
+      "niif_norma": "No aplica",
+      "categoria": "GENERAL",
+      "titulo": "Ciclo mensual completo: compra, venta, cobro y pago de cuota RER",
+      "premisa": "\"Comercial Rímac E.I.R.L.\", acogida al RER, durante el mes de junio realiza las siguientes operaciones: (1) compra mercadería al crédito por S/ 12,000 más IGV; (2) vende el 80% de dicha mercadería al contado por S/ 16,000 más IGV; (3) paga a su proveedor la factura de compra a los 15 días; y (4) al cierre de mes, determina y paga su cuota RER (1.5% de los ingresos netos del mes) y liquida el IGV resultante.",
+      "glosa": "Ciclo mensual RER de compras, ventas y liquidación de impuestos de Junio.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "60111",
+          "detalle": "Mercaderías manufacturadas – Costo",
+          "debe": 12000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 2160,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 0,
+          "haber": 14160
+        },
+        {
+          "linea": 4,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 12000,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "61111",
+          "detalle": "Variación de mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 12000
+        },
+        {
+          "linea": 6,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 18880,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 2880
+        },
+        {
+          "linea": 8,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 16000
+        },
+        {
+          "linea": 9,
+          "cuenta": "69111",
+          "detalle": "Costo de mercaderías – Terceros",
+          "debe": 9600,
+          "haber": 0
+        },
+        {
+          "linea": 10,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 9600
+        },
+        {
+          "linea": 11,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 14160,
+          "haber": 0
+        },
+        {
+          "linea": 12,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 14160
+        },
+        {
+          "linea": 13,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 720,
+          "haber": 0
+        },
+        {
+          "linea": 14,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 720
+        },
+        {
+          "linea": 15,
+          "cuenta": "88111",
+          "detalle": "Impuesto a la renta – Régimen especial",
+          "debe": 240,
+          "haber": 0
+        },
+        {
+          "linea": 16,
+          "cuenta": "40171",
+          "detalle": "Renta de tercera categoría (RER)",
+          "debe": 0,
+          "haber": 240
+        },
+        {
+          "linea": 17,
+          "cuenta": "40171",
+          "detalle": "Renta de tercera categoría (RER)",
+          "debe": 240,
+          "haber": 0
+        },
+        {
+          "linea": 18,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 240
+        }
+      ],
+      "explicacion": "Aunque el RER no exige llevar contabilidad completa, este caso ilustra el ciclo contable íntegro con fines de control gerencial. La cuota RER (1.5% de ingresos netos) es un pago único, definitivo y mensual que sustituye tanto al pago a cuenta como a la regularización anual del Impuesto a la Renta de tercera categoría.",
+      "tags": "RER, régimen tributario, compra, venta, IGV, cuota RER, pago",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_36",
+      "sector": "COMERCIAL",
+      "regimen": "NRUS",
+      "niif_norma": "No aplica",
+      "categoria": "GENERAL",
+      "titulo": "Ciclo de compras, ventas semanales y control del tope de ingresos NRUS",
+      "premisa": "\"Minimarket Los Ángeles\" (persona natural, NRUS Categoría 2, tope de ingresos S/ 8,000 mensuales) realiza durante la semana: (1) compra de abarrotes al contado por S/ 1,500 (boleta de venta del proveedor, IGV no discriminado); (2) ventas diarias acumuladas de lunes a sábado por un total de S/ 2,400, sustentadas en boletas de venta resumidas; y (3) al cierre de mes, el propietario concilia sus ingresos acumulados del mes (S/ 7,600) contra el límite de su categoría (S/ 8,000) para verificar que no deba recategorizarse.",
+      "glosa": "Compra de abarrotes al contado y ventas diarias acumuladas semanales (NRUS).",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "60111",
+          "detalle": "Mercaderías – Costo (incluye IGV no recuperable)",
+          "debe": 1500,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas / Caja",
+          "debe": 0,
+          "haber": 1500
+        },
+        {
+          "linea": 3,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 1500,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "61111",
+          "detalle": "Variación de mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 1500
+        },
+        {
+          "linea": 5,
+          "cuenta": "10111",
+          "detalle": "Caja",
+          "debe": 2400,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 2400
+        },
+        {
+          "linea": 7,
+          "cuenta": "69111",
+          "detalle": "Costo de mercaderías – Terceros",
+          "debe": 1560,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 1560
+        }
+      ],
+      "explicacion": "Los sujetos del NRUS no están obligados a llevar registros contables, pero un control interno adecuado de sus ingresos y adquisiciones acumuladas mensuales es crítico para no superar los límites de su categoría o los topes generales del NRUS (S/ 8,000 mensuales o S/ 96,000 anuales).",
+      "tags": "NRUS, boleta de venta, control interno, límite de ingresos, compra, venta",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_37",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 9",
+      "categoria": "GENERAL",
+      "titulo": "Venta de mercadería y posterior factoring de la factura por cobrar",
+      "premisa": "\"Distribuidora Mantaro S.A.C.\" vende mercadería al crédito a 90 días por S/ 60,000 más IGV. A los 10 días, ante una necesidad de liquidez, transfiere (factoriza) dicha factura a una entidad financiera, la cual le adelanta el 90% del valor nominal, reteniendo el 10% restante como garantía, y le cobra una comisión financiera del 3% sobre el valor nominal de la factura. Dado que la operación transfiere sustancialmente los riesgos y beneficios (factoring \"sin recurso\"), corresponde dar de baja la cuenta por cobrar conforme a NIIF 9.",
+      "glosa": "Venta de mercadería al crédito y posterior factoring sin recurso con entidad financiera.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 70800,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 10800
+        },
+        {
+          "linea": 3,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 60000
+        },
+        {
+          "linea": 4,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 61213.68,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "16711",
+          "detalle": "Cuentas por cobrar diversas – Fondo de garantía retenido por factoring",
+          "debe": 7080,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "67311",
+          "detalle": "Gastos financieros – Comisiones por factoring",
+          "debe": 2124,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (IGV de la comisión)",
+          "debe": 382.32,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 70800
+        },
+        {
+          "linea": 9,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 7080,
+          "haber": 0
+        },
+        {
+          "linea": 10,
+          "cuenta": "16711",
+          "detalle": "Cuentas por cobrar diversas – Fondo de garantía retenido por factoring",
+          "debe": 0,
+          "haber": 7080
+        }
+      ],
+      "explicacion": "Conforme a NIIF 9, la baja en cuentas de un activo financiero procede cuando se transfieren sustancialmente los riesgos y beneficios de propiedad (factoring sin recurso). Si se retiene el riesgo de crédito (factoring con recurso), la operación se trata como un pasivo financiero garantizado por la cuenta por cobrar.",
+      "tags": "factoring, sin recurso, NIIF 9, comisiones financieras, fondo de garantia, cobro",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_38",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 15",
+      "categoria": "GENERAL",
+      "titulo": "Venta con condición de descuento financiero 2/10 neto 30 (2 escenarios)",
+      "premisa": "\"Textiles Chancay S.A.C.\" vende mercadería al crédito por S/ 30,000 más IGV, bajo condición comercial \"2/10 neto 30\" (2% de descuento si el cliente paga dentro de los 10 días). Se presentan dos escenarios independientes: (A) el cliente paga al noveno día y accede al descuento; (B) el cliente paga al día 35, fuera de plazo, sin descuento y se le liquida el interés moratorio pactado del 1% mensual.",
+      "glosa": "Venta de mercadería al crédito con condición 2/10 neto 30 y cobro en escenarios A y B.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 35400,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 5400
+        },
+        {
+          "linea": 3,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 30000
+        },
+        {
+          "linea": 4,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas (Escenario A)",
+          "debe": 34692,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "67511",
+          "detalle": "Gastos financieros – Descuentos concedidos por pronto pago (Escenario A)",
+          "debe": 600,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (ajuste IGV por descuento - Escenario A)",
+          "debe": 108,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (Escenario A)",
+          "debe": 0,
+          "haber": 35400
+        },
+        {
+          "linea": 8,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (Escenario B)",
+          "debe": 59,
+          "haber": 0
+        },
+        {
+          "linea": 9,
+          "cuenta": "77211",
+          "detalle": "Intereses por cobranza morosa (Escenario B)",
+          "debe": 0,
+          "haber": 59
+        },
+        {
+          "linea": 10,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas (Escenario B)",
+          "debe": 35459,
+          "haber": 0
+        },
+        {
+          "linea": 11,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (Escenario B)",
+          "debe": 0,
+          "haber": 35459
+        }
+      ],
+      "explicacion": "Los descuentos por pronto pago se reconocen al cobrarse dentro del plazo como gastos financieros, conforme a NIIF 15 (contraprestación variable). El ajuste del IGV debe sustentarse mediante la nota de crédito correspondiente. Los intereses moratorios pactados son ingresos financieros adicionales.",
+      "tags": "descuento financiero, pronto pago, NIIF 15, gastos financieros, intereses moratorios, cobro",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_39",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIC 16",
+      "categoria": "GENERAL",
+      "titulo": "Mejoras en local comercial arrendado, depreciación y baja al término del contrato",
+      "premisa": "\"Zapatería Confort S.A.C.\" arrienda un local comercial por 4 años y realiza mejoras de infraestructura (estantería empotrada, vitrinas e instalaciones) por S/ 48,000 más IGV al contado. Como las mejoras no son separables y el plazo de uso coincide con la vigencia del contrato (4 años, sin opción de renovación garantizada), se deprecian en dicho plazo y se dan de baja al término del contrato.",
+      "glosa": "Reconocimiento y depreciación mensual de mejoras en propiedad arrendada de terceros.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "33511",
+          "detalle": "Construcciones en propiedad de terceros – Mejoras en local arrendado",
+          "debe": 48000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 8640,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 56640
+        },
+        {
+          "linea": 4,
+          "cuenta": "68142",
+          "detalle": "Depreciación – Construcciones en propiedad de terceros",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "39135",
+          "detalle": "Depreciación acumulada – Construcciones en propiedad de terceros",
+          "debe": 0,
+          "haber": 1000
+        },
+        {
+          "linea": 6,
+          "cuenta": "39135",
+          "detalle": "Depreciación acumulada – Construcciones en propiedad de terceros",
+          "debe": 48000,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "33511",
+          "detalle": "Construcciones en propiedad de terceros – Mejoras en local arrendado",
+          "debe": 0,
+          "haber": 48000
+        }
+      ],
+      "explicacion": "Conforme a NIC 16, las mejoras en bienes de terceros que generarán beneficios futuros se activan y deprecian en el menor plazo entre su vida útil y la vigencia remanente del contrato. Tributariamente (art. 22 inciso f del Reglamento de la LIR), se permite depreciar estas mejoras en el plazo del contrato.",
+      "tags": "mejoras local arrendado, propiedad de terceros, depreciacion lineal, NIC 16, baja activo",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_40",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIC 2",
+      "categoria": "GENERAL",
+      "titulo": "Toma de inventario físico con faltantes y sobrantes de mercadería",
+      "premisa": "\"Supermercado Familiar S.A.C.\" realiza su toma de inventario físico anual y determina: (1) un faltante de mercadería (abarrotes) por S/ 3,200, del cual S/ 2,000 son mermas normales justificadas por evaporación/vencimiento, y S/ 1,200 a un faltante sin sustento; (2) un sobrante de mercadería por S/ 450 debido a errores de registro de compras anteriores.",
+      "glosa": "Ajuste de inventario físico anual por mermas normales, faltantes no sustentados y sobrantes.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "65921",
+          "detalle": "Mermas de existencias",
+          "debe": 2000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 2000
+        },
+        {
+          "linea": 3,
+          "cuenta": "65922",
+          "detalle": "Faltante de inventario no sustentado",
+          "debe": 1200,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "65922",
+          "detalle": "Faltante de inventario no sustentado (IGV asumido)",
+          "debe": 216,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 1200
+        },
+        {
+          "linea": 6,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (por pagar, retiro de bienes)",
+          "debe": 0,
+          "haber": 216
+        },
+        {
+          "linea": 7,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 450,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "75921",
+          "detalle": "Sobrante de inventario (otros ingresos de gestión)",
+          "debe": 0,
+          "haber": 450
+        }
+      ],
+      "explicacion": "Tributariamente, solo las mermas debidamente acreditadas mediante informe técnico de profesional independiente son deducibles. Los faltantes sin sustento se asimilan a retiros de bienes gravados con IGV. Los sobrantes reflejan errores de registro contable previos que ameritan regularización.",
+      "tags": "inventario fisico, faltante inventario, merma normal, sobrante inventario, retiro de bienes, IGV, NIC 2",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_41",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "NIIF 15 / Ley 28194",
+      "categoria": "GENERAL",
+      "titulo": "Anticipo de cliente, entrega posterior de mercadería y aplicación del anticipo",
+      "premisa": "\"Muebles del Valle S.A.C.\" recibe de un cliente un anticipo de S/ 8,000 (incluido IGV) mediante transferencia bancaria, como parte de pago de un pedido especial de S/ 25,000 más IGV. 20 días después, culmina el pedido, lo entrega, emite la factura por el total, aplica el anticipo, y cobra el saldo pendiente por transferencia bancaria.",
+      "glosa": "Cobro de anticipo de cliente, emisión de factura total por pedido especial de muebles y aplicación de anticipo.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 8000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 1220.34
+        },
+        {
+          "linea": 3,
+          "cuenta": "12211",
+          "detalle": "Anticipos de clientes",
+          "debe": 0,
+          "haber": 6779.66
+        },
+        {
+          "linea": 4,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 29500,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "12211",
+          "detalle": "Anticipos de clientes",
+          "debe": 6779.66,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (reverso del IGV ya declarado)",
+          "debe": 1220.34,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (IGV total de la operación)",
+          "debe": 0,
+          "haber": 4500
+        },
+        {
+          "linea": 8,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 25000
+        },
+        {
+          "linea": 9,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (aplicación del anticipo)",
+          "debe": 0,
+          "haber": 8000
+        },
+        {
+          "linea": 10,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 21500,
+          "haber": 0
+        },
+        {
+          "linea": 11,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 21500
+        }
+      ],
+      "explicacion": "Los anticipos de clientes son pasivos (pasivos por contrato, NIIF 15). Tributariamente, se genera la obligación de declarar IGV sobre el anticipo recibido. Al superarse el umbral de S/ 2,000 (Ley 28194 de Bancarización), los pagos deben realizarse mediante medios bancarios para no perder la deducción de costo/gasto o crédito fiscal.",
+      "tags": "anticipo de cliente, pasivo por contrato, NIIF 15, bancarizacion, IGV anticipos, facturacion total, cobro",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_42",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "NIC 21",
+      "categoria": "GENERAL",
+      "titulo": "Compra de mercadería importada en USD, pago fraccionado en cuotas con diferencias de cambio",
+      "premisa": "\"Comercial Huaura S.A.C.\" adquiere mercadería de un proveedor del exterior por USD 10,000, pactando el pago en dos cuotas iguales de USD 5,000 cada una, a 30 y 60 días. El TC venta de la fecha inicial es 3.760. El pago de la primera cuota es a TC 3.790 y el segundo a TC 3.735.",
+      "glosa": "Compra de mercadería importada USD 10,000, e ingresos/egresos bancarios por amortización de cuotas con diferencias de cambio.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "60911",
+          "detalle": "Mercaderías – Costo de compras en tránsito",
+          "debe": 37600,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "46911",
+          "detalle": "Otras cuentas por pagar diversas – Proveedor del exterior",
+          "debe": 0,
+          "haber": 37600
+        },
+        {
+          "linea": 3,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 37600,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "61911",
+          "detalle": "Variación de mercaderías – Compras en tránsito",
+          "debe": 0,
+          "haber": 37600
+        },
+        {
+          "linea": 5,
+          "cuenta": "46911",
+          "detalle": "Otras cuentas por pagar diversas – Proveedor del exterior (Cuota 1)",
+          "debe": 18800,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "67611",
+          "detalle": "Diferencia de cambio (pérdida)",
+          "debe": 150,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas (Pago 1)",
+          "debe": 0,
+          "haber": 18950
+        },
+        {
+          "linea": 8,
+          "cuenta": "46911",
+          "detalle": "Otras cuentas por pagar diversas – Proveedor del exterior (Cuota 2)",
+          "debe": 18800,
+          "haber": 0
+        },
+        {
+          "linea": 9,
+          "cuenta": "77611",
+          "detalle": "Diferencia de cambio (ganancia)",
+          "debe": 0,
+          "haber": 125
+        },
+        {
+          "linea": 10,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas (Pago 2)",
+          "debe": 0,
+          "haber": 18675
+        }
+      ],
+      "explicacion": "Conforme a NIC 21, los pasivos en moneda extranjera se reconocen al TC inicial. Cualquier liquidación posterior con otro tipo de cambio genera diferencia de cambio reconocida en los resultados del periodo. No se permite reajustar el costo del inventario por variaciones posteriores de tipo de cambio.",
+      "tags": "moneda extranjera, NIC 21, diferencia de cambio, ganancia por cambio, perdida por cambio, importacion, compra, pago cuotas",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_43",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 13",
+      "categoria": "COMPRAS",
+      "titulo": "Compra de mercadería a crédito con componente de financiación implícito",
+      "premisa": "\"Comercial Paramonga S.A.C.\" adquiere mercadería a un proveedor pactando un plazo de pago de 180 días sin intereses explícitos en el contrato. El precio de contado equivalente del mismo lote es S/ 40,000, mientras que el precio pactado a crédito (180 días) es S/ 44,000. Conforme a la Sección 13, cuando un acuerdo de compra contiene efectivamente un componente de financiación (evidenciado por la diferencia entre el precio de contado y el precio a plazo), el inventario debe reconocerse al precio de contado equivalente, y la diferencia debe tratarse como gasto por intereses a lo largo del periodo de financiación, no como mayor costo de la mercadería.",
+      "glosa": "Compra de mercadería a crédito 180 días con componente de financiación implícito, reconocimiento al precio de contado equivalente.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "60111",
+          "detalle": "Mercaderías manufacturadas – Costo (precio de contado equivalente)",
+          "debe": 40000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "37312",
+          "detalle": "Intereses no devengados en transacciones con terceros",
+          "debe": 4000,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 7920,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 0,
+          "haber": 51920
+        },
+        {
+          "linea": 5,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 40000,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "61111",
+          "detalle": "Variación de mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 40000
+        },
+        {
+          "linea": 7,
+          "cuenta": "67312",
+          "detalle": "Gastos financieros – Intereses por financiación de proveedores",
+          "debe": 666.67,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "37312",
+          "detalle": "Intereses no devengados en transacciones con terceros",
+          "debe": 0,
+          "haber": 666.67
+        },
+        {
+          "linea": 9,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 51920,
+          "haber": 0
+        },
+        {
+          "linea": 10,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 51920
+        }
+      ],
+      "explicacion": "El párrafo 13.7 de la Sección 13 establece que si un acuerdo de compra contiene, en la práctica, un elemento de financiación, dicho elemento se reconoce como gasto por intereses a lo largo del periodo de financiación, y el inventario se registra al precio equivalente en efectivo. A diferencia de las NIIF plenas, la NIIF para las PYMES no exige el uso obligatorio del método de la tasa de interés efectiva estricta, permitiendo métodos de distribución más simples y practicables (como el lineal) si no hay diferencias significativas.",
+      "tags": "compra credito, componente financiacion, interes implicito, Sección 13, NIIF PYMES, inventarios",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_44",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 23",
+      "categoria": "VENTAS",
+      "titulo": "Venta con entrega diferida (DDP) y reconocimiento del ingreso al momento de la entrega real",
+      "premisa": "\"Comercial Andina S.A.C.\" vende mercadería a un cliente bajo condición de entrega DDP (Delivered Duty Paid) hasta el almacén del comprador. La mercadería es despachada desde el almacén del vendedor el 20 de julio, pero llega físicamente al almacén del cliente recién el 25 de julio. Conforme a la Sección 23, el ingreso por venta de bienes se reconoce cuando se han transferido al comprador los riesgos y ventajas inherentes a la propiedad, lo que ocurre en este caso el 25 de julio (fecha de entrega efectiva), y no en la fecha de despacho.",
+      "glosa": "Despacho de mercadería en tránsito propio, pendiente de transferencia de riesgos (condición DDP).",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "20141",
+          "detalle": "Mercaderías – En tránsito, despachadas pendientes de entrega (control interno)",
+          "debe": 22000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 0,
+          "haber": 22000
+        },
+        {
+          "linea": 3,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 41300,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 0,
+          "haber": 6300
+        },
+        {
+          "linea": 5,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros",
+          "debe": 0,
+          "haber": 35000
+        },
+        {
+          "linea": 6,
+          "cuenta": "69111",
+          "detalle": "Costo de mercaderías – Terceros",
+          "debe": 22000,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "20141",
+          "detalle": "Mercaderías – En tránsito, despachadas pendientes de entrega (control interno)",
+          "debe": 0,
+          "haber": 22000
+        }
+      ],
+      "explicacion": "El párrafo 23.10 de la Sección 23 exige evaluar si la entidad ha transferido al comprador los riesgos y ventajas significativos derivados de la propiedad de los bienes. En condiciones DDP (Incoterms), la transferencia ocurre recién en el punto de destino pactado, por lo que registrar el ingreso en la fecha de despacho constituiría un reconocimiento prematuro.",
+      "tags": "venta DDP, entrega diferida, transito, Incoterms, ingreso, costo de ventas, Sección 23",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_45",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "Sección 11",
+      "categoria": "VENTAS",
+      "titulo": "Venta al crédito a largo plazo sin intereses pactados, medición al valor presente",
+      "premisa": "\"Distribuidora Mayorista Sur S.A.C.\" vende mercadería a un cliente estratégico a un plazo de 2 años sin intereses pactados contractualmente, por un valor nominal de S/ 50,000. Dado que el plazo excede las condiciones normales de crédito comercial y constituye, en esencia, una transacción de financiación, la Sección 11 exige medir la cuenta por cobrar a su valor presente, descontando los flujos futuros a una tasa de interés de mercado para instrumentos similares (10% anual), reconociendo la diferencia como ingreso financiero a lo largo del plazo. (Se omite el efecto del IGV en el ajuste financiero).",
+      "glosa": "Venta al crédito a 2 años sin intereses pactados, reconocimiento al valor presente según Sección 11.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "12112",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (valor nominal a largo plazo)",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "17112",
+          "detalle": "Descuento no devengado en cuentas por cobrar a largo plazo",
+          "debe": 0,
+          "haber": 8677.69
+        },
+        {
+          "linea": 3,
+          "cuenta": "70111",
+          "detalle": "Mercaderías – Terceros (ingreso reconocido al valor presente)",
+          "debe": 0,
+          "haber": 41322.31
+        },
+        {
+          "linea": 4,
+          "cuenta": "17112",
+          "detalle": "Descuento no devengado en cuentas por cobrar a largo plazo",
+          "debe": 4132.23,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "77211",
+          "detalle": "Ingresos financieros – Devengo de descuento en cuentas por cobrar",
+          "debe": 0,
+          "haber": 4132.23
+        },
+        {
+          "linea": 6,
+          "cuenta": "17112",
+          "detalle": "Descuento no devengado en cuentas por cobrar a largo plazo",
+          "debe": 4545.46,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "77211",
+          "detalle": "Ingresos financieros – Devengo de descuento en cuentas por cobrar",
+          "debe": 0,
+          "haber": 4545.46
+        },
+        {
+          "linea": 8,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 50000,
+          "haber": 0
+        },
+        {
+          "linea": 9,
+          "cuenta": "12112",
+          "detalle": "Facturas por cobrar – Emitidas en cartera (valor nominal a largo plazo)",
+          "debe": 0,
+          "haber": 50000
+        }
+      ],
+      "explicacion": "El párrafo 11.13 de la Sección 11 dispone que, si el acuerdo constituye una transacción de financiación, la entidad medirá el activo o pasivo financiero al valor presente de los pagos futuros descontados a una tasa de interés de mercado. Esto equivale al costo amortizado, con reglas simplificadas frente a la NIIF 9 (por ejemplo, sin modelo de pérdida crediticia esperada en tres etapas).",
+      "tags": "venta largo plazo, sin intereses, valor presente, costo amortizado, interes implicito, Sección 11",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_46",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "Sección 17",
+      "categoria": "GENERAL",
+      "titulo": "Adquisición de mobiliario de tienda con componentes de vida útil distinta",
+      "premisa": "\"Zapatería Los Andes S.A.C.\" adquiere un sistema integral de estanterías y vitrinas para su tienda por S/ 36,000 más IGV, al contado. El bien está compuesto por dos partes claramente identificables con patrones de consumo distintos: la estructura metálica (S/ 24,000, vida útil estimada 10 años) y los paneles de vidrio/vitrinas (S/ 12,000, vida útil estimada 5 años, al ser más susceptibles a rotura y reemplazo). Conforme a la Sección 17, cada componente significativo con una vida útil diferente debe depreciarse por separado.",
+      "glosa": "Adquisición de mobiliario de tienda (estanterías y vitrinas) al contado, componentizado según vida útil.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "33611",
+          "detalle": "Muebles y enseres – Estructura metálica de estanterías",
+          "debe": 24000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "33612",
+          "detalle": "Muebles y enseres – Vitrinas y paneles de vidrio",
+          "debe": 12000,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 6480,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 42480
+        },
+        {
+          "linea": 5,
+          "cuenta": "68132",
+          "detalle": "Depreciación – Muebles y enseres (estructura metálica)",
+          "debe": 200,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "68132",
+          "detalle": "Depreciación – Muebles y enseres (vitrinas y paneles)",
+          "debe": 200,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "39133",
+          "detalle": "Depreciación acumulada – Muebles y enseres (estructura metálica)",
+          "debe": 0,
+          "haber": 200
+        },
+        {
+          "linea": 8,
+          "cuenta": "39134",
+          "detalle": "Depreciación acumulada – Muebles y enseres (vitrinas y paneles)",
+          "debe": 0,
+          "haber": 200
+        }
+      ],
+      "explicacion": "El párrafo 17.16 de la Sección 17 exige distribuir el importe inicialmente reconocido de propiedades, planta y equipo entre sus componentes principales y depreciar cada uno por separado cuando tengan patrones de consumo significativamente distintos, evitando distorsionar los resultados y reflejando adecuadamente los ciclos de reemplazo.",
+      "tags": "componentes, vida util, depreciacion separada, Sección 17, activo fijo, muebles y enseres",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_47",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 21",
+      "categoria": "GENERAL",
+      "titulo": "Litigio probable (provisión) vs. litigio posible (pasivo contingente, solo revelación)",
+      "premisa": "\"Comercial Retail Perú S.A.C.\" enfrenta dos procesos: (1) una demanda de un cliente por presunta venta de un producto defectuoso, reclamando S/ 25,000, respecto de la cual el asesor legal externo estima que es probable perder el litigio, con un monto razonablemente estimado en S/ 15,000; y (2) una segunda demanda interpuesta por un proveedor por S/ 10,000, calificada por el asesor legal como posible (no probable), por lo que, conforme a la Sección 21, únicamente corresponde su revelación en notas a los estados financieros como pasivo contingente, sin registrar asiento contable alguno. Meses después, el primer litigio concluye con sentencia firme en contra de la empresa por S/ 16,000.",
+      "glosa": "Provisión por litigio en curso calificado como probable por el asesor legal (demanda de cliente).",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "68313",
+          "detalle": "Provisión para litigios",
+          "debe": 15000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "48213",
+          "detalle": "Provisión para litigios",
+          "debe": 0,
+          "haber": 15000
+        },
+        {
+          "linea": 3,
+          "cuenta": "48213",
+          "detalle": "Provisión para litigios",
+          "debe": 15000,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "68313",
+          "detalle": "Provisión para litigios (ajuste por diferencia con el monto provisionado)",
+          "debe": 1000,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 16000
+        }
+      ],
+      "explicacion": "La Sección 21 distingue entre una provisión (se reconoce si la salida de recursos es probable y estimable con fiabilidad) y un pasivo contingente (se revela en notas, no se asienta si es calificado solo como posible). Esta correcta distinción evita registrar pasivos sobredimensionados e inexactos.",
+      "tags": "provision, pasivo contingente, litigio probable, litigio posible, Sección 21, revelacion",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_48",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 27",
+      "categoria": "GENERAL",
+      "titulo": "Deterioro combinado de mobiliario de tienda (PPE) e inventario dañado",
+      "premisa": "Al cierre del ejercicio, \"Comercial del Pacífico S.A.C.\" identifica dos indicios de deterioro tras un siniestro menor (filtración de agua en el almacén): (1) su mobiliario de tienda (vitrinas), con un valor en libros de S/ 18,000, cuyo importe recuperable (el mayor entre el valor razonable menos los costos de venta y el valor en uso) se estima en S/ 12,000; y (2) un lote específico de mercadería dañada por humedad, con valor en libros de S/ 5,000, cuyo valor neto de realización estimado tras el siniestro es de solo S/ 1,500.",
+      "glosa": "Reconocimiento de deterioro de valor en mobiliario de tienda (vitrinas) por siniestro de filtración de agua.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "68621",
+          "detalle": "Deterioro de valor – Inmuebles, maquinaria y equipo (muebles y enseres)",
+          "debe": 6000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "39931",
+          "detalle": "Deterioro acumulado – Muebles y enseres",
+          "debe": 0,
+          "haber": 6000
+        },
+        {
+          "linea": 3,
+          "cuenta": "69511",
+          "detalle": "Desvalorización de mercaderías",
+          "debe": 3500,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "29111",
+          "detalle": "Desvalorización de mercaderías",
+          "debe": 0,
+          "haber": 3500
+        }
+      ],
+      "explicacion": "La Sección 27 unifica en un solo modelo el tratamiento del deterioro para prácticamente todos los activos no financieros (inventario y PPE), lo cual simplifica los análisis requeridos para una PYME frente al marco de NIIF plenas (que separa NIC 2 y NIC 36).",
+      "tags": "deterioro activo, desvalorizacion existencias, valor neto realizacion, importe recuperable, siniestro, Sección 27",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_49",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "Sección 22",
+      "categoria": "GENERAL",
+      "titulo": "Aporte de capital social en especie (mercadería) por parte de un socio",
+      "premisa": "Un socio de \"Comercial Fénix S.A.C.\" se compromete, mediante acuerdo de junta y posterior escritura pública inscrita en Registros Públicos, a aportar mercadería (repuestos automotrices) al capital social de la empresa, valorizada en S/ 30,000 según informe de valorización independiente. Días después, el socio hace entrega física efectiva de la mercadería en el almacén de la empresa, formalizando el aporte.",
+      "glosa": "Reconocimiento del compromiso de aporte de capital en especie según acuerdo de junta y escritura pública.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "14111",
+          "detalle": "Cuentas por cobrar a los accionistas (socios) – Aportes por realizar",
+          "debe": 30000,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "50111",
+          "detalle": "Capital social – Acciones/participaciones comunes",
+          "debe": 0,
+          "haber": 30000
+        },
+        {
+          "linea": 3,
+          "cuenta": "20111",
+          "detalle": "Mercaderías manufacturadas",
+          "debe": 30000,
+          "haber": 0
+        },
+        {
+          "linea": 4,
+          "cuenta": "14111",
+          "detalle": "Cuentas por cobrar a los accionistas (socios) – Aportes por realizar",
+          "debe": 0,
+          "haber": 30000
+        }
+      ],
+      "explicacion": "Conforme a la Sección 22, los aportes se reconocen en patrimonio cuando cumplen la definición de instrumento de patrimonio. La subcuenta transitoria de la cuenta 14 permite registrar el compromiso legal antes de la entrega física del activo en especie.",
+      "tags": "aporte especie, capital social, suscripcion capital, accionistas, Sección 22",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_50",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 20",
+      "categoria": "GENERAL",
+      "titulo": "Arrendamiento operativo de vehículo de reparto con cuotas crecientes",
+      "premisa": "\"Distribuidora Norte S.A.C.\" arrienda un vehículo de reparto por 3 años. Tras evaluar los criterios de la Sección 20 (sin opción de compra ventajosa, el vehículo se devuelve al arrendador al término del contrato conservando un valor residual significativo, y el plazo del arrendamiento no cubre la mayor parte de su vida económica), la empresa clasifica el contrato como arrendamiento operativo, a diferencia del tratamiento de NIIF 16 plena. El contrato pacta cuotas crecientes: S/ 2,000 mensuales el primer año, S/ 2,300 el segundo año y S/ 2,600 el tercer año, más IGV. Conforme al párrafo 20.15, el gasto por arrendamiento operativo debe reconocerse de forma lineal a lo largo del plazo, salvo que otra base sistemática sea más representativa.",
+      "glosa": "Reconocimiento lineal del gasto por arrendamiento operativo de vehículo de reparto – cuota mes 1.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "63511",
+          "detalle": "Alquileres – Vehículos (gasto reconocido en línea recta)",
+          "debe": 2300,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (sobre el importe facturado real, S/ 2,000)",
+          "debe": 360,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 0,
+          "haber": 2360
+        },
+        {
+          "linea": 4,
+          "cuenta": "48611",
+          "detalle": "Pasivo por arrendamiento operativo – Diferencia por reconocimiento lineal",
+          "debe": 0,
+          "haber": 300
+        },
+        {
+          "linea": 5,
+          "cuenta": "63511",
+          "detalle": "Alquileres – Vehículos (gasto reconocido en línea recta - año 3)",
+          "debe": 2300,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "48611",
+          "detalle": "Pasivo por arrendamiento operativo – Diferencia por reconocimiento lineal",
+          "debe": 300,
+          "haber": 0
+        },
+        {
+          "linea": 7,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia (sobre el importe facturado real, S/ 2,600)",
+          "debe": 468,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "42121",
+          "detalle": "Facturas por pagar – Terceros",
+          "debe": 0,
+          "haber": 3068
+        }
+      ],
+      "explicacion": "A diferencia de la NIIF 16 plena (que eliminó la distinción operativo/financiero para arrendatarios), la Sección 20 mantiene el modelo dual. Para cuotas no uniformes, el párrafo 20.15 exige el reconocimiento lineal del gasto, acumulando la diferencia transitoria en un pasivo diferido que se revierte gradualmente hacia el término del contrato.",
+      "tags": "arrendamiento operativo, cuotas crecientes, gasto lineal, pasivo diferido, Sección 20",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_51",
+      "sector": "COMERCIAL",
+      "regimen": "MYPE",
+      "niif_norma": "Sección 30",
+      "categoria": "GENERAL",
+      "titulo": "Compra de activo fijo importado en USD: tratamiento de partida no monetaria al costo histórico",
+      "premisa": "\"Distribuidora Fortaleza S.A.C.\" importa un vehículo de reparto por USD 12,000, pagado de contado a la fecha de la transacción (TC compra registro histórico: 3.70). Al cierre del ejercicio, el tipo de cambio ha subido a 3.85. Conforme a la Sección 30, el vehículo constituye una partida no monetaria medida al costo histórico en moneda extranjera, por lo que se contabiliza utilizando el tipo de cambio vigente en la fecha de la transacción y no se vuelve a convertir (remedir) en periodos posteriores, a diferencia de una partida monetaria (como una cuenta por pagar en USD pendiente de cancelación) que sí se actualizaría al tipo de cambio de cierre.",
+      "glosa": "Adquisición al contado de vehículo de reparto importado, USD 12,000, TC histórico 3.70.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "34121",
+          "detalle": "Unidades de transporte – Vehículos de reparto",
+          "debe": 44400,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "40111",
+          "detalle": "IGV – Cuenta propia",
+          "debe": 7992,
+          "haber": 0
+        },
+        {
+          "linea": 3,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 52392
+        }
+      ],
+      "explicacion": "La Sección 30 establece que las partidas no monetarias registradas a costo histórico en moneda extranjera no deben reajustarse al tipo de cambio de cierre, a diferencia de las partidas monetarias. Esto previene reevaluar activos indebidamente y reconocer ganancias ficticias por diferencia de cambio.",
+      "tags": "moneda extranjera, partida no monetaria, costo historico, vehiculo, tipo de cambio, Sección 30",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
+    },
+    {
+      "id": "ak_seed_52",
+      "sector": "COMERCIAL",
+      "regimen": "RG",
+      "niif_norma": "Sección 10",
+      "categoria": "GENERAL",
+      "titulo": "Corrección retroactiva de un error material de un periodo anterior",
+      "premisa": "En marzo de 2026, \"Comercial Barranca S.A.C.\" detecta que una venta al crédito realizada en diciembre de 2025 por S/ 18,000 más IGV nunca fue registrada contablemente ni declarada en su declaración jurada mensual del IGV de dicho periodo (error material, dado que los estados financieros del ejercicio 2025 ya fueron emitidos). Conforme a la Sección 10, un error material de un periodo anterior debe corregirse de forma retroactiva, ajustando el saldo de apertura de los resultados acumulados del periodo más antiguo presentado, y no como un ingreso del periodo corriente (2026). Adicionalmente, corresponde presentar una declaración jurada rectificatoria del IGV de diciembre 2025 y asumir los intereses moratorios correspondientes.",
+      "glosa": "Corrección de error material de periodo anterior – venta de diciembre 2025 omitida, ajuste retroactivo a resultados acumulados.",
+      "asiento_json": [
+        {
+          "linea": 1,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 21240,
+          "haber": 0
+        },
+        {
+          "linea": 2,
+          "cuenta": "59121",
+          "detalle": "Resultados acumulados – Efecto por corrección de errores de periodos anteriores",
+          "debe": 0,
+          "haber": 18000
+        },
+        {
+          "linea": 3,
+          "cuenta": "40111",
+          "detalle": "IGV por regularizar (omitido en la declaración de diciembre 2025)",
+          "debe": 0,
+          "haber": 3240
+        },
+        {
+          "linea": 4,
+          "cuenta": "40111",
+          "detalle": "IGV por regularizar (omitido en la declaración de diciembre 2025)",
+          "debe": 3240,
+          "haber": 0
+        },
+        {
+          "linea": 5,
+          "cuenta": "67612",
+          "detalle": "Intereses y moras tributarias (gasto no deducible para efectos del Impuesto a la Renta)",
+          "debe": 280,
+          "haber": 0
+        },
+        {
+          "linea": 6,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 0,
+          "haber": 3520
+        },
+        {
+          "linea": 7,
+          "cuenta": "10411",
+          "detalle": "Cuentas corrientes operativas",
+          "debe": 21240,
+          "haber": 0
+        },
+        {
+          "linea": 8,
+          "cuenta": "12111",
+          "detalle": "Facturas por cobrar – Emitidas en cartera",
+          "debe": 0,
+          "haber": 21240
+        }
+      ],
+      "explicacion": "El párrafo 10.21 de la Sección 10 exige la corrección retroactiva de errores materiales de periodos anteriores mediante el reajuste del patrimonio de apertura (resultados acumulados), en lugar de impactar los resultados del ejercicio corriente. Los intereses moratorios tributarios generados son gastos no deducibles para el Impuesto a la Renta.",
+      "tags": "error material, periodo anterior, correccion retroactiva, rectificatoria, IGV, intereses, Sección 10",
+      "tipo": "CASO_PRACTICO",
+      "activo": 1,
+      "vigente_desde": "2026-01-01",
+      "vigente_hasta": "2099-12-31"
     }
-  ]
+  ],
+  "totalCases": 52,
+  "lastUpdated": "2026-07-17"
 }

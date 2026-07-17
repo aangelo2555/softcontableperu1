@@ -19,11 +19,13 @@ types.setTypeParser(23, val => val === null ? 0 : parseInt(val, 10));
 // Connection Pool optimizado para alta concurrencia (50-100 usuarios simultáneos)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1'))) 
+        ? false 
+        : { rejectUnauthorized: false },
     max: 30, // 30 conexiones activas máximo por nodo Express
-    min: 4,  // 4 conexiones calientes en standby
+    min: 0,  // No pre-asignar conexiones en standby
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 15000, // 15s timeout
     statement_timeout: 20000, // Prevenir consultas colgadas de más de 20s
     keepAlive: true
 });

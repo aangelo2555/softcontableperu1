@@ -216,15 +216,15 @@ const BalanceView: React.FC = () => {
         icon={<Landmark size={18} />}
         title="Situación Financiera"
         badge={
-          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+          <span className="px-2 py-0.5 rounded-lg bg-app-surface text-[9px] text-app-text border border-app-border tracking-[0.2em] uppercase">
             Balance General
           </span>
         }
         subtitle={`AL 31 DE DICIEMBRE DEL ${currentCompany.period || '2025'} (Nuevos Soles) • RUC: ${currentCompany.ruc}`}
         actions={
           <div className="flex gap-2">
-             <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-             <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
+             <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-app-text transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
+             <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-app-text transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
           </div>
         }
       />
@@ -248,11 +248,11 @@ const BalanceView: React.FC = () => {
             
             {/* LEFT COLUMN: ACTIVO */}
             <div className="space-y-6">
-              <h3 className="text-sm font-black border-b-2 border-app-border pb-1 tracking-[0.3em] mb-4 text-pld-blue">A C T I V O</h3>
+              <h3 className="text-sm font-black border-b-2 border-app-border pb-1 tracking-[0.3em] mb-4 text-app-text">A C T I V O</h3>
               
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-[10px] font-black text-pld-blue uppercase tracking-widest mb-2">ACTIVO CORRIENTE</h4>
+                  <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest mb-2">ACTIVO CORRIENTE</h4>
                   <ReportLine label="Efectivo y Equivalentes de Efectivo" value={efectivo} indent />
                   <ReportLine label="Inversiones Financieras CP" value={inversionesCP} indent />
                   <ReportLine label="Cuentas por Cobrar Comerciales" value={ctasComerciales} indent />
@@ -263,14 +263,14 @@ const BalanceView: React.FC = () => {
                   <ReportLine label="Inventarios / Existencias" value={existencias} indent />
                   <ReportLine label="(-) Desvalorización de Inventarios" value={desvalorizacionExistencias} indent subtract />
                   <div className="flex justify-end pt-2">
-                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-pld-blue">
+                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-app-text">
                       {totalActivoCorriente.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-black text-pld-blue uppercase tracking-widest mb-2 mt-4">ACTIVO NO CORRIENTE</h4>
+                  <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest mb-2 mt-4">ACTIVO NO CORRIENTE</h4>
                   <ReportLine label="Inversiones Mobiliarias" value={inversionesMobiliarias} indent />
                   <ReportLine label="Inversiones Inmobiliarias" value={inversionesInmobiliarias} indent />
                   <ReportLine label="Activos por Derecho de Uso" value={derechoUso} indent />
@@ -280,7 +280,7 @@ const BalanceView: React.FC = () => {
                   <ReportLine label="Intangibles" value={intangibles} indent />
                   <ReportLine label="Otros Activos no Corrientes" value={otrosActivosNoCorrientes} indent />
                   <div className="flex justify-end pt-2">
-                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-pld-blue">
+                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-app-text">
                       {totalActivoNoCorriente.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -291,7 +291,7 @@ const BalanceView: React.FC = () => {
                 <span className="text-xs font-black tracking-widest uppercase">TOTAL ACTIVO</span>
                 <div className="flex items-center gap-2">
                    <span className="text-[10px] text-app-muted font-bold">S/.</span>
-                   <span className="text-lg font-mono font-black text-pld-blue border-b-4 border-double border-pld-blue/40">
+                   <span className="text-lg font-mono font-black text-app-text border-b-4 border-double border-app-text/40">
                     {totalActivo.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                    </span>
                 </div>
@@ -300,11 +300,11 @@ const BalanceView: React.FC = () => {
 
             {/* RIGHT COLUMN: PASIVO Y PATRIMONIO */}
             <div className="space-y-6">
-              <h3 className="text-sm font-black border-b-2 border-app-border pb-1 tracking-[0.3em] mb-4 text-right text-red-500">P A S I V O   Y   P A T R I M O N I O</h3>
+              <h3 className="text-sm font-black border-b-2 border-app-border pb-1 tracking-[0.3em] mb-4 text-right text-app-text">P A S I V O   Y   P A T R I M O N I O</h3>
               
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">PASIVO CORRIENTE</h4>
+                  <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest mb-2">PASIVO CORRIENTE</h4>
                   <ReportLine label="Tributos por Pagar" value={tributos} indent />
                   <ReportLine label="Remuneraciones por Pagar" value={remunPorPagar} indent />
                   <ReportLine label="Cuentas por Pagar Comerciales" value={ctasPagarComerciales} indent />
@@ -313,24 +313,24 @@ const BalanceView: React.FC = () => {
                   <ReportLine label="Otras Cuentas por Pagar" value={otrasCtasPagar} indent />
                   <ReportLine label="Pasivo Diferido CP" value={pasivoDiferido} indent />
                   <div className="flex justify-end pt-2">
-                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-red-500">
+                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-app-text">
                       {totalPasivoCorriente.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 mt-4">PASIVO NO CORRIENTE</h4>
+                  <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest mb-2 mt-4">PASIVO NO CORRIENTE</h4>
                   <ReportLine label="Provisiones Largo Plazo" value={provisionesLP} indent />
                   <div className="flex justify-end pt-2">
-                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-red-500">
+                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-app-text">
                       {totalPasivoNoCorriente.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-black text-pld-magenta uppercase tracking-widest mb-2 mt-4">PATRIMONIO NETO</h4>
+                  <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest mb-2 mt-4">PATRIMONIO NETO</h4>
                   <ReportLine label="Capital Social" value={capitalSocial} indent />
                   <ReportLine label="Capital Adicional" value={capitalAdicional} indent />
                   <ReportLine label="Excedente de Revaluación" value={excedenteReval} indent />
@@ -338,7 +338,7 @@ const BalanceView: React.FC = () => {
                   <ReportLine label="Resultados Acumulados" value={resultadosAcumulados} indent />
                   <ReportLine label="Resultados del Ejercicio" value={utilidadEjercicio} indent />
                   <div className="flex justify-end pt-2">
-                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-pld-magenta">
+                    <span className="font-mono text-xs font-black border-t-2 border-app-border pt-1 w-32 text-right text-app-text">
                       {totalPatrimonio.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>

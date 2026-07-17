@@ -807,7 +807,7 @@ const MovimientosView: React.FC = () => {
                   <tr className="bg-app-bg text-app-muted uppercase text-[10px] font-black">
                     <th className="p-3 text-left pl-6 sticky left-0 bg-app-bg z-10 w-32 border-r border-app-border">Cuenta</th>
                     {MONTHS.map(m => <th key={m} className="p-3 min-w-[100px] text-center">{m}</th>)}
-                    <th className="p-3 pr-6 bg-violet-500/10 text-violet-500">TOTAL</th>
+                    <th className="p-3 pr-6 bg-app-surface text-app-text">TOTAL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-app-border">
@@ -819,18 +819,18 @@ const MovimientosView: React.FC = () => {
                             <input 
                               autoFocus
                               type="text"
-                              className="p-1 px-2 border border-violet-400 rounded-lg text-[10px] w-20 font-bold bg-app-bg text-app-text"
+                              className="p-1 px-2 border border-app-border rounded-lg text-[10px] w-20 font-bold bg-app-bg text-app-text"
                               value={renameValue}
                               onChange={e => setRenameValue(e.target.value)}
                               onKeyDown={e => { if(e.key === 'Enter') handleRenameAccountConfirm(); if(e.key === 'Escape') setRenamingCta(null); }}
                             />
-                            <button onClick={handleRenameAccountConfirm} className="p-1 px-1.5 bg-violet-600 text-white rounded-lg text-[10px] font-black">OK</button>
+                            <button onClick={handleRenameAccountConfirm} className="p-1 px-1.5 bg-app-surface border border-app-border text-app-text rounded-lg text-[10px] font-black hover:bg-app-hover">OK</button>
                           </div>
                         ) : (
                           <div className="flex items-center justify-between">
                              <span>{cta}</span>
                              <div className="flex gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity print:hidden">
-                               <button onClick={() => { setRenamingCta({ section: 'C', oldCta: cta }); setRenameValue(cta); }} className="text-app-muted hover:text-violet-500"><Edit2 size={12} /></button>
+                               <button onClick={() => { setRenamingCta({ section: 'C', oldCta: cta }); setRenameValue(cta); }} className="text-app-muted hover:text-app-text"><Edit2 size={12} /></button>
                                <button onClick={() => handleDeleteAccount('C', cta)} className="text-app-muted hover:text-red-500"><Trash2 size={12} /></button>
                              </div>
                           </div>
@@ -851,19 +851,19 @@ const MovimientosView: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-violet-500/10 font-black">
-                    <td className="p-3 pl-6 text-left text-violet-500 sticky left-0 bg-violet-500/10 z-10 border-r border-app-border">SUBTOTAL BI</td>
-                    {monthlyData.map(m => <td key={m.name} className="p-3 text-violet-500">{format(m.purchases.bi)}</td>)}
-                    <td className="p-3 pr-6 font-black bg-violet-500/20 text-violet-600">{format(totals.p.bi)}</td>
+                  <tr className="bg-app-surface font-black">
+                    <td className="p-3 pl-6 text-left text-app-text sticky left-0 bg-app-surface z-10 border-r border-app-border">SUBTOTAL BI</td>
+                    {monthlyData.map(m => <td key={m.name} className="p-3 text-app-text">{format(m.purchases.bi)}</td>)}
+                    <td className="p-3 pr-6 font-black bg-app-surface text-app-text border border-app-border">{format(totals.p.bi)}</td>
                   </tr>
-                  <tr className="bg-amber-500/10">
-                    <td className="p-3 pl-6 text-left font-black text-amber-500 sticky left-0 bg-amber-500/10 z-10 border-r border-amber-500/20">4011 (IGV)</td>
+                  <tr className="bg-app-surface">
+                    <td className="p-3 pl-6 text-left font-black text-app-text sticky left-0 bg-app-surface z-10 border-r border-app-border">4011 (IGV)</td>
                     {monthlyData.map(m => (
-                      <td key={m.name} className="p-3 font-bold text-amber-500 text-right font-mono">
+                      <td key={m.name} className="p-3 font-bold text-app-text text-right font-mono">
                         {format(m.purchases.igv)}
                       </td>
                     ))}
-                    <td className="p-3 pr-6 font-black bg-amber-500/20 text-amber-600">{format(totals.p.igv)}</td>
+                    <td className="p-3 pr-6 font-black bg-app-surface text-app-text border border-app-border">{format(totals.p.igv)}</td>
                   </tr>
                   <tr className="bg-app-bg border-t-2 border-app-border">
                     <td className="p-3 pl-6 text-left font-black text-app-text sticky left-0 bg-app-bg z-10 border-r border-app-border">4212 (TOTAL)</td>
@@ -885,11 +885,11 @@ const MovimientosView: React.FC = () => {
             {/* Card: Monthly Breakdown and PDT Compare */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase text-slate-600 dark:text-slate-400 italic">Análisis Mensual Detallado</h3>
+                <h3 className="text-xs font-black uppercase text-app-muted italic">Análisis Mensual Detallado</h3>
                 <select 
                   value={selectedMonthIndex} 
                   onChange={e => setSelectedMonthIndex(Number(e.target.value))}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-lg text-[10px] font-black uppercase text-blue-600"
+                  className="bg-app-bg border border-app-border p-2 rounded-lg text-[10px] font-black uppercase text-app-text"
                 >
                   {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
                 </select>
@@ -897,20 +897,20 @@ const MovimientosView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-app-surface p-6 rounded-3xl border border-app-border shadow-sm transition-all hover:shadow-md">
-                  <p className="text-[10px] font-black text-blue-500 uppercase mb-4">SEGÚN SISTEMA</p>
+                  <p className="text-[10px] font-black text-app-text uppercase mb-4">SEGÚN SISTEMA</p>
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs text-app-text"><span>IGV Ventas</span><span className="font-mono font-bold">{format(monthlyData[selectedMonthIndex].sales.igv)}</span></div>
                     <div className="flex justify-between text-xs text-app-text"><span>IGV Compras</span><span className="font-mono font-bold">{format(monthlyData[selectedMonthIndex].purchases.igv)}</span></div>
-                    <div className="pt-2 border-t border-app-border flex justify-between text-xs font-black text-app-text"><span>POR PAGAR</span><span className="text-pld-blue">{format(monthlyData[selectedMonthIndex].sales.igv - monthlyData[selectedMonthIndex].purchases.igv)}</span></div>
+                    <div className="pt-2 border-t border-app-border flex justify-between text-xs font-black text-app-text"><span>POR PAGAR</span><span className="text-app-text">{format(monthlyData[selectedMonthIndex].sales.igv - monthlyData[selectedMonthIndex].purchases.igv)}</span></div>
                   </div>
                 </div>
 
-                <div className="bg-app-bg p-6 rounded-3xl border border-app-border shadow-sm transition-all hover:shadow-md group">
-                  <p className="text-[10px] font-black text-amber-500 uppercase mb-4">SEGÚN PDT (MANUAL)</p>
+                <div className="bg-app-surface p-6 rounded-3xl border border-app-border shadow-sm transition-all hover:shadow-md group">
+                  <p className="text-[10px] font-black text-app-muted uppercase mb-4">SEGÚN PDT (MANUAL)</p>
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs text-app-text"><span>IGV Decl. V</span><EditableCell value={monthlyData[selectedMonthIndex].pdt.v} onSave={v => handleSave(selectedMonthIndex+1, 'PDT', 'V', v)} isOverride={monthlyData[selectedMonthIndex].pdt.ovV} onReset={() => handleReset(selectedMonthIndex+1, 'PDT', 'V')} /></div>
                     <div className="flex justify-between text-xs text-app-text"><span>IGV Decl. C</span><EditableCell value={monthlyData[selectedMonthIndex].pdt.c} onSave={v => handleSave(selectedMonthIndex+1, 'PDT', 'C', v)} isOverride={monthlyData[selectedMonthIndex].pdt.ovC} onReset={() => handleReset(selectedMonthIndex+1, 'PDT', 'C')} /></div>
-                    <div className="pt-2 border-t border-app-border flex justify-between text-xs font-black text-app-text"><span>DECLARADO</span><span className="text-amber-500">{format(monthlyData[selectedMonthIndex].pdt.v - monthlyData[selectedMonthIndex].pdt.c)}</span></div>
+                    <div className="pt-2 border-t border-app-border flex justify-between text-xs font-black text-app-text"><span>DECLARADO</span><span className="text-app-text">{format(monthlyData[selectedMonthIndex].pdt.v - monthlyData[selectedMonthIndex].pdt.c)}</span></div>
                   </div>
                 </div>
               </div>
@@ -924,12 +924,12 @@ const MovimientosView: React.FC = () => {
                 if (diffMonthNames.length === 0) return null;
 
                 return (
-                  <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/30 p-6 rounded-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="bg-app-surface border border-app-border p-6 rounded-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-lg shadow-rose-600/20"><AlertTriangle size={24} /></div>
+                      <div className="p-3 bg-app-surface border border-app-border text-app-text rounded-2xl shadow-sm"><AlertTriangle size={24} /></div>
                       <div>
-                        <p className="text-sm font-black text-rose-600 uppercase tracking-widest">Inconsistencia Detectada (PDT vs Sistema)</p>
-                        <p className="text-[10px] text-rose-500 font-bold uppercase mt-1">Se han detectado discrepancias en {diffMonthNames.length} {diffMonthNames.length === 1 ? 'periodo' : 'periodos'}.</p>
+                        <p className="text-sm font-black text-app-text uppercase tracking-widest">Inconsistencia Detectada (PDT vs Sistema)</p>
+                        <p className="text-[10px] text-app-muted font-bold uppercase mt-1">Se han detectado discrepancias en {diffMonthNames.length} {diffMonthNames.length === 1 ? 'periodo' : 'periodos'}.</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -937,14 +937,14 @@ const MovimientosView: React.FC = () => {
                         const diff = (m.sales.igv - m.purchases.igv) - (m.pdt.v - m.pdt.c);
                         if (Math.abs(diff) <= 0.1) return null;
                         return (
-                          <div key={m.name} className="p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-rose-100 dark:border-rose-900/20 flex justify-between items-center px-4">
-                            <span className="text-[10px] font-black text-slate-500">{m.name}</span>
-                            <span className="text-xs font-mono font-black text-rose-600">S/ {format(Math.abs(diff))}</span>
+                          <div key={m.name} className="p-2 bg-app-bg rounded-xl border border-app-border flex justify-between items-center px-4">
+                            <span className="text-[10px] font-black text-app-muted">{m.name}</span>
+                            <span className="text-xs font-mono font-black text-app-text">S/ {format(Math.abs(diff))}</span>
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-[9px] text-rose-400 font-medium italic">* La diferencia puede deberse a facturas no registradas en el sistema o errores manuales en la declaración.</p>
+                    <p className="text-[9px] text-app-muted font-medium italic">* La diferencia puede deberse a facturas no registradas en el sistema o errores manuales en la declaración.</p>
                   </div>
                 );
               })()}
@@ -952,7 +952,7 @@ const MovimientosView: React.FC = () => {
 
             {/* Renta and Impuestos Overview */}
             <div className="space-y-6">
-               <div className="bg-indigo-600 text-white p-8 rounded-[2rem] shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
+               <div className="bg-app-surface text-app-text p-8 rounded-[2rem] border border-app-border shadow-md relative overflow-hidden group">
                   <div className="relative z-10">
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-6">PAGOS A CUENTA - IMPUESTO A LA RENTA</p>
                     <div className="flex items-center justify-between">
@@ -962,19 +962,18 @@ const MovimientosView: React.FC = () => {
                       </div>
                       <div className="text-right">
                          <p className="text-[10px] font-black uppercase mb-1">Cálculo Seleccionado ({MONTHS[selectedMonthIndex]})</p>
-                         <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
+                         <div className="bg-app-bg p-3 border border-app-border rounded-2xl">
                             <EditableCell 
                                value={monthlyData[selectedMonthIndex].renta} 
                                onSave={v => handleSave(selectedMonthIndex+1, 'R', 'VAL', v)} 
                                isOverride={monthlyData[selectedMonthIndex].isRentaOv} 
                                onReset={() => handleReset(selectedMonthIndex+1, 'R', 'VAL')}
-                               className="text-white text-lg"
+                               className="text-app-text text-lg font-bold"
                             />
                          </div>
                       </div>
                     </div>
                   </div>
-                  <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-all duration-1000" />
                </div>
 
                <div className="bg-app-surface p-8 rounded-[2rem] border border-app-border shadow-sm flex items-center justify-between">
@@ -983,7 +982,7 @@ const MovimientosView: React.FC = () => {
                     <p className="text-[10px] text-app-muted font-bold mt-1">IGV + Renta acumulados a pagar</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-black text-rose-500">S/ {format(totals.s.igv - totals.p.igv + totals.renta)}</p>
+                    <p className="text-2xl font-black text-app-text">S/ {format(totals.s.igv - totals.p.igv + totals.renta)}</p>
                   </div>
                </div>
             </div>
@@ -1035,7 +1034,7 @@ const MovimientosView: React.FC = () => {
                 <p className="text-[10px] font-black uppercase tracking-widest text-app-muted">Estado del Período</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-lg font-black text-app-text">{bankStats.reconciledCount} de {bankStats.count}</span>
-                  <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${bankStats.rate === 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-app-bg border border-app-border text-app-text">
                     {bankStats.rate}% Conciliado
                   </span>
                 </div>
@@ -1043,7 +1042,7 @@ const MovimientosView: React.FC = () => {
               <div className="mt-4">
                 <div className="w-full bg-app-bg rounded-full h-3.5 overflow-hidden border border-app-border relative">
                   <div 
-                    className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full transition-all duration-500" 
+                    className="bg-app-text h-full rounded-full transition-all duration-500" 
                     style={{ width: `${bankStats.rate}%` }}
                   />
                 </div>
@@ -1054,14 +1053,14 @@ const MovimientosView: React.FC = () => {
             </div>
 
             {/* Saldos Comparados */}
-            <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900/60 p-6 rounded-3xl border border-indigo-500/20 flex flex-col justify-between">
+            <div className="bg-app-surface p-6 rounded-3xl border border-app-border flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Diferencia por Conciliar</span>
-                <h4 className="text-2xl font-black text-white mt-1">S/ {format(bankStats.total - bankStats.reconciled)}</h4>
+                <span className="text-[10px] font-black uppercase tracking-widest text-app-muted">Diferencia por Conciliar</span>
+                <h4 className="text-2xl font-black text-app-text mt-1">S/ {format(bankStats.total - bankStats.reconciled)}</h4>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-300 mt-4 border-t border-white/10 pt-2 font-mono">
-                <div>Saldo Banco: <span className="font-bold text-white">S/ {format(bankStats.total)}</span></div>
-                <div>Conciliado: <span className="font-bold text-emerald-400">S/ {format(bankStats.reconciled)}</span></div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-app-text mt-4 border-t border-app-border pt-2 font-mono">
+                <div>Saldo Banco: <span className="font-bold text-app-text">S/ {format(bankStats.total)}</span></div>
+                <div>Conciliado: <span className="font-bold text-app-text">S/ {format(bankStats.reconciled)}</span></div>
               </div>
             </div>
 
@@ -1078,7 +1077,7 @@ const MovimientosView: React.FC = () => {
                 onDrop={handleDrop}
                 className={`border-2 border-dashed rounded-3xl p-6 text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
                   isDragging 
-                    ? 'border-blue-500 bg-blue-500/5' 
+                    ? 'border-app-text bg-app-bg' 
                     : 'border-app-border hover:border-slate-500 bg-app-surface'
                 }`}
                 onClick={() => document.getElementById('bank-file-input')?.click()}
@@ -1090,7 +1089,7 @@ const MovimientosView: React.FC = () => {
                   accept=".csv,.xlsx,.xls"
                   onChange={handleFileChange}
                 />
-                <UploadCloud size={32} className="text-blue-500 mb-2 animate-bounce" />
+                <UploadCloud size={32} className="text-app-text mb-2 animate-bounce" />
                 <p className="text-xs font-black uppercase tracking-wide text-app-text">Arrastra tu extracto bancario aquí o haz click para subir</p>
                 <p className="text-[9px] text-app-muted font-bold mt-1 uppercase">Soporta BCP, BBVA, Interbank y Genérico (Excel/CSV)</p>
               </div>
@@ -1101,7 +1100,7 @@ const MovimientosView: React.FC = () => {
               <button 
                 onClick={handleAutoMatch}
                 disabled={isAutoMatching || bankStats.count === 0}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg shadow-blue-500/20 transition-all font-black text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-4 bg-app-surface border border-app-border hover:bg-app-hover text-app-text rounded-2xl shadow-sm transition-all font-black text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isAutoMatching ? (
                   <RefreshCw size={16} className="animate-spin" />
@@ -1228,12 +1227,12 @@ const MovimientosView: React.FC = () => {
                         <div>Fecha: <span className="font-bold">{selectedStmtLine?.fecha}</span></div>
                         <div>Referencia: <span className="font-bold">{selectedStmtLine?.referencia || '-'}</span></div>
                         <div className="col-span-2">Glosa: <span className="font-bold uppercase">{selectedStmtLine?.glosa}</span></div>
-                        <div>Importe: <span className={`font-black ${selectedStmtLine!.monto >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>S/ {format(selectedStmtLine!.monto)}</span></div>
+                        <div>Importe: <span className="font-black text-app-text">S/ {format(selectedStmtLine!.monto)}</span></div>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Coincidencias Contables Recomendadas</h4>
+                      <h4 className="text-[10px] font-black text-app-text uppercase tracking-widest">Coincidencias Contables Recomendadas</h4>
                       
                       {suggestions.length === 0 ? (
                         <div className="bg-app-bg/50 p-6 rounded-2xl border border-app-border text-center text-xs font-bold text-app-muted">
@@ -1246,17 +1245,13 @@ const MovimientosView: React.FC = () => {
                             return (
                               <div 
                                 key={sug.journalEntry.id}
-                                className={`p-4 bg-app-bg border rounded-2xl flex justify-between items-center gap-4 transition-all hover:border-slate-500 ${
-                                  isExact ? 'border-emerald-500/30' : 'border-app-border'
-                                }`}
+                                className="p-4 bg-app-bg border border-app-border rounded-2xl flex justify-between items-center gap-4 transition-all hover:border-slate-500"
                               >
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-black font-mono text-slate-500">{sug.journalEntry.fecha}</span>
                                     <span className="text-[9px] font-mono text-app-muted bg-app-surface px-1.5 py-0.5 rounded">Asiento: {sug.journalEntry.asiento}</span>
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
-                                      sug.score >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-                                    }`}>
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-lg bg-app-bg border border-app-border text-app-text">
                                       {sug.score}% Match
                                     </span>
                                   </div>
@@ -1271,7 +1266,7 @@ const MovimientosView: React.FC = () => {
                                   <div>
                                     <button
                                       onClick={() => handleReconcile(sug.journalEntry.id)}
-                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                                      className="px-3 py-1.5 bg-app-surface border border-app-border hover:bg-app-hover text-app-text rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
                                     >
                                       <Link2 size={12} /> Conciliar
                                     </button>
@@ -1287,8 +1282,8 @@ const MovimientosView: React.FC = () => {
                 ) : (
                   // Vista General de Asientos de Caja/Bancos
                   <div className="space-y-4">
-                    <div className="bg-blue-500/5 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
-                      <HelpCircle size={20} className="text-blue-500 mt-0.5" />
+                    <div className="bg-app-surface border border-app-border p-4 rounded-2xl flex items-start gap-3">
+                      <HelpCircle size={20} className="text-app-text mt-0.5" />
                       <div className="text-xs text-app-muted space-y-1">
                         <p className="font-bold text-app-text uppercase">¿Cómo conciliar manualmente?</p>
                         <p>1. Selecciona una transacción de la lista del **Extracto Bancario** de la izquierda.</p>
@@ -1346,16 +1341,16 @@ const MovimientosView: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setCrossBookTab('compras')}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                    crossBookTab === 'compras' ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20' : 'bg-app-bg text-app-muted hover:text-app-text'
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-all ${
+                    crossBookTab === 'compras' ? 'bg-app-bg text-app-text border-app-border shadow-sm font-bold' : 'bg-app-surface text-app-muted hover:text-app-text border-transparent'
                   }`}
                 >
                   Compras vs Pagos ({crossBookReport.purchasesPaidPct}% pagado)
                 </button>
                 <button
                   onClick={() => setCrossBookTab('ventas')}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                    crossBookTab === 'ventas' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-app-bg text-app-muted hover:text-app-text'
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-all ${
+                    crossBookTab === 'ventas' ? 'bg-app-bg text-app-text border-app-border shadow-sm font-bold' : 'bg-app-surface text-app-muted hover:text-app-text border-transparent'
                   }`}
                 >
                   Ventas vs Cobros ({crossBookReport.salesCollectedPct}% cobrado)
@@ -1373,8 +1368,8 @@ const MovimientosView: React.FC = () => {
                       <th className="p-3 text-left">Documento</th>
                       <th className="p-3 text-left">RUC / Razón Social</th>
                       <th className="p-3">Importe Total</th>
-                      <th className="p-3 text-emerald-500">Monto Pagado</th>
-                      <th className="p-3 text-rose-500">Saldo Pendiente</th>
+                      <th className="p-3 text-app-text">Monto Pagado</th>
+                      <th className="p-3 text-app-muted">Saldo Pendiente</th>
                       <th className="p-3 text-center">Estado</th>
                       <th className="p-3 text-center">Asientos Relac.</th>
                     </tr>
@@ -1393,13 +1388,10 @@ const MovimientosView: React.FC = () => {
                           <td className="p-3 text-left font-black text-app-text">{item.documento}</td>
                           <td className="p-3 text-left text-app-muted uppercase truncate max-w-[200px]" title={item.nombre}>{item.ruc} • {item.nombre}</td>
                           <td className="p-3 font-bold text-app-text">S/ {format(item.total)}</td>
-                          <td className="p-3 font-bold text-emerald-500">S/ {format(item.totalPagado)}</td>
-                          <td className="p-3 font-bold text-rose-500">S/ {format(item.saldo)}</td>
+                          <td className="p-3 font-bold text-app-text">S/ {format(item.totalPagado)}</td>
+                          <td className="p-3 font-bold text-app-text">S/ {format(item.saldo)}</td>
                           <td className="p-3 text-center">
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
-                              item.estado === 'PAGADO' ? 'bg-emerald-500/10 text-emerald-500' :
-                              item.estado === 'PARCIAL' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'
-                            }`}>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-app-bg border border-app-border text-app-text">
                               {item.estado}
                             </span>
                           </td>
@@ -1430,8 +1422,8 @@ const MovimientosView: React.FC = () => {
                       <th className="p-3 text-left">Documento</th>
                       <th className="p-3 text-left">RUC / Razón Social</th>
                       <th className="p-3">Importe Total</th>
-                      <th className="p-3 text-emerald-500">Monto Cobrado</th>
-                      <th className="p-3 text-rose-500">Saldo Pendiente</th>
+                      <th className="p-3 text-app-text">Monto Cobrado</th>
+                      <th className="p-3 text-app-muted">Saldo Pendiente</th>
                       <th className="p-3 text-center">Estado</th>
                       <th className="p-3 text-center">Asientos Relac.</th>
                     </tr>
@@ -1450,13 +1442,10 @@ const MovimientosView: React.FC = () => {
                           <td className="p-3 text-left font-black text-app-text">{item.documento}</td>
                           <td className="p-3 text-left text-app-muted uppercase truncate max-w-[200px]" title={item.nombre}>{item.ruc} • {item.nombre}</td>
                           <td className="p-3 font-bold text-app-text">S/ {format(item.total)}</td>
-                          <td className="p-3 font-bold text-emerald-500">S/ {format(item.totalPagado)}</td>
-                          <td className="p-3 font-bold text-rose-500">S/ {format(item.saldo)}</td>
+                          <td className="p-3 font-bold text-app-text">S/ {format(item.totalPagado)}</td>
+                          <td className="p-3 font-bold text-app-text">S/ {format(item.saldo)}</td>
                           <td className="p-3 text-center">
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
-                              item.estado === 'PAGADO' ? 'bg-emerald-500/10 text-emerald-500' :
-                              item.estado === 'PARCIAL' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'
-                            }`}>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-app-bg border border-app-border text-app-text">
                               {item.estado === 'PAGADO' ? 'COBRADO' : item.estado}
                             </span>
                           </td>

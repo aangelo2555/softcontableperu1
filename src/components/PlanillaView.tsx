@@ -563,8 +563,8 @@ const PlanillaView: React.FC = () => {
                 <tr className="bg-app-bg text-[8px] font-black uppercase tracking-widest text-app-muted border-b border-app-border">
                   <th colSpan={9} className="px-4 py-2 border-r border-app-border text-center bg-app-bg">Datos del Trabajador</th>
                   <th colSpan={7} className="px-4 py-2 border-r border-app-border text-center bg-app-bg">Conceptos Remunerativos</th>
-                  <th colSpan={9} className="px-4 py-2 border-r border-app-border text-center bg-app-bg/50 text-indigo-500">Descuentos</th>
-                  <th colSpan={2} className="px-4 py-2 border-r border-app-border text-center bg-emerald-500/5 text-emerald-600 italic">Empleador</th>
+                  <th colSpan={9} className="px-4 py-2 border-r border-app-border text-center bg-app-bg/50 text-app-text">Descuentos</th>
+                  <th colSpan={2} className="px-4 py-2 border-r border-app-border text-center bg-app-bg text-app-text italic">Empleador</th>
                   <th rowSpan={2} className="px-4 py-2 text-right pr-6 min-w-[100px]">Acciones</th>
                 </tr>
                 <tr className="bg-app-bg/95 text-[8px] font-black uppercase tracking-widest text-app-muted border-b border-app-border italic">
@@ -584,17 +584,17 @@ const PlanillaView: React.FC = () => {
                   <th className="px-3 py-3 text-right min-w-[90px]">Jorn. Diario</th>
                   <th className="px-3 py-3 text-right min-w-[110px]">Rem. Mensual</th>
                   <th className="px-3 py-3 text-center min-w-[50px]">A.F.</th>
-                  <th colSpan={2} className="px-3 py-3 text-center min-w-[120px] bg-blue-500/5">Horas Extras (N° / S/)</th>
-                  <th className="px-3 py-3 text-right min-w-[120px] font-black text-app-text border-r border-app-border bg-blue-500/5">Total Rem. Bruta</th>
+                  <th colSpan={2} className="px-3 py-3 text-center min-w-[120px] bg-app-surface">Horas Extras (N° / S/)</th>
+                  <th className="px-3 py-3 text-right min-w-[120px] font-black text-app-text border-r border-app-border bg-app-surface">Total Rem. Bruta</th>
 
                   {/* Descuentos */}
                   <th className="px-3 py-3 text-right min-w-[100px]">Pensión S/</th>
                   <th className="px-3 py-3 text-right min-w-[90px]">EsS. Vida</th>
                   <th className="px-3 py-3 text-right min-w-[90px]">5ta Renta</th>
                   <th className="px-3 py-3 text-right min-w-[90px]">Ret. Judic.</th>
-                  <th colSpan={3} className="px-3 py-3 text-center min-w-[240px] bg-indigo-500/5">Desglose AFP (Fondo/Seg/Com)</th>
-                  <th className="px-3 py-3 text-right min-w-[100px] bg-indigo-500/5 font-black text-rose-500">Total Desc.</th>
-                  <th className="px-3 py-3 text-right min-w-[120px] font-black text-blue-500 border-r border-app-border bg-indigo-500/5">NETO A PAGAR</th>
+                  <th colSpan={3} className="px-3 py-3 text-center min-w-[240px] bg-app-surface">Desglose AFP (Fondo/Seg/Com)</th>
+                  <th className="px-3 py-3 text-right min-w-[100px] bg-app-surface font-black text-app-text">Total Desc.</th>
+                  <th className="px-3 py-3 text-right min-w-[120px] font-black text-app-text border-r border-app-border bg-app-surface">NETO A PAGAR</th>
 
                   {/* Empleador */}
                   <th className="px-3 py-3 text-right min-w-[100px]">EsSalud 9%</th>
@@ -605,7 +605,7 @@ const PlanillaView: React.FC = () => {
                 {filteredEmployees.map((emp, idx) => (
                   <tr key={emp.id} className="text-[9px] hover:bg-app-text/[0.03] transition-colors group">
                     {/* Trabajador */}
-                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-indigo-500 group-hover:bg-app-hover">
+                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-app-text group-hover:bg-app-hover">
                       {(idx + 1).toString().padStart(3, '0')}
                     </td>
                     <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-[50px] sm:z-10 bg-app-surface group-hover:bg-app-hover">
@@ -711,25 +711,25 @@ const PlanillaView: React.FC = () => {
                         className="w-3.5 h-3.5 rounded border-app-border bg-app-bg text-indigo-600 focus:ring-indigo-500/20"
                       />
                     </td>
-                    <td className="px-3 py-2 text-center bg-blue-500/5">
+                    <td className="px-3 py-2 text-center bg-app-surface">
                         <input 
                         type="number" 
                         value={emp.horas_extras_cantidad} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveEmployee({...emp, horas_extras_cantidad: parseInt(e.target.value) || 0})}
-                        className="bg-app-bg/30 border border-app-border/30 px-1 py-1 rounded-md text-center text-blue-500 font-bold focus:ring-0 w-10 [appearance:textfield] outline-none"
+                        className="bg-app-bg/30 border border-app-border/30 px-1 py-1 rounded-md text-center text-app-text font-bold focus:ring-0 w-10 [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-blue-500/5">
+                    <td className="px-3 py-2 text-right bg-app-surface">
                         <input 
                         type="number" 
                         value={emp.horas_extras_importe} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveEmployee({...emp, horas_extras_importe: parseFloat(e.target.value) || 0})}
-                        className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-right text-blue-600 font-black focus:ring-0 w-full [appearance:textfield] outline-none"
+                        className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-right text-app-text font-black focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right font-black text-[10px] text-app-text border-r border-app-border bg-blue-500/5 italic">
+                    <td className="px-3 py-2 text-right font-black text-[10px] text-app-text border-r border-app-border bg-app-surface italic">
                         {calculateTotalRemuneracion(emp).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </td>
 
@@ -739,7 +739,7 @@ const PlanillaView: React.FC = () => {
                         type="number" 
                         value={(calculateTotalRemuneracion(emp) * (emp.regimen_pensionario === 'ONP' ? 0.13 : 0)).toFixed(2)} 
                         readOnly
-                        className="bg-transparent border-none p-0 text-right text-rose-500 font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -769,34 +769,34 @@ const PlanillaView: React.FC = () => {
                         className="bg-app-bg/30 border border-app-border/30 px-2 py-1 rounded-md text-right text-app-muted focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-indigo-500/5">
+                    <td className="px-3 py-2 text-right bg-app-surface">
                         <input 
                         type="number" 
                         value={getAFPValues(emp).fondo.toFixed(2)} 
                         readOnly
-                        className="bg-transparent border-none p-0 text-right text-indigo-400 font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
+                        className="bg-transparent border-none p-0 text-right text-app-muted font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-indigo-500/5">
+                    <td className="px-3 py-2 text-right bg-app-surface">
                         <input 
                         type="number" 
                         value={getAFPValues(emp).seguro.toFixed(2)} 
                         readOnly
-                        className="bg-transparent border-none p-0 text-right text-indigo-400 font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
+                        className="bg-transparent border-none p-0 text-right text-app-muted font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-indigo-500/5">
+                    <td className="px-3 py-2 text-right bg-app-surface">
                         <input 
                         type="number" 
                         value={getAFPValues(emp).comision.toFixed(2)} 
                         readOnly
-                        className="bg-transparent border-none p-0 text-right text-indigo-400 font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
+                        className="bg-transparent border-none p-0 text-right text-app-muted font-bold focus:ring-0 w-full [appearance:textfield] outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-rose-500/5 text-rose-500 font-black">
+                    <td className="px-3 py-2 text-right bg-app-surface text-app-text font-black">
                         {calculateDescuentos(emp).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-right font-black text-[11px] text-blue-500 border-r border-app-border bg-blue-500/5 italic">
+                    <td className="px-3 py-2 text-right font-black text-[11px] text-app-text border-r border-app-border bg-app-surface italic">
                         {(calculateTotalRemuneracion(emp) - calculateDescuentos(emp)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </td>
 

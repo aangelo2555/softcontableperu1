@@ -259,25 +259,25 @@ const ActivosFijosView: React.FC = () => {
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[110px]">Marca</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[110px]">Modelo</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[130px]">Serie / Placa</th>
-                  <th className="px-3 py-3 bg-amber-500/5 text-amber-600 min-w-[120px] text-right">Saldo Inicial</th>
-                  <th className="px-3 py-3 bg-amber-500/5 text-amber-600 min-w-[120px] text-right">Adquisiciones</th>
-                  <th className="px-3 py-3 bg-amber-500/5 text-amber-600 min-w-[120px] text-right">Mejoras</th>
-                  <th className="px-3 py-3 bg-rose-500/5 text-rose-600 min-w-[120px] text-right">Bajas</th>
-                  <th className="px-3 py-3 bg-blue-500/5 text-blue-600 min-w-[120px] text-right italic">Valor Histórico</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Saldo Inicial</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Adquisiciones</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Mejoras</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Bajas</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right italic font-black">Valor Histórico</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[130px]">Fecha Adq.</th>
                   <th className="px-3 py-3 bg-app-bg/95 min-w-[130px]">F. Inicio Uso</th>
                   
                   {/* Contable Section */}
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[100px] text-right border-l border-app-border">Tasa C. %</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right">Acum. Ant. C.</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[120px] text-right font-bold">Ejerc. C.</th>
-                  <th className="px-3 py-3 bg-indigo-500/5 text-indigo-600 min-w-[130px] text-right font-black">Deprec. Tot. C.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[100px] text-right border-l border-app-border">Tasa C. %</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Acum. Ant. C.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right font-bold">Ejerc. C.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[130px] text-right font-black">Deprec. Tot. C.</th>
 
                   {/* Tributaria Section */}
-                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[100px] text-right border-l border-app-border">Tasa T. %</th>
-                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[120px] text-right">Acum. Ant. T.</th>
-                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[120px] text-right font-bold">Ejerc. T.</th>
-                  <th className="px-3 py-3 bg-emerald-500/5 text-emerald-600 min-w-[130px] text-right font-black">Deprec. Tot. T.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[100px] text-right border-l border-app-border">Tasa T. %</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right">Acum. Ant. T.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[120px] text-right font-bold">Ejerc. T.</th>
+                  <th className="px-3 py-3 bg-app-surface text-app-text min-w-[130px] text-right font-black">Deprec. Tot. T.</th>
                   
                   <th className="px-4 py-3 bg-app-bg text-right pr-6 min-w-[100px]">Acciones</th>
                 </tr>
@@ -285,7 +285,7 @@ const ActivosFijosView: React.FC = () => {
              <tbody className="divide-y divide-app-border/40">
                 {filteredAssets.map((asset) => (
                   <tr key={asset.id} className="text-[9px] hover:bg-app-text/[0.03] transition-colors group">
-                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-amber-600 group-hover:bg-app-hover">
+                    <td className="px-4 py-2 border-r border-app-border sm:sticky sm:left-0 sm:z-10 bg-app-surface font-mono font-black text-app-text group-hover:bg-app-hover">
                         <input 
                         type="text" 
                         value={asset.codigo} 
@@ -360,7 +360,7 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.mejoras || 0} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, mejoras: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-emerald-500 font-bold focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-bold focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -369,10 +369,10 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.retiros_bajas || 0} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, retiros_bajas: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-rose-500 font-bold focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-bold focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right text-blue-500 font-black italic bg-blue-500/5">
+                    <td className="px-3 py-2 text-right text-app-text font-black italic bg-app-surface">
                         {calculateHistorico(asset).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-3 py-2">
@@ -399,7 +399,7 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.tasa_depreciacion} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, tasa_depreciacion: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-indigo-500 font-black focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-black focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -417,10 +417,10 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.deprec_ejercicio || 0} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, deprec_ejercicio: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-rose-400 font-black focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-black focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-indigo-500/5 text-indigo-500 font-black text-[11px] italic">
+                    <td className="px-3 py-2 text-right bg-app-surface text-app-text font-black text-[11px] italic">
                         <input 
                         type="number" 
                         value={asset.depreciacion_acumulada || 0} 
@@ -437,7 +437,7 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.tasa_depreciacion_tributaria || 0} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, tasa_depreciacion_tributaria: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-emerald-500 font-black focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-black focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -455,10 +455,10 @@ const ActivosFijosView: React.FC = () => {
                         value={asset.deprec_ejercicio_tributaria || 0} 
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => saveFixedAsset({...asset, deprec_ejercicio_tributaria: parseFloat(e.target.value) || 0})}
-                        className="bg-transparent border-none p-0 text-right text-rose-400 font-black focus:ring-0 w-full [appearance:textfield]"
+                        className="bg-transparent border-none p-0 text-right text-app-text font-black focus:ring-0 w-full [appearance:textfield]"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right bg-emerald-500/5 text-emerald-600 font-black text-[11px] italic">
+                    <td className="px-3 py-2 text-right bg-app-surface text-app-text font-black text-[11px] italic">
                         <input 
                         type="number" 
                         value={asset.depreciacion_acumulada_tributaria || 0} 

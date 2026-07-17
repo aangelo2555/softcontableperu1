@@ -7,11 +7,11 @@ import toast from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 
 const EgypLine: React.FC<{ label: string; value: number; indent?: boolean; bold?: boolean; isTotal?: boolean; isNet?: boolean }> = ({ label, value, indent, bold, isTotal, isNet }) => (
-  <div className={`flex justify-between text-[11px] py-1 border-b border-app-border/50 ${indent ? 'pl-8' : ''} ${isTotal ? 'border-t-2 border-app-border pt-2' : ''} ${isNet ? 'bg-pld-blue/10 p-2 rounded border-none mt-4 ring-1 ring-pld-blue/20' : ''}`}>
-    <span className={`${bold || isNet || isTotal ? 'font-black uppercase tracking-widest' : 'text-app-muted font-sans'} ${isNet ? 'text-pld-blue' : ''}`}>{label}</span>
+  <div className={`flex justify-between text-[11px] py-1 border-b border-app-border/50 ${indent ? 'pl-8' : ''} ${isTotal ? 'border-t-2 border-app-border pt-2' : ''} ${isNet ? 'bg-app-surface p-2 rounded border border-app-border mt-4 shadow-sm' : ''}`}>
+    <span className={`${bold || isNet || isTotal ? 'font-black uppercase tracking-widest' : 'text-app-muted font-sans'} ${isNet ? 'text-app-text' : ''}`}>{label}</span>
     <div className="flex items-center gap-1">
       {value < 0 && <span className="text-red-500 font-semibold font-mono">({Math.abs(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>}
-      {value >= 0 && <span className={`font-mono ${isNet ? 'text-lg text-pld-blue font-bold' : 'text-app-text'}`}>
+      {value >= 0 && <span className={`font-mono ${isNet ? 'text-lg text-app-text font-bold' : 'text-app-text'}`}>
         {value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>}
     </div>
@@ -179,7 +179,7 @@ const EgypView: React.FC = () => {
         icon={<TrendingUp size={18} />}
         title="Estado de Resultados"
         badge={
-          <span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">
+          <span className="px-2 py-0.5 rounded-lg bg-app-surface text-[9px] text-app-text border border-app-border tracking-[0.2em] uppercase">
             ER Integrales
           </span>
         }
@@ -188,23 +188,23 @@ const EgypView: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
              {/* View Selector Toggle */}
              <div className="flex bg-app-bg border border-app-border p-0.5 rounded-lg">
-               <button 
-                 onClick={() => setViewMode('FUNCION')}
-                 className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'FUNCION' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-pld-blue'}`}
-               >
-                 Función
-               </button>
-               <button 
-                 onClick={() => setViewMode('NATURALEZA')}
-                 className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'NATURALEZA' ? 'bg-pld-blue text-white shadow-sm' : 'text-app-muted hover:text-pld-blue'}`}
-               >
-                 Naturaleza
-               </button>
+                <button 
+                  onClick={() => setViewMode('FUNCION')}
+                  className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'FUNCION' ? 'bg-app-surface text-app-text shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'}`}
+                >
+                  Función
+                </button>
+                <button 
+                  onClick={() => setViewMode('NATURALEZA')}
+                  className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'NATURALEZA' ? 'bg-app-surface text-app-text shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'}`}
+                >
+                  Naturaleza
+                </button>
              </div>
 
              <div className="flex gap-2">
-                <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-                <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
+                <button onClick={() => window.print()} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-app-text transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
+                <button onClick={handleExport} className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-app-text transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Excel"><FileDown size={14} /> Excel</button>
              </div>
           </div>
         }
@@ -228,13 +228,13 @@ const EgypView: React.FC = () => {
           <div className="text-center mb-10 space-y-1">
              <h3 className="text-sm font-black uppercase tracking-[0.4em]">{currentCompany.name}</h3>
              <p className="text-[10px] font-bold text-app-muted uppercase">Estado de Resultados Integrales (Por {viewMode === 'FUNCION' ? 'Función' : 'Naturaleza'})</p>
-             <div className="h-px bg-gradient-to-r from-transparent via-pld-blue/30 to-transparent my-4" />
+             <div className="h-px bg-app-border my-4" />
           </div>
 
           <div className="space-y-1">
              {viewMode === 'FUNCION' ? (
                <>
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Ingresos y Costos Operacionales</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Ingresos y Costos Operacionales</h4>
                  <EgypLine label="VENTAS MERCADERIAS" value={fVentasBrutas} indent />
                  <EgypLine label="OTROS INGRESOS DE GESTIÓN" value={fOtrosIngresos} indent />
                  <EgypLine label="TOTAL INGRESOS BRUTOS" value={fTotalIngresos} isTotal bold />
@@ -244,34 +244,34 @@ const EgypView: React.FC = () => {
                  <EgypLine label="UTILIDAD BRUTA" value={fUtilidadBruta} isTotal bold />
 
                  <div className="h-6" />
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Gastos Operativos</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Gastos Operativos</h4>
                  <EgypLine label="GASTOS ADMINISTRATIVOS" value={fGastosAdmin} />
                  <EgypLine label="GASTOS DE VENTAS" value={fGastosVentas} />
                  <EgypLine label="UTILIDAD OPERATIVA" value={fUtilidadOperativa} isTotal bold />
                </>
              ) : (
                <>
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Cálculo del Margen Comercial</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Cálculo del Margen Comercial</h4>
                  <EgypLine label="VENTAS NETAS" value={nVentasBrutas} />
                  <EgypLine label="COMPRAS DE MERCADERÍAS" value={nCompras} />
                  <EgypLine label="VARIACIÓN DE MERCADERÍAS (CTA 61)" value={nVariacionInventario} />
                  <EgypLine label="MARGEN COMERCIAL" value={nMargenComercial} isTotal bold />
 
                  <div className="h-4" />
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Producción y Valor Agregado</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Producción y Valor Agregado</h4>
                  <EgypLine label="VARIACIÓN DE LA PRODUCCIÓN ALMACENADA" value={nVariacionExist} />
                  <EgypLine label="PRODUCCIÓN DE ACTIVO INMOVILIZADO" value={nProduccionInmov} />
                  <EgypLine label="GASTOS DE SERVICIOS PRESTADOS POR TERCEROS" value={nServiciosTerceros} />
                  <EgypLine label="VALOR AGREGADO" value={nValorAgregado} isTotal bold />
 
                  <div className="h-4" />
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Excedente Bruto</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Excedente Bruto</h4>
                  <EgypLine label="GASTOS DE PERSONAL, DIRECTORES Y GERENTES" value={nGastosPersonal} />
                  <EgypLine label="GASTOS POR TRIBUTOS" value={nTributos} />
                  <EgypLine label="EXCEDENTE BRUTO DE EXPLOTACIÓN" value={nExcedenteBruto} isTotal bold />
 
                  <div className="h-4" />
-                 <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Resultado de Explotación</h4>
+                 <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Resultado de Explotación</h4>
                  <EgypLine label="OTROS GASTOS DE GESTIÓN" value={nOtrosGastosGest} />
                  <EgypLine label="VALUACIÓN Y DETERIORO DE ACTIVOS Y PROV." value={nValuacionDeterioro} />
                  <EgypLine label="OTROS INGRESOS DE GESTIÓN" value={nOtrosIngresos} />
@@ -280,7 +280,7 @@ const EgypView: React.FC = () => {
              )}
 
              <div className="h-6" />
-             <h4 className="text-[10px] font-black text-pld-blue mb-2 uppercase tracking-widest">Resultados Finales</h4>
+             <h4 className="text-[10px] font-black text-app-text mb-2 uppercase tracking-widest">Resultados Finales</h4>
 
              <EgypLine label="INGRESOS FINANCIEROS" value={ingresosFinancieros} />
              <EgypLine label="GASTOS FINANCIEROS" value={gastosFinancieros} />

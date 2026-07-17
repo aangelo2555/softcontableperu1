@@ -372,38 +372,38 @@ const LibroCajaBancosView: React.FC = () => {
             {formato === '1.1' ? (
               /* ═══ FORMATO 1.1: EFECTIVO ═══ */
               <>
-                <tr className="bg-pld-blue text-white text-[7.5px] font-black uppercase">
-                  <th rowSpan={2} className="px-2 py-3 border border-blue-700/50 text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO<br />O CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
-                  <th rowSpan={2} className="px-2 py-3 border border-blue-700/50 text-center w-16">FECHA DE<br />LA<br />OPERACIÓN</th>
-                  <th rowSpan={2} className="px-2 py-3 border border-blue-700/50 text-center min-w-[220px]">DESCRIPCIÓN DE<br />LA OPERACIÓN</th>
-                  <th colSpan={2} className="px-2 py-2 border border-blue-700/50 text-center bg-blue-600/50">CUENTA CONTABLE ASOCIADA</th>
-                  <th colSpan={2} className="px-2 py-2 border border-blue-700/50 text-center">SALDOS Y MOVIMIENTOS</th>
+                <tr className="bg-app-surface text-app-text text-[7.5px] font-black uppercase">
+                  <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO<br />O CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
+                  <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-16">FECHA DE<br />LA<br />OPERACIÓN</th>
+                  <th rowSpan={2} className="px-2 py-3 border border-app-border text-center min-w-[220px]">DESCRIPCIÓN DE<br />LA OPERACIÓN</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-blue-600/5">CUENTA CONTABLE ASOCIADA</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center">SALDOS Y MOVIMIENTOS</th>
                 </tr>
-                <tr className="bg-pld-blue text-white text-[7px] font-black uppercase">
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-14 bg-blue-600/50">CÓDIGO</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center min-w-[130px] bg-blue-600/50">DENOMINACIÓN</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-24 text-yellow-200">DEUDOR</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-24">ACREEDOR</th>
+                <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
+                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-blue-600/5">CÓDIGO</th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[130px] bg-blue-600/5">DENOMINACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-24">DEUDOR</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-24">ACREEDOR</th>
                 </tr>
               </>
             ) : (
               /* ═══ FORMATO 1.2: CUENTAS CORRIENTES ═══ */
               <>
-                <tr className="bg-pld-blue text-white text-[7.5px] font-black uppercase">
-                  <th rowSpan={2} className="px-2 py-3 border border-blue-700/50 text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO O<br />CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
-                  <th colSpan={4} className="px-2 py-2 border border-blue-700/50 text-center bg-blue-600/50">OPERACIONES BANCARIAS</th>
-                  <th colSpan={2} className="px-2 py-2 border border-blue-700/50 text-center bg-blue-700/30">CUENTA CONTABLE ASOCIADA</th>
-                  <th colSpan={2} className="px-2 py-2 border border-blue-700/50 text-center">SALDOS Y MOVIMIENTOS</th>
+                <tr className="bg-app-surface text-app-text text-[7.5px] font-black uppercase">
+                  <th rowSpan={2} className="px-2 py-3 border border-app-border text-center w-14">NÚMERO<br />CORRELATIVO<br />DEL REGISTRO O<br />CÓDIGO<br />ÚNICO DE LA<br />OPERACIÓN</th>
+                  <th colSpan={4} className="px-2 py-2 border border-app-border text-center bg-blue-600/5">OPERACIONES BANCARIAS</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center bg-indigo-600/5">CUENTA CONTABLE ASOCIADA</th>
+                  <th colSpan={2} className="px-2 py-2 border border-app-border text-center">SALDOS Y MOVIMIENTOS</th>
                 </tr>
-                <tr className="bg-pld-blue text-white text-[7px] font-black uppercase">
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-16">FECHA DE<br />LA<br />OPERACIÓN</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-14">MEDIO<br />DE PAGO<br /><span className="text-[5.5px] opacity-70">(TABLA 1)</span></th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center min-w-[150px]">DESCRIPCIÓN<br />DE LA<br />OPERACIÓN</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center min-w-[160px]">APELLIDOS Y NOMBRES,<br />DENOMINACIÓN<br />O RAZÓN SOCIAL</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-14 bg-blue-700/30">CÓDIGO</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center min-w-[100px] bg-blue-700/30">DENOMINACIÓN</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-24 text-yellow-200">DEUDOR</th>
-                  <th className="px-2 py-2 border border-blue-700/50 text-center w-24">ACREEDOR</th>
+                <tr className="bg-app-surface text-app-text text-[7px] font-black uppercase">
+                  <th className="px-2 py-2 border border-app-border text-center w-16">FECHA DE<br />LA<br />OPERACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-14">MEDIO<br />DE PAGO<br /><span className="text-[5.5px] opacity-70">(TABLA 1)</span></th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[150px]">DESCRIPCIÓN<br />DE LA<br />OPERACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[160px]">APELLIDOS Y NOMBRES,<br />DENOMINACIÓN<br />O RAZÓN SOCIAL</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-14 bg-indigo-600/5">CÓDIGO</th>
+                  <th className="px-2 py-2 border border-app-border text-center min-w-[100px] bg-indigo-600/5">DENOMINACIÓN</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-24">DEUDOR</th>
+                  <th className="px-2 py-2 border border-app-border text-center w-24">ACREEDOR</th>
                 </tr>
               </>
             )}
@@ -432,14 +432,14 @@ const LibroCajaBancosView: React.FC = () => {
               rows.map((r, idx) => (
                 <tr
                   key={`${r.asientoKey}-${idx}`}
-                  className={`transition-colors border-b border-app-border/40 ${r.isFirstLine ? 'hover:bg-pld-blue/5' : 'hover:bg-pld-blue/2'}`}
+                  className={`transition-colors border-b border-app-border/40 ${r.isFirstLine ? 'hover:bg-app-text/[0.03]' : 'hover:bg-app-text/[0.01]'}`}
                 >
                   {/* N° Correlativo — solo primera línea */}
-                  <td className={`px-2 py-1.5 border-r border-app-border/40 text-center font-bold ${r.isFirstLine ? 'text-pld-blue' : ''}`}>
+                  <td className={`px-2 py-1.5 border-r border-app-border/40 text-center font-bold ${r.isFirstLine ? 'text-app-text' : ''}`}>
                     {r.correlativo ?? ''}
                   </td>
                   {/* Fecha — solo primera línea */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center whitespace-nowrap italic">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center whitespace-nowrap italic text-app-muted">
                     {r.isFirstLine ? r.fecha : ''}
                   </td>
                   {/* Descripción — solo primera línea */}
@@ -447,15 +447,15 @@ const LibroCajaBancosView: React.FC = () => {
                     {r.isFirstLine ? r.glosa : ''}
                   </td>
                   {/* Cuenta Código */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-black text-pld-magenta">{r.ctaCodigo}</td>
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-black text-app-text">{r.ctaCodigo}</td>
                   {/* Cuenta Denominación */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[160px] opacity-70" title={r.ctaDenom}>{r.ctaDenom}</td>
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[160px] opacity-70 text-app-text" title={r.ctaDenom}>{r.ctaDenom}</td>
                   {/* Deudor */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-pld-blue bg-blue-500/5">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
                     {fmt(r.deudor)}
                   </td>
                   {/* Acreedor */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-rose-500 bg-rose-500/5">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-rose-600 dark:text-rose-400 bg-rose-500/5">
                     {fmt(r.acreedor)}
                   </td>
                 </tr>
@@ -465,18 +465,18 @@ const LibroCajaBancosView: React.FC = () => {
               rows.map((r, idx) => (
                 <tr
                   key={`${r.asientoKey}-${idx}`}
-                  className={`transition-colors border-b border-app-border/40 ${r.isFirstLine ? 'hover:bg-pld-blue/5' : 'hover:bg-pld-blue/2'}`}
+                  className={`transition-colors border-b border-app-border/40 ${r.isFirstLine ? 'hover:bg-app-text/[0.03]' : 'hover:bg-app-text/[0.01]'}`}
                 >
                   {/* N° Correlativo */}
-                  <td className={`px-2 py-1.5 border-r border-app-border/40 text-center font-bold ${r.isFirstLine ? 'text-pld-blue' : ''}`}>
+                  <td className={`px-2 py-1.5 border-r border-app-border/40 text-center font-bold ${r.isFirstLine ? 'text-app-text' : ''}`}>
                     {r.correlativo ?? ''}
                   </td>
                   {/* Fecha */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center whitespace-nowrap italic">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center whitespace-nowrap italic text-app-muted">
                     {r.isFirstLine ? r.fecha : ''}
                   </td>
                   {/* Medio de Pago */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-bold">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-bold text-app-muted">
                     {r.isFirstLine ? (r.medioPago || '') : ''}
                   </td>
                   {/* Descripción */}
@@ -484,19 +484,19 @@ const LibroCajaBancosView: React.FC = () => {
                     {r.isFirstLine ? r.glosa : ''}
                   </td>
                   {/* Razón Social */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[160px]">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[160px] text-app-muted">
                     {r.isFirstLine ? (r.razonSocial || '') : ''}
                   </td>
                   {/* Cuenta Código */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-black text-pld-magenta">{r.ctaCodigo}</td>
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-center font-black text-app-text">{r.ctaCodigo}</td>
                   {/* Cuenta Denominación */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[120px] opacity-70" title={r.ctaDenom}>{r.ctaDenom}</td>
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-left font-sans text-[8px] uppercase truncate max-w-[120px] opacity-70 text-app-text" title={r.ctaDenom}>{r.ctaDenom}</td>
                   {/* Deudor */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-pld-blue bg-blue-500/5">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
                     {fmt(r.deudor)}
                   </td>
                   {/* Acreedor */}
-                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-rose-500 bg-rose-500/5">
+                  <td className="px-2 py-1.5 border-r border-app-border/40 text-right font-black text-rose-600 dark:text-rose-400 bg-rose-500/5">
                     {fmt(r.acreedor)}
                   </td>
                 </tr>
@@ -507,14 +507,14 @@ const LibroCajaBancosView: React.FC = () => {
           {/* ──── TFOOT: Totals ──── */}
           {rows.length > 0 && (
             <tfoot className="sticky bottom-0 z-10 bg-app-surface">
-              <tr className="font-black text-[9px] border-t-2 border-pld-blue bg-pld-blue/10">
-                <td colSpan={formato === '1.1' ? 5 : 7} className="px-3 py-2.5 border-r border-app-border/40 text-right uppercase italic text-[8px] text-pld-blue tracking-wider">
+              <tr className="font-black text-[9px] border-t-2 border-app-border bg-app-surface">
+                <td colSpan={formato === '1.1' ? 5 : 7} className="px-3 py-2.5 border-r border-app-border/40 text-right uppercase italic text-[8px] text-app-text tracking-wider">
                   TOTAL GENERAL S/
                 </td>
-                <td className="px-2 py-2.5 border-r border-app-border/40 text-right bg-pld-blue text-white font-black">
+                <td className="px-2 py-2.5 border-r border-app-border/40 text-right text-emerald-600 dark:text-emerald-400 font-black">
                   {fmtAlways(totals.deudor)}
                 </td>
-                <td className="px-2 py-2.5 border-r border-app-border/40 text-right bg-pld-blue text-white font-black">
+                <td className="px-2 py-2.5 border-r border-app-border/40 text-right text-rose-600 dark:text-rose-400 font-black">
                   {fmtAlways(totals.acreedor)}
                 </td>
               </tr>
