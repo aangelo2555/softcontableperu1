@@ -174,6 +174,19 @@ app.use('/api/sire', authMiddleware, inspectMiddleware);
 const dbRoutes = require('./routes/dbRoutes');
 app.use('/api/db', dbRoutes);
 
+// --- Rutas SoftPremium (Módulo IA Premium) ---
+app.use('/api/premium', authMiddleware, inspectMiddleware);
+
+const premiumSubscriptionRoutes = require('./routes/premiumSubscriptionRoutes');
+const premiumTributarioRoutes = require('./routes/premiumTributarioRoutes');
+const premiumPlanillasRoutes = require('./routes/premiumPlanillasRoutes');
+const premiumFinanzasRoutes = require('./routes/premiumFinanzasRoutes');
+
+app.use('/api/premium/subscription', premiumSubscriptionRoutes);
+app.use('/api/premium/tributario', premiumTributarioRoutes);
+app.use('/api/premium/planillas', premiumPlanillasRoutes);
+app.use('/api/premium/finanzas', premiumFinanzasRoutes);
+
 // --- API Endpoints: Database ---
 
 // --- Helper para sanitizar y validar consultas SQL dinámicas ---

@@ -45,8 +45,9 @@ import { AdminView } from './components/AdminView';
 import { AIKnowledgeView } from './components/AIKnowledgeView';
 import { SuggestionBox } from './components/SuggestionBox';
 import StudentDashboard from './components/StudentDashboard';
+import { SoftPremiumDashboard } from './components/SoftPremiumDashboard';
 import { isStudentMode } from './store';
-import { ShieldCheck, AlertTriangle, GraduationCap } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles } from 'lucide-react';
 
 import {
   LayoutDashboard,
@@ -174,6 +175,13 @@ const SIDEBAR_GROUPS: TabGroup[] = [
       { id: 'ANEXOS', label: 'Anexos de Balance', icon: FileSearch },
       { id: 'CCC', label: 'Ciclo Efectivo (CCC)', icon: Activity },
       { id: 'FINANCE_NOTES', label: 'Notas NIIF & NIC 12', icon: FileText },
+    ],
+  },
+  {
+    groupLabel: '✨ SoftPremium',
+    groupIcon: Sparkles,
+    items: [
+      { id: 'SOFTPREMIUM', label: 'SoftPremium (IA)', icon: Sparkles },
     ],
   },
   {
@@ -398,6 +406,7 @@ const App: React.FC = () => {
       case 'BALANCE_INICIAL': return <BalanceInicialView />;
       case 'CCC': return <CCCDashboard />;
       case 'FINANCE_NOTES': return <FinanceNotesView />;
+      case 'SOFTPREMIUM': return <SoftPremiumDashboard />;
       case 'ADMIN': return <AdminView />;
       case 'AI_KNOWLEDGE': return <AIKnowledgeView />;
       default: return isStudentMode() ? <StudentDashboard /> : <EmpresaView />;

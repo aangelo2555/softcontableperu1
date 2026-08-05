@@ -1940,6 +1940,136 @@ async function ensureSchemaConstraints() {
                     CREATE INDEX IF NOT EXISTS idx_ai_knowledge_regimen ON ai_knowledge_base(regimen);
                     CREATE INDEX IF NOT EXISTS idx_ai_knowledge_tipo ON ai_knowledge_base(tipo);
                 `
+            },
+            {
+                name: 'premium_subscriptions',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.premium_subscriptions (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        user_id TEXT NOT NULL REFERENCES public.users(id),
+                        plan_tier TEXT NOT NULL CHECK (plan_tier IN ('tributario', 'planillas', 'finanzas', 'full')),
+                        status TEXT NOT NULL DEFAULT 'trial' CHECK (status IN ('trial', 'active', 'past_due', 'canceled', 'suspended')),
+                        billing_cycle TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'annual')),
+                        price_centimos INTEGER NOT NULL DEFAULT 0,
+                        currency TEXT NOT NULL DEFAULT 'PEN',
+                        current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        current_period_end TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days'),
+                        trial_ends_at TIMESTAMPTZ,
+                        canceled_at TIMESTAMPTZ,
+                        payment_provider TEXT DEFAULT 'manual',
+                        payment_provider_ref TEXT,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_premium_sub_workspace ON premium.premium_subscriptions(workspace_id);
+                    CREATE INDEX IF NOT EXISTS idx_premium_sub_status ON premium.premium_subscriptions(status);
+                `
+            },
+            {
+                name: 'risk_analysis_runs',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.risk_analysis_runs (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        period TEXT NOT NULL,
+                        run_type TEXT NOT NULL CHECK (run_type IN (
+                            'inconsistencia_gastos_ventas',
+                            'estrategia_preventiva_sunat',
+                            'comprobantes_pago_deteccion',
+                            'declaraciones_vs_eeff',
+                            'deduccion_gastos_general'
+                        )),
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','completed','failed')),
+                        risk_score NUMERIC(5,2),
+                        findings_json JSONB,
+                        ai_model_used TEXT,
+                        tokens_consumed INTEGER,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        completed_at TIMESTAMPTZ
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_risk_workspace_period ON premium.risk_analysis_runs(workspace_id, period);
+                `
+            },
+            {
+                name: 'payroll_ai_runs',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.payroll_ai_runs (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        employee_id TEXT REFERENCES public.employees(id),
+                        period TEXT NOT NULL,
+                        concept TEXT NOT NULL CHECK (concept IN (
+                            'gratificacion', 'cts', 'vacaciones',
+                            'essalud_onp_afp_validacion', 'boleta_resumen_ia',
+                            'plame_macro_import', 'contrato_dinamico',
+                            'subsidio_maternidad', 'subsidio_enfermedad',
+                            'concepto_remunerativo_clasificacion'
+                        )),
+                        input_data_json JSONB NOT NULL,
+                        calculated_amount_centimos INTEGER,
+                        calculation_detail_json JSONB,
+                        normativa_aplicada TEXT,
+                        ai_generated_doc TEXT,
+                        reviewed_by_human BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_payroll_workspace_period ON premium.payroll_ai_runs(workspace_id, period);
+                    CREATE INDEX IF NOT EXISTS idx_payroll_employee ON premium.payroll_ai_runs(employee_id);
+                `
+            },
+            {
+                name: 'cashflow_forecasts',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.cashflow_forecasts (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        forecast_period_start DATE NOT NULL,
+                        forecast_period_end DATE NOT NULL,
+                        method TEXT NOT NULL CHECK (method IN ('directo', 'indirecto')),
+                        projected_inflows_centimos BIGINT NOT NULL,
+                        projected_outflows_centimos BIGINT NOT NULL,
+                        sunat_calendar_adjustments_json JSONB,
+                        variance_vs_actual_centimos BIGINT,
+                        factoring_recommendation_json JSONB,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_cashflow_workspace ON premium.cashflow_forecasts(workspace_id, forecast_period_start);
+                `
+            },
+            {
+                name: 'financial_dashboards',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.financial_dashboards (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        dashboard_type TEXT NOT NULL,
+                        snapshot_data_json JSONB NOT NULL,
+                        source_period TEXT NOT NULL,
+                        generated_file_path TEXT,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_dashboards_workspace ON premium.financial_dashboards(workspace_id, source_period);
+                `
+            },
+            {
+                name: 'ai_generation_audit',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium.ai_generation_audit (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        user_id TEXT NOT NULL REFERENCES public.users(id),
+                        source_table TEXT NOT NULL,
+                        source_id UUID NOT NULL,
+                        ai_provider TEXT NOT NULL,
+                        prompt_hash TEXT,
+                        output_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
+                        output_approved_by TEXT REFERENCES public.users(id),
+                        output_approved_at TIMESTAMPTZ,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_audit_workspace ON premium.ai_generation_audit(workspace_id, created_at);
+                `
             }
         ];
         
@@ -1979,8 +2109,28 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS accion TEXT;`,
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_previo TEXT;`,
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_nuevo TEXT;`,
-            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS justificacion TEXT;`
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS justificacion TEXT;`,
+            // ── SoftPremium: flags en public.workspaces y extensión laboral en public.employees ──
+            `ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS premium_enabled BOOLEAN NOT NULL DEFAULT FALSE;`,
+            `ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS premium_tiers TEXT[] DEFAULT '{}';`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS fecha_ingreso TEXT;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS fecha_cese TEXT;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS regimen_laboral TEXT DEFAULT 'general';`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS tipo_contrato TEXT;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS afp_nombre TEXT;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS afp_comision NUMERIC DEFAULT 0;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS essalud_eps TEXT DEFAULT 'essalud';`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS asignacion_familiar BOOLEAN DEFAULT FALSE;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS banco_cts TEXT;`,
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS cuenta_cts TEXT;`
         ];
+
+        // 0. Crear schema premium
+        try {
+            await pool.query('CREATE SCHEMA IF NOT EXISTS premium;');
+        } catch (e) {
+            console.warn('[POSTGRES] Warning al crear schema premium:', e.message);
+        }
 
         // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)
         for (const stmt of alterStatements) {
