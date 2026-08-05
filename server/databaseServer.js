@@ -1010,6 +1010,7 @@ ensureColumnExists('workspaces', 'annualIncomeUIT', 'REAL DEFAULT 0');
 ensureColumnExists('workspaces', 'ciiuCode', "TEXT DEFAULT ''");
 ensureColumnExists('workspaces', 'fixedAssetsValue', 'REAL DEFAULT 0');
 ensureColumnExists('workspaces', 'employeeCount', 'INTEGER DEFAULT 0');
+ensureColumnExists('workspaces', 'premium_enabled', 'INTEGER DEFAULT 0');
 
 ensureColumnExists('products', 'unit_measure', 'TEXT');
 ensureColumnExists('products', 'type_existence', 'TEXT');
@@ -1316,7 +1317,7 @@ const dbManager = {
 
     getWorkspaceById: (workspaceId) => {
         if (!workspaceId) return null;
-        const row = db.prepare('SELECT * FROM workspaces WHERE id = ? OR ruc = ?').get(workspaceId, workspaceId);
+        const row = db.prepare('SELECT * FROM workspaces WHERE ruc = ?').get(workspaceId);
         if (!row) return null;
         return {
             ...row,

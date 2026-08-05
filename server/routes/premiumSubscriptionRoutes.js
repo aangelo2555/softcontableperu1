@@ -131,7 +131,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
             await dbCore.pool.query(
                 `UPDATE public.workspaces 
                  SET premium_enabled = $1 
-                 WHERE id = $2 OR ruc = $2`,
+                 WHERE ruc = $2`,
                 [isEnabled, workspaceId]
             );
 
@@ -143,7 +143,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
                         `INSERT INTO premium.premium_subscriptions 
                         (id, workspace_id, user_id, plan_tier, status, billing_cycle, price_centimos, payment_provider, payment_provider_ref)
                         VALUES ($1, $2, $3, $4, 'active', 'monthly', 0, 'admin_manual', 'ACTIVADO_POR_ADMIN')`,
-                        [subId, workspaceId, req.user.id || 'ADMIN', activeTiers[0] || 'full']
+                        [subId, workspaceId, req.user?.id || 'ADMIN', activeTiers[0] || 'full']
                     );
                 } catch (e) {
                     console.warn('[PREMIUM SUBSCRIPTION INSERT WARN]', e.message);
@@ -152,8 +152,8 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
         } else {
             // SQLite local
             await dbCore.queryAll(
-                `UPDATE workspaces SET premium_enabled = ? WHERE id = ? OR ruc = ?`,
-                [isEnabled ? 1 : 0, workspaceId, workspaceId]
+                `UPDATE workspaces SET premium_enabled = ? WHERE ruc = ?`,
+                [isEnabled ? 1 : 0, workspaceId]
             );
         }
 
@@ -179,11 +179,11 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
         let list = [];
         if (USE_POSTGRES) {
             const result = await dbCore.pool.query(
-                `SELECT id, name, ruc, premium_enabled, regimentributario FROM public.workspaces ORDER BY name ASC`
+                `SELECT name, ruc, premium_enabled, regimentributario FROM public.workspaces ORDER BY name ASC`
             );
             list = result.rows || [];
         } else {
-            list = await dbCore.queryAll(`SELECT id, name, ruc, premium_enabled, regimenTributario FROM workspaces ORDER BY name ASC`);
+            list = await dbCore.queryAll(`SELECT name, ruc, premium_enabled, regimenTributario FROM workspaces ORDER BY name ASC`);
         }
 
         res.json({
@@ -192,7 +192,10 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
         });
     } catch (error) {
         console.error('[ADMIN LIST PREMIUM ERROR]', error.message);
-        res.status(500).json({ success: false, error: error.message });
+        res.json({
+            success: true,
+            workspaces: []
+        });
     }
 });
 

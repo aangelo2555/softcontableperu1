@@ -239,11 +239,11 @@ const db = {
         return result.rows.map(ws => mapWorkspaceColumns(ws));
     },
 
-    // Get workspace by ID or RUC
+    // Get workspace by RUC
     getWorkspaceById: async (workspaceId) => {
         if (!workspaceId) return null;
         const result = await query(
-            'SELECT * FROM workspaces WHERE id = $1 OR ruc = $1 LIMIT 1',
+            'SELECT * FROM workspaces WHERE ruc = $1 LIMIT 1',
             [workspaceId]
         );
         if (!result.rows || !result.rows[0]) return null;
