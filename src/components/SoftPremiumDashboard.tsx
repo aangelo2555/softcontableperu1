@@ -35,7 +35,7 @@ interface RiskFinding {
 }
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { companies, currentCompany, setCurrentCompany, setActiveTab: setMainActiveTab } = useStore();
+  const { workspaces, currentCompany, switchWorkspace, setActiveTab: setMainActiveTab } = useStore();
   const currentWorkspace = currentCompany;
 
   const user = React.useMemo(() => {
@@ -408,17 +408,16 @@ export const SoftPremiumDashboard: React.FC = () => {
             <select
               value={currentWorkspace?.ruc || ''}
               onChange={(e) => {
-                const found = (companies || []).find(c => c.ruc === e.target.value);
-                if (found) setCurrentCompany(found);
+                if (e.target.value) switchWorkspace(e.target.value);
               }}
               className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[200px] truncate"
             >
-              {(companies || []).map(c => (
+              {(workspaces || []).map((c: any) => (
                 <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
                   {c.name} ({c.ruc})
                 </option>
               ))}
-              {(!companies || companies.length === 0) && (
+              {(!workspaces || workspaces.length === 0) && (
                 <option value="" className="bg-app-surface text-app-text">
                   {currentWorkspace?.name || 'Sin Empresas'}
                 </option>
