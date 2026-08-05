@@ -163,7 +163,8 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     'BUZON',         // Buzón Electrónico
     'SIRE',          // Módulo SIRE
     'ADMIN',         // Panel Admin
-    'AI_KNOWLEDGE'   // Base IA (RAG)
+    'AI_KNOWLEDGE',  // Base IA (RAG)
+    'SOFTPREMIUM'    // SoftPremium (IA)
   ];
 
   if (alwaysEnabled.includes(tabId)) return true;
