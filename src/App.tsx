@@ -178,13 +178,6 @@ const SIDEBAR_GROUPS: TabGroup[] = [
     ],
   },
   {
-    groupLabel: '✨ SoftPremium',
-    groupIcon: Sparkles,
-    items: [
-      { id: 'SOFTPREMIUM', label: 'SoftPremium (IA)', icon: Sparkles },
-    ],
-  },
-  {
     groupLabel: 'Sistema',
     groupIcon: Settings,
     items: [
@@ -654,6 +647,14 @@ const App: React.FC = () => {
     ? allTabs.filter(t => t.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : (isSearchFocused ? allTabs : []);
 
+  // Ruta Standalone /premium
+  if (window.location.pathname === '/premium') {
+    if (!isLoggedIn) {
+      return <Login />;
+    }
+    return <SoftPremiumDashboard />;
+  }
+
   if (!isLoggedIn) {
     return <Login />;
   }
@@ -990,6 +991,28 @@ const App: React.FC = () => {
                 )}
               </div>
             )}
+            {/* Botón Responsivo SoftPremium (IA) en Header */}
+            <button
+              onClick={() => {
+                const isVerified = currentCompany?.premium_enabled;
+                const targetUrl = isVerified ? '/premium' : '/premium?tab=subscription';
+                window.open(targetUrl, '_blank');
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-blue-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shadow-sm cursor-pointer group"
+              title="Abrir Portal SoftPremium IA en nueva pestaña"
+            >
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
+              <span className="font-black uppercase tracking-wider hidden sm:inline font-sans">
+                SoftPremium <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-1 font-mono">IA</span>
+              </span>
+              
+              {!currentCompany?.premium_enabled && (
+                <span className="flex items-center text-[9px] bg-indigo-600/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ml-1">
+                  ¿Activar IA?
+                </span>
+              )}
+            </button>
+
             {!isStudentMode() && (
               <>
                 {/* Notifications */}
