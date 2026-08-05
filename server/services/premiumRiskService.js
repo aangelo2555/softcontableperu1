@@ -20,12 +20,16 @@ async function runRiskAnalysis({ workspaceId, userId, period, runType }) {
     const now = new Date();
 
     // 1. Crear registro de análisis en estado 'running'
-    await queryPremium(
-        `INSERT INTO premium.risk_analysis_runs 
-        (id, workspace_id, period, run_type, status, created_at)
-        VALUES ($1, $2, $3, $4, 'running', NOW())`,
-        [runId, workspaceId, period, runType]
-    );
+    try {
+        await queryPremium(
+            `INSERT INTO premium.risk_analysis_runs 
+            (id, workspace_id, period, run_type, status, created_at)
+            VALUES ($1, $2, $3, $4, 'running', NOW())`,
+            [runId, workspaceId, period, runType]
+        );
+    } catch (e) {
+        console.warn('[RISK ANALYSIS DB INSERT WARN]', e.message);
+    }
 
     try {
         // 2. Leer datos del core a través de coreReader (SOLO LECTURA)

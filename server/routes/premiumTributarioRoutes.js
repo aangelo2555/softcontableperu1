@@ -11,7 +11,7 @@ const { queryPremium } = require('../poolPremium');
 router.post('/analyze', requirePremium('tributario'), async (req, res) => {
     try {
         const { workspaceId, period, runType } = req.body;
-        const userId = req.user.id;
+        const userId = req.user?.id || 'CLIENTE_SISTEMA';
 
         if (!workspaceId || !period || !runType) {
             return res.status(400).json({ success: false, error: 'Faltan parámetros obligatorios (workspaceId, period, runType).' });

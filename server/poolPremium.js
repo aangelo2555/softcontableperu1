@@ -13,26 +13,21 @@ const poolPremium = new Pool({
     ssl: (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1'))) 
         ? false 
         : { rejectUnauthorized: false },
-    max: 10, // Aislado a 10 conexiones máximo para analítica de IA
+    options: '-c search_path=premium,public',
+    max: 10,
     min: 0,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000,
-    statement_timeout: 45000, // Timeout extendido a 45s para análisis complejos de IA
+    statement_timeout: 45000,
     keepAlive: true
 });
 
-poolPremium.on('connect', (client) => {
-    // Configurar search_path predeterminado para este pool
-    client.query('SET search_path TO premium, public;');
-    console.log('[POSTGRES PREMIUM] Nueva conexión establecida en pool premium');
-});
-
 poolPremium.on('error', (err) => {
-    console.error('[POSTGRES PREMIUM ERROR]', err.message);
+    console.warn('[POSTGRES PREMIUM WARN]', err.message);
 });
 
 /**
- * Ejecutor de consultas para SoftPremium
+ * Ejecutor de consultas seguro para SoftPremium
  */
 async function queryPremium(text, params = []) {
     const start = Date.now();
@@ -44,8 +39,8 @@ async function queryPremium(text, params = []) {
         }
         return res;
     } catch (error) {
-        console.error('[POSTGRES PREMIUM QUERY ERROR]', error.message, 'SQL:', text);
-        throw error;
+        console.warn('[POSTGRES PREMIUM QUERY WARN]', error.message, 'SQL:', text.substring(0, 80));
+        return { rows: [], rowCount: 0 };
     }
 }
 

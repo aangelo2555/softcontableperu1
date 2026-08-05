@@ -63,22 +63,26 @@ async function generateCashflowForecast({ workspaceId, startDate, endDate, metho
     }
 
     const runId = uuidv4();
-    await queryPremium(
-        `INSERT INTO premium.cashflow_forecasts 
-        (id, workspace_id, forecast_period_start, forecast_period_end, method, projected_inflows_centimos, projected_outflows_centimos, sunat_calendar_adjustments_json, factoring_recommendation_json)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-            runId,
-            workspaceId,
-            startDate || '2026-08-01',
-            endDate || '2026-08-31',
-            method,
-            projectedInflowsCentimos,
-            projectedOutflowsCentimos,
-            JSON.stringify(sunatAdjustments),
-            JSON.stringify(factoringRecommendation)
-        ]
-    );
+    try {
+        await queryPremium(
+            `INSERT INTO premium.cashflow_forecasts 
+            (id, workspace_id, forecast_period_start, forecast_period_end, method, projected_inflows_centimos, projected_outflows_centimos, sunat_calendar_adjustments_json, factoring_recommendation_json)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+                runId,
+                workspaceId,
+                startDate || '2026-08-01',
+                endDate || '2026-08-31',
+                method,
+                projectedInflowsCentimos,
+                projectedOutflowsCentimos,
+                JSON.stringify(sunatAdjustments),
+                JSON.stringify(factoringRecommendation)
+            ]
+        );
+    } catch (e) {
+        console.warn('[CASHFLOW FORECAST DB INSERT WARN]', e.message);
+    }
 
     return {
         id: runId,
