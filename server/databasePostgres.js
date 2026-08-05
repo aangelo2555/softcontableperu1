@@ -1818,11 +1818,12 @@ async function ensureSchemaConstraints() {
                         id TEXT PRIMARY KEY,
                         workspace_id TEXT,
                         user_id TEXT,
-                        action TEXT,
-                        entity_type TEXT,
-                        entity_id TEXT,
-                        changes TEXT,
-                        timestamp TIMESTAMP DEFAULT NOW()
+                        timestamp TEXT,
+                        cuo_afectado TEXT,
+                        accion TEXT,
+                        contenido_previo TEXT,
+                        contenido_nuevo TEXT,
+                        justificacion TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_audit_workspace ON audit_logs(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id);
@@ -1972,7 +1973,13 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE ai_knowledge_base ALTER COLUMN asiento_json DROP NOT NULL;`,
             `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS vigente_desde DATE DEFAULT '2026-01-01';`,
             `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS vigente_hasta DATE DEFAULT '2099-12-31';`,
-            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2';`
+            `ALTER TABLE ai_knowledge_base ADD COLUMN IF NOT EXISTS embedding_model TEXT DEFAULT 'paraphrase-multilingual-MiniLM-L12-v2';`,
+            // ── audit_logs: migrar columnas del esquema SQLite al esquema PostgreSQL ──
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS cuo_afectado TEXT;`,
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS accion TEXT;`,
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_previo TEXT;`,
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_nuevo TEXT;`,
+            `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS justificacion TEXT;`
         ];
 
         // 1. Ejecutar alterStatements primero por si las tablas ya existen sin las columnas (evita fallos al crear índices)
