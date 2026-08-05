@@ -77,15 +77,10 @@ DECISIÓN ARQUITECTÓNICA YA TOMADA (no revisitar sin razón de peso):
 - Pool de conexiones INDEPENDIENTE para Premium (ej. max: 10) separado 
   del pool del core (ej. max: 20), para que queries pesadas de IA/
   forecasting nunca compitan con las transacciones del core
-- Backend separado: `server-premium/` con sus propias rutas 
-  (`/api/premium/*`)
-- Frontend separado: bundle React independiente, branding propio 
-  "SoftPremium", NO se mezcla con los 42 componentes del core
-- Regla de acoplamiento: Premium LEE del schema `public` vía funciones 
-  de servicio controladas (nunca queries ad-hoc dispersas). Premium 
-  NUNCA escribe en `public`, con la única excepción del flag 
-  `workspaces.premium_enabled` y `workspaces.premium_tiers`, que se 
-  actualiza exclusivamente desde el flujo de activación de suscripción
+- Backend separado: rutas de servicio aisladas (`/api/premium/*`) sobre pool de conexiones secundario en PostgreSQL (max: 10)
+- Interfaz Standalone Independiente: Portal exclusivo "SOFTPREMIUM SAAS" con su propio layout a pantalla completa, header independiente, branding dorados/morados de IA, pasarela de suscripción Yape/Plin/Transferencia y botón de retorno al ERP ("Volver a SOFTCONTABLE ERP"). NO es una ventana simple del core, sino una plataforma de IA corporativa con su propio flujo comercial y analítico.
+- Pasarela de Pago integrada (Costo $0): Yape / Plin / Transferencias Bancarias con registro de vouchers de operación y panel de aprobación/override para Administradores.
+- Regla de acoplamiento: Premium LEE del schema `public` vía funciones de servicio controladas (nunca queries ad-hoc dispersas). Premium NUNCA escribe en `public`, con la única excepción del flag `workspaces.premium_enabled` y `workspaces.premium_tiers`, que se actualiza exclusivamente desde el flujo de activación de suscripción
 
 LOS 3 PILARES (con prioridad "quiero los 3, y mucho más" según el 
 fundador):
