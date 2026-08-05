@@ -249,8 +249,8 @@ async function calculateWorkspaceKPIs({ workspaceId, period, userId }) {
     // 5. Planillas KPIs
     const colaboradoresCount = employees.length;
     const gratiEstimadaTotal = employees.reduce((sum, e) => {
-        const sueldo = Number(e.sueldo || 2500);
-        const asig = e.asignacion_familiar ? 102.5 : 0;
+        const sueldo = Number(e.sueldo_basico || e.sueldo || 1130);
+        const asig = e.asignacion_familiar ? 113.00 : 0;
         return sum + sueldo + asig;
     }, 0);
 

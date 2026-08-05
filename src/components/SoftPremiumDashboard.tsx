@@ -29,7 +29,12 @@ import {
   Search,
   PieChart,
   Layers,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  MessageSquare,
+  Scale,
+  HelpCircle,
+  Cpu
 } from 'lucide-react';
 
 interface RiskFinding {
@@ -62,6 +67,14 @@ export const SoftPremiumDashboard: React.FC = () => {
   const [isPremiumActive, setIsPremiumActive] = useState<boolean>(false);
   const [premiumTiers, setPremiumTiers] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Módulo Expandido Inline (Accordion Responsivo)
+  const [expandedModule, setExpandedModule] = useState<string | null>(null);
+
+  // Estado del Co-Pilot Chat Interactivo Groq RAG por módulo
+  const [ragQueries, setRagQueries] = useState<Record<string, string>>({});
+  const [ragAnswers, setRagAnswers] = useState<Record<string, string>>({});
+  const [ragLoading, setRagLoading] = useState<Record<string, boolean>>({});
 
   // Formulario Yape / Plin / Transferencia con Adjunto de Voucher
   const [selectedPlanTier, setSelectedPlanTier] = useState<'tributario' | 'planillas' | 'finanzas' | 'full'>('full');
@@ -125,14 +138,12 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
-  // Cargar estado de suscripción del workspace
   useEffect(() => {
     if (currentWorkspace?.id || currentWorkspace?.ruc) {
       checkSubscriptionStatus();
     }
   }, [currentWorkspace?.id, currentWorkspace?.ruc]);
 
-  // Cargar KPIs dinámicos al activar suscripción o cambiar empresa/periodo
   useEffect(() => {
     if (isPremiumActive && (currentWorkspace?.id || currentWorkspace?.ruc)) {
       loadWorkspaceKPIs();
@@ -217,7 +228,54 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
-  // Ejecutar Análisis Integral de Riesgo (Pilar 1 - Evalúa TODOS los módulos)
+  // Función para consultar a Groq AI RAG en vivo por módulo
+  const handleSendRagQuery = async (pillar: string, moduleKey: string) => {
+    const queryKey = `${pillar}_${moduleKey}`;
+    const userQuery = ragQueries[queryKey];
+    if (!userQuery || !userQuery.trim()) {
+      toast.error('Ingresa una pregunta antes de consultar.');
+      return;
+    }
+
+    setRagLoading(prev => ({ ...prev, [queryKey]: true }));
+    try {
+      const res = await fetch('/api/premium/tributario/rag-query', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('softcontable_token')}`
+        },
+        body: JSON.stringify({
+          pillar,
+          moduleKey,
+          query: userQuery,
+          workspaceData: {
+            companyName: currentWorkspace?.name || 'EMPRESA',
+            ruc: currentWorkspace?.ruc || '',
+            totalVentas: workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00',
+            totalCompras: workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00',
+            igvEstimado: workspaceKPIs?.metrics?.tributario?.igvEstimadoPagarSoles || '0.00',
+            colaboradoresCount: workspaceKPIs?.metrics?.planillas?.colaboradoresCount || (employees?.length || 0),
+            sinBancarizar: workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || '0.00'
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setRagAnswers(prev => ({ ...prev, [queryKey]: data.answer }));
+        toast.success('Respuesta RAG impulsada por Groq AI generada');
+      } else {
+        toast.error(data.error || 'Error al procesar consulta RAG');
+      }
+    } catch (e: any) {
+      toast.error('Error de conexión RAG: ' + e.message);
+    } finally {
+      setRagLoading(prev => ({ ...prev, [queryKey]: false }));
+    }
+  };
+
+  // Ejecutar Análisis Integral de Riesgo (Pilar 1)
   const handleRunRiskAnalysis = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
     if (!wsId) {
@@ -236,18 +294,18 @@ export const SoftPremiumDashboard: React.FC = () => {
         body: JSON.stringify({
           workspaceId: wsId,
           period: selectedPeriod,
-          runType: 'inconsistencia_gastos_ventas' // Análisis integral
+          runType: 'inconsistencia_gastos_ventas'
         })
       });
       const data = await res.json();
       if (data.success) {
         setRiskResult(data.analysis);
-        toast.success('Auditoría Integral con IA ejecutada para todos los módulos tributarios');
+        toast.success('Auditoría Integral Groq AI ejecutada');
       } else {
         toast.error(data.error || 'Error al ejecutar análisis');
       }
     } catch (e: any) {
-      toast.error('Error de conexión con el servicio de IA: ' + e.message);
+      toast.error('Error de conexión con Groq AI: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -279,18 +337,18 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setPayrollResult(data.calculation);
-        toast.success('Cálculo determinístico de planillas y beneficios ejecutado');
+        toast.success('Cálculo laboral determinístico Groq AI ejecutado');
       } else {
         toast.error(data.error || 'Error en cálculo laboral');
       }
     } catch (e: any) {
-      toast.error('Error al comunicarse con el servidor: ' + e.message);
+      toast.error('Error: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Generar Contrato con IA (Pilar 2)
+  // Generar Contrato con Groq AI (Pilar 2)
   const handleGenerateContract = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
     if (!wsId || !selectedEmployeeId) {
@@ -316,7 +374,7 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setContractDoc(data.contract);
-        toast.success('Contrato redactado con IA según MINTRA 2026');
+        toast.success('Contrato redactado con Groq AI según MINTRA 2026');
       } else {
         toast.error(data.error || 'Error redactando contrato');
       }
@@ -353,7 +411,7 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setCashflowResult(data.forecast);
-        toast.success('Proyección financiera y cruce con calendario SUNAT generados');
+        toast.success('Forecast financiero e inferencia Groq AI generados');
       } else {
         toast.error(data.error || 'Error al generar forecast');
       }
@@ -369,8 +427,6 @@ export const SoftPremiumDashboard: React.FC = () => {
       
       {/* ─── HEADER STANDALONE SOFTPREMIUM (Fijo Superior) ─── */}
       <header className="bg-app-surface border-b border-app-border px-3 sm:px-6 py-2.5 sm:py-3.5 flex flex-col md:flex-row justify-between items-center gap-2.5 sm:gap-4 shrink-0 z-50 shadow-sm backdrop-blur-md">
-        
-        {/* Fila 1 en móvil: Botón Volver & Logo */}
         <div className="flex items-center justify-between w-full md:w-auto gap-3">
           <div className="flex items-center gap-2.5 sm:gap-4">
             <button
@@ -392,19 +448,18 @@ export const SoftPremiumDashboard: React.FC = () => {
 
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-blue-600 rounded-xl shadow-md shadow-blue-600/20 shrink-0">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <span className="text-base sm:text-xl font-black text-app-text tracking-tight font-sans">SOFT<span className="text-blue-600 dark:text-blue-400">PREMIUM</span></span>
-                  <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-widest font-mono">IA v2.0</span>
+                  <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-widest font-mono">GROQ RAG 4.0</span>
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-app-muted font-medium hidden sm:block">Portal Corporativo de Inteligencia Artificial &amp; Analítica Avanzada</p>
+                <p className="text-[10px] sm:text-[11px] text-app-muted font-medium hidden sm:block">Motor Inferencia Groq LLaMA-3.3 &amp; Inteligencia Normativa 2026</p>
               </div>
             </div>
           </div>
 
-          {/* Badge de suscripción en móvil derecha */}
           <div className="md:hidden">
             <span className={`px-2 py-1 rounded-lg text-[9.5px] font-black uppercase flex items-center gap-1 border ${
               isPremiumActive 
@@ -417,9 +472,7 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Fila 2 en móvil: Usuario & Selector de Empresas */}
         <div className="flex items-center justify-between md:justify-end gap-2 sm:gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
-          {/* Usuario Logueado */}
           <div className="bg-app-bg border border-app-border px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl flex items-center gap-2 shrink-0">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center font-black text-[11px] sm:text-xs shrink-0">
               {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
@@ -430,7 +483,6 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector MIS EMPRESAS */}
           {isPremiumActive && (
             <div className="bg-app-bg border border-app-border px-2.5 py-1 rounded-xl text-left shrink-0">
               <label className="text-[8px] sm:text-[9px] text-app-muted uppercase font-black tracking-wider block">MIS EMPRESAS</label>
@@ -446,34 +498,28 @@ export const SoftPremiumDashboard: React.FC = () => {
                     {c.name && c.name.length > 20 ? c.name.substring(0, 18) + '...' : c.name} ({c.ruc})
                   </option>
                 ))}
-                {(!workspaces || workspaces.length === 0) && (
-                  <option value="" className="bg-app-surface text-app-text">
-                    {currentWorkspace?.name || 'Sin Empresas'}
-                  </option>
-                )}
               </select>
             </div>
           )}
 
-          {/* Badge Estado Suscripción (Desktop) */}
           <div className={`hidden md:flex px-3.5 py-1.5 rounded-xl font-black text-xs items-center gap-2 border shrink-0 ${
             isPremiumActive 
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
               : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
           }`}>
             <CreditCard className="w-4 h-4" />
-            {isPremiumActive ? 'Suscripción Activa' : 'Suscripción Inactiva'}
+            {isPremiumActive ? 'Groq RAG Activo' : 'Suscripción Inactiva'}
           </div>
         </div>
       </header>
 
-      {/* ─── SUB-NAVBAR PILARES Y PLANES (Fijo Desplazable Táctil) ─── */}
+      {/* ─── SUB-NAVBAR PILARES ─── */}
       <div className="bg-app-surface border-b border-app-border px-2 sm:px-6 py-2 flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar shrink-0">
         <div className="flex gap-1.5 sm:gap-2 p-1 bg-app-bg rounded-xl border border-app-border max-w-full overflow-x-auto no-scrollbar">
           <button
             onClick={() => {
               if (!isPremiumActive) {
-                toast.error('Requiere activar suscripción SoftPremium para acceder a Tributación con IA');
+                toast.error('Requiere activar suscripción SoftPremium para acceder a Tributación con Groq IA');
                 setActiveSubTab('subscription');
               } else {
                 setActiveSubTab('tributario');
@@ -486,13 +532,13 @@ export const SoftPremiumDashboard: React.FC = () => {
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
-            <span>1. Tributación</span>
+            <span>1. Tributación RAG</span>
           </button>
 
           <button
             onClick={() => {
               if (!isPremiumActive) {
-                toast.error('Requiere activar suscripción SoftPremium para acceder a Planillas con IA');
+                toast.error('Requiere activar suscripción SoftPremium para acceder a Planillas con Groq IA');
                 setActiveSubTab('subscription');
               } else {
                 setActiveSubTab('planillas');
@@ -505,13 +551,13 @@ export const SoftPremiumDashboard: React.FC = () => {
             }`}
           >
             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
-            <span>2. Planillas</span>
+            <span>2. Planillas RAG</span>
           </button>
 
           <button
             onClick={() => {
               if (!isPremiumActive) {
-                toast.error('Requiere activar suscripción SoftPremium para acceder a Finanzas con IA');
+                toast.error('Requiere activar suscripción SoftPremium para acceder a Finanzas con Groq IA');
                 setActiveSubTab('subscription');
               } else {
                 setActiveSubTab('finanzas');
@@ -524,7 +570,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
-            <span>3. Finanzas</span>
+            <span>3. Finanzas RAG</span>
           </button>
 
           <button
@@ -541,10 +587,9 @@ export const SoftPremiumDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── CONTENIDO PRINCIPAL SOFTPREMIUM (Cuerpo con Desplazamiento Suave) ─── */}
+      {/* ─── CONTENIDO PRINCIPAL SOFTPREMIUM ─── */}
       <main className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 pb-12 sm:pb-16">
 
-        {/* SI PREMIUM NO ESTÁ ACTIVO Y INTENTA ENTRAR A PILARES */}
         {!isPremiumActive && activeSubTab !== 'subscription' && (
           <div className="bg-app-surface border border-blue-500/20 rounded-2xl p-5 sm:p-8 text-center space-y-4 sm:space-y-6 shadow-md">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto border border-blue-500/20">
@@ -552,9 +597,9 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
 
             <div className="max-w-xl mx-auto space-y-2">
-              <h2 className="text-xl sm:text-2xl font-black text-app-text">SoftPremium IA no está activo para {currentWorkspace?.name || 'esta empresa'}</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-app-text">SoftPremium Groq RAG IA no está activo para {currentWorkspace?.name || 'esta empresa'}</h2>
               <p className="text-xs sm:text-sm text-app-muted font-medium leading-relaxed">
-                Activa tu suscripción mensual para desbloquear el análisis predictivo SUNAT, cálculo determinístico de planillas y flujo de caja proyectado.
+                Activa tu suscripción mensual para desbloquear el motor RAG de inteligencia normativa SUNAT, MINTRA y NIIF 2026.
               </p>
             </div>
 
@@ -569,24 +614,22 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ─── SECCIÓN: PLANES Y PAGOS YAPE / PLIN ─── */}
+        {/* ─── SECCIÓN PLANES ─── */}
         {activeSubTab === 'subscription' && (
           <div className="space-y-6 sm:space-y-8 animate-fade-in">
             <div className="text-center space-y-1.5 max-w-2xl mx-auto px-2">
-              <h2 className="text-xl sm:text-3xl font-black text-app-text font-sans">Planes y Suscripción SoftPremium IA</h2>
+              <h2 className="text-xl sm:text-3xl font-black text-app-text font-sans">Planes y Suscripción SoftPremium Groq RAG</h2>
               <p className="text-xs sm:text-sm text-app-muted font-medium leading-relaxed">
                 Elige el plan que mejor se adapte a tu empresa. Realiza tu pago mediante Yape, Plin o Transferencia Bancaria sin comisiones adicionales.
               </p>
             </div>
 
-            {/* Tarjetas de Tarifas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {/* Plan Tributario */}
               <div className={`bg-app-surface border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between ${selectedPlanTier === 'tributario' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-2">
-                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 1: Tributación</div>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 1: Tributación RAG</div>
                   <div className="text-2xl sm:text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
-                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Auditoría preventiva SUNAT, consistencias gastos vs ventas y reglas Art. 37 LIR.</p>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Auditoría RAG SUNAT, Art. 37 LIR, Bancarización Ley 28194 y SIRE.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('tributario')}
@@ -596,12 +639,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </button>
               </div>
 
-              {/* Plan Planillas */}
               <div className={`bg-app-surface border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between ${selectedPlanTier === 'planillas' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-2">
-                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 2: Planillas</div>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 2: Planillas RAG</div>
                   <div className="text-2xl sm:text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
-                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Gratificación Ley 27735/32563 CAS, CTS y redacción de contratos con IA.</p>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Gratificación Ley 27735/32563 CAS, CTS y redactores MINTRA 2026.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('planillas')}
@@ -611,12 +653,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </button>
               </div>
 
-              {/* Plan Finanzas */}
               <div className={`bg-app-surface border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between ${selectedPlanTier === 'finanzas' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-2">
-                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 3: Finanzas</div>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Pilar 3: Finanzas RAG</div>
                   <div className="text-2xl sm:text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
-                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Flujo de caja cruzado con el calendario oficial SUNAT según dígito RUC.</p>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Flujo de caja predictivo NIIF y cruce con calendario oficial SUNAT por RUC.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('finanzas')}
@@ -626,13 +667,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </button>
               </div>
 
-              {/* Plan Full Premium */}
               <div className={`bg-app-surface border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between relative overflow-hidden ${selectedPlanTier === 'full' ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-app-border'}`}>
                 <div className="absolute top-2.5 right-2.5 bg-blue-600 text-white font-extrabold text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">Más Popular</div>
                 <div className="space-y-2">
-                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">SoftPremium Full</div>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider">SoftPremium Full RAG</div>
                   <div className="text-2xl sm:text-3xl font-black text-app-text">S/ 99 <span className="text-xs text-app-muted font-normal">/mes</span></div>
-                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Acceso completo ilimitado a los 3 Pilares (Tributación + Planillas + Finanzas).</p>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">Acceso completo ilimitado a los 3 Pilares con Inferencia Groq LLaMA-3.3.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('full')}
@@ -643,17 +683,13 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Medios de Pago Locales & Formulario de Comprobante */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 pt-2">
-              
-              {/* Información Yape / Plin / Banco */}
               <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                 <h3 className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 sm:w-5 sm:h-5" /> Medios de Pago en Perú (Sin Comisiones)
+                  <Smartphone className="w-4 h-4 sm:w-5 sm:h-5" /> Medios de Pago Directos en Perú
                 </h3>
 
                 <div className="space-y-3 sm:space-y-4">
-                  {/* Yape / Plin */}
                   <div className="bg-app-bg p-3.5 sm:p-4 rounded-xl border border-app-border flex items-center justify-between">
                     <div>
                       <div className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Yape / Plin Directo</div>
@@ -665,73 +701,26 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Cuentas Bancarias */}
                   <div className="bg-app-bg p-3.5 sm:p-4 rounded-xl border border-app-border space-y-1.5 sm:space-y-2">
                     <div className="text-[10px] sm:text-xs text-app-muted font-bold uppercase">Transferencia Bancaria</div>
-                    <div className="text-xs text-app-text font-medium">
-                      • <strong>BCP Soles:</strong> 193-98765432-0-11
-                    </div>
-                    <div className="text-xs text-app-text font-medium">
-                      • <strong>CCI BCP:</strong> 002-193009876543201114
-                    </div>
+                    <div className="text-xs text-app-text font-medium">• <strong>BCP Soles:</strong> 193-98765432-0-11</div>
+                    <div className="text-xs text-app-text font-medium">• <strong>CCI BCP:</strong> 002-193009876543201114</div>
                     <div className="text-[10px] sm:text-[11px] text-app-muted pt-1 font-medium">Titular: SOFTCONTABLE SAAS / Angelo Serna</div>
                   </div>
                 </div>
               </div>
 
-              {/* Registro de Comprobante / Voucher */}
               <form onSubmit={handleSubmitVoucher} className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
                 <h3 className="text-base sm:text-lg font-bold text-app-text flex items-center gap-2">
                   <Send className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Registrar Comprobante de Pago
                 </h3>
 
                 <div>
-                  <label className="text-[10px] sm:text-xs text-app-muted font-black uppercase tracking-wider mb-2 block">Plan a Activar</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {[
-                      { id: 'full', title: 'SoftPremium Full', price: 'S/ 99.00 / mes', desc: 'Los 3 Pilares IA', badge: 'RECOMENDADO', icon: Sparkles },
-                      { id: 'tributario', title: 'Pilar 1: Tributación IA', price: 'S/ 49.00 / mes', desc: 'Auditoría preventiva SUNAT', icon: ShieldAlert },
-                      { id: 'planillas', title: 'Pilar 2: Planillas IA', price: 'S/ 49.00 / mes', desc: 'Liquidaciones + Contratos', icon: FileCheck },
-                      { id: 'finanzas', title: 'Pilar 3: Finanzas IA', price: 'S/ 49.00 / mes', desc: 'Flujo de Caja + Forecast', icon: TrendingUp }
-                    ].map(plan => {
-                      const Icon = plan.icon;
-                      const isSelected = selectedPlanTier === plan.id;
-                      return (
-                        <div
-                          key={plan.id}
-                          onClick={() => setSelectedPlanTier(plan.id as any)}
-                          className={`p-2.5 sm:p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between relative ${
-                            isSelected
-                              ? 'bg-blue-600/10 border-blue-600 shadow-sm'
-                              : 'bg-app-bg border-app-border hover:border-app-muted'
-                          }`}
-                        >
-                          {plan.badge && (
-                            <span className="absolute -top-2 right-2 bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                              {plan.badge}
-                            </span>
-                          )}
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-app-surface text-app-muted border border-app-border'}`}>
-                              <Icon className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-[11px] sm:text-xs font-black text-app-text truncate">{plan.title}</div>
-                              <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{plan.price}</div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] sm:text-xs text-app-muted font-semibold mb-1 block">Número de Operación / Referencia</label>
+                  <label className="text-[11px] sm:text-xs text-app-muted font-semibold mb-1 block">Número de Operación Yape/Plin</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej. 09876543 o Nro de Operación Yape"
+                    placeholder="Ej. 09876543"
                     value={operationNumber}
                     onChange={(e) => setOperationNumber(e.target.value)}
                     className="w-full bg-app-bg border border-app-border rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm text-app-text focus:border-blue-500 focus:outline-none"
@@ -739,40 +728,16 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[11px] sm:text-xs text-app-muted font-semibold mb-1 block">Adjuntar Captura de Comprobante (Voucher)</label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full sm:w-auto px-3.5 py-2.5 bg-app-bg border border-app-border hover:bg-app-hover text-app-text rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm truncate"
-                    >
-                      <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                      <span className="truncate">{voucherFile ? voucherFile.name : '📁 Adjuntar Foto de Voucher'}</span>
-                    </button>
-
-                    {voucherBase64 && (
-                      <div className="relative group w-9 h-9 rounded-lg overflow-hidden border border-app-border shrink-0">
-                        <img src={voucherBase64} alt="Voucher Preview" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => { setVoucherFile(null); setVoucherBase64(null); }}
-                          className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {voucherFile && (
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">✓ Captura lista ({Math.round(voucherFile.size / 1024)} KB)</p>
-                  )}
+                  <label className="text-[11px] sm:text-xs text-app-muted font-semibold mb-1 block">Adjuntar Captura de Voucher</label>
+                  <input type="file" accept="image/*,.pdf" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full px-3.5 py-2.5 bg-app-bg border border-app-border hover:bg-app-hover text-app-text rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm truncate"
+                  >
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span className="truncate">{voucherFile ? voucherFile.name : '📁 Adjuntar Foto de Voucher'}</span>
+                  </button>
                 </div>
 
                 <button
@@ -785,15 +750,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </button>
               </form>
             </div>
-
           </div>
         )}
 
-        {/* ─── PILAR 1: TRIBUTACIÓN CON IA (Muestra explícitamente todos los módulos) ─── */}
+        {/* ─── PILAR 1: TRIBUTACIÓN CON GROQ AI RAG ─── */}
         {isPremiumActive && activeSubTab === 'tributario' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
-            
-            {/* Rejilla de Indicadores de Salud Tributaria Dinámicos */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <div className="bg-app-surface border border-app-border p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-2.5 sm:gap-3">
                 <div className="p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg sm:rounded-xl border border-emerald-500/20 shrink-0">
@@ -852,15 +814,15 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Panel de Control de Auditoría Integral */}
+            {/* MÓDULOS INTERACTIVOS EXPANDIBLES (ACCORDION RESPONSIVO CON RAG) */}
             <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-app-border pb-4">
                 <div>
                   <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Motor de Auditoría Preventiva SUNAT 2026
+                    <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Auditoría Tributaria RAG &amp; Groq AI
                   </h2>
                   <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                    Evaluación automatizada y simultánea de todos los módulos tributarios conectándose con las operaciones de SOFTCONTABLE SaaS.
+                    Presiona cualquier módulo para expandir de forma fluida el análisis de Contabilidad 4.0, sustento normativo RAG y Co-Pilot interactivo.
                   </p>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -876,64 +838,181 @@ export const SoftPremiumDashboard: React.FC = () => {
                     className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer whitespace-nowrap"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Ejecutar Auditoría IA Integral
+                    Ejecutar Auditoría Groq AI
                   </button>
                 </div>
               </div>
 
-              {/* MUESTREO EXPLÍCITO DE TODOS LOS MÓDULOS DE PILAR 1 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-1">
-                {/* Módulo 1 */}
-                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
-                      <Layers className="w-4 h-4 text-blue-600" /> Módulo 1: Consistencia Compras vs Ventas
-                    </span>
-                    <span className="text-[9.5px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded">RIE / SIRE</span>
-                  </div>
-                  <p className="text-[11px] text-app-muted">
-                    Ventas declaradas: <strong>S/ {workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'}</strong> ({workspaceKPIs?.metrics?.tributario?.totalVentasCount || 0} comprobantes) | Compras declaradas: <strong>S/ {workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00'}</strong>.
-                  </p>
-                </div>
+              {/* LISTADO DE 4 MÓDULOS TRIBUTARIOS EXPANDIBLES */}
+              <div className="space-y-3">
+                {[
+                  {
+                    id: 'tributario_mod1',
+                    title: 'Módulo 1: Consistencia Compras vs Ventas (RIE / SIRE)',
+                    badge: 'RIE / SIRE',
+                    color: 'blue',
+                    icon: Layers,
+                    summary: `Ventas declaradas: S/ ${workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'} (${workspaceKPIs?.metrics?.tributario?.totalVentasCount || 0} comprobantes) | Compras declaradas: S/ ${workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00'}.`,
+                    laws: [
+                      'TUO Ley del IGV (D.S. 055-99-EF, Art. 18 y 19) — Requisitos del Crédito Fiscal.',
+                      'Resolución de Superintendencia N° 000190-2021/SUNAT — Registros SIRE.',
+                      'Jurisprudencia RTF N° 01245-1-2021 — Coherencia de márgenes operativos impositivos.'
+                    ],
+                    formula: `Ratio Gasto/Venta = (Compras Totales S/ ${workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00'} ÷ Ventas Totales S/ ${workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'}) = ${workspaceKPIs?.metrics?.tributario?.totalVentasSoles > 0 ? (Number(workspaceKPIs?.metrics?.tributario?.totalComprasSoles) / Number(workspaceKPIs?.metrics?.tributario?.totalVentasSoles)).toFixed(2) : '0.00'}`
+                  },
+                  {
+                    id: 'tributario_mod2',
+                    title: 'Módulo 2: Bancarización & Medios de Pago (Ley 28194)',
+                    badge: 'Operaciones >= S/ 2,000',
+                    color: 'amber',
+                    icon: AlertTriangle,
+                    summary: `Total sin bancarizar identificado: S/ ${workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || '0.00'}. Auditoría de medios de pago y vouchers.`,
+                    laws: [
+                      'Ley 28194 Art. 3 y 4 — Exigencia de Medio de Pago para importes >= S/ 2,000 o US$ 500.',
+                      'TUO LIR Art. 44 inc. d) — Inadmisibilidad de costo/gasto sin bancarización.',
+                      'RTF N° 09212-3-2020 — Imposibilidad de subsanar operaciones en efectivo a posteriori.'
+                    ],
+                    formula: `Infracción Potencial = Suma de operaciones >= S/ 2,000 liquidadas en efectivo sin constancia bancaria.`
+                  },
+                  {
+                    id: 'tributario_mod3',
+                    title: 'Módulo 3: Deducción de Gastos & Causalidad Art. 37 LIR',
+                    badge: 'Causalidad',
+                    color: 'purple',
+                    icon: Calculator,
+                    summary: `Cumplimiento de causalidad y comprobantes auditados: ${workspaceKPIs?.metrics?.tributario?.gastosDeduciblesPct ?? 100}% sustentados.`,
+                    laws: [
+                      'TUO Ley del Impuesto a la Renta Art. 37 — Causalidad de gastos deducibles de 3ra categoría.',
+                      'Art. 44 LIR — Gastos personales no deducibles o de sujetos No Habidos.',
+                      'RTF N° 03708-1-2022 — Criterios de fehaciencia y trazabilidad documental.'
+                    ],
+                    formula: `Deducción Permitida = Comprobantes de proveedores activos/habidos con comprobantes sustentados.`
+                  },
+                  {
+                    id: 'tributario_mod4',
+                    title: 'Módulo 4: Scoring & Perfil de Riesgo SUNAT 2026',
+                    badge: `Score ${workspaceKPIs?.metrics?.tributario?.saludFiscalScore || 100}/100`,
+                    color: 'emerald',
+                    icon: ShieldAlert,
+                    summary: `Diagnóstico de riesgo de fiscalización: ${workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Bajo Riesgo'}.`,
+                    laws: [
+                      'Decreto Legislativo N° 1535 — Perfil de Cumplimiento del Deudor Tributario.',
+                      'RS N° 000123-2024/SUNAT — Ponderación de alertas tributarias automáticas.',
+                      'Código Tributario Art. 175 — Libros electrónicos y gradualidad de sanciones.'
+                    ],
+                    formula: `Scoring Fiscal = 100 - (Penalización por ratio alto + Penalización sin bancarizar + Inconsistencias SIRE).`
+                  }
+                ].map((mod) => {
+                  const Icon = mod.icon;
+                  const isExpanded = expandedModule === mod.id;
+                  const queryKey = `tributario_${mod.id}`;
 
-                {/* Módulo 2 */}
-                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4 text-amber-500" /> Módulo 2: Bancarización (Ley 28194)
-                    </span>
-                    <span className="text-[9.5px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded">Operaciones &gt; S/ 2,000</span>
-                  </div>
-                  <p className="text-[11px] text-app-muted">
-                    Total sin bancarizar identificado: <strong>S/ {workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || '0.00'}</strong>. Verificación de medio de pago y vouchers bancarios.
-                  </p>
-                </div>
+                  return (
+                    <div key={mod.id} className="bg-app-bg border border-app-border rounded-xl overflow-hidden transition-all shadow-sm">
+                      {/* Botón de Expansión (Header de Acordeón) */}
+                      <button
+                        onClick={() => setExpandedModule(isExpanded ? null : mod.id)}
+                        className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-app-hover transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-app-surface text-app-muted border border-app-border'}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-black text-app-text flex items-center gap-2 flex-wrap">
+                              <span>{mod.title}</span>
+                              <span className="text-[9px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/20">
+                                {mod.badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-app-muted truncate mt-0.5">{mod.summary}</p>
+                          </div>
+                        </div>
 
-                {/* Módulo 3 */}
-                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
-                      <Calculator className="w-4 h-4 text-purple-500" /> Módulo 3: Deducción Gastos Art. 37 LIR
-                    </span>
-                    <span className="text-[9.5px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded">Causalidad</span>
-                  </div>
-                  <p className="text-[11px] text-app-muted">
-                    Cumplimiento de causalidad y comprobantes válidos: <strong>{workspaceKPIs?.metrics?.tributario?.gastosDeduciblesPct ?? 100}%</strong> auditados.
-                  </p>
-                </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hidden sm:inline">
+                            {isExpanded ? 'Ocultar Contabilidad 4.0' : 'Expandir RAG 4.0'}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
+                        </div>
+                      </button>
 
-                {/* Módulo 4 */}
-                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
-                      <ShieldAlert className="w-4 h-4 text-emerald-500" /> Módulo 4: Scoring &amp; Perfil SUNAT
-                    </span>
-                    <span className="text-[9.5px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded">Puntaje {workspaceKPIs?.metrics?.tributario?.saludFiscalScore || 100}/100</span>
-                  </div>
-                  <p className="text-[11px] text-app-muted">
-                    Diagnóstico de riesgo de fiscalización: <strong>{workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Bajo Riesgo'}</strong>.
-                  </p>
-                </div>
+                      {/* CONTENIDO EXPANDIDO DE CONTABILIDAD 4.0 & RAG */}
+                      {isExpanded && (
+                        <div className="p-4 sm:p-6 border-t border-app-border bg-app-surface/60 space-y-5 animate-fade-in">
+                          
+                          {/* 1. Fórmula & Algoritmo de Cálculo */}
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Fórmulas &amp; Metodología de Cálculo 4.0
+                            </h4>
+                            <div className="bg-blue-500/5 p-3 rounded-lg border border-blue-500/10 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
+                              {mod.formula}
+                            </div>
+                          </div>
+
+                          {/* 2. Sustento Normativo RAG */}
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-amber-500" /> Sustento Normativo RAG (Leyes &amp; RTF Peruanas)
+                            </h4>
+                            <ul className="space-y-1.5 text-xs text-app-muted font-medium">
+                              {mod.laws.map((law, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-blue-600 font-bold">•</span>
+                                  <span>{law}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* 3. Co-Pilot Conversacional en Vivo con Groq AI */}
+                          <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq RAG en Vivo ("Pregúntale a la IA")
+                            </h4>
+                            <p className="text-[11px] text-app-muted">
+                              Haz una pregunta específica sobre este módulo y la IA responderá cruzando la normativa peruana con las cifras de tu empresa.
+                            </p>
+
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Ej. ¿Cómo sustento el crédito fiscal si la factura fue emitida a fin de mes?"
+                                value={ragQueries[queryKey] || ''}
+                                onChange={(e) => setRagQueries(prev => ({ ...prev, [queryKey]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSendRagQuery('tributario', mod.id);
+                                }}
+                                className="flex-1 bg-app-surface border border-app-border rounded-xl p-2.5 text-xs text-app-text focus:border-blue-500 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSendRagQuery('tributario', mod.id)}
+                                disabled={ragLoading[queryKey]}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all shrink-0"
+                              >
+                                {ragLoading[queryKey] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                Consultar Groq RAG
+                              </button>
+                            </div>
+
+                            {ragAnswers[queryKey] && (
+                              <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20 text-xs text-app-text leading-relaxed mt-3 space-y-2">
+                                <div className="font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                  <Sparkles className="w-4 h-4" /> Respuesta Groq AI &amp; Base RAG:
+                                </div>
+                                <div className="whitespace-pre-wrap font-sans text-xs">
+                                  {ragAnswers[queryKey]}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -954,34 +1033,17 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div className="bg-blue-500/10 p-3.5 sm:p-4 rounded-xl border border-blue-500/20 text-xs text-app-text leading-relaxed">
-                  <span className="font-extrabold text-blue-600 dark:text-blue-400 block mb-1">🤖 Dictamen Ejecutivo del Auditor IA:</span>
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400 block mb-1">🤖 Dictamen Ejecutivo Groq AI:</span>
                   {riskResult.findings?.resumen_ejecutivo}
-                </div>
-
-                <div className="space-y-2.5">
-                  <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-app-text">Hallazgos e Inconsistencias Identificadas ({riskResult.findings?.hallazgos?.length || 0}):</h4>
-                  {riskResult.findings?.hallazgos?.map((item: RiskFinding, idx: number) => (
-                    <div key={idx} className="bg-app-bg p-3.5 rounded-xl border-l-4 border-blue-600 border border-app-border flex flex-col sm:flex-row justify-between gap-2 sm:gap-4">
-                      <div>
-                        <div className="font-bold text-app-text text-xs">{item.titulo}</div>
-                        <div className="text-[11px] text-app-muted mt-1">{item.descripcion}</div>
-                      </div>
-                      <span className="px-2.5 py-0.5 text-[9.5px] font-black uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg h-fit w-fit shrink-0">
-                        {item.severidad}
-                      </span>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ─── PILAR 2: PLANILLAS CON IA (Muestra explícitamente todos los módulos) ─── */}
+        {/* ─── PILAR 2: PLANILLAS CON GROQ AI RAG ─── */}
         {isPremiumActive && activeSubTab === 'planillas' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
-            
-            {/* Rejilla 2x2 en celular, 4 columnas en desktop */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <div className="bg-app-surface border border-app-border p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-2.5 sm:gap-3">
                 <div className="p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl border border-blue-500/20 shrink-0">
@@ -992,7 +1054,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                   <div className="text-base sm:text-xl font-black text-app-text">
                     {workspaceKPIs?.metrics?.planillas?.colaboradoresCount ?? (employees?.length || 0)} Registrados
                   </div>
-                  <div className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-bold truncate">En Base de Datos</div>
+                  <div className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-bold truncate">Sincronizados con SaaS</div>
                 </div>
               </div>
 
@@ -1028,20 +1090,20 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-app-muted truncate">Contratos MINTRA</div>
-                  <div className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">Plantillas IA</div>
-                  <div className="text-[9px] sm:text-[10px] text-app-muted font-bold truncate">Redactor 2.0</div>
+                  <div className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">Groq Redactor</div>
+                  <div className="text-[9px] sm:text-[10px] text-app-muted font-bold truncate">Ley 728 / CAS</div>
                 </div>
               </div>
             </div>
 
-            {/* MUESTRA EXPLÍCITA DE MÓDULOS DE PLANILLAS */}
+            {/* EXPANDIBLES ACCORDION PILAR 2 PLANILLAS */}
             <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
               <div className="border-b border-app-border pb-3">
                 <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Planillas y Liquidaciones IA
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Planillas y Liquidaciones Groq RAG
                 </h2>
                 <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                  Cálculos laborales determinísticos y redacción de contratos MINTRA conectados a la nómina del sistema.
+                  Cálculos determinísticos laborales y redactor asistido de contratos conectado a la nómina de SOFTCONTABLE SaaS.
                 </p>
               </div>
 
@@ -1057,7 +1119,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <option value="">-- Seleccionar colaborador ({employees.length}) --</option>
                       {employees.map((emp: any) => (
                         <option key={emp.id || emp.dni} value={emp.id || emp.dni || emp.num_doc}>
-                          {(emp.nombres || emp.nombre || '') + ' ' + (emp.apellidos || '')} {emp.dni ? `(${emp.dni})` : ''} - S/ {emp.sueldo_basico || emp.sueldo || 2500}
+                          {(emp.nombres || emp.nombre || '') + ' ' + (emp.apellidos || '')} {emp.dni ? `(${emp.dni})` : ''} - S/ {emp.sueldo_basico || emp.sueldo || 1130}
                         </option>
                       ))}
                     </select>
@@ -1097,13 +1159,177 @@ export const SoftPremiumDashboard: React.FC = () => {
                     disabled={loading}
                     className="flex-1 bg-app-bg hover:bg-app-hover border border-app-border text-app-text font-extrabold py-2.5 sm:py-3 px-2.5 rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm cursor-pointer transition-all"
                   >
-                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Contrato IA
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Contrato Groq
                   </button>
                 </div>
               </div>
+
+              {/* LISTADO DE 4 MÓDULOS LABORALES EXPANDIBLES */}
+              <div className="space-y-3 pt-2">
+                {[
+                  {
+                    id: 'planillas_mod1',
+                    title: 'Módulo 1: Gratificación Ley 27735 & Ley 32563 CAS 2026',
+                    badge: 'Julio / Diciembre',
+                    color: 'purple',
+                    icon: Award,
+                    summary: `Gratificación semestral con Bonificación Extraordinaria del 9% (EsSalud) o 6.75% (EPS).`,
+                    laws: [
+                      'Ley N° 27735 y D.S. 005-2002-TR — Gratificaciones del sector privado.',
+                      'Ley N° 29351 y Ley N° 30334 — Bonificación Extraordinaria inafecta.',
+                      'Ley N° 32563 (Marzo 2026) — Régimen CAS: Pago de gratificación completa de 1 sueldo.'
+                    ],
+                    formula: `Gratificación = (Remuneración Computable × Meses ÷ 6) + 9% Bonificación Extraordinaria.`
+                  },
+                  {
+                    id: 'planillas_mod2',
+                    title: 'Módulo 2: Depósito & Proyección Semestral de CTS (D.Leg 650)',
+                    badge: 'Mayo / Noviembre',
+                    color: 'emerald',
+                    icon: Calculator,
+                    summary: `Compensación por Tiempo de Servicios incluyendo 1/6 de la última gratificación.`,
+                    laws: [
+                      'TUO D.Leg 650 y D.S. 001-97-TR — Depósitos semestrales de CTS.',
+                      'Integración de la sexta parte de gratificación al promedio imponible.',
+                      'Ley 32563 Art. 12 — CTS cancelatoria directa al cese para sector público.'
+                    ],
+                    formula: `Base Computable = Sueldo + Asig. Fam + (Gratificación ÷ 6). Depósito = Base ÷ 12 × Meses.`
+                  },
+                  {
+                    id: 'planillas_mod3',
+                    title: 'Módulo 3: Liquidación de Beneficios Sociales & Vacaciones Trucas',
+                    badge: 'D.Leg 713',
+                    color: 'blue',
+                    icon: Users,
+                    summary: `Vacaciones no gozadas, indemnización vacacional y liquidación al cese.`,
+                    laws: [
+                      'Decreto Legislativo N° 713 — 30 días de descanso vacacional remunerado.',
+                      'Vacaciones Truncas — Pago proporcional por meses y días trabajados.',
+                      'Art. 23 D.Leg 713 — Indemnización vacacional por falta de descanso en fecha.'
+                    ],
+                    formula: `Liquidación = Vacaciones Truncas + CTS Trunca + Gratificación Trunca.`
+                  },
+                  {
+                    id: 'planillas_mod4',
+                    title: 'Módulo 4: Redactor Inteligente de Contratos MINTRA 2026',
+                    badge: 'MINTRA 2.0',
+                    color: 'amber',
+                    icon: FileText,
+                    summary: `Generador asistido de contratos a plazo fijo e indeterminado con cláusulas Groq AI.`,
+                    laws: [
+                      'TUO D.Leg 728 (D.S. 003-97-TR) — Modalidades de contratación laboral.',
+                      'Directiva MINTRA 2026 — Registro digital y cláusulas de causa objetiva.',
+                      'Resolución Ministerial N° 120-2024-TR — Firma electrónica de boletas y contratos.'
+                    ],
+                    formula: `Generación asistida Groq LLaMA-3.3 garantizando causa objetiva sin desnaturalización.`
+                  }
+                ].map((mod) => {
+                  const Icon = mod.icon;
+                  const isExpanded = expandedModule === mod.id;
+                  const queryKey = `planillas_${mod.id}`;
+
+                  return (
+                    <div key={mod.id} className="bg-app-bg border border-app-border rounded-xl overflow-hidden transition-all shadow-sm">
+                      <button
+                        onClick={() => setExpandedModule(isExpanded ? null : mod.id)}
+                        className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-app-hover transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-app-surface text-app-muted border border-app-border'}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-black text-app-text flex items-center gap-2 flex-wrap">
+                              <span>{mod.title}</span>
+                              <span className="text-[9px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/20">
+                                {mod.badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-app-muted truncate mt-0.5">{mod.summary}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hidden sm:inline">
+                            {isExpanded ? 'Ocultar Análisis Laboral' : 'Expandir RAG Laboral'}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-4 sm:p-6 border-t border-app-border bg-app-surface/60 space-y-5 animate-fade-in">
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Fórmulas &amp; Algoritmos Laborales
+                            </h4>
+                            <div className="bg-blue-500/5 p-3 rounded-lg border border-blue-500/10 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
+                              {mod.formula}
+                            </div>
+                          </div>
+
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-amber-500" /> Sustento Normativo MINTRA &amp; Leyes
+                            </h4>
+                            <ul className="space-y-1.5 text-xs text-app-muted font-medium">
+                              {mod.laws.map((law, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-blue-600 font-bold">•</span>
+                                  <span>{law}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq Laboral en Vivo
+                            </h4>
+                            <p className="text-[11px] text-app-muted">
+                              Haz una consulta sobre licencias, gratificaciones o contratos de tu nómina.
+                            </p>
+
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Ej. ¿Corresponde pago de gratificación si el trabajador renunció antes de completar el mes?"
+                                value={ragQueries[queryKey] || ''}
+                                onChange={(e) => setRagQueries(prev => ({ ...prev, [queryKey]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSendRagQuery('planillas', mod.id);
+                                }}
+                                className="flex-1 bg-app-surface border border-app-border rounded-xl p-2.5 text-xs text-app-text focus:border-blue-500 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSendRagQuery('planillas', mod.id)}
+                                disabled={ragLoading[queryKey]}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all shrink-0"
+                              >
+                                {ragLoading[queryKey] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                Consultar RAG
+                              </button>
+                            </div>
+
+                            {ragAnswers[queryKey] && (
+                              <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20 text-xs text-app-text leading-relaxed mt-3 space-y-2">
+                                <div className="font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                  <Sparkles className="w-4 h-4" /> Respuesta Groq Laboral &amp; Base RAG:
+                                </div>
+                                <div className="whitespace-pre-wrap font-sans text-xs">
+                                  {ragAnswers[queryKey]}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Resultado Cálculo Gratificación */}
             {payrollResult && (
               <div className="bg-app-surface border border-purple-500/30 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-md">
                 <div className="flex justify-between items-center border-b border-app-border pb-3">
@@ -1133,30 +1359,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Resultado Contrato IA */}
-            {contractDoc && (
-              <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-md">
-                <div className="bg-amber-500/10 border border-amber-500/20 p-3 sm:p-4 rounded-xl flex items-center gap-2.5">
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <div className="text-[11px] sm:text-xs text-amber-700 dark:text-amber-300 font-medium">
-                    <strong>Revisión Legal:</strong> Borrador generado según MINTRA 2026. Revisar cláusulas antes de remitir al trabajador.
-                  </div>
-                </div>
-
-                <div className="bg-app-bg p-3.5 sm:p-5 rounded-xl font-mono text-[11px] sm:text-xs text-app-text max-h-56 sm:max-h-72 overflow-y-auto whitespace-pre-wrap border border-app-border leading-relaxed">
-                  {contractDoc.contractText}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* ─── PILAR 3: FINANZAS CON IA (Muestra explícitamente todos los módulos) ─── */}
+        {/* ─── PILAR 3: FINANZAS CON GROQ AI RAG ─── */}
         {isPremiumActive && activeSubTab === 'finanzas' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
-            
-            {/* Rejilla 2x2 en celular, 4 columnas en desktop */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <div className="bg-app-surface border border-app-border p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-2.5 sm:gap-3">
                 <div className="p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg sm:rounded-xl border border-blue-500/20 shrink-0">
@@ -1211,11 +1419,11 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Generador de Flujo de Caja */}
-            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-sm">
+            {/* EXPANDIBLES ACCORDION PILAR 3 FINANZAS */}
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
               <div className="border-b border-app-border pb-3">
                 <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Proyección de Flujo de Caja &amp; Vencimientos SUNAT
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Finanzas RAG &amp; Forecast Groq AI
                 </h2>
                 <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
                   Modelado predictivo de liquidez cruzando cuentas por cobrar/pagar con las fechas de vencimiento SUNAT por RUC.
@@ -1239,12 +1447,176 @@ export const SoftPremiumDashboard: React.FC = () => {
                   className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 sm:py-3 px-5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all shrink-0"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-                  Generar Forecast Financiero IA
+                  Generar Forecast Groq AI
                 </button>
+              </div>
+
+              {/* LISTADO DE 4 MÓDULOS FINANCIEROS EXPANDIBLES */}
+              <div className="space-y-3 pt-2">
+                {[
+                  {
+                    id: 'finanzas_mod1',
+                    title: 'Módulo 1: Proyección de Flujo de Caja & Saldo Neto',
+                    badge: 'NIC 7 NIIF',
+                    color: 'blue',
+                    icon: TrendingUp,
+                    summary: `Modelado predictivo de entradas (Ventas S/ ${workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'}) y salidas (Compras + Impuestos).`,
+                    laws: [
+                      'NIC 7 — Estado de Flujos de Efectivo.',
+                      'Gestión de Capital de Trabajo y Ciclo de Conversión de Efectivo.',
+                      'Cálculo de cobertura impositiva previa al vencimiento SUNAT.'
+                    ],
+                    formula: `Saldo Proyectado = Saldo Inicial + Ventas Cobradas - Compras Pagadas - Planilla - IGV.`
+                  },
+                  {
+                    id: 'finanzas_mod2',
+                    title: 'Módulo 2: Vencimiento Oficial SUNAT por Dígito de RUC',
+                    badge: `Dígito ${workspaceKPIs?.metrics?.finanzas?.sunatLastDigit ?? 0}`,
+                    color: 'amber',
+                    icon: Calendar,
+                    summary: `Vencimiento estimado: Día ${workspaceKPIs?.metrics?.finanzas?.sunatDueDateDay ?? 15} de cada mes.`,
+                    laws: [
+                      'RS N° 000281-2024/SUNAT — Cronograma Oficial de Vencimientos.',
+                      'Código Tributario Art. 176 inc. 1 — Multa por no presentar en fecha (1 UIT con 90% rebaja).',
+                      'Alertas tempranas de liquidez antes del cierre del periodo.'
+                    ],
+                    formula: `Día Vencimiento = 12 + Dígito RUC (Ajustado según calendario de domingos y feriados).`
+                  },
+                  {
+                    id: 'finanzas_mod3',
+                    title: 'Módulo 3: Ratios Financieros (Liquidez, Prueba Ácida, EBITDA)',
+                    badge: 'Solvencia 4.0',
+                    color: 'purple',
+                    icon: Calculator,
+                    summary: `Liquidez Corriente: ${workspaceKPIs?.metrics?.finanzas?.liquidezCorriente || '1.00'} | Prueba Ácida: ${workspaceKPIs?.metrics?.finanzas?.pruebaAcida || '1.00'}.`,
+                    laws: [
+                      'NIC 1 — Presentación de Estados Financieros.',
+                      'Prueba Ácida = (Activo Corriente - Inventarios) ÷ Pasivo Corriente.',
+                      'EBITDA Margin = (Utilidad Operativa + Depreciación) ÷ Ventas × 100.'
+                    ],
+                    formula: `Liquidez Corriente = Ventas Totales ÷ Compras Totales = ${workspaceKPIs?.metrics?.finanzas?.liquidezCorriente || '1.00'}`
+                  },
+                  {
+                    id: 'finanzas_mod4',
+                    title: 'Módulo 4: Escudo Fiscal & Recomendación Estratégica Groq AI',
+                    badge: 'Planeamiento 4.0',
+                    color: 'emerald',
+                    icon: DollarSign,
+                    summary: `Optimizaciones de depreciación de activos fijos, saldo a favor y capital de trabajo.`,
+                    laws: [
+                      'Norma XVI del Título Preliminar del Código Tributario — Elusión Lícita.',
+                      'Art. 38 a 41 LIR — Depreciación acelerada de activos fijos.',
+                      'Art. 50 LIR — Compensación de Pérdidas Tributarias.'
+                    ],
+                    formula: `Escudo Fiscal = Depreciación Deducible × 29.5% Tasa del Impuesto a la Renta.`
+                  }
+                ].map((mod) => {
+                  const Icon = mod.icon;
+                  const isExpanded = expandedModule === mod.id;
+                  const queryKey = `finanzas_${mod.id}`;
+
+                  return (
+                    <div key={mod.id} className="bg-app-bg border border-app-border rounded-xl overflow-hidden transition-all shadow-sm">
+                      <button
+                        onClick={() => setExpandedModule(isExpanded ? null : mod.id)}
+                        className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-app-hover transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-app-surface text-app-muted border border-app-border'}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-black text-app-text flex items-center gap-2 flex-wrap">
+                              <span>{mod.title}</span>
+                              <span className="text-[9px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/20">
+                                {mod.badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-app-muted truncate mt-0.5">{mod.summary}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hidden sm:inline">
+                            {isExpanded ? 'Ocultar Análisis Financiero' : 'Expandir RAG Financiero'}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-4 sm:p-6 border-t border-app-border bg-app-surface/60 space-y-5 animate-fade-in">
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Fórmulas &amp; Metodología Financiera NIIF
+                            </h4>
+                            <div className="bg-blue-500/5 p-3 rounded-lg border border-blue-500/10 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
+                              {mod.formula}
+                            </div>
+                          </div>
+
+                          <div className="bg-app-bg border border-app-border p-4 rounded-xl space-y-2">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-amber-500" /> Sustento Normativo NIIF &amp; SUNAT
+                            </h4>
+                            <ul className="space-y-1.5 text-xs text-app-muted font-medium">
+                              {mod.laws.map((law, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-blue-600 font-bold">•</span>
+                                  <span>{law}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
+                            <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq Financiero en Vivo
+                            </h4>
+                            <p className="text-[11px] text-app-muted">
+                              Haz una consulta financiera o pide una recomendación de liquidez.
+                            </p>
+
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Ej. ¿Cómo afecta este nivel de compras a la liquidez de cierre de mes?"
+                                value={ragQueries[queryKey] || ''}
+                                onChange={(e) => setRagQueries(prev => ({ ...prev, [queryKey]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSendRagQuery('finanzas', mod.id);
+                                }}
+                                className="flex-1 bg-app-surface border border-app-border rounded-xl p-2.5 text-xs text-app-text focus:border-blue-500 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSendRagQuery('finanzas', mod.id)}
+                                disabled={ragLoading[queryKey]}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all shrink-0"
+                              >
+                                {ragLoading[queryKey] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                Consultar RAG
+                              </button>
+                            </div>
+
+                            {ragAnswers[queryKey] && (
+                              <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20 text-xs text-app-text leading-relaxed mt-3 space-y-2">
+                                <div className="font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                  <Sparkles className="w-4 h-4" /> Respuesta Groq Financiera &amp; Base RAG:
+                                </div>
+                                <div className="whitespace-pre-wrap font-sans text-xs">
+                                  {ragAnswers[queryKey]}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Resultado Forecast Financiero */}
             {cashflowResult && (
               <div className="bg-app-surface border border-blue-500/30 rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-md">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 text-center">
@@ -1266,16 +1638,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Cruce Calendario SUNAT */}
                 <div className="bg-app-bg p-3.5 sm:p-5 rounded-xl border border-app-border space-y-1.5">
                   <div className="text-xs font-black text-blue-600 dark:text-blue-400 flex items-center gap-2">
                     <Calendar className="w-4 h-4" /> Cruce con Calendario Oficial SUNAT:
                   </div>
                   <div className="text-[11px] sm:text-xs text-app-text font-medium leading-relaxed">
                     • Último dígito RUC: <strong>{cashflowResult.sunatAdjustments?.ultimo_digito_ruc}</strong> | Vencimiento estimado: <strong>Día {cashflowResult.sunatAdjustments?.dia_vencimiento_sunat} de cada mes</strong>.
-                  </div>
-                  <div className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                    • {cashflowResult.sunatAdjustments?.alerta_liquidez}
                   </div>
                 </div>
               </div>
@@ -1285,9 +1653,8 @@ export const SoftPremiumDashboard: React.FC = () => {
 
       </main>
 
-      {/* Footer Standalone Fijo Inferior */}
       <footer className="bg-app-surface border-t border-app-border px-4 py-2.5 text-center text-[10px] sm:text-xs text-app-muted font-medium shrink-0">
-        SoftPremium SAAS — Módulo de Inteligencia Artificial Corporativa © 2026 Angelo Serna Simeon
+        SoftPremium SAAS — Módulo Groq LLaMA-3.3 RAG 4.0 © 2026 Angelo Serna Simeon
       </footer>
     </div>
   );

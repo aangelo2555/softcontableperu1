@@ -93,5 +93,35 @@ router.get('/kpis', requirePremium('tributario'), async (req, res) => {
     }
 });
 
+/**
+ * POST /api/premium/tributario/rag-query
+ * Consulta interactiva RAG a Groq AI con contexto normativo peruano 2026.
+ */
+router.post('/rag-query', requirePremium('tributario'), async (req, res) => {
+    try {
+        const { pillar, moduleKey, query, workspaceData } = req.body;
+        const ragService = require('../services/ragKnowledgeService');
+        
+        if (!query) {
+            return res.status(400).json({ success: false, error: 'Falta la consulta (query).' });
+        }
+
+        const answer = await ragService.processRAGQuery({
+            pillar: pillar || 'tributario',
+            moduleKey: moduleKey || 'ratio_compras_ventas',
+            query,
+            workspaceData: workspaceData || {}
+        });
+
+        res.json({
+            success: true,
+            answer
+        });
+    } catch (error) {
+        console.error('[RAG QUERY ROUTE ERROR]', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
 
