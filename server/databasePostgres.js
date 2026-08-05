@@ -2121,9 +2121,13 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_previo TEXT;`,
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS contenido_nuevo TEXT;`,
             `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS justificacion TEXT;`,
-            // ── SoftPremium: flags en public.workspaces y extensión laboral en public.employees ──
+            // ── SoftPremium: flags en public.workspaces, users y suscripciones ──
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_enabled BOOLEAN NOT NULL DEFAULT FALSE;`,
             `ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS premium_enabled BOOLEAN NOT NULL DEFAULT FALSE;`,
             `ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS premium_tiers TEXT[] DEFAULT '{}';`,
+            `ALTER TABLE premium.premium_subscriptions ADD COLUMN IF NOT EXISTS user_email TEXT;`,
+            `ALTER TABLE premium.premium_subscriptions ADD COLUMN IF NOT EXISTS user_name TEXT;`,
+            `ALTER TABLE premium.premium_subscriptions ADD COLUMN IF NOT EXISTS voucher_base64 TEXT;`,
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS fecha_ingreso TEXT;`,
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS fecha_cese TEXT;`,
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS regimen_laboral TEXT DEFAULT 'general';`,

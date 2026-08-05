@@ -35,7 +35,7 @@ interface RiskFinding {
 }
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { currentCompany, setActiveTab: setMainActiveTab } = useStore();
+  const { companies, currentCompany, setCurrentCompany, setActiveTab: setMainActiveTab } = useStore();
   const currentWorkspace = currentCompany;
 
   const user = React.useMemo(() => {
@@ -58,11 +58,30 @@ export const SoftPremiumDashboard: React.FC = () => {
   const [premiumTiers, setPremiumTiers] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Formulario Yape / Plin / Transferencia
+  // Formulario Yape / Plin / Transferencia con Adjunto de Voucher
   const [selectedPlanTier, setSelectedPlanTier] = useState<'tributario' | 'planillas' | 'finanzas' | 'full'>('full');
   const [paymentMethod, setPaymentMethod] = useState<'YAPE' | 'PLIN' | 'TRANSFERENCIA'>('YAPE');
   const [operationNumber, setOperationNumber] = useState<string>('');
+  const [voucherFile, setVoucherFile] = useState<File | null>(null);
+  const [voucherBase64, setVoucherBase64] = useState<string | null>(null);
   const [submittingVoucher, setSubmittingVoucher] = useState<boolean>(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        toast.error('El archivo excede el tamaño máximo permitido (8MB).');
+        return;
+      }
+      setVoucherFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVoucherBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Estados Pilar 1: Tributación IA
   const [riskRunType, setRiskRunType] = useState<string>('inconsistencia_gastos_ventas');
@@ -370,15 +389,44 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Info Empresa & Estado de Suscripción */}
-        <div className="flex items-center gap-4">
-          <div className="bg-app-bg border border-app-border px-4 py-2 rounded-xl text-right">
-            <div className="text-[10px] text-app-muted uppercase font-black tracking-wider">Empresa Activa</div>
-            <div className="text-xs font-bold text-app-text truncate max-w-[200px]">{currentWorkspace?.name || 'No seleccionada'}</div>
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold">RUC: {currentWorkspace?.ruc || '—'}</div>
+        {/* Info Usuario, Selector de Empresas & Estado de Suscripción */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Usuario Logueado */}
+          <div className="bg-app-bg border border-app-border px-3.5 py-1.5 rounded-xl flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center font-black text-xs">
+              {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-black text-app-text">{user?.name || user?.nombre || 'Cliente Logueado'}</span>
+              <span className="text-[10px] text-app-muted font-medium">{user?.email || 'usuario@softcontable.pe'}</span>
+            </div>
           </div>
 
-          <div className={`px-3.5 py-1.5 rounded-xl font-black text-xs flex items-center gap-2 border ${
+          {/* Selector MIS EMPRESAS */}
+          <div className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left">
+            <label className="text-[9px] text-app-muted uppercase font-black tracking-wider block">MIS EMPRESAS</label>
+            <select
+              value={currentWorkspace?.ruc || ''}
+              onChange={(e) => {
+                const found = companies.find(c => c.ruc === e.target.value);
+                if (found) setCurrentCompany(found);
+              }}
+              className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[200px] truncate"
+            >
+              {companies.map(c => (
+                <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
+                  {c.name} ({c.ruc})
+                </option>
+              ))}
+              {companies.length === 0 && (
+                <option value="" className="bg-app-surface text-app-text">
+                  {currentWorkspace?.name || 'Sin Empresas'}
+                </option>
+              )}
+            </select>
+          </div>
+
+          <div className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-2 border ${
             isPremiumActive 
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
               : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
@@ -643,6 +691,43 @@ export const SoftPremiumDashboard: React.FC = () => {
                     onChange={(e) => setOperationNumber(e.target.value)}
                     className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-sm text-app-text focus:border-blue-500 focus:outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="text-xs text-app-muted font-semibold mb-1 block">Adjuntar Foto / Captura de Comprobante (Voucher)</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2.5 bg-app-bg border border-app-border hover:bg-app-hover text-app-text rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      {voucherFile ? voucherFile.name : '📁 Seleccionar Captura de Comprobante'}
+                    </button>
+
+                    {voucherBase64 && (
+                      <div className="relative group w-10 h-10 rounded-lg overflow-hidden border border-app-border shrink-0">
+                        <img src={voucherBase64} alt="Voucher Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => { setVoucherFile(null); setVoucherBase64(null); }}
+                          className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {voucherFile && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">✓ Captura lista para enviar ({Math.round(voucherFile.size / 1024)} KB)</p>
+                  )}
                 </div>
 
                 <button

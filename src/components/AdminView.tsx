@@ -604,7 +604,7 @@ export const AdminView: React.FC = () => {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   // Estados Suscripciones Premium IA
-  const [premiumWorkspaces, setPremiumWorkspaces] = useState<any[]>([]);
+  const [premiumRequests, setPremiumRequests] = useState<any[]>([]);
   const [loadingPremium, setLoadingPremium] = useState<boolean>(false);
 
   useEffect(() => {
@@ -612,7 +612,7 @@ export const AdminView: React.FC = () => {
     loadAdminUsers();
   }, []);
 
-  const loadPremiumWorkspaces = async () => {
+  const loadPremiumRequests = async () => {
     try {
       setLoadingPremium(true);
       const res = await fetch('/api/premium/subscription/admin/list-all', {
@@ -620,16 +620,16 @@ export const AdminView: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setPremiumWorkspaces(data.workspaces || []);
+        setPremiumRequests(data.requests || []);
       }
     } catch (e) {
-      console.error('Error cargando lista de suscripciones:', e);
+      console.error('Error cargando solicitudes premium:', e);
     } finally {
       setLoadingPremium(false);
     }
   };
 
-  const handleTogglePremium = async (workspaceId: string, enable: boolean) => {
+  const handleTogglePremiumUser = async (userId: string, userEmail: string, enable: boolean) => {
     try {
       const res = await fetch('/api/premium/subscription/activate-manual', {
         method: 'POST',
@@ -637,12 +637,12 @@ export const AdminView: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('softcontable_token')}`
         },
-        body: JSON.stringify({ workspaceId, enable, tiers: ['full'] })
+        body: JSON.stringify({ userId, userEmail, enable, tiers: ['full'] })
       });
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
-        loadPremiumWorkspaces();
+        loadPremiumRequests();
       } else {
         toast.error(data.error || 'Error al actualizar suscripción.');
       }
@@ -752,7 +752,7 @@ export const AdminView: React.FC = () => {
             <button
               onClick={() => {
                 setActiveSubTab('PREMIUM_IA');
-                loadPremiumWorkspaces();
+                loadPremiumRequests();
               }}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
                 activeSubTab === 'PREMIUM_IA' 
@@ -1059,47 +1059,73 @@ export const AdminView: React.FC = () => {
 
         ) : activeSubTab === 'PREMIUM_IA' ? (
 
-          /* --- GESTIÓN Y ACTIVACIÓN SOFTPREMIUM IA --- */
+          /* --- GESTIÓN Y ACTIVACIÓN SOFTPREMIUM IA POR USUARIO --- */
           <div className="flex-1 flex flex-col overflow-hidden gap-4">
             <div className="flex justify-between items-center bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
               <div>
                 <h3 className="text-sm font-black uppercase text-app-text flex items-center gap-2">
                   <Sparkles size={16} className="text-blue-500 animate-pulse" />
-                  Solicitudes y Activación SoftPremium IA
+                  Solicitudes y Activación de Usuarios SoftPremium IA
                 </h3>
-                <p className="text-[11px] text-app-muted mt-0.5">Gestión centralizada de permisos para el Portal Standalone de IA Corporativa.</p>
+                <p className="text-[11px] text-app-muted mt-0.5">Auditoría de comprobantes y activación global de IA para usuarios y sus empresas asociadas.</p>
               </div>
 
               <button
-                onClick={loadPremiumWorkspaces}
+                onClick={loadPremiumRequests}
                 disabled={loadingPremium}
                 className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
               >
                 <RefreshCw size={14} className={loadingPremium ? 'animate-spin' : ''} />
-                Actualizar Lista
+                Actualizar Solicitudes
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar border border-app-border bg-app-surface rounded-2xl shadow-sm pb-6">
               <div className="responsive-table-container">
-                <table className="w-full text-left text-xs font-semibold text-app-text min-w-[800px]">
+                <table className="w-full text-left text-xs font-semibold text-app-text min-w-[900px]">
                   <thead className="bg-app-bg border-b border-app-border text-[10px] font-black uppercase text-app-muted tracking-widest sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-4">Empresa / Razón Social</th>
-                      <th className="px-6 py-4">RUC</th>
-                      <th className="px-6 py-4">Régimen Tributario</th>
-                      <th className="px-6 py-4 text-center">Estado SoftPremium</th>
+                      <th className="px-6 py-4">Cliente Solicitante</th>
+                      <th className="px-6 py-4">Empresas en Posesión</th>
+                      <th className="px-6 py-4">Plan & Pago</th>
+                      <th className="px-6 py-4 text-center">Comprobante de Pago</th>
+                      <th className="px-6 py-4 text-center">Estado Suscripción</th>
                       <th className="px-6 py-4 text-right">Acción Administrador</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-app-border">
-                    {premiumWorkspaces.map((ws) => {
-                      const isActive = !!ws.premium_enabled;
+                    {premiumRequests.map((req) => {
+                      const isActive = !!req.premium_enabled;
                       return (
-                        <tr key={ws.ruc || ws.id} className="hover:bg-app-hover">
-                          <td className="px-6 py-4 font-bold text-app-text">{ws.name}</td>
-                          <td className="px-6 py-4 font-mono font-bold text-blue-600 dark:text-blue-400">{ws.ruc}</td>
-                          <td className="px-6 py-4 text-app-muted">{ws.regimentributario || ws.regimenTributario || 'RG'}</td>
+                        <tr key={req.user_id || req.user_email} className="hover:bg-app-hover">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-app-text">{req.user_name || 'Cliente'}</div>
+                            <div className="text-[11px] font-semibold text-app-muted">{req.user_email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/20">
+                              🏢 {req.workspace_count || 1} empresa(s)
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-app-text uppercase">{req.plan_tier || 'full'}</div>
+                            <div className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-bold">
+                              {req.payment_provider || 'YAPE'} — Ref: {req.reference_number || 'PENDIENTE'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {req.voucher_base64 ? (
+                              <button
+                                onClick={() => setZoomedImage(req.voucher_base64)}
+                                className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              >
+                                <Eye size={13} />
+                                🖼️ Ver Comprobante
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-app-muted font-medium italic">Sin voucher adjunto</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 text-center">
                             {isActive ? (
                               <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
@@ -1114,27 +1140,27 @@ export const AdminView: React.FC = () => {
                           <td className="px-6 py-4 text-right">
                             {isActive ? (
                               <button
-                                onClick={() => handleTogglePremium(ws.id || ws.ruc, false)}
+                                onClick={() => handleTogglePremiumUser(req.user_id, req.user_email, false)}
                                 className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                               >
-                                Desactivar
+                                Desactivar IA
                               </button>
                             ) : (
                               <button
-                                onClick={() => handleTogglePremium(ws.id || ws.ruc, true)}
+                                onClick={() => handleTogglePremiumUser(req.user_id, req.user_email, true)}
                                 className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md cursor-pointer"
                               >
-                                ✓ Activar Premium IA
+                                ✓ Activar IA para Usuario
                               </button>
                             )}
                           </td>
                         </tr>
                       );
                     })}
-                    {premiumWorkspaces.length === 0 && !loadingPremium && (
+                    {premiumRequests.length === 0 && !loadingPremium && (
                       <tr>
-                        <td colSpan={5} className="text-center py-8 text-app-muted text-xs font-bold">
-                          No se encontraron empresas registradas.
+                        <td colSpan={6} className="text-center py-8 text-app-muted text-xs font-bold">
+                          No se encontraron solicitudes registradas.
                         </td>
                       </tr>
                     )}
