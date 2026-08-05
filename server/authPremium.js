@@ -34,35 +34,40 @@ function requirePremium(requiredTier = null) {
                 return next();
             }
 
-            if (!workspaceId) {
-                return res.status(400).json({ success: false, error: 'Falta cabecera X-Workspace-Id requerida.' });
+            // 1. Verificar si el USUARIO tiene premium_enabled = true en la tabla users
+            let isUserPremium = false;
+            if (process.env.DATABASE_URL) {
+                try {
+                    const dbCore = require('./databasePostgres');
+                    const uRes = await dbCore.pool.query(
+                        `SELECT premium_enabled FROM users WHERE id = $1 OR LOWER(email) = $2 LIMIT 1`,
+                        [user.id || '', normalizedEmail]
+                    );
+                    isUserPremium = Boolean(uRes.rows[0]?.premium_enabled);
+                } catch (e) {
+                    console.warn('[AUTH PREMIUM USER CHECK WARN]', e.message);
+                }
             }
 
-            const workspace = await coreReader.getWorkspace(workspaceId);
-            if (!workspace) {
-                return res.status(404).json({ success: false, error: 'Workspace no encontrado.' });
+            // 2. Verificar si el WORKSPACE tiene premium_enabled = true
+            let isWorkspacePremium = false;
+            if (workspaceId) {
+                try {
+                    const workspace = await coreReader.getWorkspace(workspaceId);
+                    isWorkspacePremium = Boolean(workspace?.premium_enabled);
+                } catch (e) {
+                    console.warn('[AUTH PREMIUM WORKSPACE CHECK WARN]', e.message);
+                }
             }
 
-            const isPremiumEnabled = Boolean(workspace.premium_enabled);
-            const tiers = Array.isArray(workspace.premium_tiers) ? workspace.premium_tiers : [];
+            const isPremiumEnabled = isUserPremium || isWorkspacePremium;
 
-            if (!isPremiumEnabled && !tiers.includes('full')) {
+            if (!isPremiumEnabled) {
                 return res.status(403).json({ 
                     success: false, 
                     isPremiumLocked: true,
-                    error: 'SoftPremium no está activo para este workspace. Activa tu suscripción para acceder a esta función.' 
+                    error: 'SoftPremium no está activo para tu usuario o workspace. Activa tu suscripción para acceder a este pilar.' 
                 });
-            }
-
-            if (requiredTier && requiredTier !== 'full') {
-                const hasTier = tiers.includes(requiredTier) || tiers.includes('full');
-                if (!hasTier) {
-                    return res.status(403).json({ 
-                        success: false, 
-                        isPremiumLocked: true,
-                        error: `El módulo SoftPremium ${requiredTier.toUpperCase()} no está incluido en tu suscripción actual.` 
-                    });
-                }
             }
 
             req.isPremiumActive = true;
