@@ -657,32 +657,6 @@ export const SoftPremiumDashboard: React.FC = () => {
               </form>
             </div>
 
-            {/* Panel Admin Override */}
-            {isAdmin && (
-              <div className="bg-slate-900 border border-indigo-500/40 rounded-2xl p-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-base font-bold text-indigo-300">👑 Panel de Control Administrador</h3>
-                    <p className="text-xs text-slate-400">Como Administrador puedes activar o desactivar SoftPremium instantáneamente para la empresa activa.</p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAdminTogglePremium(true)}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow cursor-pointer"
-                    >
-                      Activar Premium
-                    </button>
-                    <button
-                      onClick={() => handleAdminTogglePremium(false)}
-                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow cursor-pointer"
-                    >
-                      Desactivar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 

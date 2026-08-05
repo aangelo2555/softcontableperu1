@@ -238,6 +238,17 @@ const db = {
         
         return result.rows.map(ws => mapWorkspaceColumns(ws));
     },
+
+    // Get workspace by ID or RUC
+    getWorkspaceById: async (workspaceId) => {
+        if (!workspaceId) return null;
+        const result = await query(
+            'SELECT * FROM workspaces WHERE id = $1 OR ruc = $1 LIMIT 1',
+            [workspaceId]
+        );
+        if (!result.rows || !result.rows[0]) return null;
+        return mapWorkspaceColumns(result.rows[0]);
+    },
     
     // Get workspace data (paginado)
     getWorkspaceData: async (ruc, userId, options = {}) => {

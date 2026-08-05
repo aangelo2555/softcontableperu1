@@ -1314,6 +1314,19 @@ const dbManager = {
         }));
     },
 
+    getWorkspaceById: (workspaceId) => {
+        if (!workspaceId) return null;
+        const row = db.prepare('SELECT * FROM workspaces WHERE id = ? OR ruc = ?').get(workspaceId, workspaceId);
+        if (!row) return null;
+        return {
+            ...row,
+            sol_user: decrypt(row.sol_user),
+            sol_pass: decrypt(row.sol_pass),
+            sunatClientId: decrypt(row.sunatClientId),
+            sunatClientSecret: decrypt(row.sunatClientSecret)
+        };
+    },
+
     saveWorkspace: (w, userId) => {
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO workspaces 

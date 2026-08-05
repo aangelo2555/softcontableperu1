@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import PageHeader from './ui/PageHeader';
 import { webApiBridge } from '../services/apiBridge';
+import toast from 'react-hot-toast';
 import { 
   Users, 
   MessageSquare, 
@@ -597,15 +598,58 @@ export const AdminView: React.FC = () => {
     startInspectingWorkspace 
   } = useStore();
 
-  const [activeSubTab, setActiveSubTab] = useState<'BUZON' | 'USUARIOS' | 'CONOCIMIENTO_IA'>('BUZON');
+  const [activeSubTab, setActiveSubTab] = useState<'BUZON' | 'USUARIOS' | 'CONOCIMIENTO_IA' | 'PREMIUM_IA'>('BUZON');
   const [selectedSuggestion, setSelectedSuggestion] = useState<any | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  // Estados Suscripciones Premium IA
+  const [premiumWorkspaces, setPremiumWorkspaces] = useState<any[]>([]);
+  const [loadingPremium, setLoadingPremium] = useState<boolean>(false);
 
   useEffect(() => {
     loadAdminSuggestions();
     loadAdminUsers();
   }, []);
+
+  const loadPremiumWorkspaces = async () => {
+    try {
+      setLoadingPremium(true);
+      const res = await fetch('/api/premium/subscription/admin/list-all', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('softcontable_token')}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPremiumWorkspaces(data.workspaces || []);
+      }
+    } catch (e) {
+      console.error('Error cargando lista de suscripciones:', e);
+    } finally {
+      setLoadingPremium(false);
+    }
+  };
+
+  const handleTogglePremium = async (workspaceId: string, enable: boolean) => {
+    try {
+      const res = await fetch('/api/premium/subscription/activate-manual', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('softcontable_token')}`
+        },
+        body: JSON.stringify({ workspaceId, enable, tiers: ['full'] })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        loadPremiumWorkspaces();
+      } else {
+        toast.error(data.error || 'Error al actualizar suscripción.');
+      }
+    } catch (e: any) {
+      toast.error('Error enviando solicitud: ' + e.message);
+    }
+  };
 
   // Cálculos estadísticos
   const totalUsers = adminUsers.length;
@@ -704,6 +748,20 @@ export const AdminView: React.FC = () => {
             >
               <BrainCircuit size={12} />
               Base de IA
+            </button>
+            <button
+              onClick={() => {
+                setActiveSubTab('PREMIUM_IA');
+                loadPremiumWorkspaces();
+              }}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                activeSubTab === 'PREMIUM_IA' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'text-app-muted hover:text-app-text'
+              }`}
+            >
+              <Sparkles size={12} />
+              Suscripciones SoftPremium IA
             </button>
           </div>
         }
@@ -997,6 +1055,93 @@ export const AdminView: React.FC = () => {
               </div>
             </div>
 
+          </div>
+
+        ) : activeSubTab === 'PREMIUM_IA' ? (
+
+          /* --- GESTIÓN Y ACTIVACIÓN SOFTPREMIUM IA --- */
+          <div className="flex-1 flex flex-col overflow-hidden gap-4">
+            <div className="flex justify-between items-center bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
+              <div>
+                <h3 className="text-sm font-black uppercase text-app-text flex items-center gap-2">
+                  <Sparkles size={16} className="text-blue-500 animate-pulse" />
+                  Solicitudes y Activación SoftPremium IA
+                </h3>
+                <p className="text-[11px] text-app-muted mt-0.5">Gestión centralizada de permisos para el Portal Standalone de IA Corporativa.</p>
+              </div>
+
+              <button
+                onClick={loadPremiumWorkspaces}
+                disabled={loadingPremium}
+                className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw size={14} className={loadingPremium ? 'animate-spin' : ''} />
+                Actualizar Lista
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar border border-app-border bg-app-surface rounded-2xl shadow-sm pb-6">
+              <div className="responsive-table-container">
+                <table className="w-full text-left text-xs font-semibold text-app-text min-w-[800px]">
+                  <thead className="bg-app-bg border-b border-app-border text-[10px] font-black uppercase text-app-muted tracking-widest sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-4">Empresa / Razón Social</th>
+                      <th className="px-6 py-4">RUC</th>
+                      <th className="px-6 py-4">Régimen Tributario</th>
+                      <th className="px-6 py-4 text-center">Estado SoftPremium</th>
+                      <th className="px-6 py-4 text-right">Acción Administrador</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-app-border">
+                    {premiumWorkspaces.map((ws) => {
+                      const isActive = !!ws.premium_enabled;
+                      return (
+                        <tr key={ws.ruc || ws.id} className="hover:bg-app-hover">
+                          <td className="px-6 py-4 font-bold text-app-text">{ws.name}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-blue-600 dark:text-blue-400">{ws.ruc}</td>
+                          <td className="px-6 py-4 text-app-muted">{ws.regimentributario || ws.regimenTributario || 'RG'}</td>
+                          <td className="px-6 py-4 text-center">
+                            {isActive ? (
+                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                SÚSCRIPCIÓN ACTIVA
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-rose-500/10 text-rose-500 border border-rose-500/30">
+                                PENDIENTE / INACTIVO
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {isActive ? (
+                              <button
+                                onClick={() => handleTogglePremium(ws.id || ws.ruc, false)}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                              >
+                                Desactivar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleTogglePremium(ws.id || ws.ruc, true)}
+                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md cursor-pointer"
+                              >
+                                ✓ Activar Premium IA
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {premiumWorkspaces.length === 0 && !loadingPremium && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-app-muted text-xs font-bold">
+                          No se encontraron empresas registradas.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
         ) : (

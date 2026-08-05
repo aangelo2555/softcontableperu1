@@ -110,39 +110,68 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
             // Actualizar public.workspaces (única escritura cruzada permitida)
             await dbCore.pool.query(
                 `UPDATE public.workspaces 
-                 SET premium_enabled = $1, premium_tiers = $2 
-                 WHERE id = $3`,
-                [isEnabled, activeTiers, workspaceId]
+                 SET premium_enabled = $1 
+                 WHERE id = $2 OR ruc = $2`,
+                [isEnabled, workspaceId]
             );
 
-            // Registrar/Actualizar suscripción en schema premium
+            // Registrar/Actualizar suscripción en schema premium si existe
             if (isEnabled) {
-                const subId = uuidv4();
-                await queryPremium(
-                    `INSERT INTO premium.premium_subscriptions 
-                    (id, workspace_id, user_id, plan_tier, status, billing_cycle, price_centimos, payment_provider, payment_provider_ref)
-                    VALUES ($1, $2, $3, $4, 'active', 'monthly', 0, 'admin_manual', 'ACTIVADO_POR_ADMIN')
-                    ON CONFLICT DO NOTHING`,
-                    [subId, workspaceId, req.user.id, activeTiers[0] || 'full']
-                );
+                try {
+                    const subId = uuidv4();
+                    await queryPremium(
+                        `INSERT INTO premium.premium_subscriptions 
+                        (id, workspace_id, user_id, plan_tier, status, billing_cycle, price_centimos, payment_provider, payment_provider_ref)
+                        VALUES ($1, $2, $3, $4, 'active', 'monthly', 0, 'admin_manual', 'ACTIVADO_POR_ADMIN')`,
+                        [subId, workspaceId, req.user.id || 'ADMIN', activeTiers[0] || 'full']
+                    );
+                } catch (e) {
+                    console.warn('[PREMIUM SUBSCRIPTION INSERT WARN]', e.message);
+                }
             }
         } else {
             // SQLite local
             await dbCore.queryAll(
-                `UPDATE workspaces SET premium_enabled = ?, premium_tiers = ? WHERE id = ?`,
-                [isEnabled ? 1 : 0, JSON.stringify(activeTiers), workspaceId]
+                `UPDATE workspaces SET premium_enabled = ? WHERE id = ? OR ruc = ?`,
+                [isEnabled ? 1 : 0, workspaceId, workspaceId]
             );
         }
 
         res.json({
             success: true,
-            message: `SoftPremium ${isEnabled ? 'activado' : 'desactivado'} correctamente para el workspace.`,
+            message: `SoftPremium ${isEnabled ? 'activado' : 'desactivado'} correctamente para la empresa.`,
             workspaceId,
             premium_enabled: isEnabled,
             premium_tiers: activeTiers
         });
     } catch (error) {
         console.error('[ACTIVATE MANUAL ERROR]', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/premium/subscription/admin/list-all (Solo Admin)
+ * Lista todos los workspaces y sus solicitudes de suscripción para el Panel Admin.
+ */
+router.get('/admin/list-all', requireAdmin, async (req, res) => {
+    try {
+        let list = [];
+        if (USE_POSTGRES) {
+            const result = await dbCore.pool.query(
+                `SELECT id, name, ruc, premium_enabled, regimentributario FROM public.workspaces ORDER BY name ASC`
+            );
+            list = result.rows || [];
+        } else {
+            list = await dbCore.queryAll(`SELECT id, name, ruc, premium_enabled, regimenTributario FROM workspaces ORDER BY name ASC`);
+        }
+
+        res.json({
+            success: true,
+            workspaces: list
+        });
+    } catch (error) {
+        console.error('[ADMIN LIST PREMIUM ERROR]', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
