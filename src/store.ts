@@ -366,6 +366,8 @@ export interface CompanyData {
   ciiuCode?: string;
   fixedAssetsValue?: number;
   employeeCount?: number;
+  premium_enabled?: boolean;
+  premium_tiers?: string[];
 }
 
 export interface BuzonMensaje {
