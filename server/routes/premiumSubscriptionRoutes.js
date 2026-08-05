@@ -213,40 +213,27 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
         if (USE_POSTGRES) {
             const result = await dbCore.pool.query(`
                 SELECT 
-                    s.id as subscription_id,
-                    COALESCE(u.id, s.user_id) as user_id,
-                    COALESCE(s.user_name, u.name, 'Cliente') as user_name,
-                    COALESCE(s.user_email, u.email, 'sin-email') as user_email,
-                    COALESCE(u.premium_enabled, FALSE) as premium_enabled,
-                    (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id OR user_id = s.user_id) as workspace_count,
-                    s.plan_tier,
-                    s.payment_provider,
-                    s.payment_provider_ref as reference_number,
-                    s.voucher_base64,
-                    s.status as subscription_status,
-                    s.created_at
-                FROM premium.premium_subscriptions s
-                LEFT JOIN users u ON (u.id = s.user_id OR LOWER(u.email) = LOWER(s.user_email))
-                UNION ALL
-                SELECT 
-                    NULL as subscription_id,
                     u.id as user_id,
-                    u.name as user_name,
-                    u.email as user_email,
+                    COALESCE(u.name, s.user_name, 'Cliente') as user_name,
+                    LOWER(u.email) as user_email,
                     COALESCE(u.premium_enabled, FALSE) as premium_enabled,
                     (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id) as workspace_count,
-                    'Sin Plan' as plan_tier,
-                    'N/A' as payment_provider,
-                    'N/A' as reference_number,
-                    NULL as voucher_base64,
-                    'inactive' as subscription_status,
-                    u.created_at
+                    s.id as subscription_id,
+                    COALESCE(s.plan_tier, 'full') as plan_tier,
+                    COALESCE(s.payment_provider, 'N/A') as payment_provider,
+                    COALESCE(s.payment_provider_ref, 'PENDIENTE') as reference_number,
+                    s.voucher_base64,
+                    COALESCE(s.status, 'inactive') as subscription_status,
+                    COALESCE(s.created_at, u.created_at) as created_at
                 FROM users u
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM premium.premium_subscriptions s2 
-                    WHERE s2.user_id = u.id OR LOWER(s2.user_email) = LOWER(u.email)
-                )
-                ORDER BY created_at DESC NULLS LAST
+                LEFT JOIN LATERAL (
+                    SELECT id, user_name, user_email, plan_tier, payment_provider, payment_provider_ref, voucher_base64, status, created_at
+                    FROM premium.premium_subscriptions 
+                    WHERE user_id = u.id OR LOWER(user_email) = LOWER(u.email)
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) s ON TRUE
+                ORDER BY s.created_at DESC NULLS LAST, u.name ASC
             `);
             list = result.rows || [];
         } else {

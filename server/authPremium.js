@@ -71,7 +71,7 @@ function requirePremium(requiredTier = null) {
             }
 
             req.isPremiumActive = true;
-            req.premiumTiers = tiers;
+            req.premiumTiers = ['tributario', 'planillas', 'finanzas', 'full'];
             next();
         } catch (error) {
             console.error('[AUTH PREMIUM ERROR]', error.message);
