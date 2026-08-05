@@ -930,11 +930,11 @@ const App: React.FC = () => {
 
               {/* Search Results Dropdown */}
               {isSearchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl overflow-hidden z-50 animate-fade-in py-1 glass-dropdown">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl max-h-64 overflow-y-auto z-50 animate-fade-in py-1 glass-dropdown custom-scrollbar">
                   <div className="px-3 py-2 text-[10px] font-black uppercase text-app-muted tracking-widest border-b border-app-border mb-1">
                     Módulos Encontrados
                   </div>
-                  {searchResults.map((res) => (
+                  {searchResults.slice(0, searchQuery.trim() ? 10 : 5).map((res) => (
                     <button
                       key={res.id}
                       onClick={() => { setActiveTab(res.id); setSearchQuery(''); setIsSearchFocused(false); }}

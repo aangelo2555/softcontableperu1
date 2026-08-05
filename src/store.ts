@@ -1245,16 +1245,16 @@ const debouncedSaveEmployee = (ruc: string, e: any) => {
     try {
       await electron.dbExecute(`
         INSERT OR REPLACE INTO employees (
-          id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
+          id, workspace_id, user_id, dni, nombre, fecha_nacimiento, edad, puesto,
           fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
           cussp, dias_trabajados, jornal_diario, sueldo_basico, 
           asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
           horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
           impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
           afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `, [
-        e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
+        e.id, ruc, e.user_id || localStorage.getItem('softcontable_user_id') || '', e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
         e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
         e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
         e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,

@@ -1442,7 +1442,7 @@ const dbManager = {
         const inventoryMovements = db.prepare('SELECT * FROM inventory_movements WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const cashMovements = db.prepare('SELECT * FROM cash_movements WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const fixedAssets = db.prepare('SELECT * FROM fixed_assets WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const employees = db.prepare('SELECT * FROM employees WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
+        const employees = db.prepare("SELECT * FROM employees WHERE workspace_id = ? AND (user_id = ? OR user_id IS NULL OR user_id = '')").all(ruc, userId);
         const balanceInicial = db.prepare('SELECT * FROM balance_inicial WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
         const bankStatements = db.prepare('SELECT * FROM bank_statements WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
 

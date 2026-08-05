@@ -120,6 +120,8 @@ export const SoftPremiumDashboard: React.FC = () => {
         setPremiumTiers(data.premium_tiers || ['full']);
         if (!active) {
           setActiveSubTab('subscription');
+        } else {
+          setActiveSubTab('tributario');
         }
       } else {
         setIsPremiumActive(false);
@@ -419,7 +421,7 @@ export const SoftPremiumDashboard: React.FC = () => {
               >
                 {(workspaces || []).map((c: any) => (
                   <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
-                    {c.name} ({c.ruc})
+                    {c.name && c.name.length > 25 ? c.name.substring(0, 22) + '...' : c.name} ({c.ruc})
                   </option>
                 ))}
                 {(!workspaces || workspaces.length === 0) && (

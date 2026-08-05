@@ -48,7 +48,8 @@ export function calcularObligacionesContables(
   };
 
   // Normalizar nombres de régimen para el algoritmo
-  const regimen = regimenInput === 'RG' ? 'GENERAL' : regimenInput === 'MYPE' ? 'RMT' : regimenInput;
+  const norm = (regimenInput || '').toUpperCase();
+  const regimen = (norm.includes('GENERAL') || norm === 'RG') ? 'GENERAL' : (norm.includes('MYPE') || norm.includes('RMT') || norm === 'MYPE') ? 'RMT' : norm;
 
   // 2. Control de caso base: Nuevo RUS no lleva contabilidad
   if (regimen === 'NRUS') {

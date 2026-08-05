@@ -299,7 +299,7 @@ const db = {
             query('SELECT * FROM inventory_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
             query('SELECT * FROM cash_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
             query('SELECT * FROM fixed_assets WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM employees WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
+            query('SELECT * FROM employees WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR user_id = \'\')', [ruc, userId]),
             query('SELECT * FROM balance_inicial WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
             query('SELECT * FROM bank_statements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId])
         ]);
