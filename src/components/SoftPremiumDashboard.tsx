@@ -23,6 +23,7 @@ import {
   Building2,
   Zap,
   Check,
+  FileCheck,
   Smartphone,
   ExternalLink
 } from 'lucide-react';
