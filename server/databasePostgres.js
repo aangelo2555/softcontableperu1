@@ -1946,8 +1946,8 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.premium_subscriptions (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
-                        user_id TEXT NOT NULL REFERENCES public.users(id),
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
                         plan_tier TEXT NOT NULL CHECK (plan_tier IN ('tributario', 'planillas', 'finanzas', 'full')),
                         status TEXT NOT NULL DEFAULT 'trial' CHECK (status IN ('trial', 'active', 'past_due', 'canceled', 'suspended')),
                         billing_cycle TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'annual')),
@@ -1971,7 +1971,7 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.risk_analysis_runs (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        workspace_id TEXT NOT NULL,
                         period TEXT NOT NULL,
                         run_type TEXT NOT NULL CHECK (run_type IN (
                             'inconsistencia_gastos_ventas',
@@ -1996,8 +1996,8 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.payroll_ai_runs (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
-                        employee_id TEXT REFERENCES public.employees(id),
+                        workspace_id TEXT NOT NULL,
+                        employee_id TEXT,
                         period TEXT NOT NULL,
                         concept TEXT NOT NULL CHECK (concept IN (
                             'gratificacion', 'cts', 'vacaciones',
@@ -2023,7 +2023,7 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.cashflow_forecasts (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        workspace_id TEXT NOT NULL,
                         forecast_period_start DATE NOT NULL,
                         forecast_period_end DATE NOT NULL,
                         method TEXT NOT NULL CHECK (method IN ('directo', 'indirecto')),
@@ -2042,7 +2042,7 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.financial_dashboards (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
+                        workspace_id TEXT NOT NULL,
                         dashboard_type TEXT NOT NULL,
                         snapshot_data_json JSONB NOT NULL,
                         source_period TEXT NOT NULL,
@@ -2057,14 +2057,14 @@ async function ensureSchemaConstraints() {
                 schema: `
                     CREATE TABLE IF NOT EXISTS premium.ai_generation_audit (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        workspace_id TEXT NOT NULL REFERENCES public.workspaces(id),
-                        user_id TEXT NOT NULL REFERENCES public.users(id),
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
                         source_table TEXT NOT NULL,
                         source_id UUID NOT NULL,
                         ai_provider TEXT NOT NULL,
                         prompt_hash TEXT,
                         output_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
-                        output_approved_by TEXT REFERENCES public.users(id),
+                        output_approved_by TEXT,
                         output_approved_at TIMESTAMPTZ,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     );
