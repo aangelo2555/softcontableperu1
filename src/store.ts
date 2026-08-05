@@ -1244,29 +1244,33 @@ const debouncedSaveEmployee = (ruc: string, e: any) => {
   const timeout = setTimeout(async () => {
     employeeSaveTimeouts.delete(e.id);
     try {
-      await electron.dbExecute(`
-        INSERT OR REPLACE INTO employees (
-          id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
-          fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
-          cussp, dias_trabajados, jornal_diario, sueldo_basico, 
-          asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
-          horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
-          impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
-          afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-      `, [
-        e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
-        e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
-        e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
-        e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
-        e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
-        e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
-        e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
-      ]);
+      if (webApiBridge && (webApiBridge as any).dbSaveEmployeesBatch) {
+        await (webApiBridge as any).dbSaveEmployeesBatch(ruc, [e]);
+      } else {
+        await electron.dbExecute(`
+          INSERT OR REPLACE INTO employees (
+            id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
+            fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
+            cussp, dias_trabajados, jornal_diario, sueldo_basico, 
+            asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
+            horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
+            impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
+            afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `, [
+          e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
+          e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
+          e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
+          e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
+          e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
+          e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
+          e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
+        ]);
+      }
     } catch (err) {
       console.error('[STORE] debouncedSaveEmployee failed:', err);
     }
-  }, 500);
+  }, 300);
   employeeSaveTimeouts.set(e.id, timeout);
 };
 
@@ -2711,7 +2715,16 @@ export const useStore = create<AppState>()(
           clearTimeout(employeeSaveTimeouts.get(id));
           employeeSaveTimeouts.delete(id);
         }
-        await electron.dbExecute('DELETE FROM employees WHERE id = ?', [id]);
+        const ruc = get().currentCompany?.ruc || '';
+        try {
+          if (webApiBridge && (webApiBridge as any).dbDeleteEmployee) {
+            await (webApiBridge as any).dbDeleteEmployee(id, ruc);
+          } else {
+            await electron.dbExecute('DELETE FROM employees WHERE id = ?', [id]);
+          }
+        } catch (e) {
+          console.error('[STORE] deleteEmployee failed:', e);
+        }
         set({ employees: get().employees.filter(x => x.id !== id) });
       },
 

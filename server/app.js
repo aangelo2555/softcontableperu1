@@ -714,6 +714,97 @@ app.post('/api/db/asientos/batch', async (req, res) => {
     }
 });
 
+// Batch Employees (Guardar lista de trabajadores)
+app.post('/api/db/employees/batch', async (req, res) => {
+    try {
+        const { workspace_id, items } = req.body;
+        const userId = req.targetUserId;
+        if (!workspace_id || !Array.isArray(items)) {
+            return res.status(400).json({ error: 'workspace_id y items[] son requeridos' });
+        }
+
+        await db.transaction(async (client) => {
+            for (const e of items) {
+                if (USE_POSTGRES) {
+                    await client.query(`
+                        INSERT INTO employees (
+                            id, workspace_id, user_id, dni, nombre, fecha_nacimiento, edad, puesto,
+                            fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
+                            cussp, dias_trabajados, jornal_diario, sueldo_basico, 
+                            asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
+                            horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
+                            impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
+                            afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
+                        ON CONFLICT (id) DO UPDATE SET
+                            dni = EXCLUDED.dni, nombre = EXCLUDED.nombre, fecha_nacimiento = EXCLUDED.fecha_nacimiento,
+                            edad = EXCLUDED.edad, puesto = EXCLUDED.puesto, fecha_ingreso = EXCLUDED.fecha_ingreso,
+                            fecha_salida = EXCLUDED.fecha_salida, fecha_reingreso = EXCLUDED.fecha_reingreso,
+                            regimen_pensionario = EXCLUDED.regimen_pensionario, cussp = EXCLUDED.cussp,
+                            dias_trabajados = EXCLUDED.dias_trabajados, jornal_diario = EXCLUDED.jornal_diario,
+                            sueldo_basico = EXCLUDED.sueldo_basico, asignacion_familiar = EXCLUDED.asignacion_familiar,
+                            asignacion_familiar_monto = EXCLUDED.asignacion_familiar_monto,
+                            horas_extras_cantidad = EXCLUDED.horas_extras_cantidad,
+                            horas_extras_importe = EXCLUDED.horas_extras_importe,
+                            total_remuneracion = EXCLUDED.total_remuneracion, descuento_onp = EXCLUDED.descuento_onp,
+                            essalud_vida = EXCLUDED.essalud_vida, impuesto_renta_5ta = EXCLUDED.impuesto_renta_5ta,
+                            retencion_judicial = EXCLUDED.retencion_judicial, afp_fondo = EXCLUDED.afp_fondo,
+                            afp_seguro = EXCLUDED.afp_seguro, afp_comision = EXCLUDED.afp_comision,
+                            total_descuento = EXCLUDED.total_descuento, neto_pagar = EXCLUDED.neto_pagar,
+                            essalud_empleador = EXCLUDED.essalud_empleador, sctr_empleador = EXCLUDED.sctr_empleador
+                    `, [
+                        e.id, workspace_id, userId, e.dni || '', e.nombre || e.nombres || '', e.fecha_nacimiento || '', e.edad || 0, e.puesto || e.cargo || '',
+                        e.fecha_ingreso || '', e.fecha_salida || e.fecha_cese || '', e.fecha_reingreso || '', e.regimen_pensionario || e.afp_nombre || '',
+                        e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico || e.sueldo || 0,
+                        e.asignacion_familiar ? true : false, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
+                        e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
+                        e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
+                        e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
+                    ]);
+                } else {
+                    await db.run(`
+                        INSERT OR REPLACE INTO employees (
+                            id, workspace_id, user_id, dni, nombre, fecha_nacimiento, edad, puesto,
+                            fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
+                            cussp, dias_trabajados, jornal_diario, sueldo_basico, 
+                            asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
+                            horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
+                            impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
+                            afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        e.id, workspace_id, userId, e.dni || '', e.nombre || e.nombres || '', e.fecha_nacimiento || '', e.edad || 0, e.puesto || e.cargo || '',
+                        e.fecha_ingreso || '', e.fecha_salida || e.fecha_cese || '', e.fecha_reingreso || '', e.regimen_pensionario || e.afp_nombre || '',
+                        e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico || e.sueldo || 0,
+                        e.asignacion_familiar ? 1 : 0, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
+                        e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
+                        e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
+                        e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
+                    ]);
+                }
+            }
+        });
+
+        cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error('[DB BATCH EMPLOYEES ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Employee by ID
+app.delete('/api/db/employees/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.targetUserId;
+        await db.run('DELETE FROM employees WHERE id = $1 AND user_id = $2', [id, userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Delete Purchase by ID
 app.delete('/api/db/purchases/:id', async (req, res) => {
     try {

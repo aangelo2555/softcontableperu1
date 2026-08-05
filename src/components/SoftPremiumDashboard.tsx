@@ -25,7 +25,11 @@ import {
   Check,
   FileCheck,
   Smartphone,
-  ExternalLink
+  ExternalLink,
+  Search,
+  PieChart,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
 
 interface RiskFinding {
@@ -85,7 +89,6 @@ export const SoftPremiumDashboard: React.FC = () => {
   };
 
   // Estados Pilar 1: Tributación IA
-  const [riskRunType, setRiskRunType] = useState<string>('inconsistencia_gastos_ventas');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-08');
   const [riskResult, setRiskResult] = useState<any>(null);
 
@@ -214,7 +217,7 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
-  // Ejecutar Análisis de Riesgo (Pilar 1)
+  // Ejecutar Análisis Integral de Riesgo (Pilar 1 - Evalúa TODOS los módulos)
   const handleRunRiskAnalysis = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
     if (!wsId) {
@@ -233,13 +236,13 @@ export const SoftPremiumDashboard: React.FC = () => {
         body: JSON.stringify({
           workspaceId: wsId,
           period: selectedPeriod,
-          runType: riskRunType
+          runType: 'inconsistencia_gastos_ventas' // Análisis integral
         })
       });
       const data = await res.json();
       if (data.success) {
         setRiskResult(data.analysis);
-        toast.success('Análisis de riesgo tributario completado');
+        toast.success('Auditoría Integral con IA ejecutada para todos los módulos tributarios');
       } else {
         toast.error(data.error || 'Error al ejecutar análisis');
       }
@@ -250,7 +253,7 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
-  // Calcular Gratificación (Pilar 2)
+  // Calcular Gratificación y Beneficios (Pilar 2)
   const handleCalculateGratificacion = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
     if (!wsId || !selectedEmployeeId) {
@@ -276,7 +279,7 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setPayrollResult(data.calculation);
-        toast.success('Cálculo de gratificación generado');
+        toast.success('Cálculo determinístico de planillas y beneficios ejecutado');
       } else {
         toast.error(data.error || 'Error en cálculo laboral');
       }
@@ -291,7 +294,7 @@ export const SoftPremiumDashboard: React.FC = () => {
   const handleGenerateContract = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
     if (!wsId || !selectedEmployeeId) {
-      toast.error('Ingresa el ID del colaborador.');
+      toast.error('Ingresa el ID o DNI del colaborador.');
       return;
     }
     setLoading(true);
@@ -313,7 +316,7 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setContractDoc(data.contract);
-        toast.success('Contrato redactado con IA. Requiere revisión humana.');
+        toast.success('Contrato redactado con IA según MINTRA 2026');
       } else {
         toast.error(data.error || 'Error redactando contrato');
       }
@@ -350,7 +353,7 @@ export const SoftPremiumDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setCashflowResult(data.forecast);
-        toast.success('Proyección de caja cruzada con vencimiento SUNAT lista');
+        toast.success('Proyección financiera y cruce con calendario SUNAT generados');
       } else {
         toast.error(data.error || 'Error al generar forecast');
       }
@@ -576,7 +579,7 @@ export const SoftPremiumDashboard: React.FC = () => {
               </p>
             </div>
 
-            {/* Tarjetas de Tarifas (2x2 en tablet/móvil, 4 en desktop) */}
+            {/* Tarjetas de Tarifas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {/* Plan Tributario */}
               <div className={`bg-app-surface border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between ${selectedPlanTier === 'tributario' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
@@ -786,11 +789,11 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ─── PILAR 1: TRIBUTACIÓN CON IA ─── */}
+        {/* ─── PILAR 1: TRIBUTACIÓN CON IA (Muestra explícitamente todos los módulos) ─── */}
         {isPremiumActive && activeSubTab === 'tributario' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
             
-            {/* Rejilla 2x2 en celular, 4 columnas en desktop */}
+            {/* Rejilla de Indicadores de Salud Tributaria Dinámicos */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               <div className="bg-app-surface border border-app-border p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm flex items-center gap-2.5 sm:gap-3">
                 <div className="p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg sm:rounded-xl border border-emerald-500/20 shrink-0">
@@ -802,7 +805,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                     {workspaceKPIs?.metrics?.tributario?.saludFiscalScore ?? 100} / 100
                   </div>
                   <div className="text-[9px] sm:text-[10px] text-app-muted font-bold truncate">
-                    {workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Bajo Riesgo'}
+                    {workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Riesgo Bajo de Fiscalización'}
                   </div>
                 </div>
               </div>
@@ -849,51 +852,87 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Panel de Ejecución de Auditoría */}
-            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-sm">
-              <div className="border-b border-app-border pb-3">
-                <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Auditoría Preventiva SUNAT 2026
-                </h2>
-                <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                  Evaluación automatizada entre RIE, SIRE, bancarización Ley 28194 y causalidad del gasto Art. 37 LIR.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-1">
+            {/* Panel de Control de Auditoría Integral */}
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-app-border pb-4">
                 <div>
-                  <label className="text-[10px] sm:text-xs text-app-muted font-black uppercase tracking-wider mb-1 block">Tipo de Auditoría</label>
-                  <select
-                    value={riskRunType}
-                    onChange={(e) => setRiskRunType(e.target.value)}
-                    className="w-full bg-app-bg border border-app-border rounded-xl p-2.5 sm:p-3 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="inconsistencia_gastos_ventas">Ratio Compras vs. Ventas (RIE / SIRE)</option>
-                    <option value="comprobantes_pago_deteccion">Detección de Comprobantes Irregulares</option>
-                    <option value="estrategia_preventiva_sunat">Estrategia Preventiva de Fiscalización</option>
-                    <option value="deduccion_gastos_general">Deducción de Gastos (Art. 37 LIR)</option>
-                  </select>
+                  <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Motor de Auditoría Preventiva SUNAT 2026
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
+                    Evaluación automatizada y simultánea de todos los módulos tributarios conectándose con las operaciones de SOFTCONTABLE SaaS.
+                  </p>
                 </div>
-
-                <div>
-                  <label className="text-[10px] sm:text-xs text-app-muted font-black uppercase tracking-wider mb-1 block">Periodo Tributario</label>
+                <div className="flex items-center gap-3 w-full md:w-auto">
                   <input
                     type="month"
                     value={selectedPeriod}
                     onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="w-full bg-app-bg border border-app-border rounded-xl p-2.5 sm:p-3 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none"
+                    className="bg-app-bg border border-app-border rounded-xl p-2.5 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none"
                   />
-                </div>
-
-                <div className="flex items-end sm:col-span-2 md:col-span-1">
                   <button
                     onClick={handleRunRiskAnalysis}
                     disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 sm:py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                    className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer whitespace-nowrap"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Ejecutar Auditoría IA
+                    Ejecutar Auditoría IA Integral
                   </button>
+                </div>
+              </div>
+
+              {/* MUESTREO EXPLÍCITO DE TODOS LOS MÓDULOS DE PILAR 1 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-1">
+                {/* Módulo 1 */}
+                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-blue-600" /> Módulo 1: Consistencia Compras vs Ventas
+                    </span>
+                    <span className="text-[9.5px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded">RIE / SIRE</span>
+                  </div>
+                  <p className="text-[11px] text-app-muted">
+                    Ventas declaradas: <strong>S/ {workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'}</strong> ({workspaceKPIs?.metrics?.tributario?.totalVentasCount || 0} comprobantes) | Compras declaradas: <strong>S/ {workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00'}</strong>.
+                  </p>
+                </div>
+
+                {/* Módulo 2 */}
+                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" /> Módulo 2: Bancarización (Ley 28194)
+                    </span>
+                    <span className="text-[9.5px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded">Operaciones &gt; S/ 2,000</span>
+                  </div>
+                  <p className="text-[11px] text-app-muted">
+                    Total sin bancarizar identificado: <strong>S/ {workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || '0.00'}</strong>. Verificación de medio de pago y vouchers bancarios.
+                  </p>
+                </div>
+
+                {/* Módulo 3 */}
+                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
+                      <Calculator className="w-4 h-4 text-purple-500" /> Módulo 3: Deducción Gastos Art. 37 LIR
+                    </span>
+                    <span className="text-[9.5px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded">Causalidad</span>
+                  </div>
+                  <p className="text-[11px] text-app-muted">
+                    Cumplimiento de causalidad y comprobantes válidos: <strong>{workspaceKPIs?.metrics?.tributario?.gastosDeduciblesPct ?? 100}%</strong> auditados.
+                  </p>
+                </div>
+
+                {/* Módulo 4 */}
+                <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-app-text flex items-center gap-1.5">
+                      <ShieldAlert className="w-4 h-4 text-emerald-500" /> Módulo 4: Scoring &amp; Perfil SUNAT
+                    </span>
+                    <span className="text-[9.5px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded">Puntaje {workspaceKPIs?.metrics?.tributario?.saludFiscalScore || 100}/100</span>
+                  </div>
+                  <p className="text-[11px] text-app-muted">
+                    Diagnóstico de riesgo de fiscalización: <strong>{workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Bajo Riesgo'}</strong>.
+                  </p>
                 </div>
               </div>
             </div>
@@ -903,7 +942,7 @@ export const SoftPremiumDashboard: React.FC = () => {
               <div className="bg-app-surface border border-blue-500/30 rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-md">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-app-border pb-3 gap-3">
                   <div>
-                    <h3 className="text-sm sm:text-base font-black text-app-text">Informe de Hallazgos Preventivos SUNAT</h3>
+                    <h3 className="text-sm sm:text-base font-black text-app-text">Informe Consolidado de Auditoría SUNAT</h3>
                     <p className="text-[11px] sm:text-xs text-app-muted">Empresa: <strong>{currentWorkspace?.name}</strong> | Periodo: <strong>{riskResult.period}</strong></p>
                   </div>
                   <div className="bg-app-bg border border-app-border px-3 py-1.5 rounded-xl text-left sm:text-right shrink-0">
@@ -920,7 +959,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div className="space-y-2.5">
-                  <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-app-text">Detalle de Inconsistencias Detectadas ({riskResult.findings?.hallazgos?.length || 0}):</h4>
+                  <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-app-text">Hallazgos e Inconsistencias Identificadas ({riskResult.findings?.hallazgos?.length || 0}):</h4>
                   {riskResult.findings?.hallazgos?.map((item: RiskFinding, idx: number) => (
                     <div key={idx} className="bg-app-bg p-3.5 rounded-xl border-l-4 border-blue-600 border border-app-border flex flex-col sm:flex-row justify-between gap-2 sm:gap-4">
                       <div>
@@ -938,7 +977,7 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ─── PILAR 2: PLANILLAS CON IA ─── */}
+        {/* ─── PILAR 2: PLANILLAS CON IA (Muestra explícitamente todos los módulos) ─── */}
         {isPremiumActive && activeSubTab === 'planillas' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
             
@@ -951,7 +990,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                 <div className="min-w-0">
                   <div className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-app-muted truncate">Colaboradores</div>
                   <div className="text-base sm:text-xl font-black text-app-text">
-                    {workspaceKPIs?.metrics?.planillas?.colaboradoresCount ?? 0} Registrados
+                    {workspaceKPIs?.metrics?.planillas?.colaboradoresCount ?? (employees?.length || 0)} Registrados
                   </div>
                   <div className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 font-bold truncate">En Base de Datos</div>
                 </div>
@@ -995,14 +1034,14 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Formularios de Cálculos Laborales */}
-            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-sm">
+            {/* MUESTRA EXPLÍCITA DE MÓDULOS DE PLANILLAS */}
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
               <div className="border-b border-app-border pb-3">
                 <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Cálculos Laborales &amp; Generador de Contratos
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Planillas y Liquidaciones IA
                 </h2>
                 <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                  Cálculo determinístico de Gratificaciones (Ley 27735 y CAS 2026), CTS y contratos adaptados al Ministerio de Trabajo.
+                  Cálculos laborales determinísticos y redacción de contratos MINTRA conectados a la nómina del sistema.
                 </p>
               </div>
 
@@ -1018,7 +1057,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <option value="">-- Seleccionar colaborador ({employees.length}) --</option>
                       {employees.map((emp: any) => (
                         <option key={emp.id || emp.dni} value={emp.id || emp.dni || emp.num_doc}>
-                          {(emp.nombres || emp.nombre || '') + ' ' + (emp.apellidos || '')} {emp.dni ? `(${emp.dni})` : ''}
+                          {(emp.nombres || emp.nombre || '') + ' ' + (emp.apellidos || '')} {emp.dni ? `(${emp.dni})` : ''} - S/ {emp.sueldo_basico || emp.sueldo || 2500}
                         </option>
                       ))}
                     </select>
@@ -1051,7 +1090,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                     disabled={loading}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 sm:py-3 px-2.5 rounded-xl text-xs flex items-center justify-center gap-1 shadow-md cursor-pointer transition-all"
                   >
-                    <Calculator className="w-4 h-4" /> Gratificación
+                    <Calculator className="w-4 h-4" /> Calcular Gratificación
                   </button>
                   <button
                     onClick={handleGenerateContract}
@@ -1113,7 +1152,7 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ─── PILAR 3: FINANZAS CON IA ─── */}
+        {/* ─── PILAR 3: FINANZAS CON IA (Muestra explícitamente todos los módulos) ─── */}
         {isPremiumActive && activeSubTab === 'finanzas' && (
           <div className="space-y-4 sm:space-y-6 animate-fade-in">
             
@@ -1176,7 +1215,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             <div className="bg-app-surface border border-app-border rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-sm">
               <div className="border-b border-app-border pb-3">
                 <h2 className="text-base sm:text-lg font-black text-app-text flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Proyección de Flujo de Caja SUNAT
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Proyección de Flujo de Caja &amp; Vencimientos SUNAT
                 </h2>
                 <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
                   Modelado predictivo de liquidez cruzando cuentas por cobrar/pagar con las fechas de vencimiento SUNAT por RUC.

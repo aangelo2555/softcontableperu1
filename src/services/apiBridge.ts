@@ -136,6 +136,10 @@ export const webApiBridge = {
         const res = await api.post('/api/db/asientos/batch', { workspace_id, items });
         return res.data;
     },
+    dbSaveEmployeesBatch: async (workspace_id: string, items: any[]) => {
+        const res = await api.post('/api/db/employees/batch', { workspace_id, items });
+        return res.data;
+    },
     dbDeletePurchase: async (id: string, workspace_id?: string) => {
         const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
         const res = await api.delete(`/api/db/purchases/${id}${query}`);
@@ -154,6 +158,14 @@ export const webApiBridge = {
         const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
         const res = await api.delete(`/api/db/asientos/${id}${query}`);
         return res.data;
+    },
+    dbDeleteEmployee: async (id: string, workspace_id?: string) => {
+        const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
+        const res = await api.delete(`/api/db/employees/${id}${query}`);
+        return res.data;
+    },
+    dbExecute: async (sql: string, params?: any[]) => {
+        return webApiBridge.dbQuery(sql, params);
     },
     dbQuery: async (sql: string, params?: any[]) => {
         // Convertir ? a $1, $2, $3 para PostgreSQL

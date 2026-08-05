@@ -41,7 +41,7 @@ function getPeriodPatterns(period) {
 }
 
 /**
- * Obtiene los datos del workspace/empresa.
+ * Obtiene los datos del workspace/empresa por RUC o ID UUID.
  */
 async function getWorkspace(workspaceId) {
     if (!workspaceId) return null;
@@ -56,26 +56,29 @@ async function getEmployees(workspaceId, userId) {
     if (USE_POSTGRES) {
         const res = await dbCore.pool.query(
             `SELECT * FROM public.employees 
-             WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR user_id = $1 LIMIT 1))
+             WHERE (workspace_id = $1 
+                OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+                OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
                AND ($2::text IS NULL OR $2::text = '' OR $2::text = 'CLIENTE_SISTEMA' OR user_id = $2)
-             ORDER BY apellidos, nombres`,
+             ORDER BY id DESC`,
             [workspaceId, userId || null]
         );
         return res.rows || [];
     } else {
         return await dbCore.queryAll(
             `SELECT * FROM employees 
-             WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? LIMIT 1))
+             WHERE (workspace_id = ? 
+                OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+                OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
                AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
-             ORDER BY apellidos, nombres`,
-            [workspaceId, workspaceId, userId, userId, userId, userId]
+             ORDER BY id DESC`,
+            [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId]
         );
     }
 }
 
 /**
  * Obtiene las compras de un período para análisis tributario/riesgo.
- * Soporta formatos YYYY-MM-DD, DD/MM/YYYY y SIRE YYYYMM00.
  */
 async function getPurchases(workspaceId, period, userId) {
     if (!workspaceId) return [];
@@ -84,7 +87,9 @@ async function getPurchases(workspaceId, period, userId) {
     if (USE_POSTGRES) {
         let queryText = `
             SELECT * FROM public.purchases 
-            WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 LIMIT 1))
+            WHERE (workspace_id = $1 
+               OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+               OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
               AND ($5::text IS NULL OR $5::text = '' OR $5::text = 'CLIENTE_SISTEMA' OR user_id = $5)
         `;
         let params = [workspaceId, isoPattern, slashPattern, sirePattern, userId || null];
@@ -94,27 +99,55 @@ async function getPurchases(workspaceId, period, userId) {
         queryText += ` ORDER BY fecha ASC`;
 
         const res = await dbCore.pool.query(queryText, params);
-        return res.rows || [];
+        let rows = res.rows || [];
+
+        // Fallback: Si no hay registros para el periodo específico, retornar todos los registros de la empresa
+        if (rows.length === 0 && !isWildcard) {
+            const fallbackRes = await dbCore.pool.query(
+                `SELECT * FROM public.purchases 
+                 WHERE (workspace_id = $1 
+                    OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+                    OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
+                   AND ($2::text IS NULL OR $2::text = '' OR $2::text = 'CLIENTE_SISTEMA' OR user_id = $2)
+                 ORDER BY fecha ASC`,
+                [workspaceId, userId || null]
+            );
+            rows = fallbackRes.rows || [];
+        }
+        return rows;
     } else {
         let queryText = `
             SELECT * FROM purchases 
-            WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? LIMIT 1))
+            WHERE (workspace_id = ? 
+               OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+               OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
               AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
         `;
-        let params = [workspaceId, workspaceId, userId, userId, userId, userId];
+        let params = [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId];
         if (!isWildcard) {
             queryText += ` AND (fecha LIKE ? OR fecha LIKE ? OR fecha LIKE ? OR estado_sire LIKE ?)`;
             params.push(isoPattern, slashPattern, sirePattern, isoPattern);
         }
         queryText += ` ORDER BY fecha ASC`;
 
-        return await dbCore.queryAll(queryText, params);
+        let rows = await dbCore.queryAll(queryText, params);
+        if (rows.length === 0 && !isWildcard) {
+            rows = await dbCore.queryAll(
+                `SELECT * FROM purchases 
+                 WHERE (workspace_id = ? 
+                    OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+                    OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                   AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
+                 ORDER BY fecha ASC`,
+                [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId]
+            );
+        }
+        return rows;
     }
 }
 
 /**
  * Obtiene las ventas de un período para análisis tributario/riesgo.
- * Soporta formatos YYYY-MM-DD, DD/MM/YYYY y SIRE YYYYMM00.
  */
 async function getSales(workspaceId, period, userId) {
     if (!workspaceId) return [];
@@ -123,7 +156,9 @@ async function getSales(workspaceId, period, userId) {
     if (USE_POSTGRES) {
         let queryText = `
             SELECT * FROM public.sales 
-            WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 LIMIT 1))
+            WHERE (workspace_id = $1 
+               OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+               OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
               AND ($5::text IS NULL OR $5::text = '' OR $5::text = 'CLIENTE_SISTEMA' OR user_id = $5)
         `;
         let params = [workspaceId, isoPattern, slashPattern, sirePattern, userId || null];
@@ -133,21 +168,48 @@ async function getSales(workspaceId, period, userId) {
         queryText += ` ORDER BY fecha ASC`;
 
         const res = await dbCore.pool.query(queryText, params);
-        return res.rows || [];
+        let rows = res.rows || [];
+        if (rows.length === 0 && !isWildcard) {
+            const fallbackRes = await dbCore.pool.query(
+                `SELECT * FROM public.sales 
+                 WHERE (workspace_id = $1 
+                    OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+                    OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
+                   AND ($2::text IS NULL OR $2::text = '' OR $2::text = 'CLIENTE_SISTEMA' OR user_id = $2)
+                 ORDER BY fecha ASC`,
+                [workspaceId, userId || null]
+            );
+            rows = fallbackRes.rows || [];
+        }
+        return rows;
     } else {
         let queryText = `
             SELECT * FROM sales 
-            WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? LIMIT 1))
+            WHERE (workspace_id = ? 
+               OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+               OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
               AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
         `;
-        let params = [workspaceId, workspaceId, userId, userId, userId, userId];
+        let params = [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId];
         if (!isWildcard) {
             queryText += ` AND (fecha LIKE ? OR fecha LIKE ? OR fecha LIKE ? OR estado_sire LIKE ?)`;
             params.push(isoPattern, slashPattern, sirePattern, isoPattern);
         }
         queryText += ` ORDER BY fecha ASC`;
 
-        return await dbCore.queryAll(queryText, params);
+        let rows = await dbCore.queryAll(queryText, params);
+        if (rows.length === 0 && !isWildcard) {
+            rows = await dbCore.queryAll(
+                `SELECT * FROM sales 
+                 WHERE (workspace_id = ? 
+                    OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+                    OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                   AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
+                 ORDER BY fecha ASC`,
+                [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId]
+            );
+        }
+        return rows;
     }
 }
 
@@ -161,7 +223,9 @@ async function getJournalEntries(workspaceId, period, userId) {
     if (USE_POSTGRES) {
         let queryText = `
             SELECT * FROM public.journal 
-            WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 LIMIT 1))
+            WHERE (workspace_id = $1 
+               OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+               OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
               AND ($5::text IS NULL OR $5::text = '' OR $5::text = 'CLIENTE_SISTEMA' OR user_id = $5)
         `;
         let params = [workspaceId, isoPattern, slashPattern, sirePattern, userId || null];
@@ -171,21 +235,48 @@ async function getJournalEntries(workspaceId, period, userId) {
         queryText += ` ORDER BY fecha ASC, asiento ASC`;
 
         const res = await dbCore.pool.query(queryText, params);
-        return res.rows || [];
+        let rows = res.rows || [];
+        if (rows.length === 0 && !isWildcard) {
+            const fallbackRes = await dbCore.pool.query(
+                `SELECT * FROM public.journal 
+                 WHERE (workspace_id = $1 
+                    OR workspace_id = (SELECT ruc FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1)
+                    OR workspace_id = (SELECT id FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
+                   AND ($2::text IS NULL OR $2::text = '' OR $2::text = 'CLIENTE_SISTEMA' OR user_id = $2)
+                 ORDER BY fecha ASC, asiento ASC`,
+                [workspaceId, userId || null]
+            );
+            rows = fallbackRes.rows || [];
+        }
+        return rows;
     } else {
         let queryText = `
             SELECT * FROM journal 
-            WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? LIMIT 1))
+            WHERE (workspace_id = ? 
+               OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+               OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
               AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
         `;
-        let params = [workspaceId, workspaceId, userId, userId, userId, userId];
+        let params = [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId];
         if (!isWildcard) {
             queryText += ` AND (fecha LIKE ? OR fecha LIKE ? OR fecha LIKE ?)`;
             params.push(isoPattern, slashPattern, sirePattern);
         }
         queryText += ` ORDER BY fecha ASC, asiento ASC`;
 
-        return await dbCore.queryAll(queryText, params);
+        let rows = await dbCore.queryAll(queryText, params);
+        if (rows.length === 0 && !isWildcard) {
+            rows = await dbCore.queryAll(
+                `SELECT * FROM journal 
+                 WHERE (workspace_id = ? 
+                    OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1)
+                    OR workspace_id = (SELECT id FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                   AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
+                 ORDER BY fecha ASC, asiento ASC`,
+                [workspaceId, workspaceId, workspaceId, workspaceId, workspaceId, userId, userId, userId, userId]
+            );
+        }
+        return rows;
     }
 }
 
@@ -215,4 +306,3 @@ module.exports = {
     getJournalEntries,
     getPlanContable
 };
-
