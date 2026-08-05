@@ -214,10 +214,10 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
             const result = await dbCore.pool.query(`
                 SELECT 
                     u.id as user_id,
-                    COALESCE(u.name, s.user_name, 'Cliente') as user_name,
+                    COALESCE(u.name, 'Cliente') as user_name,
                     u.email as user_email,
                     COALESCE(u.premium_enabled, FALSE) as premium_enabled,
-                    COUNT(DISTINCT w.ruc) as workspace_count,
+                    (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id) as workspace_count,
                     s.id as subscription_id,
                     s.plan_tier,
                     s.payment_provider,
@@ -226,13 +226,13 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
                     s.status as subscription_status,
                     s.created_at
                 FROM users u
-                LEFT JOIN workspaces w ON w.user_id = u.id
-                LEFT JOIN (
-                    SELECT DISTINCT ON (user_id) * 
+                LEFT JOIN LATERAL (
+                    SELECT id, plan_tier, payment_provider, payment_provider_ref, voucher_base64, status, created_at
                     FROM premium.premium_subscriptions 
-                    ORDER BY user_id, created_at DESC
-                ) s ON (s.user_id = u.id OR s.user_email = u.email)
-                GROUP BY u.id, u.name, u.email, u.premium_enabled, s.id, s.plan_tier, s.payment_provider, s.payment_provider_ref, s.voucher_base64, s.status, s.created_at
+                    WHERE user_id = u.id OR user_email = u.email
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) s ON TRUE
                 ORDER BY s.created_at DESC NULLS LAST, u.name ASC
             `);
             list = result.rows || [];

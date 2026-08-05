@@ -1094,7 +1094,7 @@ export const AdminView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-app-border">
-                    {premiumRequests.map((req) => {
+                    {(premiumRequests || []).map((req) => {
                       const isActive = !!req.premium_enabled;
                       return (
                         <tr key={req.user_id || req.user_email} className="hover:bg-app-hover">

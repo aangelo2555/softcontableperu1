@@ -408,17 +408,17 @@ export const SoftPremiumDashboard: React.FC = () => {
             <select
               value={currentWorkspace?.ruc || ''}
               onChange={(e) => {
-                const found = companies.find(c => c.ruc === e.target.value);
+                const found = (companies || []).find(c => c.ruc === e.target.value);
                 if (found) setCurrentCompany(found);
               }}
               className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[200px] truncate"
             >
-              {companies.map(c => (
+              {(companies || []).map(c => (
                 <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
                   {c.name} ({c.ruc})
                 </option>
               ))}
-              {companies.length === 0 && (
+              {(!companies || companies.length === 0) && (
                 <option value="" className="bg-app-surface text-app-text">
                   {currentWorkspace?.name || 'Sin Empresas'}
                 </option>
