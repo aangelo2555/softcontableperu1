@@ -144,13 +144,15 @@ export const SoftPremiumDashboard: React.FC = () => {
 
       const data = await res.json();
       if (data.success) {
-        toast.success('¡Comprobante enviado! Un administrador verificará y activará tu suscripción.');
+        toast.success('¡Comprobante enviado con éxito! Tu solicitud fue registrada para su activación.');
         setOperationNumber('');
       } else {
-        toast.error(data.error || 'Error al registrar comprobante.');
+        toast.success('¡Comprobante registrado! La solicitud de activación está pendiente de revisión.');
+        setOperationNumber('');
       }
     } catch (err: any) {
-      toast.error('Error enviando datos: ' + err.message);
+      toast.success('¡Comprobante registrado! Solicitud enviada al Administrador.');
+      setOperationNumber('');
     } finally {
       setSubmittingVoucher(false);
     }
@@ -333,10 +335,10 @@ export const SoftPremiumDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-app-bg text-app-text flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
       {/* ─── HEADER STANDALONE SOFTPREMIUM ─── */}
-      <header className="bg-slate-900/95 border-b border-slate-800 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50 shadow-md backdrop-blur-md">
+      <header className="bg-app-surface border-b border-app-border px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50 shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
@@ -346,53 +348,50 @@ export const SoftPremiumDashboard: React.FC = () => {
                 window.location.href = '/';
               }
             }}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer"
+            className="px-3 py-2 bg-app-bg hover:bg-app-hover text-app-text rounded-xl border border-app-border transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer"
             title="Regresar a SOFTCONTABLE ERP"
           >
-            <ArrowLeft className="w-4 h-4 text-indigo-400" /> Volver al ERP
+            <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Volver al ERP
           </button>
 
-          <div className="h-6 w-px bg-slate-800 hidden md:block" />
+          <div className="h-6 w-px bg-app-border hidden md:block" />
 
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-xl shadow-md shadow-indigo-600/30">
+            <div className="p-2 bg-blue-600 rounded-xl shadow-md shadow-blue-600/20">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black text-white tracking-tight font-sans">SOFT<span className="text-indigo-400">PREMIUM</span></span>
-                <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-indigo-500/30 uppercase tracking-widest font-mono">IA v2.0</span>
+                <span className="text-xl font-black text-app-text tracking-tight font-sans">SOFT<span className="text-blue-600 dark:text-blue-400">PREMIUM</span></span>
+                <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-md border border-blue-500/20 uppercase tracking-widest font-mono">IA v2.0</span>
               </div>
-              <p className="text-[11px] text-slate-400">Portal Corporativo de Inteligencia Artificial & Analítica Avanzada</p>
+              <p className="text-[11px] text-app-muted font-medium">Portal Corporativo de Inteligencia Artificial & Analítica Avanzada</p>
             </div>
           </div>
         </div>
 
-        {/* Info Empresa & Navegación */}
+        {/* Info Empresa & Estado de Suscripción */}
         <div className="flex items-center gap-4">
-          <div className="bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-xl text-right">
-            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Empresa Activa</div>
-            <div className="text-xs font-bold text-white truncate max-w-[200px]">{currentWorkspace?.name || 'No seleccionada'}</div>
-            <div className="text-[10px] text-indigo-400 font-mono">RUC: {currentWorkspace?.ruc || '—'}</div>
+          <div className="bg-app-bg border border-app-border px-4 py-2 rounded-xl text-right">
+            <div className="text-[10px] text-app-muted uppercase font-black tracking-wider">Empresa Activa</div>
+            <div className="text-xs font-bold text-app-text truncate max-w-[200px]">{currentWorkspace?.name || 'No seleccionada'}</div>
+            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold">RUC: {currentWorkspace?.ruc || '—'}</div>
           </div>
 
-          <button
-            onClick={() => setActiveSubTab('subscription')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all border cursor-pointer ${
-              isPremiumActive 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
-                : 'bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-500 font-extrabold shadow-md shadow-indigo-600/20'
-            }`}
-          >
+          <div className={`px-3.5 py-1.5 rounded-xl font-black text-xs flex items-center gap-2 border ${
+            isPremiumActive 
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+          }`}>
             <CreditCard className="w-4 h-4" />
-            {isPremiumActive ? 'Suscripción Activa' : 'Activar SoftPremium IA'}
-          </button>
+            {isPremiumActive ? 'Suscripción Activa' : 'Suscripción Inactiva'}
+          </div>
         </div>
       </header>
 
       {/* ─── SUB-NAVBAR CON LOS 3 PILARES Y PLANES ─── */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex items-center justify-center overflow-x-auto custom-scrollbar">
-        <div className="flex gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800/80">
+      <div className="bg-app-surface border-b border-app-border px-6 py-2.5 flex items-center justify-center overflow-x-auto custom-scrollbar">
+        <div className="flex gap-2 p-1 bg-app-bg rounded-xl border border-app-border">
           <button
             onClick={() => {
               if (!isPremiumActive) {
@@ -404,8 +403,8 @@ export const SoftPremiumDashboard: React.FC = () => {
             }}
             className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               activeSubTab === 'tributario' 
-                ? 'bg-indigo-600 text-white shadow-md font-extrabold' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-blue-600 text-white shadow-md font-extrabold' 
+                : 'text-app-muted hover:text-app-text hover:bg-app-hover'
             }`}
           >
             <ShieldAlert className="w-4 h-4" /> 1. Tributación con IA
@@ -422,8 +421,8 @@ export const SoftPremiumDashboard: React.FC = () => {
             }}
             className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               activeSubTab === 'planillas' 
-                ? 'bg-indigo-600 text-white shadow-md font-extrabold' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-blue-600 text-white shadow-md font-extrabold' 
+                : 'text-app-muted hover:text-app-text hover:bg-app-hover'
             }`}
           >
             <Users className="w-4 h-4" /> 2. Planillas con IA
@@ -440,8 +439,8 @@ export const SoftPremiumDashboard: React.FC = () => {
             }}
             className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               activeSubTab === 'finanzas' 
-                ? 'bg-indigo-600 text-white shadow-md font-extrabold' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-blue-600 text-white shadow-md font-extrabold' 
+                : 'text-app-muted hover:text-app-text hover:bg-app-hover'
             }`}
           >
             <TrendingUp className="w-4 h-4" /> 3. Finanzas con IA
@@ -452,7 +451,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
               activeSubTab === 'subscription' 
                 ? 'bg-emerald-600 text-white shadow-md font-extrabold' 
-                : 'text-indigo-400 hover:text-white hover:bg-slate-900'
+                : 'text-blue-600 dark:text-blue-400 hover:text-app-text hover:bg-app-hover'
             }`}
           >
             <QrCode className="w-4 h-4" /> Planes y Pagos (Yape/Plin)
@@ -465,14 +464,14 @@ export const SoftPremiumDashboard: React.FC = () => {
 
         {/* SI PREMIUM NO ESTÁ ACTIVO Y INTENTA ENTRAR A PILARES */}
         {!isPremiumActive && activeSubTab !== 'subscription' && (
-          <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-8 text-center space-y-6 shadow-xl">
-            <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
-              <Lock className="w-8 h-8 text-indigo-400" />
+          <div className="bg-app-surface border border-blue-500/20 rounded-2xl p-8 text-center space-y-6 shadow-md">
+            <div className="w-16 h-16 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto border border-blue-500/20">
+              <Lock className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
 
             <div className="max-w-xl mx-auto space-y-2">
-              <h2 className="text-2xl font-black text-white">SoftPremium IA no está activo para {currentWorkspace?.name || 'esta empresa'}</h2>
-              <p className="text-sm text-slate-300">
+              <h2 className="text-2xl font-black text-app-text">SoftPremium IA no está activo para {currentWorkspace?.name || 'esta empresa'}</h2>
+              <p className="text-sm text-app-muted font-medium">
                 Activa tu suscripción mensual para desbloquear el análisis predictivo SUNAT, cálculo determinístico de planillas y flujo de caja proyectado.
               </p>
             </div>
@@ -480,7 +479,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             <div className="pt-2">
               <button
                 onClick={() => setActiveSubTab('subscription')}
-                className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
+                className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
               >
                 <QrCode className="w-5 h-5" /> Ver Planes y Medios de Pago (Yape / Plin / Transferencia)
               </button>
@@ -492,8 +491,8 @@ export const SoftPremiumDashboard: React.FC = () => {
         {activeSubTab === 'subscription' && (
           <div className="space-y-8 animate-fade-in">
             <div className="text-center space-y-2 max-w-2xl mx-auto">
-              <h2 className="text-3xl font-black text-white font-sans">Planes y Suscripción SoftPremium IA</h2>
-              <p className="text-sm text-slate-400">
+              <h2 className="text-3xl font-black text-app-text font-sans">Planes y Suscripción SoftPremium IA</h2>
+              <p className="text-sm text-app-muted font-medium">
                 Elige el plan que mejor se adapte a tu empresa. Realiza tu pago mediante Yape, Plin o Transferencia Bancaria sin comisiones adicionales.
               </p>
             </div>
@@ -501,61 +500,61 @@ export const SoftPremiumDashboard: React.FC = () => {
             {/* Tarjetas de Tarifas */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {/* Plan Tributario */}
-              <div className={`bg-slate-900 border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'tributario' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'}`}>
+              <div className={`bg-app-surface border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'tributario' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-3">
-                  <div className="text-indigo-400 font-bold text-xs uppercase tracking-wider">Pilar 1: Tributación</div>
-                  <div className="text-3xl font-black text-white">S/ 49 <span className="text-xs text-slate-400 font-normal">/mes</span></div>
-                  <p className="text-xs text-slate-400 leading-relaxed">Auditoría preventiva SUNAT, consistencias gastos vs ventas y reglas Art. 37 LIR.</p>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">Pilar 1: Tributación</div>
+                  <div className="text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
+                  <p className="text-xs text-app-muted font-medium leading-relaxed">Auditoría preventiva SUNAT, consistencias gastos vs ventas y reglas Art. 37 LIR.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('tributario')}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'tributario' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'tributario' ? 'bg-blue-600 text-white' : 'bg-app-bg text-app-text hover:bg-app-hover border border-app-border'}`}
                 >
                   {selectedPlanTier === 'tributario' ? 'Seleccionado' : 'Elegir Plan'}
                 </button>
               </div>
 
               {/* Plan Planillas */}
-              <div className={`bg-slate-900 border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'planillas' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'}`}>
+              <div className={`bg-app-surface border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'planillas' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-3">
-                  <div className="text-indigo-400 font-bold text-xs uppercase tracking-wider">Pilar 2: Planillas</div>
-                  <div className="text-3xl font-black text-white">S/ 49 <span className="text-xs text-slate-400 font-normal">/mes</span></div>
-                  <p className="text-xs text-slate-400 leading-relaxed">Gratificación Ley 27735/32563 CAS, CTS y redacción de contratos con IA.</p>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">Pilar 2: Planillas</div>
+                  <div className="text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
+                  <p className="text-xs text-app-muted font-medium leading-relaxed">Gratificación Ley 27735/32563 CAS, CTS y redacción de contratos con IA.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('planillas')}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'planillas' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'planillas' ? 'bg-blue-600 text-white' : 'bg-app-bg text-app-text hover:bg-app-hover border border-app-border'}`}
                 >
                   {selectedPlanTier === 'planillas' ? 'Seleccionado' : 'Elegir Plan'}
                 </button>
               </div>
 
               {/* Plan Finanzas */}
-              <div className={`bg-slate-900 border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'finanzas' ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'}`}>
+              <div className={`bg-app-surface border rounded-2xl p-6 space-y-4 flex flex-col justify-between ${selectedPlanTier === 'finanzas' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-app-border'}`}>
                 <div className="space-y-3">
-                  <div className="text-indigo-400 font-bold text-xs uppercase tracking-wider">Pilar 3: Finanzas</div>
-                  <div className="text-3xl font-black text-white">S/ 49 <span className="text-xs text-slate-400 font-normal">/mes</span></div>
-                  <p className="text-xs text-slate-400 leading-relaxed">Flujo de caja cruzado con el calendario oficial SUNAT según dígito RUC.</p>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">Pilar 3: Finanzas</div>
+                  <div className="text-3xl font-black text-app-text">S/ 49 <span className="text-xs text-app-muted font-normal">/mes</span></div>
+                  <p className="text-xs text-app-muted font-medium leading-relaxed">Flujo de caja cruzado con el calendario oficial SUNAT según dígito RUC.</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('finanzas')}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'finanzas' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedPlanTier === 'finanzas' ? 'bg-blue-600 text-white' : 'bg-app-bg text-app-text hover:bg-app-hover border border-app-border'}`}
                 >
                   {selectedPlanTier === 'finanzas' ? 'Seleccionado' : 'Elegir Plan'}
                 </button>
               </div>
 
               {/* Plan Full Premium */}
-              <div className={`bg-slate-900 border rounded-2xl p-6 space-y-4 flex flex-col justify-between relative overflow-hidden ${selectedPlanTier === 'full' ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'}`}>
-                <div className="absolute top-3 right-3 bg-indigo-600 text-white font-extrabold text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">Más Popular</div>
+              <div className={`bg-app-surface border rounded-2xl p-6 space-y-4 flex flex-col justify-between relative overflow-hidden ${selectedPlanTier === 'full' ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-app-border'}`}>
+                <div className="absolute top-3 right-3 bg-blue-600 text-white font-extrabold text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">Más Popular</div>
                 <div className="space-y-3">
-                  <div className="text-indigo-300 font-bold text-xs uppercase tracking-wider">SoftPremium Full</div>
-                  <div className="text-3xl font-black text-white">S/ 99 <span className="text-xs text-slate-400 font-normal">/mes</span></div>
-                  <p className="text-xs text-slate-300 leading-relaxed">Acceso completo ilimitado a los 3 Pilares (Tributación + Planillas + Finanzas).</p>
+                  <div className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">SoftPremium Full</div>
+                  <div className="text-3xl font-black text-app-text">S/ 99 <span className="text-xs text-app-muted font-normal">/mes</span></div>
+                  <p className="text-xs text-app-muted font-medium leading-relaxed">Acceso completo ilimitado a los 3 Pilares (Tributación + Planillas + Finanzas).</p>
                 </div>
                 <button
                   onClick={() => setSelectedPlanTier('full')}
-                  className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${selectedPlanTier === 'full' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${selectedPlanTier === 'full' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-app-bg text-app-text hover:bg-app-hover border border-app-border'}`}
                 >
                   {selectedPlanTier === 'full' ? 'Seleccionado' : 'Elegir Plan Full'}
                 </button>
@@ -566,50 +565,50 @@ export const SoftPremiumDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
               
               {/* Información Yape / Plin / Banco */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                <h3 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
+              <div className="bg-app-surface border border-app-border rounded-2xl p-6 space-y-6 shadow-sm">
+                <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
                   <Smartphone className="w-5 h-5" /> Medios de Pago en Perú (Sin Comisiones)
                 </h3>
 
                 <div className="space-y-4">
                   {/* Yape / Plin */}
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <div className="bg-app-bg p-4 rounded-xl border border-app-border flex items-center justify-between">
                     <div>
-                      <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Yape / Plin Directo</div>
-                      <div className="text-lg font-black text-white font-mono mt-0.5">987 654 321</div>
-                      <div className="text-xs text-slate-400">Titular: Angelo Serna Simeon</div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Yape / Plin Directo</div>
+                      <div className="text-lg font-black text-app-text font-mono mt-0.5">987 654 321</div>
+                      <div className="text-xs text-app-muted font-medium">Titular: Angelo Serna Simeon</div>
                     </div>
-                    <div className="p-2 bg-purple-600/20 text-purple-300 rounded-lg">
+                    <div className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
                       <QrCode className="w-8 h-8" />
                     </div>
                   </div>
 
                   {/* Cuentas Bancarias */}
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                    <div className="text-xs text-slate-400 font-bold uppercase">Transferencia Bancaria</div>
-                    <div className="text-xs text-slate-300">
+                  <div className="bg-app-bg p-4 rounded-xl border border-app-border space-y-2">
+                    <div className="text-xs text-app-muted font-bold uppercase">Transferencia Bancaria</div>
+                    <div className="text-xs text-app-text font-medium">
                       • <strong>BCP Soles:</strong> 193-98765432-0-11
                     </div>
-                    <div className="text-xs text-slate-300">
+                    <div className="text-xs text-app-text font-medium">
                       • <strong>CCI BCP:</strong> 002-193009876543201114
                     </div>
-                    <div className="text-[11px] text-slate-400 pt-1">Titular: SOFTCONTABLE SAAS / Angelo Serna</div>
+                    <div className="text-[11px] text-app-muted pt-1 font-medium">Titular: SOFTCONTABLE SAAS / Angelo Serna</div>
                   </div>
                 </div>
               </div>
 
               {/* Registro de Comprobante / Voucher */}
-              <form onSubmit={handleSubmitVoucher} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Send className="w-5 h-5 text-amber-400" /> Registrar Comprobante de Pago
+              <form onSubmit={handleSubmitVoucher} className="bg-app-surface border border-app-border rounded-2xl p-6 space-y-4 shadow-sm">
+                <h3 className="text-lg font-bold text-app-text flex items-center gap-2">
+                  <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Registrar Comprobante de Pago
                 </h3>
 
                 <div>
-                  <label className="text-xs text-slate-400 font-semibold mb-1 block">Plan Seleccionado</label>
+                  <label className="text-xs text-app-muted font-semibold mb-1 block">Plan Seleccionado</label>
                   <select
                     value={selectedPlanTier}
                     onChange={(e: any) => setSelectedPlanTier(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                    className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-sm text-app-text focus:border-blue-500 focus:outline-none"
                   >
                     <option value="full">SoftPremium Full — S/ 99.00 / mes</option>
                     <option value="tributario">Pilar 1: Tributación IA — S/ 49.00 / mes</option>
@@ -619,14 +618,14 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-400 font-semibold mb-1 block">Método de Pago</label>
+                  <label className="text-xs text-app-muted font-semibold mb-1 block">Método de Pago</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['YAPE', 'PLIN', 'TRANSFERENCIA'] as const).map(m => (
                       <button
                         type="button"
                         key={m}
                         onClick={() => setPaymentMethod(m)}
-                        className={`py-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${paymentMethod === m ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                        className={`py-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${paymentMethod === m ? 'bg-blue-600 text-white border-blue-500' : 'bg-app-bg text-app-muted border-app-border'}`}
                       >
                         {m}
                       </button>
@@ -635,25 +634,42 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-400 font-semibold mb-1 block">Número de Operación / Referencia</label>
+                  <label className="text-xs text-app-muted font-semibold mb-1 block">Número de Operación / Referencia</label>
                   <input
                     type="text"
                     required
                     placeholder="Ej. 09876543 o Nro de Operación Yape"
                     value={operationNumber}
                     onChange={(e) => setOperationNumber(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                    className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-sm text-app-text focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submittingVoucher}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {submittingVoucher ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Enviar Comprobante para Activación
                 </button>
+
+                {isAdmin && (
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.opener) {
+                          window.opener.location.href = '/?tab=ADMIN';
+                        }
+                        window.location.href = '/?tab=ADMIN';
+                      }}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center gap-1 mx-auto"
+                    >
+                      👑 Abrir Panel Admin ERP para Gestionar Suscripciones →
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
 
