@@ -1270,7 +1270,7 @@ const debouncedSaveEmployee = (ruc: string, e: any) => {
     } catch (err) {
       console.error('[STORE] debouncedSaveEmployee failed:', err);
     }
-  }, 300);
+  }, 50);
   employeeSaveTimeouts.set(e.id, timeout);
 };
 

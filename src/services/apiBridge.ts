@@ -164,9 +164,6 @@ export const webApiBridge = {
         const res = await api.delete(`/api/db/employees/${id}${query}`);
         return res.data;
     },
-    dbExecute: async (sql: string, params?: any[]) => {
-        return webApiBridge.dbQuery(sql, params);
-    },
     dbQuery: async (sql: string, params?: any[]) => {
         // Convertir ? a $1, $2, $3 para PostgreSQL
         const convertedSQL = convertSQLitePlaceholdersToPostgres(sql);
