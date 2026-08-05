@@ -157,6 +157,9 @@ export const SoftPremiumDashboard: React.FC = () => {
           planTier: selectedPlanTier,
           paymentMethod,
           referenceNumber: operationNumber,
+          voucherBase64: voucherBase64,
+          userEmail: user?.email || '',
+          userName: user?.name || user?.nombre || '',
           priceCentimos: selectedPlanTier === 'full' ? 9900 : 4900
         })
       });
@@ -402,28 +405,30 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector MIS EMPRESAS */}
-          <div className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left">
-            <label className="text-[9px] text-app-muted uppercase font-black tracking-wider block">MIS EMPRESAS</label>
-            <select
-              value={currentWorkspace?.ruc || ''}
-              onChange={(e) => {
-                if (e.target.value) switchWorkspace(e.target.value);
-              }}
-              className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[200px] truncate"
-            >
-              {(workspaces || []).map((c: any) => (
-                <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
-                  {c.name} ({c.ruc})
-                </option>
-              ))}
-              {(!workspaces || workspaces.length === 0) && (
-                <option value="" className="bg-app-surface text-app-text">
-                  {currentWorkspace?.name || 'Sin Empresas'}
-                </option>
-              )}
-            </select>
-          </div>
+          {/* Selector MIS EMPRESAS (Solo visible si la suscripción está activa) */}
+          {isPremiumActive && (
+            <div className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left">
+              <label className="text-[9px] text-app-muted uppercase font-black tracking-wider block">MIS EMPRESAS</label>
+              <select
+                value={currentWorkspace?.ruc || ''}
+                onChange={(e) => {
+                  if (e.target.value) switchWorkspace(e.target.value);
+                }}
+                className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[200px] truncate"
+              >
+                {(workspaces || []).map((c: any) => (
+                  <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
+                    {c.name} ({c.ruc})
+                  </option>
+                ))}
+                {(!workspaces || workspaces.length === 0) && (
+                  <option value="" className="bg-app-surface text-app-text">
+                    {currentWorkspace?.name || 'Sin Empresas'}
+                  </option>
+                )}
+              </select>
+            </div>
+          )}
 
           <div className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-2 border ${
             isPremiumActive 
@@ -651,17 +656,45 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </h3>
 
                 <div>
-                  <label className="text-xs text-app-muted font-semibold mb-1 block">Plan Seleccionado</label>
-                  <select
-                    value={selectedPlanTier}
-                    onChange={(e: any) => setSelectedPlanTier(e.target.value)}
-                    className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-sm text-app-text focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="full">SoftPremium Full — S/ 99.00 / mes</option>
-                    <option value="tributario">Pilar 1: Tributación IA — S/ 49.00 / mes</option>
-                    <option value="planillas">Pilar 2: Planillas IA — S/ 49.00 / mes</option>
-                    <option value="finanzas">Pilar 3: Finanzas IA — S/ 49.00 / mes</option>
-                  </select>
+                  <label className="text-xs text-app-muted font-black uppercase tracking-wider mb-2 block">Plan a Activar</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      { id: 'full', title: 'SoftPremium Full', price: 'S/ 99.00 / mes', desc: 'Los 3 Pilares: Tributario + Planillas + Finanzas IA', badge: 'RECOMENDADO', icon: Sparkles },
+                      { id: 'tributario', title: 'Pilar 1: Tributación IA', price: 'S/ 49.00 / mes', desc: 'Auditoría Sunat + Diagnóstico de Inconsistencias', icon: ShieldAlert },
+                      { id: 'planillas', title: 'Pilar 2: Planillas IA', price: 'S/ 49.00 / mes', desc: 'Liquidaciones LPT + Redacción de Contratos IA', icon: FileCheck },
+                      { id: 'finanzas', title: 'Pilar 3: Finanzas IA', price: 'S/ 49.00 / mes', desc: 'Flujo de Caja + Forecast de Liquidez Contable', icon: TrendingUp }
+                    ].map(plan => {
+                      const Icon = plan.icon;
+                      const isSelected = selectedPlanTier === plan.id;
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => setSelectedPlanTier(plan.id as any)}
+                          className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between relative ${
+                            isSelected
+                              ? 'bg-blue-600/10 border-blue-600 shadow-md ring-1 ring-blue-500/20'
+                              : 'bg-app-bg border-app-border hover:border-app-muted'
+                          }`}
+                        >
+                          {plan.badge && (
+                            <span className="absolute -top-2.5 right-3 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                              {plan.badge}
+                            </span>
+                          )}
+                          <div className="flex items-start gap-2.5 mb-1">
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-app-surface text-app-muted border border-app-border'}`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-black text-app-text truncate">{plan.title}</div>
+                              <div className="text-[11px] font-bold text-blue-600 dark:text-blue-400">{plan.price}</div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-app-muted font-medium line-clamp-2 mt-0.5">{plan.desc}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>

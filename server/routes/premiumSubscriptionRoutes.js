@@ -91,8 +91,8 @@ router.post('/submit-voucher', async (req, res) => {
     try {
         const { workspaceId, planTier, billingCycle, priceCentimos, paymentMethod, referenceNumber, voucherBase64 } = req.body;
         const userId = req.user?.id || 'CLIENTE_SISTEMA';
-        const userEmail = req.user?.email || '';
-        const userName = req.user?.name || req.user?.nombre || userEmail || 'Cliente';
+        const userEmail = (req.body.userEmail || req.user?.email || '').toLowerCase().trim();
+        const userName = req.body.userName || req.user?.name || req.user?.nombre || userEmail || 'Cliente';
 
         const subId = uuidv4();
         const price = priceCentimos || 4900;
@@ -145,7 +145,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
         const { userId, userEmail, workspaceId, enable, tiers } = req.body;
         const isEnabled = enable !== false;
 
-        const targetEmail = userEmail || '';
+        const targetEmail = (userEmail || '').toLowerCase().trim();
         const targetUserId = userId || '';
         const targetWorkspaceRuc = workspaceId || '';
 
@@ -153,13 +153,13 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
             // 1. Activar en tabla USERS por ID o EMAIL
             if (targetUserId || targetEmail) {
                 await dbCore.pool.query(
-                    `UPDATE users SET premium_enabled = $1 WHERE id = $2 OR email = $3`,
+                    `UPDATE users SET premium_enabled = $1 WHERE id = $2 OR LOWER(email) = $3`,
                     [isEnabled, targetUserId, targetEmail]
                 );
 
                 // 2. Activar en todas las empresas de ese usuario
                 await dbCore.pool.query(
-                    `UPDATE public.workspaces SET premium_enabled = $1 WHERE user_id = $2 OR user_id = (SELECT id FROM users WHERE email = $3 LIMIT 1)`,
+                    `UPDATE public.workspaces SET premium_enabled = $1 WHERE user_id = $2 OR user_id = (SELECT id FROM users WHERE LOWER(email) = $3 LIMIT 1)`,
                     [isEnabled, targetUserId, targetEmail]
                 );
             }
@@ -205,7 +205,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
 
 /**
  * GET /api/premium/subscription/admin/list-all (Solo Admin)
- * Lista las solicitudes de suscripción y usuarios clientes para el Panel Admin.
+ * Lista las solicitudes de suscripción con sus imágenes de voucher para el Panel Admin.
  */
 router.get('/admin/list-all', requireAdmin, async (req, res) => {
     try {
@@ -213,27 +213,40 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
         if (USE_POSTGRES) {
             const result = await dbCore.pool.query(`
                 SELECT 
-                    u.id as user_id,
-                    COALESCE(u.name, 'Cliente') as user_name,
-                    u.email as user_email,
-                    COALESCE(u.premium_enabled, FALSE) as premium_enabled,
-                    (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id) as workspace_count,
                     s.id as subscription_id,
+                    COALESCE(u.id, s.user_id) as user_id,
+                    COALESCE(s.user_name, u.name, 'Cliente') as user_name,
+                    COALESCE(s.user_email, u.email, 'sin-email') as user_email,
+                    COALESCE(u.premium_enabled, FALSE) as premium_enabled,
+                    (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id OR user_id = s.user_id) as workspace_count,
                     s.plan_tier,
                     s.payment_provider,
                     s.payment_provider_ref as reference_number,
                     s.voucher_base64,
                     s.status as subscription_status,
                     s.created_at
+                FROM premium.premium_subscriptions s
+                LEFT JOIN users u ON (u.id = s.user_id OR LOWER(u.email) = LOWER(s.user_email))
+                UNION ALL
+                SELECT 
+                    NULL as subscription_id,
+                    u.id as user_id,
+                    u.name as user_name,
+                    u.email as user_email,
+                    COALESCE(u.premium_enabled, FALSE) as premium_enabled,
+                    (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id) as workspace_count,
+                    'Sin Plan' as plan_tier,
+                    'N/A' as payment_provider,
+                    'N/A' as reference_number,
+                    NULL as voucher_base64,
+                    'inactive' as subscription_status,
+                    u.created_at
                 FROM users u
-                LEFT JOIN LATERAL (
-                    SELECT id, plan_tier, payment_provider, payment_provider_ref, voucher_base64, status, created_at
-                    FROM premium.premium_subscriptions 
-                    WHERE user_id = u.id OR user_email = u.email
-                    ORDER BY created_at DESC 
-                    LIMIT 1
-                ) s ON TRUE
-                ORDER BY s.created_at DESC NULLS LAST, u.name ASC
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM premium.premium_subscriptions s2 
+                    WHERE s2.user_id = u.id OR LOWER(s2.user_email) = LOWER(u.email)
+                )
+                ORDER BY created_at DESC NULLS LAST
             `);
             list = result.rows || [];
         } else {
