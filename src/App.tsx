@@ -46,6 +46,7 @@ import { AIKnowledgeView } from './components/AIKnowledgeView';
 import { SuggestionBox } from './components/SuggestionBox';
 import StudentDashboard from './components/StudentDashboard';
 import { SoftPremiumDashboard } from './components/SoftPremiumDashboard';
+import { LegalPages } from './components/LegalPages';
 import { isStudentMode } from './store';
 import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles } from 'lucide-react';
 
@@ -282,6 +283,7 @@ const App: React.FC = () => {
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showLegalPage, setShowLegalPage] = useState<'terms' | 'privacy' | 'security' | 'confidentiality' | 'cookies' | 'eula' | 'legal' | null>(null);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -668,7 +670,8 @@ const App: React.FC = () => {
           onLoad={() => setLogoLoaded(true)}
           className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)]" 
         />
-        <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE ERP</h1>
+        <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE</h1>
+        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.15em] mb-3">Sistema Contable en la Nube • SaaS</p>
         <p className="text-sm text-slate-400 animate-pulse">Iniciando motor de base de datos...</p>
       </div>
     );
@@ -1094,13 +1097,28 @@ const App: React.FC = () => {
         </main>
 
         {/* Faint Footer */}
-        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border">
+        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
           <span className="text-[9px] font-black uppercase tracking-widest text-app-muted/85">
-            Desarrollado por Softcontable • ERP Contable 2026
+            © 2026 Angelo Thomas Serna Simeon • SOFTCONTABLE SaaS
+          </span>
+          <span className="hidden sm:inline text-[9px] text-app-muted/40">|</span>
+          <span className="flex items-center gap-2">
+            <button onClick={() => setShowLegalPage('terms')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Términos</button>
+            <span className="text-[9px] text-app-muted/30">•</span>
+            <button onClick={() => setShowLegalPage('privacy')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Privacidad</button>
+            <span className="text-[9px] text-app-muted/30">•</span>
+            <button onClick={() => setShowLegalPage('security')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Seguridad</button>
+            <span className="text-[9px] text-app-muted/30">•</span>
+            <button onClick={() => setShowLegalPage('legal')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Legal</button>
           </span>
         </div>
       </div>
       <SuggestionBox />
+
+      {/* ═══ Modal Legal ═══ */}
+      {showLegalPage && (
+        <LegalPages initialSection={showLegalPage} onClose={() => setShowLegalPage(null)} />
+      )}
 
       {/* Banner flotante para iOS */}
       {showIosTip && (

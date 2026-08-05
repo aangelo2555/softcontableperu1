@@ -36,7 +36,7 @@ interface RiskFinding {
 }
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { workspaces, currentCompany, switchWorkspace, setActiveTab: setMainActiveTab } = useStore();
+  const { workspaces, currentCompany, employees, switchWorkspace, setActiveTab: setMainActiveTab } = useStore();
   const currentWorkspace = currentCompany;
 
   const user = React.useMemo(() => {
@@ -98,12 +98,44 @@ export const SoftPremiumDashboard: React.FC = () => {
   // Estados Pilar 3: Finanzas IA
   const [cashflowResult, setCashflowResult] = useState<any>(null);
 
+  // Estados de KPIs Dinámicos Reales desde la BD Core
+  const [workspaceKPIs, setWorkspaceKPIs] = useState<any>(null);
+  const [loadingKPIs, setLoadingKPIs] = useState<boolean>(false);
+
+  const loadWorkspaceKPIs = async () => {
+    const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
+    if (!wsId) return;
+
+    setLoadingKPIs(true);
+    try {
+      const res = await fetch(`/api/premium/tributario/kpis?workspaceId=${wsId}&period=${selectedPeriod}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('softcontable_token')}` }
+      });
+      const data = await res.json();
+      if (data.success && data.kpis) {
+        setWorkspaceKPIs(data.kpis);
+      }
+    } catch (e) {
+      console.warn('Error al obtener KPIs dinámicos:', e);
+    } finally {
+      setLoadingKPIs(false);
+    }
+  };
+
   // Cargar estado de suscripción del workspace
   useEffect(() => {
     if (currentWorkspace?.id || currentWorkspace?.ruc) {
       checkSubscriptionStatus();
     }
   }, [currentWorkspace?.id, currentWorkspace?.ruc]);
+
+  // Cargar KPIs dinámicos al activar suscripción o cambiar empresa/periodo
+  useEffect(() => {
+    if (isPremiumActive && (currentWorkspace?.id || currentWorkspace?.ruc)) {
+      loadWorkspaceKPIs();
+    }
+  }, [isPremiumActive, currentWorkspace?.id, currentWorkspace?.ruc, selectedPeriod]);
+
 
   const checkSubscriptionStatus = async () => {
     const wsId = currentWorkspace?.id || currentWorkspace?.ruc;
@@ -374,9 +406,9 @@ export const SoftPremiumDashboard: React.FC = () => {
               }
             }}
             className="px-3 py-2 bg-app-bg hover:bg-app-hover text-app-text rounded-xl border border-app-border transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer"
-            title="Regresar a SOFTCONTABLE ERP"
+            title="Regresar a SOFTCONTABLE"
           >
-            <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Volver al ERP
+            <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Volver al Sistema
           </button>
 
           <div className="h-6 w-px bg-app-border hidden md:block" />
@@ -786,7 +818,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       }}
                       className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center gap-1 mx-auto"
                     >
-                      👑 Abrir Panel Admin ERP para Gestionar Suscripciones →
+                      👑 Abrir Panel Administrador para Gestionar Suscripciones →
                     </button>
                   </div>
                 )}
@@ -800,7 +832,7 @@ export const SoftPremiumDashboard: React.FC = () => {
         {isPremiumActive && activeSubTab === 'tributario' && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* Rejilla de Indicadores de Salud Tributaria */}
+            {/* Rejilla de Indicadores de Salud Tributaria Dinámicos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm flex items-center gap-3">
                 <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
@@ -808,8 +840,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Salud Fiscal SUNAT</div>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">94 / 100</div>
-                  <div className="text-[10px] text-app-muted font-bold">Riesgo Bajo de Fiscalización</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    {workspaceKPIs?.metrics?.tributario?.saludFiscalScore ?? 100} / 100
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">
+                    {workspaceKPIs?.metrics?.tributario?.saludFiscalEtiqueta || 'Riesgo Bajo de Fiscalización'}
+                  </div>
                 </div>
               </div>
 
@@ -819,8 +855,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Cruce RIE / SIRE</div>
-                  <div className="text-xl font-black text-app-text">99.2%</div>
-                  <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">Ventas vs Compras Conciliadas</div>
+                  <div className="text-xl font-black text-app-text">
+                    {workspaceKPIs?.metrics?.tributario?.cruceSirePct ?? 100}%
+                  </div>
+                  <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold truncate max-w-[160px]">
+                    Vtas S/ {workspaceKPIs?.metrics?.tributario?.totalVentasSoles || '0.00'} | Cpras S/ {workspaceKPIs?.metrics?.tributario?.totalComprasSoles || '0.00'}
+                  </div>
                 </div>
               </div>
 
@@ -830,8 +870,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Sin Bancarizar (L. 28194)</div>
-                  <div className="text-xl font-black text-amber-600 dark:text-amber-400">S/ 0.00</div>
-                  <div className="text-[10px] text-app-muted font-bold">Operaciones &gt; S/ 2,000 OK</div>
+                  <div className="text-xl font-black text-amber-600 dark:text-amber-400">
+                    S/ {workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || '0.00'}
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">
+                    {Number(workspaceKPIs?.metrics?.tributario?.sinBancarizarSoles || 0) > 0 ? 'Revisión Sugerida' : 'Operaciones > S/ 2,000 OK'}
+                  </div>
                 </div>
               </div>
 
@@ -841,7 +885,9 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Gastos Deducibles (Art. 37)</div>
-                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">100% Validado</div>
+                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+                    {workspaceKPIs?.metrics?.tributario?.gastosDeduciblesPct ?? 100}% Validado
+                  </div>
                   <div className="text-[10px] text-app-muted font-bold">Causalidad y Feconciencia</div>
                 </div>
               </div>
@@ -942,7 +988,7 @@ export const SoftPremiumDashboard: React.FC = () => {
         {isPremiumActive && activeSubTab === 'planillas' && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* Rejilla de Indicadores de Planilla empresarial */}
+            {/* Rejilla de Indicadores de Planilla empresarial Dinámicos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm flex items-center gap-3">
                 <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
@@ -950,8 +996,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Colaboradores</div>
-                  <div className="text-xl font-black text-app-text">Activos en T-Registro</div>
-                  <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">PLAME al Día</div>
+                  <div className="text-xl font-black text-app-text">
+                    {workspaceKPIs?.metrics?.planillas?.colaboradoresCount ?? 0} Registrados
+                  </div>
+                  <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">En Base de Datos</div>
                 </div>
               </div>
 
@@ -960,9 +1008,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                   <Award className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Gratificación 2026</div>
-                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">Ley 27735 / 32563</div>
-                  <div className="text-[10px] text-app-muted font-bold">+ 9% Bonificación EsSalud</div>
+                  <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Gratificación Estimada</div>
+                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+                    S/ {workspaceKPIs?.metrics?.planillas?.gratiEstimadaTotalSoles || '0.00'}
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">Ley 27735 / Ley 32563 CAS</div>
                 </div>
               </div>
 
@@ -972,8 +1022,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Depósito CTS</div>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">Semestre Mayo/Nov</div>
-                  <div className="text-[10px] text-app-muted font-bold">Cálculo Automático</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    S/ {workspaceKPIs?.metrics?.planillas?.ctsEstimadaSoles || '0.00'}
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">Cálculo Estimado Semestral</div>
                 </div>
               </div>
 
@@ -1002,14 +1054,29 @@ export const SoftPremiumDashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
                 <div>
-                  <label className="text-xs text-app-muted font-black uppercase tracking-wider mb-1 block">Empleado (DNI o Nombre)</label>
-                  <input
-                    type="text"
-                    placeholder="Ingresa DNI o Nombre del colaborador"
-                    value={selectedEmployeeId}
-                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                    className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none"
-                  />
+                  <label className="text-xs text-app-muted font-black uppercase tracking-wider mb-1 block">Colaborador (Seleccionar de la BD o Ingresar DNI)</label>
+                  {employees && employees.length > 0 ? (
+                    <select
+                      value={selectedEmployeeId}
+                      onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                      className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none cursor-pointer"
+                    >
+                      <option value="">-- Selecciona un colaborador registrado ({employees.length}) --</option>
+                      {employees.map((emp: any) => (
+                        <option key={emp.id || emp.dni} value={emp.id || emp.dni || emp.num_doc}>
+                          {(emp.nombres || emp.nombre || '') + ' ' + (emp.apellidos || '')} {emp.dni ? `(DNI: ${emp.dni})` : ''} - S/ {emp.sueldo || 2500}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Ingresa DNI o Nombre del colaborador"
+                      value={selectedEmployeeId}
+                      onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                      className="w-full bg-app-bg border border-app-border rounded-xl p-3 text-xs font-bold text-app-text focus:border-blue-500 focus:outline-none"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -1096,7 +1163,7 @@ export const SoftPremiumDashboard: React.FC = () => {
         {isPremiumActive && activeSubTab === 'finanzas' && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* Rejilla Ratios Financieros & Salud de Liquidez */}
+            {/* Rejilla Ratios Financieros & Salud de Liquidez Dinámicos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm flex items-center gap-3">
                 <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
@@ -1104,8 +1171,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Ratio Liquidez Corriente</div>
-                  <div className="text-xl font-black text-app-text">1.85</div>
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Solvencia Positiva</div>
+                  <div className="text-xl font-black text-app-text">
+                    {workspaceKPIs?.metrics?.finanzas?.liquidezCorriente ?? '1.00'}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    {Number(workspaceKPIs?.metrics?.finanzas?.liquidezCorriente || 1) >= 1 ? 'Solvencia Positiva' : 'Observación de Liquidez'}
+                  </div>
                 </div>
               </div>
 
@@ -1115,7 +1186,9 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Prueba Ácida</div>
-                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">1.22</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    {workspaceKPIs?.metrics?.finanzas?.pruebaAcida ?? '1.00'}
+                  </div>
                   <div className="text-[10px] text-app-muted font-bold">Capacidad Inmediata</div>
                 </div>
               </div>
@@ -1126,8 +1199,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Margen Operativo EBITDA</div>
-                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">24.5%</div>
-                  <div className="text-[10px] text-app-muted font-bold">Eficiencia Operativa</div>
+                  <div className="text-xl font-black text-purple-600 dark:text-purple-400">
+                    {workspaceKPIs?.metrics?.finanzas?.ebitdaMarginPct ?? '0.0'}%
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">Eficiencia Operativa BD</div>
                 </div>
               </div>
 
@@ -1137,11 +1212,16 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-black tracking-wider text-app-muted">Vencimiento SUNAT</div>
-                  <div className="text-xl font-black text-amber-600 dark:text-amber-400">Según RUC</div>
-                  <div className="text-[10px] text-app-muted font-bold">Calendario Oficial</div>
+                  <div className="text-xl font-black text-amber-600 dark:text-amber-400">
+                    Día {workspaceKPIs?.metrics?.finanzas?.sunatDueDateDay ?? 15}
+                  </div>
+                  <div className="text-[10px] text-app-muted font-bold">
+                    RUC Dígito {workspaceKPIs?.metrics?.finanzas?.sunatLastDigit ?? 0}
+                  </div>
                 </div>
               </div>
             </div>
+
 
             {/* Generador de Flujo de Caja */}
             <div className="bg-app-surface border border-app-border rounded-2xl p-6 space-y-4 shadow-sm">

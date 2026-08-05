@@ -27,7 +27,7 @@ function getSunatDueDate(ruc, year, month) {
  */
 async function generateCashflowForecast({ workspaceId, startDate, endDate, method = 'directo' }) {
     const workspace = await coreReader.getWorkspace(workspaceId);
-    const ruc = workspace ? workspace.ruc : '';
+    const ruc = workspace?.ruc || (workspaceId && workspaceId.length === 11 ? workspaceId : '');
 
     const currentPeriod = startDate ? startDate.substring(0, 7) : new Date().toISOString().substring(0, 7);
     const purchases = await coreReader.getPurchases(workspaceId, currentPeriod, null);
@@ -35,13 +35,16 @@ async function generateCashflowForecast({ workspaceId, startDate, endDate, metho
 
     const totalVentasSoles = sales.reduce((sum, s) => sum + Number(s.total || 0), 0);
     const totalComprasSoles = purchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
-    const igvAPagarEstimado = Math.max(0, (totalVentasSoles - totalComprasSoles) * 0.18);
+    const igvVentas = sales.reduce((sum, s) => sum + Number(s.igv || 0), 0);
+    const igvCompras = purchases.reduce((sum, p) => sum + Number(p.igv || 0), 0);
+    const igvAPagarEstimado = Math.max(0, igvVentas - igvCompras);
 
     const rucLastDigit = ruc.length === 11 ? ruc.substring(10, 11) : '0';
     const vencimientoDia = getSunatDueDate(ruc, 2026, 8);
 
     const projectedInflowsCentimos = Math.round(totalVentasSoles * 100);
     const projectedOutflowsCentimos = Math.round((totalComprasSoles + igvAPagarEstimado) * 100);
+
 
     const sunatAdjustments = {
         ruc_evaluado: ruc,

@@ -1317,7 +1317,7 @@ const dbManager = {
 
     getWorkspaceById: (workspaceId) => {
         if (!workspaceId) return null;
-        const row = db.prepare('SELECT * FROM workspaces WHERE ruc = ?').get(workspaceId);
+        const row = db.prepare('SELECT * FROM workspaces WHERE ruc = ? OR user_id = ?').get(workspaceId, workspaceId);
         if (!row) return null;
         return {
             ...row,

@@ -854,7 +854,7 @@ const PlanillaView: React.FC = () => {
                  <span className="font-bold uppercase tracking-wider text-[9px]">Deducciones de Ley</span>
               </div>
            </div>
-           <p className="font-bold italic">© SOFTCONTABLE ERP - Cumplimiento normativo PLAME / T-Registro</p>
+           <p className="font-bold italic">© SOFTCONTABLE SaaS - Cumplimiento normativo PLAME / T-Registro</p>
         </div>
       </div>
 

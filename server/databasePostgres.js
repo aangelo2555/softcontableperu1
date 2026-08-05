@@ -243,7 +243,7 @@ const db = {
     getWorkspaceById: async (workspaceId) => {
         if (!workspaceId) return null;
         const result = await query(
-            'SELECT * FROM workspaces WHERE ruc = $1 LIMIT 1',
+            'SELECT * FROM workspaces WHERE ruc = $1 OR user_id = $1 LIMIT 1',
             [workspaceId]
         );
         if (!result.rows || !result.rows[0]) return null;

@@ -193,6 +193,103 @@ Hallazgos detectados: ${JSON.stringify(findings)}`;
     }
 }
 
+/**
+ * Calcula los KPIs dinámicos reales en tiempo real desde la BD para un workspace y periodo.
+ */
+async function calculateWorkspaceKPIs({ workspaceId, period, userId }) {
+    let workspace = null;
+    try {
+        workspace = await coreReader.getWorkspace(workspaceId);
+    } catch (e) {
+        workspace = null;
+    }
+
+    const ruc = workspace?.ruc || workspaceId || '';
+    const lastDigit = ruc.length >= 11 ? parseInt(ruc.substring(10, 11), 10) : 0;
+    const lastDigitNum = isNaN(lastDigit) ? 0 : lastDigit;
+    const sunatDueDateDay = Math.min(22, 12 + (lastDigitNum === 0 ? 1 : lastDigitNum));
+
+    const purchases = (await coreReader.getPurchases(workspaceId, period, userId)) || [];
+    const sales = (await coreReader.getSales(workspaceId, period, userId)) || [];
+    const employees = (await coreReader.getEmployees(workspaceId, userId)) || [];
+
+    const totalVentas = sales.reduce((sum, s) => sum + Number(s.total || 0), 0);
+    const totalCompras = purchases.reduce((sum, p) => sum + Number(p.total || 0), 0);
+    const igvVentas = sales.reduce((sum, s) => sum + Number(s.igv || 0), 0);
+    const igvCompras = purchases.reduce((sum, p) => sum + Number(p.igv || 0), 0);
+    const igvEstimadoPagar = Math.max(0, igvVentas - igvCompras);
+
+    // 1. Salud Fiscal SUNAT
+    let saludFiscalScore = 100;
+    if (totalVentas > 0 && (totalCompras / totalVentas) > 0.90) {
+        saludFiscalScore -= 20;
+    }
+    const sinBancarizarOps = purchases.filter(p => Number(p.total || 0) >= 2000 && (!p.pago_medio || p.pago_medio === 'EFECTIVO'));
+    const sinBancarizarTotal = sinBancarizarOps.reduce((sum, p) => sum + Number(p.total || 0), 0);
+    if (sinBancarizarTotal > 0) {
+        saludFiscalScore -= 15;
+    }
+    saludFiscalScore = Math.max(0, Math.min(100, saludFiscalScore));
+
+    // 2. Cruce RIE / SIRE
+    const totalDocs = purchases.length + sales.length;
+    const conciliados = purchases.filter(p => p.estado_sire && p.estado_sire !== 'Local').length + 
+                        sales.filter(s => s.estado_sire && s.estado_sire !== 'Local').length;
+    const cruceSirePct = totalDocs > 0 ? ((conciliados / totalDocs) * 100).toFixed(1) : '100.0';
+
+    // 3. Gastos Deducibles
+    const deduciblesCount = purchases.filter(p => (p.doc_num || '').length === 11).length;
+    const gastosDeduciblesPct = purchases.length > 0 ? Math.round((deduciblesCount / purchases.length) * 100) : 100;
+
+    // 4. Finanzas KPIs
+    const liquidezCorriente = totalCompras > 0 ? (totalVentas / totalCompras).toFixed(2) : (totalVentas > 0 ? '2.50' : '1.00');
+    const pruebaAcida = totalCompras > 0 ? ((totalVentas * 0.85) / totalCompras).toFixed(2) : (totalVentas > 0 ? '1.80' : '1.00');
+    const ebitdaMargin = totalVentas > 0 ? (((totalVentas - totalCompras) / totalVentas) * 100).toFixed(1) : '0.0';
+
+    // 5. Planillas KPIs
+    const colaboradoresCount = employees.length;
+    const gratiEstimadaTotal = employees.reduce((sum, e) => {
+        const sueldo = Number(e.sueldo || 2500);
+        const asig = e.asignacion_familiar ? 102.5 : 0;
+        return sum + sueldo + asig;
+    }, 0);
+
+    return {
+        workspaceId,
+        period,
+        companyName: workspace?.name || 'EMPRESA',
+        ruc,
+        metrics: {
+            tributario: {
+                saludFiscalScore,
+                saludFiscalEtiqueta: saludFiscalScore >= 80 ? 'Riesgo Bajo de Fiscalización' : (saludFiscalScore >= 50 ? 'Riesgo Medio' : 'Riesgo Alto'),
+                cruceSirePct: Number(cruceSirePct),
+                sinBancarizarSoles: sinBancarizarTotal.toFixed(2),
+                gastosDeduciblesPct,
+                totalVentasSoles: totalVentas.toFixed(2),
+                totalComprasSoles: totalCompras.toFixed(2),
+                igvEstimadoPagarSoles: igvEstimadoPagar.toFixed(2),
+                totalVentasCount: sales.length,
+                totalComprasCount: purchases.length
+            },
+            planillas: {
+                colaboradoresCount,
+                gratiEstimadaTotalSoles: gratiEstimadaTotal.toFixed(2),
+                ctsEstimadaSoles: (gratiEstimadaTotal / 2).toFixed(2)
+            },
+            finanzas: {
+                liquidezCorriente: Number(liquidezCorriente),
+                pruebaAcida: Number(pruebaAcida),
+                ebitdaMarginPct: Number(ebitdaMargin),
+                sunatLastDigit: lastDigitNum,
+                sunatDueDateDay
+            }
+        }
+    };
+}
+
 module.exports = {
-    runRiskAnalysis
+    runRiskAnalysis,
+    calculateWorkspaceKPIs
 };
+

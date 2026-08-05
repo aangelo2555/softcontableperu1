@@ -103,8 +103,8 @@ router.post('/register-student', authLimiter, async (req, res) => {
 // --- LOGIN ---
 router.post('/login', authLimiter, async (req, res) => {
     try {
-        const { email, password } = req.body;
-        console.log(`[AUTH] Intento de login: ${email}`);
+        const { email, password, mode } = req.body;
+        console.log(`[AUTH] Intento de login: ${email} (Modo: ${mode || 'profesional'})`);
 
         const user = await dbManager.getUserByEmail(email);
         if (!user) {
@@ -123,6 +123,23 @@ router.post('/login', authLimiter, async (req, res) => {
         let role = user.role || 'user';
         if (role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com') {
             role = 'admin';
+        }
+
+        // VALIDACIÓN DE COHERENCIA ENTRE MODO SOLICITADO Y ROL DE LA CUENTA
+        if (mode === 'profesional' && role === 'estudiante') {
+            console.warn(`[AUTH] Intento de ingresar a cuenta de Estudiante desde Modo Profesional: ${email}`);
+            return res.status(400).json({
+                success: false,
+                error: '🎓 Esta cuenta está registrada en Modo Estudiante. Activa la opción "Acceso Estudiante" en la pantalla de inicio para ingresar.'
+            });
+        }
+
+        if (mode === 'estudiante' && role !== 'estudiante') {
+            console.warn(`[AUTH] Intento de ingresar a cuenta Profesional desde Modo Estudiante: ${email}`);
+            return res.status(400).json({
+                success: false,
+                error: '💼 Esta cuenta es de Modo Profesional. Vuelve al modo "Profesional" para iniciar sesión.'
+            });
         }
 
         // Crear Token

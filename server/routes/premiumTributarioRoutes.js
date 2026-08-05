@@ -63,4 +63,35 @@ router.get('/runs', requirePremium('tributario'), async (req, res) => {
     }
 });
 
+/**
+ * GET /api/premium/tributario/kpis
+ * Obtiene los KPIs reales dinámicos para la empresa y periodo especificados.
+ */
+router.get('/kpis', requirePremium('tributario'), async (req, res) => {
+    try {
+        const workspaceId = req.query.workspaceId || req.headers['x-workspace-id'];
+        const period = req.query.period || '2026-08';
+        const userId = req.user?.id || 'CLIENTE_SISTEMA';
+
+        if (!workspaceId) {
+            return res.status(400).json({ success: false, error: 'Falta workspaceId.' });
+        }
+
+        const data = await premiumRiskService.calculateWorkspaceKPIs({
+            workspaceId,
+            period,
+            userId
+        });
+
+        res.json({
+            success: true,
+            kpis: data
+        });
+    } catch (error) {
+        console.error('[TRIBUTARIO KPIS ERROR]', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
+
