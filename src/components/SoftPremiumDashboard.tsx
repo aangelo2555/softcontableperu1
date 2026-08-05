@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { apiBridge } from '../services/apiBridge';
 import toast from 'react-hot-toast';
 import { 
   Sparkles, 
@@ -28,7 +27,18 @@ interface RiskFinding {
 }
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { currentWorkspace, user } = useStore();
+  const { currentCompany } = useStore();
+  const currentWorkspace = currentCompany;
+
+  const user = React.useMemo(() => {
+    const token = localStorage.getItem('softcontable_token');
+    if (!token) return null;
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch {
+      return null;
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState<'tributario' | 'planillas' | 'finanzas' | 'subscription'>('tributario');
   const [isPremiumActive, setIsPremiumActive] = useState<boolean>(true);
   const [premiumTiers, setPremiumTiers] = useState<string[]>(['full']);

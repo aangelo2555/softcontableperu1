@@ -346,6 +346,7 @@ export interface MovimientoData {
 }
 
 export interface CompanyData {
+  id?: string;
   name: string;
   ruc: string;
   regimenTributario: RegimenCode;
