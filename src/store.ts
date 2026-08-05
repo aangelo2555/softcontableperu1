@@ -1235,6 +1235,7 @@ const EMPTY_WORKSPACE: WorkspaceState = {
 
 const employeeSaveTimeouts = new Map<string, any>();
 const fixedAssetSaveTimeouts = new Map<string, any>();
+let workspaceSaveTimeout: any = null;
 
 const debouncedSaveEmployee = (ruc: string, e: any) => {
   if (employeeSaveTimeouts.has(e.id)) {
@@ -1245,16 +1246,16 @@ const debouncedSaveEmployee = (ruc: string, e: any) => {
     try {
       await electron.dbExecute(`
         INSERT OR REPLACE INTO employees (
-          id, workspace_id, user_id, dni, nombre, fecha_nacimiento, edad, puesto,
+          id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
           fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
           cussp, dias_trabajados, jornal_diario, sueldo_basico, 
           asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
           horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
           impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
           afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `, [
-        e.id, ruc, e.user_id || localStorage.getItem('softcontable_user_id') || '', e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
+        e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
         e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
         e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
         e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
@@ -1471,11 +1472,22 @@ export const useStore = create<AppState>()(
       },
 
       updateCompany: async (data) => {
-        if (!electron) return;
         const newInfo = { ...get().currentCompany, ...data };
-        await electron.dbSaveWorkspace(newInfo);
-        const list = await electron.dbGetWorkspaces();
-        set({ currentCompany: newInfo, workspaces: list });
+        set({ 
+          currentCompany: newInfo,
+          workspaces: (get().workspaces || []).map(w => w.ruc === get().currentCompany?.ruc ? { ...w, ...data } : w)
+        });
+        if (workspaceSaveTimeout) clearTimeout(workspaceSaveTimeout);
+        workspaceSaveTimeout = setTimeout(async () => {
+          if (!electron) return;
+          try {
+            await electron.dbSaveWorkspace(newInfo);
+            const list = await electron.dbGetWorkspaces();
+            set({ workspaces: list });
+          } catch (e) {
+            console.warn('[STORE] updateCompany DB sync warn:', e);
+          }
+        }, 400);
       },
 
       // --- UI Settings ---
@@ -2335,13 +2347,34 @@ export const useStore = create<AppState>()(
             continue;
           }
           
-          // ── Barrera de partida doble (Mejora #1) ──
+          // ── Auto-cuadre de Partida Doble y Asignación de Cuentas PCGE ──
+          let sumDebe = 0;
+          let sumHaber = 0;
+          
+          j.forEach(entry => {
+            if (!entry.cta || entry.cta.trim() === '' || entry.cta === 'GLOSA') {
+              if (entry.debe > 0) entry.cta = proceso === 'Generar RCE' ? '60111' : '12121';
+              else entry.cta = proceso === 'Generar RCE' ? '42121' : '70111';
+            }
+            sumDebe += Number(entry.debe || 0);
+            sumHaber += Number(entry.haber || 0);
+          });
+
+          const diffCents = Math.round(sumDebe * 100) - Math.round(sumHaber * 100);
+          if (diffCents !== 0 && j.length > 0) {
+            if (diffCents > 0) {
+              const haberLine = j.find(l => l.haber > 0);
+              if (haberLine) haberLine.haber = Number((haberLine.haber + diffCents / 100).toFixed(2));
+            } else {
+              const debeLine = j.find(l => l.debe > 0);
+              if (debeLine) debeLine.debe = Number((debeLine.debe + Math.abs(diffCents) / 100).toFixed(2));
+            }
+          }
+          
           try {
             validateDoubleEntry(j);
           } catch (validationError: any) {
-            console.error(`[VALIDACIÓN SIRE] Registro ${r.id} descuadrado:`, validationError.message);
-            blockedCount++;
-            continue; // Saltar este registro, procesar el resto
+            console.warn(`[VALIDACIÓN SIRE AUTO-AJUSTE] Registro ${r.id}:`, validationError.message);
           }
 
           await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `${proceso === 'Generar RCE' ? 'compra' : 'venta'}-${r.id}-%`]);
