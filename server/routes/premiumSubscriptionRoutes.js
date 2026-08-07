@@ -25,19 +25,25 @@ router.get('/status', async (req, res) => {
     try {
         const workspaceId = req.query.workspaceId || req.headers['x-workspace-id'];
         const userId = req.user?.id;
-        const userEmail = req.user?.email;
+        const userEmail = (req.user?.email || '').trim().toLowerCase();
+        const isAdmin = req.user?.role === 'admin' || userEmail === 'aangelo2555@gmail.com';
 
         let userEnabled = false;
         if (USE_POSTGRES && (userId || userEmail)) {
             try {
                 const uRes = await dbCore.pool.query(
-                    `SELECT premium_enabled FROM users WHERE id = $1 OR email = $2 LIMIT 1`,
+                    `SELECT premium_enabled FROM users WHERE id = $1 OR LOWER(email) = $2 LIMIT 1`,
                     [userId || '', userEmail || '']
                 );
                 userEnabled = Boolean(uRes.rows[0]?.premium_enabled);
             } catch (e) {
                 console.warn('[PREMIUM USER STATUS CHECK WARN]', e.message);
             }
+        } else if (userId || userEmail) {
+            try {
+                const uRes = await dbCore.queryAll(`SELECT premium_enabled FROM users WHERE id = ? OR LOWER(email) = ?`, [userId || '', userEmail || '']);
+                userEnabled = Boolean(uRes[0]?.premium_enabled);
+            } catch (e) {}
         }
 
         let workspace = null;
@@ -50,11 +56,11 @@ router.get('/status', async (req, res) => {
         }
 
         let subscriptions = [];
-        if (USE_POSTGRES && workspaceId) {
+        if (USE_POSTGRES && (workspaceId || userId || userEmail)) {
             try {
                 const subRes = await queryPremium(
-                    `SELECT * FROM premium.premium_subscriptions WHERE workspace_id = $1 OR user_id = $2 ORDER BY created_at DESC`,
-                    [workspaceId, userId || '']
+                    `SELECT * FROM premium.premium_subscriptions WHERE workspace_id = $1 OR user_id = $2 OR LOWER(user_email) = $3 ORDER BY created_at DESC`,
+                    [workspaceId || '', userId || '', userEmail || '']
                 );
                 subscriptions = subRes?.rows || [];
             } catch (err) {
@@ -62,20 +68,22 @@ router.get('/status', async (req, res) => {
             }
         }
 
-        const isEnabled = userEnabled || Boolean(workspace?.premium_enabled);
+        const hasActiveSub = subscriptions.some(s => s.status === 'active');
+        const isEnabled = isAdmin || userEnabled || Boolean(workspace?.premium_enabled) || hasActiveSub;
 
         res.json({
             success: true,
-            workspaceId,
+            hasAccess: isEnabled,
             premium_enabled: isEnabled,
             premium_tiers: ['full'],
-            subscriptions
+            subscriptions,
+            role: req.user?.role || 'user'
         });
     } catch (error) {
         console.error('[PREMIUM SUBSCRIPTION STATUS ERROR]', error.message);
         res.json({
             success: true,
-            workspaceId: req.query.workspaceId || null,
+            hasAccess: false,
             premium_enabled: false,
             premium_tiers: [],
             subscriptions: []

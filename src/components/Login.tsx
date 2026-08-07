@@ -406,6 +406,9 @@ export const Login: React.FC = () => {
                     }
 
                     localStorage.setItem('softcontable_token', res.token);
+                    if (res.user) {
+                        localStorage.setItem('softcontable_user', JSON.stringify(res.user));
+                    }
                     if (rememberMe) {
                         localStorage.setItem('softcontable_rem_email', formData.email);
                     } else {
@@ -425,6 +428,9 @@ export const Login: React.FC = () => {
                 if (res.success) {
                     if (isStudentModeActive && res.token) {
                         localStorage.setItem('softcontable_token', res.token);
+                        if (res.user) {
+                            localStorage.setItem('softcontable_user', JSON.stringify(res.user));
+                        }
                         toast.success('🎓 ¡Registro de estudiante exitoso! Iniciando sesión automáticamente...');
                         setTimeout(() => {
                             window.location.reload();

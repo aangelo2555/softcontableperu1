@@ -37,14 +37,35 @@ import {
 } from 'lucide-react';
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { currentCompany, setActiveTab, workspaces, switchWorkspace } = useStore();
+  const { currentCompany, setActiveTab, workspaces, switchWorkspace, employees } = useStore();
   const user = React.useMemo(() => {
     try {
+      // 1. Intentar desde softcontable_user en localStorage
       const stored = localStorage.getItem('softcontable_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch (e) {
-      return null;
-    }
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.name || parsed?.nombre || parsed?.email) return parsed;
+      }
+      // 2. Fallback: Parsear token JWT softcontable_token
+      const token = localStorage.getItem('softcontable_token');
+      if (token) {
+        const base64Url = token.split('.')[1];
+        if (base64Url) {
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+          const payload = JSON.parse(jsonPayload);
+          if (payload) {
+            return {
+              id: payload.id,
+              name: payload.name || payload.nombre || payload.email?.split('@')[0] || 'Usuario Logueado',
+              email: payload.email || '',
+              role: payload.role || 'user'
+            };
+          }
+        }
+      }
+    } catch (e) {}
+    return null;
   }, []);
 
   const isAdmin = user?.role === 'admin' || (user?.email || '').toLowerCase() === 'aangelo2555@gmail.com';
@@ -119,15 +140,17 @@ export const SoftPremiumDashboard: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('softcontable_token');
-      const res = await fetch('/api/premium/subscription/status', {
+      const workspaceId = currentCompany?.ruc || '';
+      const res = await fetch(`/api/premium/subscription/status?workspaceId=${workspaceId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
 
       if (data.success) {
-        const hasAccess = data.hasAccess || data.role === 'admin' || (user?.email || '').toLowerCase() === 'aangelo2555@gmail.com';
-        setIsPremiumActive(hasAccess);
-        setPremiumTiers(data.tiers || (hasAccess ? ['tributario', 'planillas', 'finanzas', 'full'] : []));
+        const userEmail = (user?.email || '').toLowerCase();
+        const hasAccess = data.hasAccess || data.premium_enabled || data.role === 'admin' || userEmail === 'aangelo2555@gmail.com';
+        setIsPremiumActive(Boolean(hasAccess));
+        setPremiumTiers(data.premium_tiers || (hasAccess ? ['tributario', 'planillas', 'finanzas', 'full'] : []));
 
         if (hasAccess && activeSubTab === 'subscription') {
           setActiveSubTab('tributario');
@@ -329,7 +352,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
           </div>
 
-          {isPremiumActive && (
+          {workspaces && workspaces.length > 0 && (
             <div className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left shrink-0">
               <label className="text-[9px] text-app-muted uppercase font-black tracking-wider block">MIS EMPRESAS</label>
               <select
@@ -339,7 +362,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                 }}
                 className="bg-transparent text-xs font-bold text-app-text outline-none cursor-pointer max-w-[140px] sm:max-w-[200px] truncate"
               >
-                {(workspaces || []).map((c: any) => (
+                {workspaces.map((c: any) => (
                   <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
                     {c.name && c.name.length > 20 ? c.name.substring(0, 18) + '...' : c.name} ({c.ruc})
                   </option>
@@ -348,14 +371,17 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
           )}
 
-          <div className={`hidden md:flex px-3.5 py-1.5 rounded-xl font-black text-xs items-center gap-2 border shrink-0 ${
-            isPremiumActive 
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm' 
-              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-          }`}>
+          <button 
+            onClick={() => setActiveSubTab('subscription')}
+            className={`hidden md:flex px-3.5 py-1.5 rounded-xl font-black text-xs items-center gap-2 border shrink-0 transition-all cursor-pointer ${
+              isPremiumActive 
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm' 
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+            }`}
+          >
             <CreditCard className="w-4 h-4" />
-            {isPremiumActive ? 'Groq RAG Activo' : 'Suscripción Inactiva'}
-          </div>
+            {isPremiumActive ? '✓ Suscripción Activa (Groq RAG 4.0)' : 'Suscripción Inactiva (Ver Planes)'}
+          </button>
         </div>
       </header>
 
@@ -764,149 +790,155 @@ export const SoftPremiumDashboard: React.FC = () => {
         )}
 
         {/* PILAR 2: PLANILLAS RAG */}
-        {activeSubTab === 'planillas' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-app-surface border border-app-border rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    PILAR 2
-                  </span>
-                  <h2 className="text-lg sm:text-xl font-black text-app-text tracking-tight flex items-center gap-2">
-                    <Users className="w-5 h-5 text-emerald-500" /> Planillas RAG &amp; Gestión Laboral IA
-                  </h2>
-                </div>
-                <p className="text-xs text-app-muted font-medium max-w-2xl">
-                  Sincronización fluida de nómina SaaS, cálculo proyectado de Gratificaciones, CTS, Asignación Familiar y régimen PLAME peruano 2026.
-                </p>
-              </div>
+        {activeSubTab === 'planillas' && (() => {
+          const realColaboradores = (kpis.colaboradoresCount > 0) ? kpis.colaboradoresCount : (employees ? employees.length : 0);
+          const realGrati = (kpis.gratiEstimadaTotal > 0) ? kpis.gratiEstimadaTotal : (employees ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0) : 0);
+          const realCts = (kpis.ctsEstimadaTotal > 0) ? kpis.ctsEstimadaTotal : (realGrati / 2);
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto shrink-0">
-                <div className="bg-app-bg border border-app-border p-3 rounded-xl">
-                  <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">Trabajadores</span>
-                  <span className="text-sm font-black text-emerald-500">{kpis.colaboradoresCount} Registrados</span>
+          return (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-app-surface border border-app-border rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      PILAR 2
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black text-app-text tracking-tight flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-500" /> Planillas RAG &amp; Gestión Laboral IA
+                    </h2>
+                  </div>
+                  <p className="text-xs text-app-muted font-medium max-w-2xl">
+                    Sincronización fluida de nómina SaaS, cálculo proyectado de Gratificaciones, CTS, Asignación Familiar y régimen PLAME peruano 2026.
+                  </p>
                 </div>
-                <div className="bg-app-bg border border-app-border p-3 rounded-xl">
-                  <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">Grati Est.</span>
-                  <span className="text-sm font-black text-blue-500">S/ {kpis.gratiEstimadaTotal.toFixed(2)}</span>
-                </div>
-                <div className="bg-app-bg border border-app-border p-3 rounded-xl">
-                  <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">CTS Est.</span>
-                  <span className="text-sm font-black text-purple-500">S/ {kpis.ctsEstimadaTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Módulo Planillas */}
-            <div className="bg-app-surface border border-app-border rounded-2xl shadow-sm overflow-hidden">
-              <div 
-                onClick={() => toggleModule('pla_m1')}
-                className="p-5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-transparent via-transparent to-emerald-500/5 hover:bg-app-hover transition-colors"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/20">
-                    <Users className="w-5 h-5" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto shrink-0">
+                  <div className="bg-app-bg border border-app-border p-3 rounded-xl">
+                    <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">Trabajadores</span>
+                    <span className="text-sm font-black text-emerald-500">{realColaboradores} Registrados</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-app-text">Módulo 2.1</span>
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Sincronizado SaaS</span>
-                    </div>
-                    <h3 className="text-sm font-black text-app-text">Proyección de Gratificaciones &amp; CTS (Ley 27735)</h3>
+                  <div className="bg-app-bg border border-app-border p-3 rounded-xl">
+                    <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">Grati Est.</span>
+                    <span className="text-sm font-black text-blue-500">S/ {realGrati.toFixed(2)}</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-blue-500 hidden sm:inline">{expandedModule === 'pla_m1' ? 'Cerrar' : 'Ver Proyección'}</span>
-                  {expandedModule === 'pla_m1' ? <ChevronUp className="w-5 h-5 text-blue-500" /> : <ChevronDown className="w-5 h-5 text-app-muted" />}
+                  <div className="bg-app-bg border border-app-border p-3 rounded-xl">
+                    <span className="text-[9px] font-black text-app-text uppercase tracking-wider block">CTS Est.</span>
+                    <span className="text-sm font-black text-purple-500">S/ {realCts.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
-              {expandedModule === 'pla_m1' && (
-                <div className="border-t border-app-border bg-app-bg/50 p-5 space-y-4 animate-scale-up">
-                  <div className="flex bg-app-surface p-1 rounded-xl border border-app-border gap-1">
-                    <button
-                      onClick={() => setModuleSubTab('pla_m1', 'DIAGNOSTICO')}
-                      className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        getModuleSubTab('pla_m1') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
-                      }`}
-                    >
-                      <Activity className="w-4 h-4" /> Diagnóstico Nómina
-                    </button>
-                    <button
-                      onClick={() => setModuleSubTab('pla_m1', 'NORMATIVA')}
-                      className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        getModuleSubTab('pla_m1') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
-                      }`}
-                    >
-                      <Scale className="w-4 h-4" /> Normativa MINTRA
-                    </button>
-                    <button
-                      onClick={() => setModuleSubTab('pla_m1', 'GROQ_AI')}
-                      className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        getModuleSubTab('pla_m1') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
-                      }`}
-                    >
-                      <MessageSquare className="w-4 h-4" /> GROQ + IA en Vivo
-                    </button>
+              {/* Módulo Planillas */}
+              <div className="bg-app-surface border border-app-border rounded-2xl shadow-sm overflow-hidden">
+                <div 
+                  onClick={() => toggleModule('pla_m1')}
+                  className="p-5 flex items-center justify-between cursor-pointer bg-gradient-to-r from-transparent via-transparent to-emerald-500/5 hover:bg-app-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/20">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase text-app-text">Módulo 2.1</span>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Sincronizado SaaS</span>
+                      </div>
+                      <h3 className="text-sm font-black text-app-text">Proyección de Gratificaciones &amp; CTS (Ley 27735)</h3>
+                    </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-blue-500 hidden sm:inline">{expandedModule === 'pla_m1' ? 'Cerrar' : 'Ver Proyección'}</span>
+                    {expandedModule === 'pla_m1' ? <ChevronUp className="w-5 h-5 text-blue-500" /> : <ChevronDown className="w-5 h-5 text-app-muted" />}
+                  </div>
+                </div>
 
-                  {getModuleSubTab('pla_m1') === 'DIAGNOSTICO' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
-                      <div className="bg-app-surface p-4 rounded-xl border border-app-border">
-                        <span className="text-[10px] font-black uppercase text-app-muted">Colaboradores Activos</span>
-                        <p className="text-base font-black text-emerald-500">{kpis.colaboradoresCount}</p>
-                      </div>
-                      <div className="bg-app-surface p-4 rounded-xl border border-app-border">
-                        <span className="text-[10px] font-black uppercase text-app-muted">Monto Proyectado Gratificación</span>
-                        <p className="text-base font-black text-blue-500">S/ {kpis.gratiEstimadaTotal.toFixed(2)}</p>
-                      </div>
-                      <div className="bg-app-surface p-4 rounded-xl border border-app-border">
-                        <span className="text-[10px] font-black uppercase text-app-muted">Monto Proyectado CTS</span>
-                        <p className="text-base font-black text-purple-500">S/ {kpis.ctsEstimadaTotal.toFixed(2)}</p>
-                      </div>
+                {expandedModule === 'pla_m1' && (
+                  <div className="border-t border-app-border bg-app-bg/50 p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-app-surface p-1 rounded-xl border border-app-border gap-1">
+                      <button
+                        onClick={() => setModuleSubTab('pla_m1', 'DIAGNOSTICO')}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <Activity className="w-4 h-4" /> Diagnóstico Nómina
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('pla_m1', 'NORMATIVA')}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <Scale className="w-4 h-4" /> Normativa MINTRA
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('pla_m1', 'GROQ_AI')}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <MessageSquare className="w-4 h-4" /> GROQ + IA en Vivo
+                      </button>
                     </div>
-                  )}
 
-                  {getModuleSubTab('pla_m1') === 'NORMATIVA' && (
-                    <div className="bg-app-surface p-4 rounded-xl border border-app-border space-y-2 animate-fade-in">
-                      <h4 className="text-xs font-black text-app-text flex items-center gap-2">
-                        <Scale className="w-4 h-4 text-emerald-500" /> Ley N° 27735 (Gratificaciones) &amp; D.S. 001-97-TR (CTS)
-                      </h4>
-                      <p className="text-xs text-app-text leading-relaxed">
-                        Cálculo computable integrado con remuneración básica, asignación familiar (S/ 113.00 en 2026) y bonificación extraordinaria del 9% (EsSalud).
-                      </p>
-                    </div>
-                  )}
-
-                  {getModuleSubTab('pla_m1') === 'GROQ_AI' && (
-                    <div className="space-y-3 animate-fade-in">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Consultar sobre licencias, gratificaciones o CTS..."
-                          value={ragQueries['pla_m1'] || ''}
-                          onChange={(e) => setRagQueries({ ...ragQueries, pla_m1: e.target.value })}
-                          className="flex-1 bg-app-surface border border-app-border px-3.5 py-2.5 rounded-xl text-xs font-bold outline-none"
-                        />
-                        <button
-                          onClick={() => handleAskRAG('planillas', 'pla_m1')}
-                          className="px-4 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          Consultar
-                        </button>
-                      </div>
-                      {ragAnswers['pla_m1'] && (
-                        <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-xs text-app-text whitespace-pre-line">
-                          {ragAnswers['pla_m1']}
+                    {getModuleSubTab('pla_m1') === 'DIAGNOSTICO' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
+                        <div className="bg-app-surface p-4 rounded-xl border border-app-border">
+                          <span className="text-[10px] font-black uppercase text-app-muted">Colaboradores Activos</span>
+                          <p className="text-base font-black text-emerald-500">{realColaboradores}</p>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                        <div className="bg-app-surface p-4 rounded-xl border border-app-border">
+                          <span className="text-[10px] font-black uppercase text-app-muted">Monto Proyectado Gratificación</span>
+                          <p className="text-base font-black text-blue-500">S/ {realGrati.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-app-surface p-4 rounded-xl border border-app-border">
+                          <span className="text-[10px] font-black uppercase text-app-muted">Monto Proyectado CTS</span>
+                          <p className="text-base font-black text-purple-500">S/ {realCts.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('pla_m1') === 'NORMATIVA' && (
+                      <div className="bg-app-surface p-4 rounded-xl border border-app-border space-y-2 animate-fade-in">
+                        <h4 className="text-xs font-black text-app-text flex items-center gap-2">
+                          <Scale className="w-4 h-4 text-emerald-500" /> Ley N° 27735 (Gratificaciones) &amp; D.S. 001-97-TR (CTS)
+                        </h4>
+                        <p className="text-xs text-app-text leading-relaxed">
+                          Cálculo computable integrado con remuneración básica, asignación familiar (S/ 113.00 en 2026) y bonificación extraordinaria del 9% (EsSalud).
+                        </p>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('pla_m1') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Consultar sobre licencias, gratificaciones o CTS..."
+                            value={ragQueries['pla_m1'] || ''}
+                            onChange={(e) => setRagQueries({ ...ragQueries, pla_m1: e.target.value })}
+                            className="flex-1 bg-app-surface border border-app-border px-3.5 py-2.5 rounded-xl text-xs font-bold outline-none"
+                          />
+                          <button
+                            onClick={() => handleAskRAG('planillas', 'pla_m1')}
+                            className="px-4 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            Consultar
+                          </button>
+                        </div>
+                        {ragAnswers['pla_m1'] && (
+                          <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-xs text-app-text whitespace-pre-line">
+                            {ragAnswers['pla_m1']}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* PILAR 3: FINANZAS RAG */}
         {activeSubTab === 'finanzas' && (
