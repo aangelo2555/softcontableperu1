@@ -1068,17 +1068,6 @@ export const AdminView: React.FC = () => {
               <Sparkles size={12} />
               Suscripciones SoftPremium IA
             </button>
-            <button
-              onClick={() => setActiveSubTab('PREMIUM_RAG')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                activeSubTab === 'PREMIUM_RAG' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-app-muted hover:text-app-text'
-              }`}
-            >
-              <Sparkles size={12} />
-              RAG SoftPremium
-            </button>
           </div>
         }
       />
@@ -1486,8 +1475,6 @@ export const AdminView: React.FC = () => {
             </div>
           </div>
 
-        ) : activeSubTab === 'PREMIUM_RAG' ? (
-          <SoftPremiumRAGManager />
         ) : (
           <AIKnowledgeManager />
         )}

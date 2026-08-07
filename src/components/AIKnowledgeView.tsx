@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Database, Search, Plus, Trash2, Edit2, Play, CheckCircle, AlertTriangle, HelpCircle, RefreshCw, X, Save } from 'lucide-react';
+import { Database, Search, Plus, Trash2, Edit2, Play, CheckCircle, AlertTriangle, HelpCircle, RefreshCw, X, Save, Sparkles, BrainCircuit } from 'lucide-react';
 import { webApiBridge } from '../services/apiBridge';
 import PageHeader from './ui/PageHeader';
 import FormField from './ui/FormField';
@@ -20,7 +20,313 @@ interface AIKnowledgeItem {
   tags?: string;
 }
 
+// --- Subcomponente de Gestión RAG SoftPremium (Groq + IA) ---
+const SoftPremiumRAGManager: React.FC = () => {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+
+  const [pillar, setPillar] = useState<'tributario' | 'planillas' | 'finanzas'>('tributario');
+  const [moduleKey, setModuleKey] = useState<string>('all');
+  const [title, setTitle] = useState<string>('');
+  const [lawArticlesStr, setLawArticlesStr] = useState<string>('');
+  const [calculationMethodology, setCalculationMethodology] = useState<string>('');
+  const [customPromptRules, setCustomPromptRules] = useState<string>('');
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/premium/admin/rag-knowledge', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('softcontable_token')}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setItems(data.items || []);
+      }
+    } catch (e: any) {
+      toast.error('Error al cargar reglas RAG SoftPremium');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleOpenModal = (item?: any) => {
+    if (item) {
+      setSelectedItem(item);
+      setPillar(item.pillar || 'tributario');
+      setModuleKey(item.module_key || 'all');
+      setTitle(item.title || '');
+      let articles = item.law_articles;
+      if (typeof articles === 'string') {
+        try { articles = JSON.parse(articles); } catch (e) {}
+      }
+      setLawArticlesStr(Array.isArray(articles) ? articles.join('\n') : (item.law_articles || ''));
+      setCalculationMethodology(item.calculation_methodology || '');
+      setCustomPromptRules(item.custom_prompt_rules || '');
+    } else {
+      setSelectedItem(null);
+      setPillar('tributario');
+      setModuleKey('all');
+      setTitle('');
+      setLawArticlesStr('');
+      setCalculationMethodology('');
+      setCustomPromptRules('');
+    }
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error('Ingresa un título descriptivo para la norma RAG.');
+      return;
+    }
+
+    const articlesArray = lawArticlesStr
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    try {
+      const res = await fetch('/api/premium/admin/rag-knowledge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('softcontable_token')}`
+        },
+        body: JSON.stringify({
+          id: selectedItem ? selectedItem.id : undefined,
+          pillar,
+          moduleKey,
+          title,
+          lawArticles: articlesArray,
+          calculationMethodology,
+          customPromptRules
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(selectedItem ? 'Regla RAG actualizada.' : 'Regla RAG guardada.');
+        setShowModal(false);
+        loadData();
+      } else {
+        toast.error(data.error || 'Error guardando regla RAG.');
+      }
+    } catch (err: any) {
+      toast.error('Error de conexión: ' + err.message);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Seguro de eliminar esta regla RAG normativo?')) return;
+    try {
+      const res = await fetch(`/api/premium/admin/rag-knowledge/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('softcontable_token')}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Regla RAG eliminada.');
+        loadData();
+      } else {
+        toast.error(data.error || 'Error al eliminar.');
+      }
+    } catch (e: any) {
+      toast.error('Error al eliminar: ' + e.message);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4 p-4 sm:p-6 bg-app-surface/40 rounded-2xl border border-app-border">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h3 className="text-base font-black text-app-text flex items-center gap-2">
+            <Database className="w-5 h-5 text-blue-500" /> Base de Conocimiento RAG SoftPremium (Groq + IA)
+          </h3>
+          <p className="text-xs text-app-muted font-medium">
+            Agrega o edita artículos de ley, jurisprudencia y metodologías de cálculo para alimentar las inferencias de Groq AI en los 3 Pilares (Tributario, Planillas y Finanzas).
+          </p>
+        </div>
+        <button
+          onClick={() => handleOpenModal()}
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer transition-all"
+        >
+          <Plus size={14} /> Nueva Regla Normativa RAG
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="p-8 text-center text-xs text-app-muted font-bold">Cargando base de conocimiento RAG...</div>
+      ) : items.length === 0 ? (
+        <div className="p-8 bg-app-bg border border-app-border rounded-xl text-center space-y-2">
+          <p className="text-xs text-app-muted font-bold">No hay reglas RAG personalizadas ingresadas en la base de datos.</p>
+          <p className="text-[11px] text-app-muted">SoftPremium utilizará automáticamente la base de conocimiento normativa estándar del sistema.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {items.map((item) => {
+            let articles = item.law_articles;
+            if (typeof articles === 'string') {
+              try { articles = JSON.parse(articles); } catch (e) {}
+            }
+            return (
+              <div key={item.id} className="bg-app-bg border border-app-border rounded-xl p-4 space-y-3 shadow-sm flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                      Pilar: {item.pillar} | Módulo: {item.module_key}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleOpenModal(item)} className="p-1 text-app-muted hover:text-blue-500 hover:bg-app-hover rounded">
+                        <Edit2 size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1 text-app-muted hover:text-rose-500 hover:bg-rose-500/10 rounded">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <h4 className="text-xs font-black text-app-text">{item.title}</h4>
+                  {Array.isArray(articles) && articles.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold text-app-muted uppercase">Leyes &amp; Artículos Base:</div>
+                      <ul className="text-[11px] text-app-text space-y-0.5 pl-3 list-disc">
+                        {articles.map((art: string, i: number) => (
+                          <li key={i}>{art}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {item.calculation_methodology && (
+                    <div className="text-[11px] text-app-muted font-medium bg-app-surface p-2 rounded border border-app-border">
+                      <strong>Metodología:</strong> {item.calculation_methodology}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[9px] text-app-muted text-right font-mono">
+                  Actualizado: {new Date(item.updated_at || item.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-app-surface border border-app-border max-w-xl w-full rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-app-border pb-3">
+              <h3 className="text-sm font-black text-app-text flex items-center gap-2">
+                <Database size={14} className="text-blue-500" />
+                {selectedItem ? 'Editar Regla RAG SoftPremium' : 'Nueva Regla RAG SoftPremium'}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="p-1 text-app-muted hover:text-app-text rounded-lg">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Pilar Contable</label>
+                  <select
+                    value={pillar}
+                    onChange={(e: any) => setPillar(e.target.value)}
+                    className="w-full bg-app-bg border border-app-border rounded-xl p-2 text-xs font-bold text-app-text outline-none"
+                  >
+                    <option value="tributario">1. Tributación RAG</option>
+                    <option value="planillas">2. Planillas RAG</option>
+                    <option value="finanzas">3. Finanzas RAG</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Módulo Específico</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. ratio_compras_ventas o 'all'"
+                    value={moduleKey}
+                    onChange={(e) => setModuleKey(e.target.value)}
+                    className="w-full bg-app-bg border border-app-border rounded-xl p-2 text-xs font-bold text-app-text outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Título de la Norma o Regla</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Criterio de Fehaciencia de Gastos en Servicios Digitales 2026"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-app-bg border border-app-border rounded-xl p-2.5 text-xs font-bold text-app-text outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Artículos de Ley y RTF (Un artículo por línea)</label>
+                <textarea
+                  rows={4}
+                  placeholder="Ej:&#10;TUO Ley del IGV (D.S. 055-99-EF, Art. 18) — Requisitos del Crédito Fiscal.&#10;RTF N° 01245-1-2021 — Sustento de fehaciencia."
+                  value={lawArticlesStr}
+                  onChange={(e) => setLawArticlesStr(e.target.value)}
+                  className="w-full bg-app-bg border border-app-border rounded-xl p-2.5 text-xs font-medium text-app-text outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Metodología de Cálculo / Algoritmo</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Cobertura = (Ventas - Compras) / Ventas x 100"
+                  value={calculationMethodology}
+                  onChange={(e) => setCalculationMethodology(e.target.value)}
+                  className="w-full bg-app-bg border border-app-border rounded-xl p-2 text-xs font-bold text-app-text outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-app-muted mb-1 block">Reglas Adicionales de Inferencia para Groq AI</label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej. Recomendar siempre verificar el RUC en el portal de SUNAT antes de proceder con la deducción."
+                  value={customPromptRules}
+                  onChange={(e) => setCustomPromptRules(e.target.value)}
+                  className="w-full bg-app-bg border border-app-border rounded-xl p-2 text-xs font-medium text-app-text outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-app-bg border border-app-border text-app-text rounded-xl text-xs font-bold hover:bg-app-hover"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md"
+                >
+                  {selectedItem ? 'Guardar Cambios' : 'Crear Regla RAG'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AIKnowledgeView: React.FC = () => {
+  const [ragSubTab, setRagSubTab] = useState<'ASIENTOS_RAG' | 'SOFTPREMIUM_RAG'>('ASIENTOS_RAG');
   const [cases, setCases] = useState<AIKnowledgeItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -221,6 +527,37 @@ export const AIKnowledgeView: React.FC = () => {
         }
       />
 
+      {/* Selector de Apartados RAG */}
+      <div className="bg-app-surface border-b border-app-border px-6 py-2.5 flex items-center justify-start gap-2 overflow-x-auto no-scrollbar shrink-0">
+        <button
+          onClick={() => setRagSubTab('ASIENTOS_RAG')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            ragSubTab === 'ASIENTOS_RAG'
+              ? 'bg-blue-600 text-white shadow-md font-extrabold'
+              : 'text-app-muted hover:text-app-text hover:bg-app-hover'
+          }`}
+        >
+          <BrainCircuit className="w-4 h-4" /> 1. Asientos Contables RAG (SaaS)
+        </button>
+
+        <button
+          onClick={() => setRagSubTab('SOFTPREMIUM_RAG')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            ragSubTab === 'SOFTPREMIUM_RAG'
+              ? 'bg-blue-600 text-white shadow-md font-extrabold'
+              : 'text-app-muted hover:text-app-text hover:bg-app-hover'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" /> 2. RAG SoftPremium Normativo (Groq + IA)
+        </button>
+      </div>
+
+      {ragSubTab === 'SOFTPREMIUM_RAG' ? (
+        <div className="p-6">
+          <SoftPremiumRAGManager />
+        </div>
+      ) : (
+        <>
       {/* Filters Bar */}
       <div className="bg-app-surface px-6 py-4 border-b border-app-border flex flex-col md:flex-row gap-4 items-center justify-between">
         <form onSubmit={handleSearchSubmit} className="flex-1 w-full flex gap-2">
@@ -683,6 +1020,8 @@ export const AIKnowledgeView: React.FC = () => {
 
           </div>
         </Modal>
+      )}
+      </>
       )}
     </div>
   );
