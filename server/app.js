@@ -203,11 +203,13 @@ const premiumSubscriptionRoutes = require('./routes/premiumSubscriptionRoutes');
 const premiumTributarioRoutes = require('./routes/premiumTributarioRoutes');
 const premiumPlanillasRoutes = require('./routes/premiumPlanillasRoutes');
 const premiumFinanzasRoutes = require('./routes/premiumFinanzasRoutes');
+const premiumAdminRoutes = require('./routes/premiumAdminRoutes');
 
 app.use('/api/premium/subscription', premiumSubscriptionRoutes);
 app.use('/api/premium/tributario', premiumAiLimiter, premiumTributarioRoutes);
 app.use('/api/premium/planillas', premiumAiLimiter, premiumPlanillasRoutes);
 app.use('/api/premium/finanzas', premiumAiLimiter, premiumFinanzasRoutes);
+app.use('/api/premium/admin', premiumAdminRoutes);
 
 // --- API Endpoints: Database ---
 

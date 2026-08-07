@@ -71,7 +71,7 @@ export const SoftPremiumDashboard: React.FC = () => {
   // Módulo Expandido Inline (Accordion Responsivo)
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
-  // Estado del Co-Pilot Chat Interactivo Groq RAG por módulo
+  // Estado del GROQ + IA Chat Interactivo Groq RAG por módulo
   const [ragQueries, setRagQueries] = useState<Record<string, string>>({});
   const [ragAnswers, setRagAnswers] = useState<Record<string, string>>({});
   const [ragLoading, setRagLoading] = useState<Record<string, boolean>>({});
@@ -822,7 +822,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" /> Módulos de Auditoría Tributaria RAG &amp; Groq AI
                   </h2>
                   <p className="text-[11px] sm:text-xs text-app-muted font-medium leading-relaxed">
-                    Presiona cualquier módulo para expandir de forma fluida el análisis de Contabilidad 4.0, sustento normativo RAG y Co-Pilot interactivo.
+                    Presiona cualquier módulo para expandir de forma fluida el análisis de Contabilidad 4.0, sustento normativo RAG y GROQ + IA interactivo.
                   </p>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -966,10 +966,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                             </ul>
                           </div>
 
-                          {/* 3. Co-Pilot Conversacional en Vivo con Groq AI */}
+                          {/* 3. GROQ + IA Conversacional en Vivo con Groq AI */}
                           <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
                             <h4 className="text-xs font-black text-app-text flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq RAG en Vivo ("Pregúntale a la IA")
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> GROQ + IA Groq RAG en Vivo ("Pregúntale a la IA")
                             </h4>
                             <p className="text-[11px] text-app-muted">
                               Haz una pregunta específica sobre este módulo y la IA responderá cruzando la normativa peruana con las cifras de tu empresa.
@@ -1284,7 +1284,7 @@ export const SoftPremiumDashboard: React.FC = () => {
 
                           <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
                             <h4 className="text-xs font-black text-app-text flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq Laboral en Vivo
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> GROQ + IA Groq Laboral en Vivo
                             </h4>
                             <p className="text-[11px] text-app-muted">
                               Haz una consulta sobre licencias, gratificaciones o contratos de tu nómina.
@@ -1571,7 +1571,7 @@ export const SoftPremiumDashboard: React.FC = () => {
 
                           <div className="bg-app-bg border border-blue-500/30 p-4 rounded-xl space-y-3">
                             <h4 className="text-xs font-black text-app-text flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Co-Pilot Groq Financiero en Vivo
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> GROQ + IA Groq Financiero en Vivo
                             </h4>
                             <p className="text-[11px] text-app-muted">
                               Haz una consulta financiera o pide una recomendación de liquidez.

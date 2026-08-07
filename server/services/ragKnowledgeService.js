@@ -124,10 +124,47 @@ const NORMATIVA_KNOWLEDGE_BASE = {
   }
 };
 
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const dbManager = USE_POSTGRES ? require('../databasePostgres') : require('../databaseServer');
+
 /**
- * Recupera el contexto normativo RAG para un pilar y módulo específico.
+ * Recupera el contexto normativo RAG para un pilar y módulo específico,
+ * primero desde la base de datos de administración y luego desde el diccionario estático.
  */
-function getNormativeContext(pillar, moduleKey) {
+async function getNormativeContext(pillar, moduleKey) {
+  try {
+    let rows = [];
+    if (USE_POSTGRES) {
+      const res = await dbManager.pool.query(
+        `SELECT * FROM premium_rag_knowledge WHERE pillar = $1 AND (module_key = $2 OR module_key = 'all') ORDER BY updated_at DESC`,
+        [pillar, moduleKey]
+      );
+      rows = res.rows || [];
+    } else if (dbManager.rawDb && dbManager.rawDb.prepare) {
+      rows = dbManager.rawDb.prepare(
+        `SELECT * FROM premium_rag_knowledge WHERE pillar = ? AND (module_key = ? OR module_key = 'all') ORDER BY updated_at DESC`
+      ).all(pillar, moduleKey);
+    }
+
+    if (rows && rows.length > 0) {
+      const dbItem = rows[0];
+      let lawArticles = [];
+      try {
+        lawArticles = typeof dbItem.law_articles === 'string' ? JSON.parse(dbItem.law_articles) : dbItem.law_articles;
+      } catch (e) {
+        lawArticles = [dbItem.law_articles];
+      }
+      return {
+        titulo: dbItem.title || 'Normativa RAG Personalizada',
+        articulos: Array.isArray(lawArticles) ? lawArticles : [dbItem.law_articles],
+        metodologia: dbItem.calculation_methodology || 'Cálculo algorítmico normativo.',
+        customPromptRules: dbItem.custom_prompt_rules || ''
+      };
+    }
+  } catch (e) {
+    console.warn('[RAG KNOWLEDGE DB WARN]', e.message);
+  }
+
   if (NORMATIVA_KNOWLEDGE_BASE[pillar] && NORMATIVA_KNOWLEDGE_BASE[pillar][moduleKey]) {
     return NORMATIVA_KNOWLEDGE_BASE[pillar][moduleKey];
   }
@@ -142,7 +179,7 @@ function getNormativeContext(pillar, moduleKey) {
  * Responde una consulta interactiva del usuario utilizando Groq AI + RAG Context.
  */
 async function processRAGQuery({ pillar, moduleKey, query, workspaceData }) {
-  const normativity = getNormativeContext(pillar, moduleKey);
+  const normativity = await getNormativeContext(pillar, moduleKey);
 
   const prompt = `Actúa como el Auditor Contable-Tributario y Laboral de nivel Senior en Perú, especialista en Contabilidad 4.0.
 Responde de forma concisa, profesional y estructurada (máximo 4 párrafos en Markdown) a la consulta del usuario sobre la empresa "${workspaceData?.companyName || 'EMPRESA'}" (RUC: ${workspaceData?.ruc || 'N/A'}).
@@ -150,8 +187,9 @@ Responde de forma concisa, profesional y estructurada (máximo 4 párrafos en Ma
 [CONTEXTO NORMATIVO RAG APORTADO]:
 - Módulo / Tema: ${normativity.titulo}
 - Leyes y Artículos Base:
-${normativity.articulos.map(a => `  • ${a}`).join('\n')}
+${(normativity.articulos || []).map(a => `  • ${a}`).join('\n')}
 - Metodología de Cálculo: ${normativity.metodologia}
+${normativity.customPromptRules ? `- Reglas Adicionales Admin: ${normativity.customPromptRules}` : ''}
 
 [DATOS REALES DEL WORKSPACE EN SOFTCONTABLE SAAS]:
 - Ventas Totales: S/ ${workspaceData?.totalVentas || '0.00'}
@@ -170,7 +208,7 @@ Proporciona una respuesta precisa citando la norma peruana correspondiente y dan
     return typeof aiResponse === 'string' ? aiResponse : (aiResponse.text || 'Sin respuesta');
   } catch (err) {
     console.error('[RAG SERVICE ERROR]', err.message);
-    return `De acuerdo a la normativa peruana (${normativity.articulos[0]}), se recomienda revisar el registro sustentatorio de las operaciones para evitar observaciones en fiscalizaciones.`;
+    return `De acuerdo a la normativa peruana (${normativity.articulos ? normativity.articulos[0] : 'Normativa SUNAT/MINTRA'}), se recomienda revisar el registro sustentatorio de las operaciones para evitar observaciones en fiscalizaciones.`;
   }
 }
 

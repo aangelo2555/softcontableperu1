@@ -532,7 +532,52 @@ Por favor, genera el asiento contable en base a la premisa anterior, respetando 
     }
 }
 
+/**
+ * Genera una respuesta de texto libre usando Groq AI LLaMA-3.3.
+ */
+async function generateResponse(prompt, options = {}) {
+    const { key, url } = getGroqApiConfig();
+    if (!key) {
+        throw new Error('GROQ_API_KEY no está configurada.');
+    }
+
+    const systemPrompt = options.systemPrompt || 'Eres un asistente experto contable, tributario y laboral en Perú para el sistema SOFTCONTABLE.';
+    const model = options.model || 'llama-3.3-70b-versatile';
+
+    try {
+        const response = await axios.post(
+            url,
+            {
+                model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: options.temperature ?? 0.3,
+                max_tokens: options.max_tokens ?? 1500
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 30000
+            }
+        );
+
+        const content = response.data?.choices?.[0]?.message?.content;
+        if (!content) {
+            throw new Error('La respuesta de Groq AI no contiene texto.');
+        }
+        return content;
+    } catch (error) {
+        console.error('[GROQ AI GENERATE RESPONSE ERROR]', error.response?.data || error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     generateAsiento,
-    retrieveSimilarCases
+    retrieveSimilarCases,
+    generateResponse
 };

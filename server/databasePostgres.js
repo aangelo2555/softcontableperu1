@@ -1711,6 +1711,23 @@ async function ensureSchemaConstraints() {
                 `
             },
             {
+                name: 'premium_rag_knowledge',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS premium_rag_knowledge (
+                        id TEXT PRIMARY KEY,
+                        pillar TEXT NOT NULL,
+                        module_key TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        law_articles TEXT,
+                        calculation_methodology TEXT,
+                        custom_prompt_rules TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_premium_rag_pillar ON premium_rag_knowledge(pillar);
+                `
+            },
+            {
                 name: 'inventory_movements',
                 schema: `
                     CREATE TABLE IF NOT EXISTS inventory_movements (
