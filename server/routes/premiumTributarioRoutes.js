@@ -69,18 +69,17 @@ router.get('/runs', requirePremium('tributario'), async (req, res) => {
  */
 router.get('/kpis', requirePremium('tributario'), async (req, res) => {
     try {
-        const workspaceId = req.query.workspaceId || req.headers['x-workspace-id'];
-        const period = req.query.period || '2026-08';
-        const userId = req.user?.id || 'CLIENTE_SISTEMA';
+        const workspaceId = req.query.workspaceId || req.query.ruc || req.headers['x-workspace-id'];
+        const period = req.query.period || '%';
 
         if (!workspaceId) {
-            return res.status(400).json({ success: false, error: 'Falta workspaceId.' });
+            return res.status(400).json({ success: false, error: 'Falta workspaceId o ruc.' });
         }
 
         const data = await premiumRiskService.calculateWorkspaceKPIs({
             workspaceId,
             period,
-            userId
+            userId: null
         });
 
         res.json({

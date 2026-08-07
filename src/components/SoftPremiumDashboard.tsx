@@ -165,12 +165,40 @@ export const SoftPremiumDashboard: React.FC = () => {
     if (!currentCompany?.ruc) return;
     try {
       const token = localStorage.getItem('softcontable_token');
-      const res = await fetch(`/api/premium/tributario/kpis?ruc=${currentCompany.ruc}`, {
+      const res = await fetch(`/api/premium/tributario/kpis?workspaceId=${currentCompany.ruc}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (data.success && data.kpis) {
-        setKpis(data.kpis);
+        const raw = data.kpis;
+        const trib = raw.metrics?.tributario || raw;
+        const pla = raw.metrics?.planillas || raw;
+        const fin = raw.metrics?.finanzas || raw;
+
+        const totalVentas = parseFloat(trib.totalVentasSoles || trib.totalVentas || '0');
+        const totalCompras = parseFloat(trib.totalComprasSoles || trib.totalCompras || '0');
+        const igvEstimado = parseFloat(trib.igvEstimadoPagarSoles || trib.igvEstimado || '0');
+        const ratioComprasVentas = totalVentas > 0 ? (totalCompras / totalVentas) * 100 : 0;
+        const sinBancarizarMonto = parseFloat(trib.sinBancarizarSoles || trib.sinBancarizarMonto || '0');
+
+        const colaboradoresCount = pla.colaboradoresCount || (employees ? employees.length : 0);
+        const gratiEstimadaTotal = parseFloat(pla.gratiEstimadaTotalSoles || pla.gratiEstimadaTotal || '0');
+        const ctsEstimadaTotal = parseFloat(pla.ctsEstimadaSoles || pla.ctsEstimadaTotal || '0');
+
+        const scoreRiesgoSunat = trib.saludFiscalScore >= 80 ? 'BAJO' : (trib.saludFiscalScore >= 50 ? 'MEDIO' : 'ALTO');
+
+        setKpis({
+          totalVentas,
+          totalCompras,
+          igvEstimado,
+          ratioComprasVentas,
+          sinBancarizarCount: 0,
+          sinBancarizarMonto,
+          colaboradoresCount,
+          gratiEstimadaTotal,
+          ctsEstimadaTotal,
+          scoreRiesgoSunat
+        });
       }
     } catch (e) {
       console.error('[SOFTPREMIUM] Error cargando KPIs:', e);
@@ -182,10 +210,10 @@ export const SoftPremiumDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isPremiumActive && currentCompany?.ruc) {
+    if (currentCompany?.ruc) {
       fetchKpis();
     }
-  }, [isPremiumActive, currentCompany?.ruc]);
+  }, [currentCompany?.ruc]);
 
   const handleSubmitVoucher = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -944,53 +972,157 @@ export const SoftPremiumDashboard: React.FC = () => {
         })()}
 
         {/* PILAR 3: FINANZAS RAG */}
-        {activeSubTab === 'finanzas' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="bg-app-surface border border-app-border rounded-xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                    PILAR 3
-                  </span>
-                  <h2 className="text-sm sm:text-base font-extrabold text-app-text tracking-tight flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4 text-purple-500" /> Finanzas &amp; Flujo de Caja IA
-                  </h2>
-                </div>
-                <p className="text-[11px] sm:text-xs text-app-muted font-medium max-w-2xl leading-relaxed">
-                  Predicción de liquidez, proyección de vencimientos tributarios SUNAT y ratios financieros estratégicos.
-                </p>
-              </div>
-            </div>
+        {activeSubTab === 'finanzas' && (() => {
+          const liquidez = kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras).toFixed(2) : (kpis.totalVentas > 0 ? '2.50' : '1.00');
+          const ebitda = kpis.totalVentas > 0 ? (((kpis.totalVentas - kpis.totalCompras) / kpis.totalVentas) * 100).toFixed(1) : '0.0';
+          const rucDigit = (currentCompany?.ruc || '').slice(-1);
+          const sunatDay = Math.min(22, 12 + (parseInt(rucDigit || '0', 10) || 1));
 
-            <div className="bg-app-surface border border-app-border rounded-xl shadow-sm p-5 text-center space-y-2.5">
-              <TrendingUp className="w-8 h-8 text-purple-500 mx-auto animate-bounce" />
-              <h3 className="text-sm font-bold text-app-text">Motor Financiero Groq LLaMA-3.3 4.0</h3>
-              <p className="text-[11px] text-app-muted max-w-xl mx-auto">
-                Realiza consultas directas sobre estrategias de liquidez o proyecciones de caja para la empresa {currentCompany?.name}.
-              </p>
-              <div className="max-w-xl mx-auto flex gap-1.5 pt-1">
-                <input
-                  type="text"
-                  placeholder="Ej: ¿Cuál es mi nivel de liquidez proyectado para el próximo mes?"
-                  value={ragQueries['fin_m1'] || ''}
-                  onChange={(e) => setRagQueries({ ...ragQueries, fin_m1: e.target.value })}
-                  className="flex-1 bg-app-bg border border-app-border px-3.5 py-2 rounded-lg text-[11px] font-bold outline-none"
-                />
-                <button
-                  onClick={() => handleAskRAG('finanzas', 'fin_m1')}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
-                >
-                  Consultar
-                </button>
-              </div>
-              {ragAnswers['fin_m1'] && (
-                <div className="bg-purple-500/10 border border-purple-500/30 p-3 rounded-lg text-[11px] text-app-text text-left max-w-xl mx-auto whitespace-pre-line">
-                  {ragAnswers['fin_m1']}
+          return (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-app-surface border border-app-border rounded-xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                      PILAR 3
+                    </span>
+                    <h2 className="text-sm sm:text-base font-extrabold text-app-text tracking-tight flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-purple-500" /> Finanzas &amp; Flujo de Caja IA
+                    </h2>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-app-muted font-medium max-w-2xl leading-relaxed">
+                    Predicción de liquidez, proyección de vencimientos tributarios SUNAT y ratios financieros estratégicos.
+                  </p>
                 </div>
-              )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full md:w-auto shrink-0">
+                  <div className="bg-app-bg border border-app-border p-2.5 rounded-lg">
+                    <span className="text-[8px] font-bold text-app-text uppercase tracking-wider block">Liquidez</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-purple-500">{liquidez} x</span>
+                  </div>
+                  <div className="bg-app-bg border border-app-border p-2.5 rounded-lg">
+                    <span className="text-[8px] font-bold text-app-text uppercase tracking-wider block">Margen EBITDA</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-emerald-500">{ebitda}%</span>
+                  </div>
+                  <div className="bg-app-bg border border-app-border p-2.5 rounded-lg">
+                    <span className="text-[8px] font-bold text-app-text uppercase tracking-wider block">Vcto. SUNAT</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-amber-500">Día {sunatDay}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Módulo Finanzas */}
+              <div className="bg-app-surface border border-app-border rounded-xl shadow-sm overflow-hidden">
+                <div 
+                  onClick={() => toggleModule('fin_m1')}
+                  className="p-4 flex items-center justify-between cursor-pointer bg-gradient-to-r from-transparent via-transparent to-purple-500/5 hover:bg-app-hover transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg border border-purple-500/20">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase text-app-text">Módulo 3.1</span>
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">Liquidez {liquidez}x</span>
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-bold text-app-text">Estrategia de Liquidez &amp; Flujo de Caja Proyectado</h3>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-blue-500 hidden sm:inline">{expandedModule === 'fin_m1' ? 'Cerrar' : 'Ver Análisis'}</span>
+                    {expandedModule === 'fin_m1' ? <ChevronUp className="w-4 h-4 text-blue-500" /> : <ChevronDown className="w-4 h-4 text-app-muted" />}
+                  </div>
+                </div>
+
+                {expandedModule === 'fin_m1' && (
+                  <div className="border-t border-app-border bg-app-bg/50 p-4 space-y-3 animate-scale-up">
+                    <div className="flex bg-app-surface p-1 rounded-lg border border-app-border gap-1">
+                      <button
+                        onClick={() => setModuleSubTab('fin_m1', 'DIAGNOSTICO')}
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <Activity className="w-3.5 h-3.5" /> Diagnóstico Financiero
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('fin_m1', 'NORMATIVA')}
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <Scale className="w-3.5 h-3.5" /> Ratios Estratégicos
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('fin_m1', 'GROQ_AI')}
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        }`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" /> GROQ + IA en Vivo
+                      </button>
+                    </div>
+
+                    {getModuleSubTab('fin_m1') === 'DIAGNOSTICO' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 animate-fade-in">
+                        <div className="bg-app-surface p-3 rounded-lg border border-app-border space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase text-app-muted">Ratio Liquidez Corriente</span>
+                          <p className="text-xs sm:text-sm font-bold text-purple-500">{liquidez} x</p>
+                        </div>
+                        <div className="bg-app-surface p-3 rounded-lg border border-app-border space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase text-app-muted">Margen Bruto EBITDA</span>
+                          <p className="text-xs sm:text-sm font-bold text-emerald-500">{ebitda} %</p>
+                        </div>
+                        <div className="bg-app-surface p-3 rounded-lg border border-app-border space-y-0.5">
+                          <span className="text-[9px] font-bold uppercase text-app-muted">Próximo Vencimiento SUNAT</span>
+                          <p className="text-xs sm:text-sm font-bold text-amber-500">Día {sunatDay} del mes</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('fin_m1') === 'NORMATIVA' && (
+                      <div className="bg-app-surface p-3 rounded-lg border border-app-border space-y-1.5 animate-fade-in">
+                        <h4 className="text-[11px] font-bold text-app-text flex items-center gap-1.5">
+                          <Scale className="w-3.5 h-3.5 text-purple-500" /> Fórmulas &amp; Metodología Financiera 4.0
+                        </h4>
+                        <p className="text-[11px] text-app-text leading-relaxed font-mono">
+                          Liquidez Corriente = Ventas Totales / Compras Totales<br />
+                          Margen EBITDA (%) = ((Ventas - Compras) / Ventas) x 100
+                        </p>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('fin_m1') === 'GROQ_AI' && (
+                      <div className="space-y-2.5 animate-fade-in">
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Ej: ¿Cuál es mi nivel de liquidez proyectado para el próximo mes?"
+                            value={ragQueries['fin_m1'] || ''}
+                            onChange={(e) => setRagQueries({ ...ragQueries, fin_m1: e.target.value })}
+                            className="flex-1 bg-app-surface border border-app-border px-3 py-2 rounded-lg text-[11px] font-bold outline-none"
+                          />
+                          <button
+                            onClick={() => handleAskRAG('finanzas', 'fin_m1')}
+                            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 cursor-pointer"
+                          >
+                            Consultar
+                          </button>
+                        </div>
+                        {ragAnswers['fin_m1'] && (
+                          <div className="bg-purple-500/10 border border-purple-500/30 p-3 rounded-lg text-[11px] text-app-text whitespace-pre-line">
+                            {ragAnswers['fin_m1']}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB: PLANES Y PAGOS YAPE / PLIN */}
         {activeSubTab === 'subscription' && (
