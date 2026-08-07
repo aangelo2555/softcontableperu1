@@ -44,6 +44,18 @@ const autoSyncService = require('./autoSyncService');
 const cacheService = require('./cacheService');
 
 const helmet = require('helmet');
+const {
+    globalApiLimiter,
+    authStrictLimiter,
+    premiumAiLimiter,
+    ddosDetectionMiddleware,
+    hppProtection,
+    payloadSizeGuard,
+    requestIdMiddleware,
+    securityHeadersMiddleware,
+    applySlowlorisDefense,
+    securityStatusEndpoint
+} = require('./securityMiddleware');
 
 const app = express();
 app.set('trust proxy', 1); // Confiar en el proxy de Railway para identificar la IP de origen en rate limiting
@@ -59,6 +71,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026
 app.use(helmet({
     contentSecurityPolicy: false, // Desactivar CSP estricto para evitar romper SPA React en producción/dev
 }));
+
+// ═══════════════════════════════════════════════════════════════════════
+// MÓDULO DE SEGURIDAD ANTI-DDoS — 10 CAPAS DE PROTECCIÓN
+// ═══════════════════════════════════════════════════════════════════════
+app.use(requestIdMiddleware);          // Capa 10: Trazabilidad de cada petición
+app.use(securityHeadersMiddleware);    // Capa 9: Headers de seguridad reforzados
+app.use(payloadSizeGuard);             // Capa 5: Rechazo de payloads > 12MB
+app.use(ddosDetectionMiddleware);      // Capa 6+7: Detección ráfagas + blacklist dinámica
+app.use(hppProtection);                // Capa 8: Sanitización de parámetros duplicados
+app.use('/api/', globalApiLimiter);    // Capa 1: Rate limit global 100 req/min para toda la API
 
 // --- Optimización #4: Compresión GZIP para reducir tamaño de respuestas ---
 app.use(compression({
@@ -133,8 +155,8 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-// --- Rutas Públicas ---
-app.use('/api/auth', authRoutes);
+// --- Rutas Públicas (con rate limiting estricto anti brute-force) ---
+app.use('/api/auth', authStrictLimiter, authRoutes);
 
 // --- Middleware de Inspección Admin ---
 // Permite que un admin inspeccione los datos de otro usuario sin absorber su empresa.
@@ -183,9 +205,9 @@ const premiumPlanillasRoutes = require('./routes/premiumPlanillasRoutes');
 const premiumFinanzasRoutes = require('./routes/premiumFinanzasRoutes');
 
 app.use('/api/premium/subscription', premiumSubscriptionRoutes);
-app.use('/api/premium/tributario', premiumTributarioRoutes);
-app.use('/api/premium/planillas', premiumPlanillasRoutes);
-app.use('/api/premium/finanzas', premiumFinanzasRoutes);
+app.use('/api/premium/tributario', premiumAiLimiter, premiumTributarioRoutes);
+app.use('/api/premium/planillas', premiumAiLimiter, premiumPlanillasRoutes);
+app.use('/api/premium/finanzas', premiumAiLimiter, premiumFinanzasRoutes);
 
 // --- API Endpoints: Database ---
 
@@ -2870,7 +2892,21 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SERVER] SOFTCONTABLE 2 ONLINE en puerto ${PORT}`);
+// --- Endpoint de Estado de Seguridad (solo admin) ---
+app.get('/api/security/status', authMiddleware, (req, res) => {
+    const normalizedEmail = (req.user?.email || '').trim().toLowerCase();
+    const isAdmin = req.user?.role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com';
+    if (!isAdmin) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado' });
+    }
+    securityStatusEndpoint(req, res);
 });
+
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[SERVER] SOFTCONTABLE 2 ONLINE en puerto ${PORT}`);
+    console.log(`[SECURITY] 🛡️ 10 capas de protección anti-DDoS ACTIVAS`);
+});
+
+// Capa 4: Defensa anti-Slowloris aplicada al servidor HTTP
+applySlowlorisDefense(server);
