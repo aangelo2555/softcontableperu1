@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 
 export const SoftPremiumDashboard: React.FC = () => {
-  const { currentCompany, setActiveTab, workspaces, switchWorkspace, employees } = useStore();
+  const { currentCompany, setActiveTab, workspaces, switchWorkspace, employees, sales, purchases } = useStore();
   const user = React.useMemo(() => {
     try {
       const stored = localStorage.getItem('softcontable_user');
@@ -163,29 +163,48 @@ export const SoftPremiumDashboard: React.FC = () => {
 
   const fetchKpis = async () => {
     if (!currentCompany?.ruc) return;
+
+    // Métricas del store local para la empresa seleccionada
+    const localSales = (sales || []).filter(s => s.estado_sire !== 'Propuesta');
+    const localPurchases = (purchases || []).filter(p => p.estado_sire !== 'Propuesta');
+
+    const storeTotalVentas = localSales.reduce((acc, s) => acc + Number(s.total || ((s.bi || 0) + (s.igv || 0)) || 0), 0);
+    const storeTotalCompras = localPurchases.reduce((acc, p) => acc + Number(p.total || ((p.bi || 0) + (p.igv || 0)) || 0), 0);
+    const storeIgvVentas = localSales.reduce((acc, s) => acc + Number(s.igv || 0), 0);
+    const storeIgvCompras = localPurchases.reduce((acc, p) => acc + Number(p.igv || 0), 0);
+    const storeIgvEstimado = Math.max(0, storeIgvVentas - storeIgvCompras);
+
     try {
       const token = localStorage.getItem('softcontable_token');
       const res = await fetch(`/api/premium/tributario/kpis?workspaceId=${currentCompany.ruc}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
+
       if (data.success && data.kpis) {
         const raw = data.kpis;
         const trib = raw.metrics?.tributario || raw;
         const pla = raw.metrics?.planillas || raw;
-        const fin = raw.metrics?.finanzas || raw;
 
-        const totalVentas = parseFloat(trib.totalVentasSoles || trib.totalVentas || '0');
-        const totalCompras = parseFloat(trib.totalComprasSoles || trib.totalCompras || '0');
-        const igvEstimado = parseFloat(trib.igvEstimadoPagarSoles || trib.igvEstimado || '0');
+        const serverVentas = parseFloat(trib.totalVentasSoles || trib.totalVentas || '0');
+        const serverCompras = parseFloat(trib.totalComprasSoles || trib.totalCompras || '0');
+        const serverIgv = parseFloat(trib.igvEstimadoPagarSoles || trib.igvEstimado || '0');
+
+        // Garantizar alineación total con la empresa seleccionada
+        const totalVentas = (localSales.length > 0 || storeTotalVentas > 0) ? storeTotalVentas : serverVentas;
+        const totalCompras = (localPurchases.length > 0 || storeTotalCompras > 0) ? storeTotalCompras : serverCompras;
+        const igvEstimado = (localSales.length > 0 || localPurchases.length > 0) ? storeIgvEstimado : serverIgv;
+
         const ratioComprasVentas = totalVentas > 0 ? (totalCompras / totalVentas) * 100 : 0;
         const sinBancarizarMonto = parseFloat(trib.sinBancarizarSoles || trib.sinBancarizarMonto || '0');
 
-        const colaboradoresCount = pla.colaboradoresCount || (employees ? employees.length : 0);
-        const gratiEstimadaTotal = parseFloat(pla.gratiEstimadaTotalSoles || pla.gratiEstimadaTotal || '0');
-        const ctsEstimadaTotal = parseFloat(pla.ctsEstimadaSoles || pla.ctsEstimadaTotal || '0');
+        const colaboradoresCount = (employees && employees.length > 0) ? employees.length : (pla.colaboradoresCount || 0);
+        const gratiEstimadaTotal = (employees && employees.length > 0)
+          ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0)
+          : parseFloat(pla.gratiEstimadaTotalSoles || pla.gratiEstimadaTotal || '0');
+        const ctsEstimadaTotal = gratiEstimadaTotal / 2;
 
-        const scoreRiesgoSunat = trib.saludFiscalScore >= 80 ? 'BAJO' : (trib.saludFiscalScore >= 50 ? 'MEDIO' : 'ALTO');
+        const scoreRiesgoSunat = ratioComprasVentas > 85 ? 'MEDIO' : (trib.saludFiscalScore >= 80 ? 'BAJO' : 'ALTO');
 
         setKpis({
           totalVentas,
@@ -199,10 +218,26 @@ export const SoftPremiumDashboard: React.FC = () => {
           ctsEstimadaTotal,
           scoreRiesgoSunat
         });
+        return;
       }
     } catch (e) {
-      console.error('[SOFTPREMIUM] Error cargando KPIs:', e);
+      console.error('[SOFTPREMIUM] Error cargando KPIs del servidor:', e);
     }
+
+    // Fallback local instantáneo con datos exclusivos de la empresa seleccionada
+    const ratioComprasVentas = storeTotalVentas > 0 ? (storeTotalCompras / storeTotalVentas) * 100 : 0;
+    setKpis({
+      totalVentas: storeTotalVentas,
+      totalCompras: storeTotalCompras,
+      igvEstimado: storeIgvEstimado,
+      ratioComprasVentas,
+      sinBancarizarCount: 0,
+      sinBancarizarMonto: 0,
+      colaboradoresCount: employees ? employees.length : 0,
+      gratiEstimadaTotal: employees ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0) : 0,
+      ctsEstimadaTotal: employees ? (employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0) / 2) : 0,
+      scoreRiesgoSunat: ratioComprasVentas > 85 ? 'MEDIO' : 'BAJO'
+    });
   };
 
   useEffect(() => {
@@ -213,7 +248,7 @@ export const SoftPremiumDashboard: React.FC = () => {
     if (currentCompany?.ruc) {
       fetchKpis();
     }
-  }, [currentCompany?.ruc]);
+  }, [currentCompany?.ruc, sales, purchases, employees]);
 
   const handleSubmitVoucher = async (e: React.FormEvent) => {
     e.preventDefault();

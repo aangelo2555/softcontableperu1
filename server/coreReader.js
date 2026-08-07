@@ -13,7 +13,7 @@ const dbCore = USE_POSTGRES ? require('./databasePostgres') : require('./databas
  * Normaliza el parámetro de periodo (ej. '2026-08') a patrones SQL de búsqueda de fechas.
  */
 function getPeriodPatterns(period) {
-    if (!period || typeof period !== 'string') {
+    if (!period || typeof period !== 'string' || period.trim() === '%' || period.trim() === '') {
         return { isoPattern: '%', slashPattern: '%', sirePattern: '%', isWildcard: true };
     }
     const cleanPeriod = period.trim();
