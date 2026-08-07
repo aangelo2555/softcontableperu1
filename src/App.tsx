@@ -663,6 +663,16 @@ const App: React.FC = () => {
     return <Login />;
   }
 
+  // --- MÓDULO INDEPENDIENTE SOFTPREMIUM A PANTALLA COMPLETA 100% ---
+  if (activeTab === 'SOFTPREMIUM' || window.location.pathname === '/premium') {
+    return (
+      <div className={`fixed inset-0 z-[9999] w-screen h-screen min-h-screen bg-app-bg text-app-text font-sans overflow-y-auto ${theme === 'dark' ? 'dark' : ''}`}>
+        <Toaster position="top-right" reverseOrder={false} />
+        <SoftPremiumDashboard />
+      </div>
+    );
+  }
+
   if (isInitializing) {
     return (
       <div className={`h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center transition-opacity duration-500 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}>
@@ -999,12 +1009,13 @@ const App: React.FC = () => {
             {/* Botón Responsivo SoftPremium (IA) en Header */}
             <button
               onClick={() => {
-                const isVerified = currentCompany?.premium_enabled;
-                const targetUrl = isVerified ? '/premium' : '/premium?tab=subscription';
-                window.open(targetUrl, '_blank');
+                setActiveTab('SOFTPREMIUM');
+                if (window.history && window.history.pushState) {
+                  window.history.pushState({}, '', '/premium');
+                }
               }}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-blue-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shadow-sm cursor-pointer group"
-              title="Abrir Portal SoftPremium IA en nueva pestaña"
+              title="Abrir Portal SoftPremium IA a Pantalla Completa"
             >
               <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
               <span className="font-black uppercase tracking-wider hidden sm:inline font-sans">
