@@ -439,6 +439,16 @@ const App: React.FC = () => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  // --- Manejo PWA/SPA de la ruta /premium ---
+  useEffect(() => {
+    if (window.location.pathname === '/premium' || window.location.pathname.includes('/premium')) {
+      setActiveTab('SOFTPREMIUM');
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  }, []);
+
   // --- Inactivity Timeout watch ---
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -648,14 +658,6 @@ const App: React.FC = () => {
   const searchResults = searchQuery 
     ? allTabs.filter(t => t.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : (isSearchFocused ? allTabs : []);
-
-  // Ruta Standalone /premium
-  if (window.location.pathname === '/premium') {
-    if (!isLoggedIn) {
-      return <Login />;
-    }
-    return <SoftPremiumDashboard />;
-  }
 
   if (!isLoggedIn) {
     return <Login />;

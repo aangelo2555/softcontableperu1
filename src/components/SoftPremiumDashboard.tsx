@@ -357,9 +357,9 @@ export const SoftPremiumDashboard: React.FC = () => {
   };
 
   const handleVolver = () => {
-    setActiveTab('compras');
-    if (window.location.pathname === '/premium' || window.location.pathname.includes('/premium')) {
-      window.location.href = '/';
+    setActiveTab('EMPRESA');
+    if (window.history && window.history.pushState) {
+      window.history.pushState({}, '', '/');
     }
   };
 
