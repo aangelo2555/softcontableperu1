@@ -772,13 +772,18 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
 
       {/* ═══ ESTILOS LEGALES ═══ */}
       <style>{`
+        .legal-content-body {
+          color: var(--app-text, #0f172a);
+        }
         .legal-content-body h1 {
+          color: var(--app-text, #0f172a);
           font-size: 1.35rem;
           font-weight: 900;
           letter-spacing: -0.025em;
           margin-bottom: 0.5rem;
         }
         .legal-content-body h2 {
+          color: var(--app-text, #0f172a);
           font-size: 0.95rem;
           font-weight: 900;
           text-transform: uppercase;
@@ -786,16 +791,18 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
           margin-top: 2rem;
           margin-bottom: 0.75rem;
           padding-bottom: 0.5rem;
-          border-bottom: 1px solid var(--app-border, rgba(128,128,128,0.15));
+          border-bottom: 1px solid var(--app-border, rgba(128,128,128,0.2));
         }
         .legal-content-body h3 {
+          color: var(--app-text, #1e293b);
           font-size: 0.85rem;
           font-weight: 800;
           margin-top: 1.25rem;
           margin-bottom: 0.5rem;
         }
         .legal-content-body p {
-          font-size: 0.8rem;
+          color: var(--app-text-muted, #334155);
+          font-size: 0.825rem;
           line-height: 1.7;
           margin-bottom: 0.75rem;
           font-weight: 500;
@@ -806,7 +813,8 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
           margin-bottom: 1rem;
         }
         .legal-content-body ul li {
-          font-size: 0.8rem;
+          color: var(--app-text-muted, #334155);
+          font-size: 0.825rem;
           line-height: 1.7;
           padding-left: 1.25rem;
           position: relative;
@@ -817,38 +825,45 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
           content: '▸';
           position: absolute;
           left: 0;
-          color: #3b82f6;
+          color: #2563eb;
           font-weight: 900;
+        }
+        .legal-content-body strong {
+          color: var(--app-text, #0f172a);
+          font-weight: 800;
         }
         .legal-content-body code {
           font-size: 0.75rem;
-          background: rgba(59, 130, 246, 0.08);
+          background: rgba(37, 99, 235, 0.08);
+          color: #1d4ed8;
           padding: 0.15rem 0.4rem;
           border-radius: 0.35rem;
           font-weight: 700;
-          border: 1px solid rgba(59,130,246,0.12);
+          border: 1px solid rgba(37, 99, 235, 0.15);
         }
         .legal-meta {
+          color: #64748b !important;
           font-size: 0.7rem !important;
           font-weight: 700 !important;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          opacity: 0.5;
           margin-bottom: 1.5rem !important;
         }
         .legal-highlight {
-          background: rgba(59, 130, 246, 0.06);
-          border: 1px solid rgba(59, 130, 246, 0.15);
+          background: rgba(37, 99, 235, 0.06);
+          border: 1px solid rgba(37, 99, 235, 0.2);
           border-radius: 1rem;
           padding: 1rem 1.25rem;
           font-size: 0.8rem;
           line-height: 1.7;
           margin-bottom: 1.5rem;
           font-weight: 500;
+          color: var(--app-text, #0f172a);
         }
         .legal-highlight.legal-warning {
-          background: rgba(245, 158, 11, 0.06);
-          border-color: rgba(245, 158, 11, 0.2);
+          background: rgba(245, 158, 11, 0.08);
+          border-color: rgba(245, 158, 11, 0.3);
+          color: #92400e;
         }
         .legal-table {
           width: 100%;
@@ -859,12 +874,14 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
         .legal-table th,
         .legal-table td {
           padding: 0.6rem 0.75rem;
-          border: 1px solid var(--app-border, rgba(128,128,128,0.15));
+          border: 1px solid var(--app-border, rgba(128,128,128,0.2));
           text-align: left;
           font-weight: 600;
+          color: var(--app-text, #0f172a);
         }
         .legal-table th {
-          background: rgba(59, 130, 246, 0.06);
+          background: rgba(37, 99, 235, 0.08);
+          color: #1e40af;
           font-weight: 800;
           text-transform: uppercase;
           font-size: 0.7rem;
@@ -877,17 +894,27 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
           background: transparent;
         }
         .legal-scroll::-webkit-scrollbar-thumb {
-          background: rgba(128,128,128,0.2);
+          background: rgba(148, 163, 184, 0.3);
           border-radius: 3px;
         }
         .legal-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(128,128,128,0.35);
+          background: rgba(148, 163, 184, 0.5);
         }
-        @media print {
-          .legal-content-body { font-size: 11pt; }
-          .legal-content-body h1 { font-size: 16pt; }
-          .legal-content-body h2 { font-size: 13pt; }
-        }
+
+        /* ─── MODO OSCURO CONTRASTES ─── */
+        .dark .legal-content-body { color: #f8fafc; }
+        .dark .legal-content-body h1,
+        .dark .legal-content-body h2,
+        .dark .legal-content-body h3,
+        .dark .legal-content-body strong { color: #f8fafc; }
+        .dark .legal-content-body p,
+        .dark .legal-content-body ul li { color: #cbd5e1; }
+        .dark .legal-content-body code { color: #60a5fa; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); }
+        .dark .legal-meta { color: #94a3b8 !important; }
+        .dark .legal-highlight { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #f8fafc; }
+        .dark .legal-highlight.legal-warning { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: #fef08a; }
+        .dark .legal-table th, .dark .legal-table td { border-color: rgba(255, 255, 255, 0.1); color: #f8fafc; }
+        .dark .legal-table th { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
       `}</style>
     </div>
   );

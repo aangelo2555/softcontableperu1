@@ -16,7 +16,12 @@ import {
     EyeOff,
     CheckCircle2,
     Sparkles,
-    ShieldCheck
+    ShieldCheck,
+    Cpu,
+    Landmark,
+    Users,
+    ReceiptText,
+    TrendingUp
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -24,42 +29,42 @@ import { LegalPages } from './LegalPages';
 
 const customStyles = `
   .glass-card-pro {
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 
-      0 25px 60px -15px rgba(0, 0, 0, 0.7),
-      inset 0 1px 1px rgba(255, 255, 255, 0.08);
+      0 30px 60px -12px rgba(0, 0, 0, 0.65),
+      inset 0 1px 1px rgba(255, 255, 255, 0.12);
   }
   .glass-card-student {
-    background: rgba(19, 16, 42, 0.8);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(129, 140, 248, 0.2);
+    background: rgba(19, 24, 52, 0.85);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(129, 140, 248, 0.25);
     box-shadow: 
-      0 25px 60px -15px rgba(49, 46, 129, 0.4),
-      inset 0 1px 1px rgba(165, 180, 252, 0.15);
+      0 30px 60px -12px rgba(30, 27, 75, 0.5),
+      inset 0 1px 1px rgba(165, 180, 252, 0.2);
   }
   .glass-input-field {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: #ffffff;
     transition: all 0.2s ease-in-out;
   }
   .glass-input-field:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.22);
   }
   .glass-input-field:focus-within {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: rgba(212, 175, 55, 0.6);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
   }
   .glass-input-field-student:focus-within {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: rgba(129, 140, 248, 0.7);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(129, 140, 248, 0.75);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
   }
 `;
 
@@ -68,58 +73,58 @@ const showcaseViews = [
         id: 'dashboard',
         title: 'Panel Principal',
         icon: Layers,
-        activeColor: 'text-[#d4af37]',
+        activeColor: 'text-blue-400',
         badge: 'Resumen Gerencial',
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-amber-500/[0.03] border border-[#d4af37]/30 rounded-xl p-3.5">
-                        <span className="text-[9px] text-[#d4af37] font-bold uppercase tracking-wider block mb-1">Ventas del Mes</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 48,250.00</span>
-                        <span className="text-[9px] text-emerald-400 font-bold block mt-1">+12.4% vs mes ant.</span>
+                    <div className="bg-blue-500/[0.05] border border-blue-500/25 rounded-xl p-3.5">
+                        <span className="text-[9px] text-blue-400 font-bold uppercase tracking-wider block mb-1">Ventas del Mes</span>
+                        <span className="text-base lg:text-lg font-black text-white">S/ 83,536.61</span>
+                        <span className="text-[9px] text-emerald-400 font-bold block mt-1">+14.2% vs mes ant.</span>
                     </div>
-                    <div className="bg-emerald-500/[0.03] border border-emerald-500/30 rounded-xl p-3.5">
+                    <div className="bg-emerald-500/[0.05] border border-emerald-500/25 rounded-xl p-3.5">
                         <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider block mb-1">Compras del Mes</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 24,180.00</span>
-                        <span className="text-[9px] text-slate-400 font-bold block mt-1">142 comprobantes</span>
+                        <span className="text-base lg:text-lg font-black text-white">S/ 312.92</span>
+                        <span className="text-[9px] text-slate-400 font-bold block mt-1">2 comprobantes</span>
                     </div>
-                    <div className="bg-sky-500/[0.03] border border-sky-500/30 rounded-xl p-3.5">
-                        <span className="text-[9px] text-sky-400 font-bold uppercase tracking-wider block mb-1">Impuesto RMT</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 4,342.00</span>
-                        <span className="text-[9px] text-amber-500/80 font-bold block mt-1">IGV / Renta SUNAT</span>
+                    <div className="bg-purple-500/[0.05] border border-purple-500/25 rounded-xl p-3.5">
+                        <span className="text-[9px] text-purple-400 font-bold uppercase tracking-wider block mb-1">IGV Estimado</span>
+                        <span className="text-base lg:text-lg font-black text-white">S/ 12,697.10</span>
+                        <span className="text-[9px] text-indigo-400 font-bold block mt-1">Régimen RMT / RG</span>
                     </div>
                 </div>
                 <div className="grid grid-cols-12 gap-3 flex-1">
-                    <div className="col-span-8 bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="col-span-8 bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
                         <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block mb-2">Flujo de Caja Anual (2026)</span>
                         <div className="flex items-end justify-between h-32 pt-2 px-1">
                             {[40, 60, 45, 75, 50, 90, 65, 80, 55, 70, 85, 95].map((h, i) => (
                                 <div key={i} className="w-[6%] flex flex-col items-center gap-1.5">
-                                    <div className="w-full bg-gradient-to-t from-slate-800 to-[#d4af37]/70 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
+                                    <div className="w-full bg-gradient-to-t from-slate-800 to-blue-500/80 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
                                     <span className="text-[8px] text-slate-500 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="col-span-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="col-span-4 bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
                         <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block mb-2">Rendimiento</span>
                         <div className="space-y-2.5">
                             <div>
                                 <div className="flex justify-between text-[9px] text-slate-400 mb-1">
-                                    <span>Margen Neto</span>
-                                    <span className="text-white font-bold">49.8%</span>
+                                    <span>Margen Bruto</span>
+                                    <span className="text-white font-bold">99.6%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-[#d4af37] h-full rounded-full" style={{ width: '49.8%' }}></div>
+                                    <div className="bg-blue-500 h-full rounded-full" style={{ width: '99.6%' }}></div>
                                 </div>
                             </div>
                             <div>
                                 <div className="flex justify-between text-[9px] text-slate-400 mb-1">
                                     <span>Ejecución Presup.</span>
-                                    <span className="text-white font-bold">82.4%</span>
+                                    <span className="text-white font-bold">88.4%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '82.4%' }}></div>
+                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '88.4%' }}></div>
                                 </div>
                             </div>
                         </div>
@@ -132,11 +137,60 @@ const showcaseViews = [
         )
     },
     {
+        id: 'sire',
+        title: 'SIRE SUNAT 2026',
+        icon: ReceiptText,
+        activeColor: 'text-indigo-400',
+        badge: 'RCE 8.1 & RVIE 14.1',
+        content: (
+            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Integración Directa SIRE SUNAT 2026</span>
+                    <span className="text-[9px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full font-bold">Sincronizado SOL</span>
+                </div>
+                <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-white/[0.01] flex-1 flex flex-col">
+                    <table className="w-full text-left border-collapse flex-1">
+                        <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.04]">
+                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Módulo SIRE</th>
+                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Comprobantes</th>
+                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Base Imponible</th>
+                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-right">Estado SUNAT</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.04] text-[9.5px]">
+                            <tr className="hover:bg-white/[0.02]">
+                                <td className="p-2.5 font-bold text-white flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> RVIE 14.1 (Ventas)
+                                </td>
+                                <td className="p-2.5 text-slate-300 font-mono">1 Registros</td>
+                                <td className="p-2.5 text-blue-400 font-bold font-mono">S/ 70,793.74</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-bold">ACEPTADO (Ticket)</td>
+                            </tr>
+                            <tr className="hover:bg-white/[0.02]">
+                                <td className="p-2.5 font-bold text-white flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-purple-500"></span> RCE 8.1 (Compras)
+                                </td>
+                                <td className="p-2.5 text-slate-300 font-mono">2 Registros</td>
+                                <td className="p-2.5 text-purple-400 font-bold font-mono">S/ 265.19</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-bold">ACEPTADO (Ticket)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div className="p-3 bg-blue-500/5 border-t border-white/[0.08] flex items-center justify-between text-[9px]">
+                        <span className="text-slate-400 font-medium">Comparativa SIRE vs Local: Sin discrepancias detectadas.</span>
+                        <span className="text-blue-400 font-bold">Resumen 100% Ok</span>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
         id: 'diario',
-        title: 'Libro Diario',
+        title: 'Libro Diario PLE',
         icon: FileText,
         activeColor: 'text-emerald-400',
-        badge: 'Formato SUNAT 5.1',
+        badge: 'Formato SUNAT 5.1 & 5.2',
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
@@ -164,13 +218,13 @@ const showcaseViews = [
                                 <td className="p-2.5 font-mono font-bold text-slate-400">40111</td>
                                 <td className="p-2.5 text-white">IGV - Cuenta Propia</td>
                                 <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-amber-500/80 font-bold">1,800.00</td>
+                                <td className="p-2.5 text-right text-blue-400 font-bold">1,800.00</td>
                             </tr>
                             <tr className="hover:bg-white/[0.02]">
                                 <td className="p-2.5 font-mono font-bold text-slate-400">70121</td>
                                 <td className="p-2.5 text-white">Mercaderías - Venta Local</td>
                                 <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-amber-500/80 font-bold">10,000.00</td>
+                                <td className="p-2.5 text-right text-blue-400 font-bold">10,000.00</td>
                             </tr>
                             <tr className="hover:bg-white/[0.02]">
                                 <td className="p-2.5 font-mono font-bold text-slate-400">60111</td>
@@ -182,12 +236,12 @@ const showcaseViews = [
                                 <td className="p-2.5 font-mono font-bold text-slate-400">42121</td>
                                 <td className="p-2.5 text-white">Facturas por Pagar - Local</td>
                                 <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-amber-500/80 font-bold">5,000.00</td>
+                                <td className="p-2.5 text-right text-blue-400 font-bold">5,000.00</td>
                             </tr>
                             <tr className="bg-white/[0.03] font-bold border-t border-white/10">
                                 <td className="p-2.5 text-[8.5px] text-slate-400 uppercase tracking-wider" colSpan={2}>Suma de Operaciones del Folio</td>
                                 <td className="p-2.5 text-right text-emerald-400 font-black">16,800.00</td>
-                                <td className="p-2.5 text-right text-amber-500/80 font-black">16,800.00</td>
+                                <td className="p-2.5 text-right text-blue-400 font-black">16,800.00</td>
                             </tr>
                         </tbody>
                     </table>
@@ -196,141 +250,91 @@ const showcaseViews = [
         )
     },
     {
-        id: 'empresas',
-        title: 'Mis Empresas',
-        icon: Building2,
-        activeColor: 'text-sky-400',
-        badge: 'Multi-Empresa',
+        id: 'planillas',
+        title: 'Planillas & PLAME',
+        icon: Users,
+        activeColor: 'text-amber-400',
+        badge: 'Ley 27735 & CTS',
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Cartera de Empresas Activas</span>
-                    <span className="text-[9px] text-slate-400 font-bold">Total: 4 Registradas</span>
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Nómina de Colaboradores &amp; Beneficios Sociales</span>
+                    <span className="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-0.5 rounded-full font-bold">PLAME Ready</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 flex-1">
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-500/40 transition-colors">
+                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
                         <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded font-mono font-bold">RUC 20601234567</span>
-                            <h4 className="text-[11px] font-black text-white mt-1.5 leading-snug">AGROINDUSTRIA DEL SUR S.A.C.</h4>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Gratificaciones Ley 27735</span>
+                            <span className="text-sm font-black text-white">S/ 3,450.00</span>
+                            <p className="text-[8px] text-slate-400 mt-1">Cálculo proyectado Julio/Diciembre con Bonificación Extraordinaria (9%).</p>
                         </div>
-                        <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-white/[0.04] pt-2 mt-1.5">
-                            <span>Régimen: RMT</span>
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">● ACTIVO</span>
-                        </div>
+                        <span className="text-[8.5px] text-emerald-400 font-bold">● Calculado Automatizado</span>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-500/40 transition-colors">
+                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
                         <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded font-mono font-bold">RUC 20459876543</span>
-                            <h4 className="text-[11px] font-black text-white mt-1.5 leading-snug">CONSTRUCTORA HERMANOS E.I.R.L.</h4>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">CTS D.S. 001-97-TR</span>
+                            <span className="text-sm font-black text-white">S/ 1,725.00</span>
+                            <p className="text-[8px] text-slate-400 mt-1">Depósito Mayo/Noviembre computable con 1/6 de gratificación.</p>
                         </div>
-                        <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-white/[0.04] pt-2 mt-1.5">
-                            <span>Régimen: GENERAL</span>
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">● ACTIVO</span>
-                        </div>
-                    </div>
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-500/40 transition-colors">
-                        <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded font-mono font-bold">RUC 20123456789</span>
-                            <h4 className="text-[11px] font-black text-white mt-1.5 leading-snug">COMERCIAL SANTA FE S.R.L.</h4>
-                        </div>
-                        <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-white/[0.04] pt-2 mt-1.5">
-                            <span>Régimen: MYPE</span>
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">● ACTIVO</span>
-                        </div>
-                    </div>
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-500/40 transition-colors">
-                        <div>
-                            <span className="text-[8px] bg-slate-800 text-slate-300 border border-white/10 px-2 py-0.5 rounded font-mono font-bold">RUC 20555666777</span>
-                            <h4 className="text-[11px] font-black text-white mt-1.5 leading-snug">SERVICIOS LOGÍSTICOS S.A.</h4>
-                        </div>
-                        <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-white/[0.04] pt-2 mt-1.5">
-                            <span>Régimen: GENERAL</span>
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">● ACTIVO</span>
-                        </div>
+                        <span className="text-[8.5px] text-blue-400 font-bold">● Sincronizado PLAME</span>
                     </div>
                 </div>
             </div>
         )
     },
     {
-        id: 'reportes',
-        title: 'Reportes NIIF',
-        icon: PieChart,
-        activeColor: 'text-indigo-400',
-        badge: 'Estados Financieros',
+        id: 'bancos',
+        title: 'Tesoreria & Bancos',
+        icon: Landmark,
+        activeColor: 'text-cyan-400',
+        badge: 'Auto-Match Bancario',
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Estado de Situación Financiera (ESF)</span>
-                    <span className="text-[9px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full font-bold">NIIF / NIC 1</span>
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Conciliación Bancaria Automática</span>
+                    <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-2.5 py-0.5 rounded-full font-bold">BCP / BBVA / Interbank</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 flex-1 text-[9px]">
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between">
-                        <div>
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block border-b border-white/5 pb-1 mb-1.5">1. ACTIVOS</span>
-                            <div className="space-y-1">
-                                <span className="text-[7.5px] text-slate-500 font-bold uppercase block">Activo Corriente</span>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Efectivo y Equiv.</span>
-                                    <span className="text-white font-mono">S/ 48,250.00</span>
-                                </div>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Cuentas por Cobrar</span>
-                                    <span className="text-white font-mono">S/ 36,500.00</span>
-                                </div>
-                                <div className="flex justify-between pl-1 font-bold text-slate-300 border-t border-white/5 pt-0.5">
-                                    <span>Total Corriente</span>
-                                    <span className="font-mono">S/ 109,750.00</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 mt-2">
-                                <span className="text-[7.5px] text-slate-500 font-bold uppercase block">Activo No Corriente</span>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Propiedad y Equip.</span>
-                                    <span className="text-white font-mono">S/ 42,680.00</span>
-                                </div>
-                            </div>
+                <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center text-[9.5px] bg-white/[0.03] p-2 rounded-lg border border-white/5">
+                            <span className="text-white font-mono">MOV-2026-0814 • Depósito Cliente</span>
+                            <span className="text-emerald-400 font-bold font-mono">+S/ 11,800.00</span>
                         </div>
-
-                        <div className="flex justify-between font-black text-white text-[10px] border-t border-white/10 pt-1.5 mt-1">
-                            <span>TOTAL ACTIVOS</span>
-                            <span className="font-mono text-emerald-400">S/ 152,430.00</span>
+                        <div className="flex justify-between items-center text-[9.5px] bg-white/[0.03] p-2 rounded-lg border border-white/5">
+                            <span className="text-white font-mono">MOV-2026-0815 • Pago Proveedor</span>
+                            <span className="text-blue-400 font-bold font-mono">-S/ 5,000.00</span>
                         </div>
                     </div>
-
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between">
-                        <div>
-                            <span className="text-[8.5px] text-slate-400 font-bold uppercase block border-b border-white/5 pb-1 mb-1.5">2. PASIVO Y PATRIMONIO</span>
-                            <div className="space-y-1">
-                                <span className="text-[7.5px] text-slate-500 font-bold uppercase block">Pasivo Corriente</span>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Tributos por Pagar</span>
-                                    <span className="text-white font-mono">S/ 11,800.00</span>
-                                </div>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Cuentas por Pagar</span>
-                                    <span className="text-white font-mono">S/ 16,350.00</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 mt-2">
-                                <span className="text-[7.5px] text-slate-500 font-bold uppercase block">Patrimonio Neto</span>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Capital Social</span>
-                                    <span className="text-white font-mono">S/ 80,000.00</span>
-                                </div>
-                                <div className="flex justify-between pl-1">
-                                    <span className="text-slate-400">Res. Acumulados</span>
-                                    <span className="text-white font-mono">S/ 30,280.00</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between font-black text-indigo-400 text-[10px] border-t border-white/10 pt-1.5 mt-1">
-                            <span>PASIVO + PATRIMONIO</span>
-                            <span className="font-mono">S/ 152,430.00</span>
-                        </div>
+                    <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/10 pt-2">
+                        <span>Conciliado: 100% de Extractos Bancarios</span>
+                        <span className="text-cyan-400 font-bold">Match Automático OK</span>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: 'softpremium',
+        title: 'SoftPremium Groq AI',
+        icon: Cpu,
+        activeColor: 'text-purple-400',
+        badge: 'Groq LLaMA-3.3 RAG 4.0',
+        content: (
+            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Auditoría Tributaria Preventiva &amp; RAG AI</span>
+                    <span className="text-[9px] bg-purple-500/10 border border-purple-500/30 text-purple-400 px-2.5 py-0.5 rounded-full font-bold">Riesgo SUNAT: BAJO</span>
+                </div>
+                <div className="bg-purple-500/[0.05] border border-purple-500/25 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                    <div>
+                        <span className="text-[9px] text-purple-300 font-bold uppercase tracking-wider block mb-1">Dictamen de Inteligencia Normativa 2026</span>
+                        <p className="text-[9.5px] text-slate-200 leading-relaxed">
+                            "Tu ratio de compras vs ventas se encuentra en 0.37%, dentro de los márgenes óptimos sustentables. No se detectan inconsistencias bancarias Ley 28194."
+                        </p>
+                    </div>
+                    <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-purple-500/20 pt-2">
+                        <span>Motor de Inferencia: Groq LLaMA-3.3 70B</span>
+                        <span className="text-purple-400 font-bold">IA RAG 4.0 Activo</span>
                     </div>
                 </div>
             </div>
@@ -389,7 +393,6 @@ export const Login: React.FC = () => {
                 });
 
                 if (res.success) {
-                    // Validar doblemente en cliente que el rol coincida con el modo activado
                     if (isStudentModeActive && res.user?.role !== 'estudiante') {
                         const msg = '💼 Esta cuenta es de Modo Profesional. Vuelve al modo "Profesional" para iniciar sesión.';
                         setErrorAlert(msg);
@@ -455,13 +458,13 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-[#08090d] text-slate-100 flex items-center justify-center font-sans selection:bg-amber-500/20 selection:text-amber-200 overflow-x-hidden relative p-4 md:p-8">
+        <div className="min-h-screen w-full bg-[#080a10] text-slate-100 flex items-center justify-center font-sans selection:bg-blue-600/30 selection:text-blue-200 overflow-x-hidden relative p-4 md:p-8">
             <style>{customStyles}</style>
 
-            {/* Elementos ambientales de fondo (Optimizados sin blurs intensivos de renderizado) */}
+            {/* Elementos ambientales de fondo */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full filter blur-3xl"></div>
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/5 rounded-full filter blur-3xl"></div>
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl"></div>
+                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full filter blur-3xl"></div>
                 <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-20"></div>
             </div>
 
@@ -477,7 +480,7 @@ export const Login: React.FC = () => {
                             <img src="/assets/logo.png" alt="Softcontable Logo" className="w-12 h-12 object-contain" />
                         </div>
                         <h1 className="text-2xl lg:text-3xl font-black tracking-wider text-white uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
-                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">CONTABLE</span>
+                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-400">CONTABLE</span>
                         </h1>
                         <p className="text-slate-400 text-[10.5px] font-bold tracking-widest uppercase mt-1 notranslate" translate="no">
                             Sistema Contable en la Nube v2.0
@@ -499,7 +502,7 @@ export const Login: React.FC = () => {
                                 }}
                                 className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
                                     !isStudentModeActive 
-                                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20' 
+                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25' 
                                         : 'text-slate-400 hover:text-white'
                                 }`}
                             >
@@ -528,7 +531,7 @@ export const Login: React.FC = () => {
                         <div className={`mb-5 p-2.5 rounded-xl border text-[10.5px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
-                                : 'bg-amber-500/10 border-amber-500/20 text-amber-200/90'
+                                : 'bg-blue-500/10 border-blue-500/25 text-blue-200/90'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
@@ -537,7 +540,7 @@ export const Login: React.FC = () => {
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={16} className="shrink-0 text-amber-400" />
+                                    <ShieldCheck size={16} className="shrink-0 text-blue-400" />
                                     <span>Acceso al sistema contable oficial y cartera de empresas.</span>
                                 </>
                             )}
@@ -553,7 +556,7 @@ export const Login: React.FC = () => {
                                 }}
                                 className={`flex-1 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-amber-400 text-amber-300' 
+                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-blue-400 text-blue-300' 
                                         : 'border-transparent text-slate-500 hover:text-slate-300'
                                 }`}
                             >
@@ -567,7 +570,7 @@ export const Login: React.FC = () => {
                                 }}
                                 className={`flex-1 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     !isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-amber-400 text-amber-300' 
+                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-blue-400 text-blue-300' 
                                         : 'border-transparent text-slate-500 hover:text-slate-300'
                                 }`}
                             >
@@ -578,8 +581,8 @@ export const Login: React.FC = () => {
                         {/* Formulario */}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {errorAlert && (
-                                <div className="bg-red-500/15 border border-red-500/30 text-red-200 text-xs py-3 px-3.5 rounded-xl flex items-start gap-2.5 animate-in fade-in duration-200">
-                                    <span className="text-red-400 mt-0.5 text-sm shrink-0">⚠️</span>
+                                <div className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs py-3 px-3.5 rounded-xl flex items-start gap-2.5 animate-in fade-in duration-200">
+                                    <span className="text-rose-400 mt-0.5 text-sm shrink-0">⚠️</span>
                                     <div className="flex-1 font-medium leading-relaxed">{errorAlert}</div>
                                 </div>
                             )}
@@ -650,7 +653,7 @@ export const Login: React.FC = () => {
                                             type="checkbox"
                                             checked={rememberMe}
                                             onChange={e => setRememberMe(e.target.checked)}
-                                            className="w-4 h-4 rounded border-white/10 bg-black/40 checked:bg-amber-400 accent-amber-500"
+                                            className="w-4 h-4 rounded border-white/10 bg-black/40 checked:bg-blue-600 accent-blue-600"
                                         />
                                         <span>Recordar credenciales</span>
                                     </label>
@@ -666,7 +669,7 @@ export const Login: React.FC = () => {
                                 className={`w-full font-black py-3.5 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 mt-5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-900/40'
-                                        : 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 shadow-amber-500/20'
+                                        : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/25'
                                 } disabled:opacity-50 disabled:pointer-events-none`}
                             >
                                 {isLoading ? (
@@ -701,7 +704,7 @@ export const Login: React.FC = () => {
                 <div className="hidden md:flex flex-1 max-w-2xl h-[560px] flex-col justify-center">
                     
                     {/* Contenedor Mockup Sistema */}
-                    <div className="w-full h-full bg-[#0c0d12] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
+                    <div className="w-full h-full bg-[#0b0f19] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
                         
                         {/* Ventana Header macOS style */}
                         <div className="h-10 border-b border-white/10 bg-black/50 flex items-center justify-between px-4 shrink-0">
@@ -710,11 +713,11 @@ export const Login: React.FC = () => {
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></span>
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></span>
                             </div>
-                            <div className="text-[9.5px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                <Sparkles size={11} className="text-amber-400" />
+                            <div className="text-[9.5px] text-slate-300 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                <Sparkles size={11} className="text-blue-400" />
                                 SOFTCONTABLE ERP PREVIEW
                             </div>
-                            <div className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-mono">
+                            <div className="text-[9px] bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded text-blue-400 font-mono font-bold">
                                 LIVE DEMO
                             </div>
                         </div>
@@ -723,8 +726,8 @@ export const Login: React.FC = () => {
                         <div className="flex-1 flex overflow-hidden">
                             
                             {/* Sidebar de Módulos (Navegable por clic) */}
-                            <div className="w-48 border-r border-white/5 p-3 flex flex-col gap-1.5 shrink-0 bg-black/30">
-                                <span className="text-[8.5px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-2.5">
+                            <div className="w-48 border-r border-white/5 p-3 flex flex-col gap-1.5 shrink-0 bg-black/40">
+                                <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2.5">
                                     Módulos Activos
                                 </span>
                                 {showcaseViews.map((view, idx) => {
@@ -735,36 +738,36 @@ export const Login: React.FC = () => {
                                             key={view.id}
                                             type="button"
                                             onClick={() => setActiveSlide(idx)}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer ${
+                                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-200 cursor-pointer ${
                                                 isActive 
-                                                    ? 'bg-white/10 text-white font-bold border border-white/10 shadow' 
+                                                    ? 'bg-blue-600/15 text-white font-bold border border-blue-500/30 shadow-sm' 
                                                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                                             }`}
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <Icon size={14} className={isActive ? view.activeColor : 'text-slate-500'} />
-                                                <span className="text-[10px] tracking-wider uppercase">{view.title}</span>
+                                                <span className="text-[10px] tracking-wider uppercase font-semibold">{view.title}</span>
                                             </div>
                                         </button>
                                     );
                                 })}
 
-                                <div className="mt-auto p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[9px] text-slate-400 space-y-1">
-                                    <div className="font-bold text-slate-300">SUNAT 2026 Ready</div>
-                                    <div className="text-[8px] text-slate-500">PLE / SIRE 2026 integrado automáticamente.</div>
+                                <div className="mt-auto p-2.5 bg-blue-500/[0.04] border border-blue-500/15 rounded-xl text-[9px] text-slate-400 space-y-1">
+                                    <div className="font-bold text-blue-300">SUNAT 2026 Ready</div>
+                                    <div className="text-[8px] text-slate-500">PLE / SIRE / PLAME integrado automáticamente.</div>
                                 </div>
                             </div>
 
                             {/* Área de Visualización del Carrusel */}
-                            <div className="flex-1 p-5 flex flex-col overflow-hidden bg-gradient-to-br from-slate-950/40 to-black/60 relative">
+                            <div className="flex-1 p-5 flex flex-col overflow-hidden bg-gradient-to-br from-slate-950/60 to-black/80 relative">
                                 
                                 {/* Header Vista Activa */}
-                                <div className="flex justify-between items-center border-b border-white/5 pb-3 mb-3 shrink-0">
+                                <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3 shrink-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-white uppercase tracking-wider">
+                                        <span className="text-xs font-extrabold text-white uppercase tracking-wider">
                                             {showcaseViews[activeSlide].title}
                                         </span>
-                                        <span className="text-[8.5px] bg-white/5 border border-white/10 text-slate-300 px-2 py-0.5 rounded font-medium">
+                                        <span className="text-[8.5px] bg-blue-500/10 border border-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-bold">
                                             {showcaseViews[activeSlide].badge}
                                         </span>
                                     </div>
@@ -775,7 +778,7 @@ export const Login: React.FC = () => {
                                                 type="button"
                                                 onClick={() => setActiveSlide(i)}
                                                 className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                                    i === activeSlide ? 'w-5 bg-amber-400' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                                                    i === activeSlide ? 'w-5 bg-blue-500' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
                                                 }`}
                                             />
                                         ))}
@@ -813,3 +816,4 @@ export const Login: React.FC = () => {
         </div>
     );
 };
+
