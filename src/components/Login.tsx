@@ -21,7 +21,9 @@ import {
     Landmark,
     Users,
     ReceiptText,
-    TrendingUp
+    KeyRound,
+    X,
+    AlertCircle
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -29,42 +31,42 @@ import { LegalPages } from './LegalPages';
 
 const customStyles = `
   .glass-card-pro {
-    background: rgba(15, 23, 42, 0.82);
+    background: rgba(15, 23, 42, 0.88);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 
       0 30px 60px -12px rgba(0, 0, 0, 0.65),
       inset 0 1px 1px rgba(255, 255, 255, 0.12);
   }
   .glass-card-student {
-    background: rgba(19, 24, 52, 0.85);
+    background: rgba(19, 24, 52, 0.9);
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(129, 140, 248, 0.25);
+    border: 1px solid rgba(129, 140, 248, 0.28);
     box-shadow: 
       0 30px 60px -12px rgba(30, 27, 75, 0.5),
       inset 0 1px 1px rgba(165, 180, 252, 0.2);
   }
   .glass-input-field {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: #ffffff;
     transition: all 0.2s ease-in-out;
   }
   .glass-input-field:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
   }
   .glass-input-field:focus-within {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(59, 130, 246, 0.7);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
   }
   .glass-input-field-student:focus-within {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(129, 140, 248, 0.75);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(129, 140, 248, 0.85);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
   }
 `;
 
@@ -78,58 +80,58 @@ const showcaseViews = [
         content: (
             <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-blue-500/[0.05] border border-blue-500/25 rounded-xl p-3.5">
-                        <span className="text-[9px] text-blue-400 font-bold uppercase tracking-wider block mb-1">Ventas del Mes</span>
+                    <div className="bg-slate-900/90 border border-blue-500/35 rounded-xl p-3.5 shadow-md">
+                        <span className="text-[9px] text-blue-400 font-extrabold uppercase tracking-wider block mb-1">Ventas del Mes</span>
                         <span className="text-base lg:text-lg font-black text-white">S/ 83,536.61</span>
-                        <span className="text-[9px] text-emerald-400 font-bold block mt-1">+14.2% vs mes ant.</span>
+                        <span className="text-[9.5px] text-emerald-400 font-bold block mt-1">+14.2% vs mes ant.</span>
                     </div>
-                    <div className="bg-emerald-500/[0.05] border border-emerald-500/25 rounded-xl p-3.5">
-                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider block mb-1">Compras del Mes</span>
+                    <div className="bg-slate-900/90 border border-emerald-500/35 rounded-xl p-3.5 shadow-md">
+                        <span className="text-[9px] text-emerald-400 font-extrabold uppercase tracking-wider block mb-1">Compras del Mes</span>
                         <span className="text-base lg:text-lg font-black text-white">S/ 312.92</span>
-                        <span className="text-[9px] text-slate-400 font-bold block mt-1">2 comprobantes</span>
+                        <span className="text-[9.5px] text-slate-300 font-bold block mt-1">2 comprobantes</span>
                     </div>
-                    <div className="bg-purple-500/[0.05] border border-purple-500/25 rounded-xl p-3.5">
-                        <span className="text-[9px] text-purple-400 font-bold uppercase tracking-wider block mb-1">IGV Estimado</span>
+                    <div className="bg-slate-900/90 border border-purple-500/35 rounded-xl p-3.5 shadow-md">
+                        <span className="text-[9px] text-purple-300 font-extrabold uppercase tracking-wider block mb-1">IGV Estimado</span>
                         <span className="text-base lg:text-lg font-black text-white">S/ 12,697.10</span>
-                        <span className="text-[9px] text-indigo-400 font-bold block mt-1">Régimen RMT / RG</span>
+                        <span className="text-[9.5px] text-indigo-300 font-bold block mt-1">Régimen RMT / RG</span>
                     </div>
                 </div>
                 <div className="grid grid-cols-12 gap-3 flex-1">
-                    <div className="col-span-8 bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
-                        <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block mb-2">Flujo de Caja Anual (2026)</span>
+                    <div className="col-span-8 bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
+                        <span className="text-[10px] text-white font-extrabold uppercase tracking-wider block mb-2">Flujo de Caja Anual (2026)</span>
                         <div className="flex items-end justify-between h-32 pt-2 px-1">
                             {[40, 60, 45, 75, 50, 90, 65, 80, 55, 70, 85, 95].map((h, i) => (
                                 <div key={i} className="w-[6%] flex flex-col items-center gap-1.5">
-                                    <div className="w-full bg-gradient-to-t from-slate-800 to-blue-500/80 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
-                                    <span className="text-[8px] text-slate-500 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
+                                    <div className="w-full bg-gradient-to-t from-slate-800 to-blue-500/90 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
+                                    <span className="text-[8.5px] text-slate-300 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="col-span-4 bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
-                        <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block mb-2">Rendimiento</span>
+                    <div className="col-span-4 bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
+                        <span className="text-[10px] text-white font-extrabold uppercase tracking-wider block mb-2">Rendimiento</span>
                         <div className="space-y-2.5">
                             <div>
-                                <div className="flex justify-between text-[9px] text-slate-400 mb-1">
+                                <div className="flex justify-between text-[9.5px] text-slate-300 mb-1">
                                     <span>Margen Bruto</span>
                                     <span className="text-white font-bold">99.6%</span>
                                 </div>
-                                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                                     <div className="bg-blue-500 h-full rounded-full" style={{ width: '99.6%' }}></div>
                                 </div>
                             </div>
                             <div>
-                                <div className="flex justify-between text-[9px] text-slate-400 mb-1">
+                                <div className="flex justify-between text-[9.5px] text-slate-300 mb-1">
                                     <span>Ejecución Presup.</span>
                                     <span className="text-white font-bold">88.4%</span>
                                 </div>
-                                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                                     <div className="bg-emerald-500 h-full rounded-full" style={{ width: '88.4%' }}></div>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-[8px] text-slate-500 mt-2">
-                            Actualización en tiempo real.
+                        <div className="text-[8.5px] text-slate-400 mt-2 font-semibold">
+                            Sincronización en tiempo real.
                         </div>
                     </div>
                 </div>
@@ -145,41 +147,41 @@ const showcaseViews = [
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Integración Directa SIRE SUNAT 2026</span>
-                    <span className="text-[9px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full font-bold">Sincronizado SOL</span>
+                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Integración Directa SIRE SUNAT 2026</span>
+                    <span className="text-[9.5px] bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 px-2.5 py-0.5 rounded-full font-extrabold">Sincronizado SOL</span>
                 </div>
-                <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-white/[0.01] flex-1 flex flex-col">
+                <div className="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-900/90 flex-1 flex flex-col shadow-md">
                     <table className="w-full text-left border-collapse flex-1">
                         <thead>
-                            <tr className="border-b border-white/[0.08] bg-white/[0.04]">
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Módulo SIRE</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Comprobantes</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Base Imponible</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-right">Estado SUNAT</th>
+                            <tr className="border-b border-slate-700/80 bg-slate-800/60">
+                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Módulo SIRE</th>
+                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Comprobantes</th>
+                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Base Imponible</th>
+                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Estado SUNAT</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.04] text-[9.5px]">
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-bold text-white flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> RVIE 14.1 (Ventas)
+                        <tbody className="divide-y divide-slate-800 text-[10px]">
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2.5 font-black text-white flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> RVIE 14.1 (Ventas)
                                 </td>
-                                <td className="p-2.5 text-slate-300 font-mono">1 Registros</td>
-                                <td className="p-2.5 text-blue-400 font-bold font-mono">S/ 70,793.74</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-bold">ACEPTADO (Ticket)</td>
+                                <td className="p-2.5 text-slate-200 font-mono font-semibold">1 Registros</td>
+                                <td className="p-2.5 text-blue-300 font-black font-mono">S/ 70,793.74</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-black">ACEPTADO (Ticket)</td>
                             </tr>
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-bold text-white flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-purple-500"></span> RCE 8.1 (Compras)
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2.5 font-black text-white flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span> RCE 8.1 (Compras)
                                 </td>
-                                <td className="p-2.5 text-slate-300 font-mono">2 Registros</td>
-                                <td className="p-2.5 text-purple-400 font-bold font-mono">S/ 265.19</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-bold">ACEPTADO (Ticket)</td>
+                                <td className="p-2.5 text-slate-200 font-mono font-semibold">2 Registros</td>
+                                <td className="p-2.5 text-purple-300 font-black font-mono">S/ 265.19</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-black">ACEPTADO (Ticket)</td>
                             </tr>
                         </tbody>
                     </table>
-                    <div className="p-3 bg-blue-500/5 border-t border-white/[0.08] flex items-center justify-between text-[9px]">
-                        <span className="text-slate-400 font-medium">Comparativa SIRE vs Local: Sin discrepancias detectadas.</span>
-                        <span className="text-blue-400 font-bold">Resumen 100% Ok</span>
+                    <div className="p-3 bg-blue-500/10 border-t border-slate-700/80 flex items-center justify-between text-[9.5px]">
+                        <span className="text-slate-300 font-semibold">Comparativa SIRE vs Local: Sin discrepancias detectadas.</span>
+                        <span className="text-blue-400 font-extrabold">Resumen 100% Ok</span>
                     </div>
                 </div>
             </div>
@@ -194,54 +196,54 @@ const showcaseViews = [
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
-                    <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-0.5 rounded-full font-bold">Folio: 0048</span>
+                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
+                    <span className="text-[9.5px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-extrabold">Folio: 0048</span>
                 </div>
-                <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-white/[0.01] flex-1 flex flex-col">
+                <div className="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-900/90 flex-1 flex flex-col shadow-md">
                     <table className="w-full text-left border-collapse flex-1">
                         <thead>
-                            <tr className="border-b border-white/[0.08] bg-white/[0.04]">
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Código</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cuenta Contable</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-right">Debe (S/)</th>
-                                <th className="p-2.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-right">Haber (S/)</th>
+                            <tr className="border-b border-slate-700/80 bg-slate-800/60">
+                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Código</th>
+                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Cuenta Contable</th>
+                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Debe (S/)</th>
+                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Haber (S/)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.04] text-[9.5px]">
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-mono font-bold text-slate-400">10411</td>
-                                <td className="p-2.5 text-white">BCP - Moneda Nacional</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-bold">11,800.00</td>
-                                <td className="p-2.5 text-right text-slate-600">-</td>
+                        <tbody className="divide-y divide-slate-800 text-[10px]">
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2 font-mono font-bold text-slate-300">10411</td>
+                                <td className="p-2 text-white font-semibold">BCP - Moneda Nacional</td>
+                                <td className="p-2 text-right text-emerald-400 font-black">11,800.00</td>
+                                <td className="p-2 text-right text-slate-500">-</td>
                             </tr>
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-mono font-bold text-slate-400">40111</td>
-                                <td className="p-2.5 text-white">IGV - Cuenta Propia</td>
-                                <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-blue-400 font-bold">1,800.00</td>
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2 font-mono font-bold text-slate-300">40111</td>
+                                <td className="p-2 text-white font-semibold">IGV - Cuenta Propia</td>
+                                <td className="p-2 text-right text-slate-500">-</td>
+                                <td className="p-2 text-right text-blue-400 font-black">1,800.00</td>
                             </tr>
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-mono font-bold text-slate-400">70121</td>
-                                <td className="p-2.5 text-white">Mercaderías - Venta Local</td>
-                                <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-blue-400 font-bold">10,000.00</td>
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2 font-mono font-bold text-slate-300">70121</td>
+                                <td className="p-2 text-white font-semibold">Mercaderías - Venta Local</td>
+                                <td className="p-2 text-right text-slate-500">-</td>
+                                <td className="p-2 text-right text-blue-400 font-black">10,000.00</td>
                             </tr>
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-mono font-bold text-slate-400">60111</td>
-                                <td className="p-2.5 text-white">Mercaderías - Compra Local</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-bold">5,000.00</td>
-                                <td className="p-2.5 text-right text-slate-600">-</td>
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2 font-mono font-bold text-slate-300">60111</td>
+                                <td className="p-2 text-white font-semibold">Mercaderías - Compra Local</td>
+                                <td className="p-2 text-right text-emerald-400 font-black">5,000.00</td>
+                                <td className="p-2 text-right text-slate-500">-</td>
                             </tr>
-                            <tr className="hover:bg-white/[0.02]">
-                                <td className="p-2.5 font-mono font-bold text-slate-400">42121</td>
-                                <td className="p-2.5 text-white">Facturas por Pagar - Local</td>
-                                <td className="p-2.5 text-right text-slate-600">-</td>
-                                <td className="p-2.5 text-right text-blue-400 font-bold">5,000.00</td>
+                            <tr className="hover:bg-slate-800/40">
+                                <td className="p-2 font-mono font-bold text-slate-300">42121</td>
+                                <td className="p-2 text-white font-semibold">Facturas por Pagar - Local</td>
+                                <td className="p-2 text-right text-slate-500">-</td>
+                                <td className="p-2 text-right text-blue-400 font-black">5,000.00</td>
                             </tr>
-                            <tr className="bg-white/[0.03] font-bold border-t border-white/10">
-                                <td className="p-2.5 text-[8.5px] text-slate-400 uppercase tracking-wider" colSpan={2}>Suma de Operaciones del Folio</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black">16,800.00</td>
-                                <td className="p-2.5 text-right text-blue-400 font-black">16,800.00</td>
+                            <tr className="bg-slate-800/80 font-bold border-t border-slate-700/80">
+                                <td className="p-2 text-[9px] text-slate-200 uppercase font-black tracking-wider" colSpan={2}>Suma de Operaciones del Folio</td>
+                                <td className="p-2 text-right text-emerald-400 font-black">16,800.00</td>
+                                <td className="p-2 text-right text-blue-400 font-black">16,800.00</td>
                             </tr>
                         </tbody>
                     </table>
@@ -258,25 +260,25 @@ const showcaseViews = [
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Nómina de Colaboradores &amp; Beneficios Sociales</span>
-                    <span className="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-0.5 rounded-full font-bold">PLAME Ready</span>
+                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Nómina de Colaboradores &amp; Beneficios Sociales</span>
+                    <span className="text-[9.5px] bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2.5 py-0.5 rounded-full font-extrabold">PLAME Ready</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 flex-1">
-                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
                         <div>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Gratificaciones Ley 27735</span>
-                            <span className="text-sm font-black text-white">S/ 3,450.00</span>
-                            <p className="text-[8px] text-slate-400 mt-1">Cálculo proyectado Julio/Diciembre con Bonificación Extraordinaria (9%).</p>
+                            <span className="text-[9.5px] text-amber-300 font-extrabold uppercase block mb-1">Gratificaciones Ley 27735</span>
+                            <span className="text-base font-black text-white">S/ 3,450.00</span>
+                            <p className="text-[8.5px] text-slate-300 mt-1 font-medium">Cálculo proyectado Julio/Diciembre con Bonificación Extraordinaria (9%).</p>
                         </div>
-                        <span className="text-[8.5px] text-emerald-400 font-bold">● Calculado Automatizado</span>
+                        <span className="text-[9px] text-emerald-400 font-black mt-2">● Cálculo Automatizado</span>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
                         <div>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">CTS D.S. 001-97-TR</span>
-                            <span className="text-sm font-black text-white">S/ 1,725.00</span>
-                            <p className="text-[8px] text-slate-400 mt-1">Depósito Mayo/Noviembre computable con 1/6 de gratificación.</p>
+                            <span className="text-[9.5px] text-blue-300 font-extrabold uppercase block mb-1">CTS D.S. 001-97-TR</span>
+                            <span className="text-base font-black text-white">S/ 1,725.00</span>
+                            <p className="text-[8.5px] text-slate-300 mt-1 font-medium">Depósito Mayo/Noviembre computable con 1/6 de gratificación.</p>
                         </div>
-                        <span className="text-[8.5px] text-blue-400 font-bold">● Sincronizado PLAME</span>
+                        <span className="text-[9px] text-blue-400 font-black mt-2">● Sincronizado PLAME</span>
                     </div>
                 </div>
             </div>
@@ -284,30 +286,30 @@ const showcaseViews = [
     },
     {
         id: 'bancos',
-        title: 'Tesoreria & Bancos',
+        title: 'Tesorería & Bancos',
         icon: Landmark,
         activeColor: 'text-cyan-400',
         badge: 'Auto-Match Bancario',
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Conciliación Bancaria Automática</span>
-                    <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-2.5 py-0.5 rounded-full font-bold">BCP / BBVA / Interbank</span>
+                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Conciliación Bancaria Automática</span>
+                    <span className="text-[9.5px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 px-2.5 py-0.5 rounded-full font-extrabold">BCP / BBVA / Interbank</span>
                 </div>
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between shadow-md">
                     <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[9.5px] bg-white/[0.03] p-2 rounded-lg border border-white/5">
-                            <span className="text-white font-mono">MOV-2026-0814 • Depósito Cliente</span>
-                            <span className="text-emerald-400 font-bold font-mono">+S/ 11,800.00</span>
+                        <div className="flex justify-between items-center text-[10px] bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                            <span className="text-white font-bold font-mono">MOV-2026-0814 • Depósito Cliente</span>
+                            <span className="text-emerald-400 font-black font-mono">+S/ 11,800.00</span>
                         </div>
-                        <div className="flex justify-between items-center text-[9.5px] bg-white/[0.03] p-2 rounded-lg border border-white/5">
-                            <span className="text-white font-mono">MOV-2026-0815 • Pago Proveedor</span>
-                            <span className="text-blue-400 font-bold font-mono">-S/ 5,000.00</span>
+                        <div className="flex justify-between items-center text-[10px] bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                            <span className="text-white font-bold font-mono">MOV-2026-0815 • Pago Proveedor</span>
+                            <span className="text-blue-400 font-black font-mono">-S/ 5,000.00</span>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-white/10 pt-2">
+                    <div className="flex justify-between items-center text-[9.5px] text-slate-300 border-t border-slate-700/80 pt-2 font-semibold">
                         <span>Conciliado: 100% de Extractos Bancarios</span>
-                        <span className="text-cyan-400 font-bold">Match Automático OK</span>
+                        <span className="text-cyan-400 font-black">Match Automático OK</span>
                     </div>
                 </div>
             </div>
@@ -322,19 +324,19 @@ const showcaseViews = [
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Auditoría Tributaria Preventiva &amp; RAG AI</span>
-                    <span className="text-[9px] bg-purple-500/10 border border-purple-500/30 text-purple-400 px-2.5 py-0.5 rounded-full font-bold">Riesgo SUNAT: BAJO</span>
+                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Auditoría Tributaria Preventiva &amp; RAG AI</span>
+                    <span className="text-[9.5px] bg-purple-500/20 border border-purple-500/40 text-purple-300 px-2.5 py-0.5 rounded-full font-extrabold">Riesgo SUNAT: BAJO</span>
                 </div>
-                <div className="bg-purple-500/[0.05] border border-purple-500/25 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                <div className="bg-slate-900/90 border border-purple-500/35 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between shadow-md">
                     <div>
-                        <span className="text-[9px] text-purple-300 font-bold uppercase tracking-wider block mb-1">Dictamen de Inteligencia Normativa 2026</span>
-                        <p className="text-[9.5px] text-slate-200 leading-relaxed">
+                        <span className="text-[9.5px] text-purple-300 font-extrabold uppercase tracking-wider block mb-1">Dictamen de Inteligencia Normativa 2026</span>
+                        <p className="text-[10px] text-slate-100 leading-relaxed font-medium">
                             "Tu ratio de compras vs ventas se encuentra en 0.37%, dentro de los márgenes óptimos sustentables. No se detectan inconsistencias bancarias Ley 28194."
                         </p>
                     </div>
-                    <div className="flex justify-between items-center text-[8.5px] text-slate-400 border-t border-purple-500/20 pt-2">
+                    <div className="flex justify-between items-center text-[9px] text-slate-300 border-t border-purple-500/30 pt-2 font-semibold">
                         <span>Motor de Inferencia: Groq LLaMA-3.3 70B</span>
-                        <span className="text-purple-400 font-bold">IA RAG 4.0 Activo</span>
+                        <span className="text-purple-300 font-black">IA RAG 4.0 Activo</span>
                     </div>
                 </div>
             </div>
@@ -353,22 +355,18 @@ export const Login: React.FC = () => {
         password: '',
         name: ''
     });
-    const [rememberMe, setRememberMe] = useState(false);
 
     const [activeSlide, setActiveSlide] = useState(0);
     const [showLoginLegal, setShowLoginLegal] = useState<'terms' | 'privacy' | 'security' | 'confidentiality' | 'cookies' | 'eula' | 'legal' | null>(null);
 
-    useEffect(() => {
-        const savedEmail = localStorage.getItem('softcontable_rem_email');
-        if (savedEmail) {
-            setFormData(prev => ({
-                ...prev,
-                email: savedEmail,
-                password: ''
-            }));
-            setRememberMe(true);
-        }
-    }, []);
+    // Estado Modal ¿Olvidaste tu clave?
+    const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState<1 | 2>(1);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotNewPassword, setForgotNewPassword] = useState('');
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [forgotError, setForgotError] = useState<string | null>(null);
+    const [forgotMessage, setForgotMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -401,7 +399,7 @@ export const Login: React.FC = () => {
                         return;
                     }
                     if (!isStudentModeActive && res.user?.role === 'estudiante') {
-                        const msg = '🎓 Esta cuenta está registrada en Modo Estudiante. Activa "Acceso Estudiante" para ingresar.';
+                        const msg = '🎓 Esta cuenta está registrada en Modo Estudiante. Activa la opción "Estudiante" para ingresar.';
                         setErrorAlert(msg);
                         toast.error(msg);
                         setIsLoading(false);
@@ -412,12 +410,6 @@ export const Login: React.FC = () => {
                     if (res.user) {
                         localStorage.setItem('softcontable_user', JSON.stringify(res.user));
                     }
-                    if (rememberMe) {
-                        localStorage.setItem('softcontable_rem_email', formData.email);
-                    } else {
-                        localStorage.removeItem('softcontable_rem_email');
-                    }
-                    localStorage.removeItem('softcontable_rem_pass');
                     window.location.reload();
                 } else {
                     const errMsg = res.error || 'Error al iniciar sesión';
@@ -457,16 +449,53 @@ export const Login: React.FC = () => {
         }
     };
 
-    return (
-        <div className="min-h-screen w-full bg-[#080a10] text-slate-100 flex items-center justify-center font-sans selection:bg-blue-600/30 selection:text-blue-200 overflow-x-hidden relative p-4 md:p-8">
-            <style>{customStyles}</style>
+    // Manejo de Recuperación de Contraseña (Paso 1: Verificar correo)
+    const handleForgotVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setForgotLoading(true);
+        setForgotError(null);
+        setForgotMessage(null);
+        try {
+            const res = await webApiBridge.authForgotPassword({ email: forgotEmail });
+            if (res.success) {
+                setForgotMessage(res.message);
+                setForgotStep(2);
+            } else {
+                setForgotError(res.error || 'Error al verificar la cuenta');
+            }
+        } catch (err: any) {
+            setForgotError(err.response?.data?.error || 'No se encontró la cuenta con este correo.');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
 
-            {/* Elementos ambientales de fondo */}
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl"></div>
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full filter blur-3xl"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-20"></div>
-            </div>
+    // Manejo de Recuperación de Contraseña (Paso 2: Restablecer clave)
+    const handleForgotReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setForgotLoading(true);
+        setForgotError(null);
+        setForgotMessage(null);
+        try {
+            const res = await webApiBridge.authForgotPassword({ email: forgotEmail, newPassword: forgotNewPassword });
+            if (res.success) {
+                toast.success(res.message);
+                setShowForgotPasswordModal(false);
+                setFormData(prev => ({ ...prev, email: forgotEmail }));
+                setIsLogin(true);
+            } else {
+                setForgotError(res.error || 'Error al actualizar la contraseña');
+            }
+        } catch (err: any) {
+            setForgotError(err.response?.data?.error || 'Error al restablecer la contraseña.');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen w-full bg-[#07090e] text-slate-100 flex items-center justify-center font-sans selection:bg-blue-600/30 selection:text-blue-200 overflow-x-hidden relative p-4 md:p-8">
+            <style>{customStyles}</style>
 
             {/* Layout Principal Contenedor */}
             <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-8 lg:gap-12 relative z-10 my-auto">
@@ -523,7 +552,7 @@ export const Login: React.FC = () => {
                                 }`}
                             >
                                 <GraduationCap size={14} />
-                                <span>🎓 Estudiante</span>
+                                <span>Estudiante</span>
                             </button>
                         </div>
 
@@ -579,7 +608,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                             {errorAlert && (
                                 <div className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs py-3 px-3.5 rounded-xl flex items-start gap-2.5 animate-in fade-in duration-200">
                                     <span className="text-rose-400 mt-0.5 text-sm shrink-0">⚠️</span>
@@ -595,6 +624,7 @@ export const Login: React.FC = () => {
                                         <input 
                                             type="text"
                                             required
+                                            autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
                                             className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
                                             style={{ paddingLeft: '2.75rem' }}
@@ -612,6 +642,7 @@ export const Login: React.FC = () => {
                                     <input 
                                         type="email"
                                         required
+                                        autoComplete="username"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
                                         className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
                                         style={{ paddingLeft: '2.75rem' }}
@@ -628,7 +659,7 @@ export const Login: React.FC = () => {
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
-                                        autoComplete="current-password"
+                                        autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder="••••••••"
                                         className="w-full py-3 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
                                         style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
@@ -647,19 +678,20 @@ export const Login: React.FC = () => {
                             </div>
 
                             {isLogin && (
-                                <div className="flex items-center justify-between px-1 pt-1 text-xs">
-                                    <label className="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
-                                        <input 
-                                            type="checkbox"
-                                            checked={rememberMe}
-                                            onChange={e => setRememberMe(e.target.checked)}
-                                            className="w-4 h-4 rounded border-white/10 bg-black/40 checked:bg-blue-600 accent-blue-600"
-                                        />
-                                        <span>Recordar credenciales</span>
-                                    </label>
-                                    <a href="#" className="text-slate-400 hover:text-white transition-colors font-medium">
+                                <div className="flex items-center justify-end px-1 pt-1 text-xs">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            setForgotEmail(formData.email);
+                                            setShowForgotPasswordModal(true);
+                                            setForgotStep(1);
+                                            setForgotError(null);
+                                            setForgotMessage(null);
+                                        }} 
+                                        className="text-blue-400 hover:text-blue-300 transition-colors font-bold cursor-pointer hover:underline"
+                                    >
                                         ¿Olvidaste tu clave?
-                                    </a>
+                                    </button>
                                 </div>
                             )}
 
@@ -808,6 +840,103 @@ export const Login: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL RECUPERACIÓN DE CONTRASEÑA */}
+            {showForgotPasswordModal && (
+                <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+                    <div className="w-full max-w-md bg-[#0f172a] border border-slate-700/80 rounded-3xl p-6 shadow-2xl relative animate-scale-up">
+                        <button
+                            onClick={() => setShowForgotPasswordModal(false)}
+                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-2xl border border-blue-500/30">
+                                <KeyRound size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-white uppercase tracking-wider">Recuperar Contraseña</h3>
+                                <p className="text-xs text-slate-400 font-medium">SOFTCONTABLE SaaS Security</p>
+                            </div>
+                        </div>
+
+                        {forgotError && (
+                            <div className="mb-4 bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs p-3 rounded-xl flex items-center gap-2">
+                                <AlertCircle size={16} className="text-rose-400 shrink-0" />
+                                <span>{forgotError}</span>
+                            </div>
+                        )}
+
+                        {forgotMessage && (
+                            <div className="mb-4 bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-xs p-3 rounded-xl flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                                <span>{forgotMessage}</span>
+                            </div>
+                        )}
+
+                        {forgotStep === 1 ? (
+                            <form onSubmit={handleForgotVerify} className="space-y-4">
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    Ingresa el correo electrónico asociado a tu cuenta para verificar tu identidad y restablecer tu clave de acceso.
+                                </p>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Correo Registrado</label>
+                                    <div className="relative flex items-center rounded-xl glass-input-field">
+                                        <Mail className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="usuario@empresa.com"
+                                            className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
+                                            style={{ paddingLeft: '2.75rem' }}
+                                            value={forgotEmail}
+                                            onChange={e => setForgotEmail(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={forgotLoading}
+                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs uppercase tracking-wider cursor-pointer shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar Cuenta'}
+                                </button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleForgotReset} className="space-y-4">
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    Cuenta verificada: <strong className="text-blue-400">{forgotEmail}</strong>. Ingresa tu nueva contraseña para actualizar tu acceso.
+                                </p>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nueva Contraseña</label>
+                                    <div className="relative flex items-center rounded-xl glass-input-field">
+                                        <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="password"
+                                            required
+                                            minLength={6}
+                                            placeholder="••••••••"
+                                            className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
+                                            style={{ paddingLeft: '2.75rem' }}
+                                            value={forgotNewPassword}
+                                            onChange={e => setForgotNewPassword(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={forgotLoading}
+                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs uppercase tracking-wider cursor-pointer shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar Nueva Contraseña'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Modal Legal */}
             {showLoginLegal && (

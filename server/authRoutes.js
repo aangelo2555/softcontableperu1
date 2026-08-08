@@ -157,6 +157,43 @@ router.post('/login', authLimiter, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
+// --- RECUPERACIÓN DE CONTRASEÑA ---
+router.post('/forgot-password', authLimiter, async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        console.log(`[AUTH] Solicitud de recuperación de contraseña: ${email}`);
+
+        if (!email) {
+            return res.status(400).json({ success: false, error: 'Debe proporcionar un correo electrónico válido.' });
+        }
+
+        const user = await dbManager.getUserByEmail(email);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'No existe ninguna cuenta registrada con este correo electrónico.' });
+        }
+
+        if (newPassword) {
+            if (newPassword.length < 6) {
+                return res.status(400).json({ success: false, error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+            }
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+            await dbManager.query(
+                USE_POSTGRES ? 'UPDATE users SET password = $1 WHERE email = $2' : 'UPDATE users SET password = ? WHERE email = ?',
+                [hashedPassword, email]
+            );
+            return res.json({ success: true, message: '¡Tu contraseña ha sido restablecida exitosamente! Ahora puedes iniciar sesión.' });
+        } else {
+            return res.json({
+                success: true,
+                message: `Cuenta verificada para ${email}. Ingresa tu nueva contraseña para continuar.`,
+                verified: true
+            });
+        }
+    } catch (error) {
+        console.error('[AUTH ERROR] Error en recuperación de contraseña:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 module.exports = router;

@@ -65,6 +65,10 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/register-student', userData);
         return res.data;
     },
+    authForgotPassword: async (data: { email: string; newPassword?: string }) => {
+        const res = await api.post('/api/auth/forgot-password', data);
+        return res.data;
+    },
 
     // --- Database API ---
     dbGetWorkspaces: async () => {
