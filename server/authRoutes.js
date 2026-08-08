@@ -15,10 +15,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026
 
 const authLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minuto
-    max: 5, // Limitar cada IP a 5 peticiones de login/registro por minuto
+    max: 15, // Límite por IP por minuto
     message: { success: false, error: 'Demasiados intentos de acceso desde esta IP, por favor intente de nuevo en un minuto.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false
 });
 
 // --- REGISTRO ---
@@ -157,6 +158,8 @@ router.post('/login', authLimiter, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
 // --- RECUPERACIÓN DE CONTRASEÑA ---
 router.post('/forgot-password', authLimiter, async (req, res) => {
     try {

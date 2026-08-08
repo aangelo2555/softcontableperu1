@@ -31,9 +31,9 @@ const globalApiLimiter = rateLimit({
     max: 100,                 // Máximo 100 peticiones por IP por minuto
     standardHeaders: true,    // Incluir headers RateLimit-* en la respuesta
     legacyHeaders: false,
+    validate: false,
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
-        // Usar X-Forwarded-For para Railway proxy, fallback a IP directa
         return req.ip || req.connection?.remoteAddress || 'unknown';
     },
     handler: (req, res) => {
@@ -52,9 +52,10 @@ const globalApiLimiter = rateLimit({
 
 const authStrictLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 5,
+    max: 15,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     keyGenerator: (req) => req.ip || 'unknown',
     handler: (req, res) => {
         console.warn(`[SECURITY] Rate limit AUTH excedido para IP: ${req.ip} — Posible ataque de fuerza bruta`);
@@ -72,15 +73,16 @@ const authStrictLimiter = rateLimit({
 
 const premiumAiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 10,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     keyGenerator: (req) => req.ip || 'unknown',
     handler: (req, res) => {
         console.warn(`[SECURITY] Rate limit PREMIUM/AI excedido para IP: ${req.ip} — Ruta IA: ${req.originalUrl}`);
         res.status(429).json({
             success: false,
-            error: 'Has excedido el límite de consultas de Inteligencia Artificial (10/min). Espera un momento para continuar.',
+            error: 'Has excedido el límite de consultas de Inteligencia Artificial (20/min). Espera un momento para continuar.',
             retryAfter: 60
         });
     }
