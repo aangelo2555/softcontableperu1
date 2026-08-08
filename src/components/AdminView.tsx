@@ -934,7 +934,7 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  const handleTogglePremiumUser = async (userId: string, userEmail: string, enable: boolean) => {
+  const handleTogglePremiumUser = async (userId: string, userEmail: string, enable: boolean, tierSelection: string = 'full') => {
     try {
       const res = await fetch('/api/premium/subscription/activate-manual', {
         method: 'POST',
@@ -942,7 +942,7 @@ export const AdminView: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('softcontable_token')}`
         },
-        body: JSON.stringify({ userId, userEmail, enable, tiers: ['full'] })
+        body: JSON.stringify({ userId, userEmail, enable, tiers: [tierSelection] })
       });
       const data = await res.json();
       if (data.success) {
@@ -1451,12 +1451,28 @@ export const AdminView: React.FC = () => {
                                 Desactivar IA
                               </button>
                             ) : (
-                              <button
-                                onClick={() => handleTogglePremiumUser(req.user_id, req.user_email, true)}
-                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md cursor-pointer"
-                              >
-                                ✓ Activar IA para Usuario
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <select
+                                  id={`tier-select-${req.user_id || req.user_email}`}
+                                  defaultValue={req.plan_tier || 'full'}
+                                  className="bg-app-bg border border-app-border text-app-text rounded-xl px-2 py-1.5 text-xs font-bold outline-none cursor-pointer"
+                                >
+                                  <option value="full">FULL (3 Pilares)</option>
+                                  <option value="tributario">Pilar 1 (Tributario)</option>
+                                  <option value="planillas">Pilar 2 (Planillas)</option>
+                                  <option value="finanzas">Pilar 3 (Finanzas)</option>
+                                </select>
+                                <button
+                                  onClick={() => {
+                                    const selectElem = document.getElementById(`tier-select-${req.user_id || req.user_email}`) as HTMLSelectElement;
+                                    const chosenTier = selectElem ? selectElem.value : 'full';
+                                    handleTogglePremiumUser(req.user_id, req.user_email, true, chosenTier);
+                                  }}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md cursor-pointer whitespace-nowrap"
+                                >
+                                  ✓ Activar IA
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>

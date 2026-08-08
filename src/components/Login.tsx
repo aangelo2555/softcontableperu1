@@ -189,61 +189,61 @@ const showcaseViews = [
     },
     {
         id: 'diario',
-        title: 'Libro Diario PLE',
+        title: 'Libro Diario 5.1',
         icon: FileText,
         activeColor: 'text-emerald-400',
         badge: 'Formato SUNAT 5.1 & 5.2',
         content: (
             <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
-                    <span className="text-[9.5px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-extrabold">Folio: 0048</span>
+                    <span className="text-[11px] text-white font-black uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
+                    <span className="text-[9.5px] bg-emerald-500/25 border border-emerald-500/50 text-emerald-300 px-2.5 py-0.5 rounded-full font-black">Folio: 0048</span>
                 </div>
-                <div className="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-900/90 flex-1 flex flex-col shadow-md">
+                <div className="border border-slate-700 rounded-xl overflow-hidden bg-[#0a0f1d] flex-1 flex flex-col shadow-xl">
                     <table className="w-full text-left border-collapse flex-1">
                         <thead>
-                            <tr className="border-b border-slate-700/80 bg-slate-800/60">
-                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Código</th>
-                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Cuenta Contable</th>
-                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Debe (S/)</th>
-                                <th className="p-2 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Haber (S/)</th>
+                            <tr className="border-b border-slate-700 bg-slate-800/90">
+                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider">Código</th>
+                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider">Cuenta Contable</th>
+                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider text-right">Debe (S/)</th>
+                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider text-right">Haber (S/)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800 text-[10px]">
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2 font-mono font-bold text-slate-300">10411</td>
-                                <td className="p-2 text-white font-semibold">BCP - Moneda Nacional</td>
-                                <td className="p-2 text-right text-emerald-400 font-black">11,800.00</td>
-                                <td className="p-2 text-right text-slate-500">-</td>
+                        <tbody className="divide-y divide-slate-800 text-[10.5px]">
+                            <tr className="hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2.5 font-mono font-black text-emerald-400">10411</td>
+                                <td className="p-2.5 text-white font-bold">BCP - Moneda Nacional</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-black">11,800.00</td>
+                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2 font-mono font-bold text-slate-300">40111</td>
-                                <td className="p-2 text-white font-semibold">IGV - Cuenta Propia</td>
-                                <td className="p-2 text-right text-slate-500">-</td>
-                                <td className="p-2 text-right text-blue-400 font-black">1,800.00</td>
+                            <tr className="hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2.5 font-mono font-black text-blue-400">40111</td>
+                                <td className="p-2.5 text-white font-bold">IGV - Cuenta Propia</td>
+                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2.5 text-right text-blue-300 font-black">1,800.00</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2 font-mono font-bold text-slate-300">70121</td>
-                                <td className="p-2 text-white font-semibold">Mercaderías - Venta Local</td>
-                                <td className="p-2 text-right text-slate-500">-</td>
-                                <td className="p-2 text-right text-blue-400 font-black">10,000.00</td>
+                            <tr className="hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2.5 font-mono font-black text-blue-400">70121</td>
+                                <td className="p-2.5 text-white font-bold">Mercaderías - Venta Local</td>
+                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2.5 text-right text-blue-300 font-black">10,000.00</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2 font-mono font-bold text-slate-300">60111</td>
-                                <td className="p-2 text-white font-semibold">Mercaderías - Compra Local</td>
-                                <td className="p-2 text-right text-emerald-400 font-black">5,000.00</td>
-                                <td className="p-2 text-right text-slate-500">-</td>
+                            <tr className="hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2.5 font-mono font-black text-emerald-400">60111</td>
+                                <td className="p-2.5 text-white font-bold">Mercaderías - Compra Local</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-black">5,000.00</td>
+                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2 font-mono font-bold text-slate-300">42121</td>
-                                <td className="p-2 text-white font-semibold">Facturas por Pagar - Local</td>
-                                <td className="p-2 text-right text-slate-500">-</td>
-                                <td className="p-2 text-right text-blue-400 font-black">5,000.00</td>
+                            <tr className="hover:bg-slate-800/60 transition-colors">
+                                <td className="p-2.5 font-mono font-black text-blue-400">42121</td>
+                                <td className="p-2.5 text-white font-bold">Facturas por Pagar - Local</td>
+                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2.5 text-right text-blue-300 font-black">5,000.00</td>
                             </tr>
-                            <tr className="bg-slate-800/80 font-bold border-t border-slate-700/80">
-                                <td className="p-2 text-[9px] text-slate-200 uppercase font-black tracking-wider" colSpan={2}>Suma de Operaciones del Folio</td>
-                                <td className="p-2 text-right text-emerald-400 font-black">16,800.00</td>
-                                <td className="p-2 text-right text-blue-400 font-black">16,800.00</td>
+                            <tr className="bg-slate-800/90 font-black border-t-2 border-slate-700">
+                                <td className="p-2.5 text-[9.5px] text-white uppercase tracking-wider font-black" colSpan={2}>Suma de Operaciones del Folio</td>
+                                <td className="p-2.5 text-right text-emerald-400 font-black text-[11px]">16,800.00</td>
+                                <td className="p-2.5 text-right text-blue-300 font-black text-[11px]">16,800.00</td>
                             </tr>
                         </tbody>
                     </table>
@@ -733,10 +733,10 @@ export const Login: React.FC = () => {
                 </div>
 
                 {/* COLUMNA DERECHA: Carrusel Interactivo de Tablas Dinámicas y Maqueta 3D */}
-                <div className="hidden md:flex flex-1 max-w-2xl h-[560px] flex-col justify-center">
+                <div className="hidden md:flex flex-1 max-w-2xl h-[560px] flex-col justify-center [perspective:1400px]">
                     
-                    {/* Contenedor Mockup Sistema */}
-                    <div className="w-full h-full bg-[#0b0f19] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
+                    {/* Contenedor Mockup Sistema (Inclinado 3D 45°) */}
+                    <div className="w-full h-full bg-[#0b0f19] border border-slate-700/80 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative transition-all duration-700 ease-out [transform:rotateY(-14deg)_rotateX(7deg)_rotate(-2deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)_rotate(0deg)] hover:shadow-blue-500/10">
                         
                         {/* Ventana Header macOS style */}
                         <div className="h-10 border-b border-white/10 bg-black/50 flex items-center justify-between px-4 shrink-0">

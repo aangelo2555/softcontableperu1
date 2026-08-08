@@ -103,6 +103,7 @@ export const SoftPremiumDashboard: React.FC = () => {
   const [voucherBase64, setVoucherBase64] = useState<string | null>(null);
   const [submittingVoucher, setSubmittingVoucher] = useState<boolean>(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState<boolean>(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -378,32 +379,27 @@ export const SoftPremiumDashboard: React.FC = () => {
               <span>VOLVER</span>
             </button>
             <div className="h-4 w-px bg-app-border hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-blue-600 rounded-lg shadow-sm shrink-0">
-                <Cpu className="w-4 h-4 text-white animate-pulse" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img src="/assets/logo.png" alt="Softcontable Logo" className="w-8 h-8 object-contain shrink-0" />
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm sm:text-base font-extrabold tracking-tight text-app-text">SOFT<span className="text-blue-600 dark:text-blue-400">PREMIUM</span></span>
-                  <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-500/20 uppercase font-mono">GROQ RAG 4.0</span>
+                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase font-mono">IA EN VIVO 2026</span>
                 </div>
-                <p className="text-[10px] text-app-muted font-medium hidden sm:block">Motor Inferencia Groq LLaMA-3.3 &amp; Inteligencia Normativa 2026</p>
               </div>
             </div>
           </div>
 
           <div className="md:hidden flex items-center gap-2">
-            <button 
-              onClick={() => setActiveSubTab('subscription')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 border ${
-                isPremiumActive 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-              }`}
-            >
-              <CreditCard className="w-3 h-3" />
-              {isPremiumActive ? 'Activo' : 'Inactivo'}
-            </button>
+            {!isPremiumActive && (
+              <button 
+                onClick={() => setActiveSubTab('subscription')}
+                className="px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+              >
+                <CreditCard className="w-3 h-3" />
+                Inactivo
+              </button>
+            )}
           </div>
         </div>
 
@@ -414,40 +410,77 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
             <div className="flex flex-col text-left max-w-[110px] sm:max-w-none truncate">
               <span className="text-[11px] font-bold text-app-text truncate">{user?.name || user?.nombre || 'Usuario Logueado'}</span>
-              <span className="text-[9px] text-app-muted font-medium truncate hidden sm:block">{user?.email || 'usuario@softcontable.pe'}</span>
+              <span className="text-[9px] text-app-muted font-medium truncate hidden sm:block">{user?.email || 'softcontable10@gmail.pe'}</span>
             </div>
           </div>
 
+          {/* CUSTOM DROPDOWN ELEGANTE MIS EMPRESAS */}
           {workspaces && workspaces.length > 0 && (
-            <div className="bg-app-bg border border-app-border px-2.5 py-1 rounded-xl text-left shrink-0">
-              <label className="text-[8px] text-app-muted uppercase font-bold tracking-wider block">MIS EMPRESAS</label>
-              <select
-                value={currentCompany?.ruc || ''}
-                onChange={(e) => {
-                  if (e.target.value) switchWorkspace(e.target.value);
-                }}
-                className="bg-transparent text-[11px] font-bold text-app-text outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate"
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left flex items-center gap-2 hover:border-blue-500/40 transition-colors cursor-pointer"
               >
-                {workspaces.map((c: any) => (
-                  <option key={c.ruc} value={c.ruc} className="bg-app-surface text-app-text">
-                    {c.name && c.name.length > 18 ? c.name.substring(0, 16) + '...' : c.name} ({c.ruc})
-                  </option>
-                ))}
-              </select>
+                <div>
+                  <label className="text-[7.5px] text-app-muted uppercase font-black tracking-widest block leading-tight">MIS EMPRESAS</label>
+                  <span className="text-[11px] font-bold text-app-text block max-w-[130px] sm:max-w-[170px] truncate leading-tight">
+                    {currentCompany?.name ? (currentCompany.name.length > 16 ? currentCompany.name.substring(0, 14) + '...' : currentCompany.name) : 'Seleccionar'}
+                  </span>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-app-muted shrink-0" />
+              </button>
+
+              {showCompanyDropdown && (
+                <div className="absolute right-0 mt-1 w-64 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl z-50 overflow-hidden animate-scale-up p-1 space-y-0.5">
+                  <div className="px-2.5 py-1.5 border-b border-slate-800 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                    Empresas Disponibles ({workspaces.length})
+                  </div>
+                  <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-0.5">
+                    {workspaces.map((c: any) => {
+                      const isSelected = c.ruc === currentCompany?.ruc;
+                      return (
+                        <button
+                          key={c.ruc}
+                          type="button"
+                          onClick={() => {
+                            switchWorkspace(c.ruc);
+                            setShowCompanyDropdown(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                            isSelected ? 'bg-blue-600 text-white font-bold' : 'text-slate-200 hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="truncate pr-2">
+                            <div className="font-bold truncate">{c.name}</div>
+                            <div className="text-[9.5px] opacity-70 font-mono">RUC: {c.ruc}</div>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <button 
-            onClick={() => setActiveSubTab('subscription')}
-            className={`hidden md:flex px-3 py-1 rounded-xl font-bold text-[11px] items-center gap-1.5 border shrink-0 transition-all cursor-pointer ${
-              isPremiumActive 
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm' 
-                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
-            }`}
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            {isPremiumActive ? '✓ Suscripción Activa (Groq RAG 4.0)' : 'Suscripción Inactiva (Ver Planes)'}
-          </button>
+          {!isPremiumActive && (
+            <button 
+              onClick={() => setActiveSubTab('subscription')}
+              className="hidden md:flex px-3 py-1 rounded-xl font-bold text-[11px] items-center gap-1.5 border shrink-0 transition-all cursor-pointer bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Suscripción Inactiva (Ver Planes)
+            </button>
+          )}
+
+          {isPremiumActive && (
+            <div className="hidden md:flex px-3 py-1 rounded-xl font-bold text-[11px] items-center gap-1.5 border shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              ✓ Suscripción Activa
+            </div>
+          )}
         </div>
       </header>
 
@@ -1190,31 +1223,51 @@ export const SoftPremiumDashboard: React.FC = () => {
                   <span className="text-lg font-bold text-blue-600 dark:text-blue-400">S/ 49<span className="text-[10px] font-normal text-app-muted">/mes</span></span>
                 </div>
                 <ul className="text-[11px] text-app-text space-y-1.5">
-                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Acceso Ilimitado a los 3 Pilares RAG</li>
-                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Motor Groq LLaMA-3.3 Ultra-Rápido</li>
-                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Sincronización Automática de Planillas SaaS</li>
+                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Acceso Completo a los 3 Pilares</li>
+                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Inteligencia Artificial en Vivo 2026</li>
+                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Sincronización Automática con SaaS</li>
                 </ul>
               </div>
 
               <div 
-                onClick={() => setSelectedPlanTier('tributario')}
-                className={`p-4 rounded-xl border transition-all cursor-pointer space-y-3 relative ${
-                  selectedPlanTier === 'tributario' 
-                    ? 'bg-blue-600/10 border-blue-500 shadow-md scale-[1.01]' 
-                    : 'bg-app-surface border-app-border hover:border-blue-500/40'
+                className={`p-4 rounded-xl border transition-all space-y-3 relative ${
+                  ['tributario', 'planillas', 'finanzas'].includes(selectedPlanTier)
+                    ? 'bg-indigo-600/10 border-indigo-500 shadow-md' 
+                    : 'bg-app-surface border-app-border'
                 }`}
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[9px] font-bold text-app-muted uppercase tracking-wider">INDIVIDUAL</span>
+                    <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">INDIVIDUAL</span>
                     <h3 className="text-sm font-bold text-app-text">Plan Pilar Individual</h3>
                   </div>
                   <span className="text-lg font-bold text-app-text">S/ 25<span className="text-[10px] font-normal text-app-muted">/mes</span></span>
                 </div>
-                <ul className="text-[11px] text-app-text space-y-1.5">
-                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Acceso a 1 Pilar Seleccionado</li>
-                  <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Motor Groq LLaMA-3.3</li>
-                </ul>
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[9px] font-bold uppercase text-app-muted block">Elige 1 Pilar a activar:</label>
+                  <div className="space-y-1">
+                    {[
+                      { id: 'tributario', label: '1. Pilar Tributario (Auditoría SUNAT)' },
+                      { id: 'planillas', label: '2. Pilar Planillas & PLAME' },
+                      { id: 'finanzas', label: '3. Pilar Finanzas & Flujo de Caja' }
+                    ].map(pilar => (
+                      <button
+                        key={pilar.id}
+                        type="button"
+                        onClick={() => setSelectedPlanTier(pilar.id as any)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[10.5px] font-bold transition-all flex items-center justify-between cursor-pointer border ${
+                          selectedPlanTier === pilar.id
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                            : 'bg-app-bg text-app-muted hover:text-app-text border-app-border'
+                        }`}
+                      >
+                        <span>{pilar.label}</span>
+                        {selectedPlanTier === pilar.id && <Check className="w-3.5 h-3.5 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1232,9 +1285,9 @@ export const SoftPremiumDashboard: React.FC = () => {
                     onChange={(e: any) => setPaymentMethod(e.target.value)}
                     className="w-full bg-app-bg border border-app-border p-2 rounded-lg text-[11px] font-bold outline-none"
                   >
-                    <option value="YAPE">Yape (987654321 - Angelo Serna)</option>
-                    <option value="PLIN">Plin (987654321 - Angelo Serna)</option>
-                    <option value="TRANSFERENCIA">Transferencia BCP / Interbank</option>
+                    <option value="YAPE">Yape (923887478 - Angelo Serna)</option>
+                    <option value="PLIN">Plin (923887478 - Angelo Serna)</option>
+                    <option value="TRANSFERENCIA">Transferencia BCP / Interbank (softcontable10@gmail.com)</option>
                   </select>
                 </div>
 

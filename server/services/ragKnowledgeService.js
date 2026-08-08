@@ -182,26 +182,28 @@ async function processRAGQuery({ pillar, moduleKey, query, workspaceData }) {
   const normativity = await getNormativeContext(pillar, moduleKey);
 
   const prompt = `Actúa como el Auditor Contable-Tributario y Laboral de nivel Senior en Perú, especialista en Contabilidad 4.0.
-Responde de forma concisa, profesional y estructurada (máximo 4 párrafos en Markdown) a la consulta del usuario sobre la empresa "${workspaceData?.companyName || 'EMPRESA'}" (RUC: ${workspaceData?.ruc || 'N/A'}).
+Responde de forma ULTRA CONCISA, DIRECTA y EXACTA a la consulta del usuario sobre la empresa "${workspaceData?.companyName || 'EMPRESA'}" (RUC: ${workspaceData?.ruc || 'N/A'}).
 
-[CONTEXTO NORMATIVO RAG APORTADO]:
+REGLAS DE BREVEDAD OBLIGATORIAS:
+- Sé 100% directo al grano. Responde únicamente la consulta concreta sin saludos largos, ni explicaciones redundantes.
+- Usa máximo 2 párrafos cortos o 3 viñetas bien estructuradas.
+- Cita la base legal peruana relevante.
+
+[CONTEXTO NORMATIVO RAG]:
 - Módulo / Tema: ${normativity.titulo}
 - Leyes y Artículos Base:
 ${(normativity.articulos || []).map(a => `  • ${a}`).join('\n')}
 - Metodología de Cálculo: ${normativity.metodologia}
 ${normativity.customPromptRules ? `- Reglas Adicionales Admin: ${normativity.customPromptRules}` : ''}
 
-[DATOS REALES DEL WORKSPACE EN SOFTCONTABLE SAAS]:
+[DATOS REALES DEL WORKSPACE]:
 - Ventas Totales: S/ ${workspaceData?.totalVentas || '0.00'}
 - Compras Totales: S/ ${workspaceData?.totalCompras || '0.00'}
 - IGV Estimado a Pagar: S/ ${workspaceData?.igvEstimado || '0.00'}
 - Colaboradores Registrados: ${workspaceData?.colaboradoresCount || 0}
-- Sin Bancarizar: S/ ${workspaceData?.sinBancarizar || '0.00'}
 
-[PREGUNTA DEL USUARIO]:
-"${query}"
-
-Proporciona una respuesta precisa citando la norma peruana correspondiente y dando una recomendación práctica aplicable para la empresa.`;
+[CONSULTA DEL USUARIO]:
+"${query}"`;
 
   try {
     const aiResponse = await geminiService.generateResponse(prompt);
