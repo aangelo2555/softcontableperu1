@@ -33,7 +33,10 @@ import {
   Activity,
   Award,
   Copy,
-  Info
+  Info,
+  Building,
+  X,
+  Search
 } from 'lucide-react';
 
 export const SoftPremiumDashboard: React.FC = () => {
@@ -103,7 +106,8 @@ export const SoftPremiumDashboard: React.FC = () => {
   const [voucherBase64, setVoucherBase64] = useState<string | null>(null);
   const [submittingVoucher, setSubmittingVoucher] = useState<boolean>(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [showCompanyDropdown, setShowCompanyDropdown] = useState<boolean>(false);
+  const [showCompanyModal, setShowCompanyModal] = useState<boolean>(false);
+  const [companySearchTerm, setCompanySearchTerm] = useState<string>('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -381,12 +385,7 @@ export const SoftPremiumDashboard: React.FC = () => {
             <div className="h-4 w-px bg-app-border hidden sm:block" />
             <div className="flex items-center gap-2.5">
               <img src="/assets/logo.png" alt="Softcontable Logo" className="w-8 h-8 object-contain shrink-0" />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm sm:text-base font-extrabold tracking-tight text-app-text">SOFT<span className="text-blue-600 dark:text-blue-400">PREMIUM</span></span>
-                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase font-mono">IA EN VIVO 2026</span>
-                </div>
-              </div>
+              <span className="text-sm sm:text-base font-extrabold tracking-tight text-app-text">SOFT<span className="text-blue-600 dark:text-blue-400">PREMIUM</span></span>
             </div>
           </div>
 
@@ -410,59 +409,25 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
             <div className="flex flex-col text-left max-w-[110px] sm:max-w-none truncate">
               <span className="text-[11px] font-bold text-app-text truncate">{user?.name || user?.nombre || 'Usuario Logueado'}</span>
-              <span className="text-[9px] text-app-muted font-medium truncate hidden sm:block">{user?.email || 'softcontable10@gmail.pe'}</span>
+              <span className="text-[9px] text-app-muted font-medium truncate hidden sm:block">{user?.email || 'softcontable10@gmail.com'}</span>
             </div>
           </div>
 
-          {/* CUSTOM DROPDOWN ELEGANTE MIS EMPRESAS */}
+          {/* BOTÓN ABRE MODAL MIS EMPRESAS */}
           {workspaces && workspaces.length > 0 && (
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-                className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left flex items-center gap-2 hover:border-blue-500/40 transition-colors cursor-pointer"
-              >
-                <div>
-                  <label className="text-[7.5px] text-app-muted uppercase font-black tracking-widest block leading-tight">MIS EMPRESAS</label>
-                  <span className="text-[11px] font-bold text-app-text block max-w-[130px] sm:max-w-[170px] truncate leading-tight">
-                    {currentCompany?.name ? (currentCompany.name.length > 16 ? currentCompany.name.substring(0, 14) + '...' : currentCompany.name) : 'Seleccionar'}
-                  </span>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-app-muted shrink-0" />
-              </button>
-
-              {showCompanyDropdown && (
-                <div className="absolute right-0 mt-1 w-64 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl z-50 overflow-hidden animate-scale-up p-1 space-y-0.5">
-                  <div className="px-2.5 py-1.5 border-b border-slate-800 text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                    Empresas Disponibles ({workspaces.length})
-                  </div>
-                  <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-0.5">
-                    {workspaces.map((c: any) => {
-                      const isSelected = c.ruc === currentCompany?.ruc;
-                      return (
-                        <button
-                          key={c.ruc}
-                          type="button"
-                          onClick={() => {
-                            switchWorkspace(c.ruc);
-                            setShowCompanyDropdown(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
-                            isSelected ? 'bg-blue-600 text-white font-bold' : 'text-slate-200 hover:bg-slate-800'
-                          }`}
-                        >
-                          <div className="truncate pr-2">
-                            <div className="font-bold truncate">{c.name}</div>
-                            <div className="text-[9.5px] opacity-70 font-mono">RUC: {c.ruc}</div>
-                          </div>
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowCompanyModal(true)}
+              className="bg-app-bg border border-app-border px-3 py-1 rounded-xl text-left flex items-center gap-2 hover:border-blue-500/40 transition-all cursor-pointer shrink-0"
+            >
+              <div>
+                <label className="text-[7.5px] text-app-muted uppercase font-black tracking-widest block leading-tight">MIS EMPRESAS</label>
+                <span className="text-[11px] font-bold text-app-text block max-w-[130px] sm:max-w-[170px] truncate leading-tight">
+                  {currentCompany?.name ? (currentCompany.name.length > 16 ? currentCompany.name.substring(0, 14) + '...' : currentCompany.name) : 'Seleccionar'}
+                </span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-app-muted shrink-0" />
+            </button>
           )}
 
           {!isPremiumActive && (
@@ -523,17 +488,19 @@ export const SoftPremiumDashboard: React.FC = () => {
             3. Finanzas RAG
           </button>
 
-          <button
-            onClick={() => setActiveSubTab('subscription')}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'subscription'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-amber-500 dark:text-amber-400 hover:bg-app-hover'
-            }`}
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            Planes y Pagos (Yape/Plin)
-          </button>
+          {!isPremiumActive && (
+            <button
+              onClick={() => setActiveSubTab('subscription')}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                activeSubTab === 'subscription'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-amber-500 dark:text-amber-400 hover:bg-app-hover'
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Planes y Pagos (Yape/Plin)
+            </button>
+          )}
         </div>
       </nav>
 
@@ -617,30 +584,30 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <div className="flex bg-app-surface p-1 rounded-lg border border-app-border gap-1">
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'DIAGNOSTICO')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           getModuleSubTab('trib_m1') === 'DIAGNOSTICO'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-app-muted hover:text-app-text'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Activity className="w-3.5 h-3.5" /> Diagnóstico
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'NORMATIVA')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           getModuleSubTab('trib_m1') === 'NORMATIVA'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-app-muted hover:text-app-text'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Scale className="w-3.5 h-3.5" /> Normativa RAG
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'GROQ_AI')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           getModuleSubTab('trib_m1') === 'GROQ_AI'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-app-muted hover:text-app-text'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <MessageSquare className="w-3.5 h-3.5" /> GROQ + IA en Vivo
@@ -721,7 +688,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                               <button
                                 key={idx}
                                 onClick={() => handleAskRAG('tributario', 'trib_m1', chip)}
-                                className="text-[10px] font-semibold bg-app-surface hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded border border-app-border transition-colors cursor-pointer"
+                                className="text-[10px] font-bold text-app-text hover:text-blue-600 dark:hover:text-blue-400 bg-app-surface hover:bg-blue-500/10 border border-app-border hover:border-blue-500/40 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer"
                               >
                                 {chip}
                               </button>
@@ -805,24 +772,30 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <div className="flex bg-app-surface p-1 rounded-lg border border-app-border gap-1">
                       <button
                         onClick={() => setModuleSubTab('trib_m2', 'DIAGNOSTICO')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('trib_m2') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('trib_m2') === 'DIAGNOSTICO'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Activity className="w-3.5 h-3.5" /> Diagnóstico
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m2', 'NORMATIVA')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('trib_m2') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('trib_m2') === 'NORMATIVA'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Scale className="w-3.5 h-3.5" /> Normativa RAG
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m2', 'GROQ_AI')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('trib_m2') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('trib_m2') === 'GROQ_AI'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <MessageSquare className="w-3.5 h-3.5" /> GROQ + IA en Vivo
@@ -956,24 +929,30 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <div className="flex bg-app-surface p-1 rounded-lg border border-app-border gap-1">
                       <button
                         onClick={() => setModuleSubTab('pla_m1', 'DIAGNOSTICO')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('pla_m1') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'DIAGNOSTICO'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Activity className="w-3.5 h-3.5" /> Diagnóstico Nómina
                       </button>
                       <button
                         onClick={() => setModuleSubTab('pla_m1', 'NORMATIVA')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('pla_m1') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'NORMATIVA'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Scale className="w-3.5 h-3.5" /> Normativa MINTRA
                       </button>
                       <button
                         onClick={() => setModuleSubTab('pla_m1', 'GROQ_AI')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('pla_m1') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('pla_m1') === 'GROQ_AI'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <MessageSquare className="w-3.5 h-3.5" /> GROQ + IA en Vivo
@@ -1108,24 +1087,30 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <div className="flex bg-app-surface p-1 rounded-lg border border-app-border gap-1">
                       <button
                         onClick={() => setModuleSubTab('fin_m1', 'DIAGNOSTICO')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('fin_m1') === 'DIAGNOSTICO' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'DIAGNOSTICO'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Activity className="w-3.5 h-3.5" /> Diagnóstico Financiero
                       </button>
                       <button
                         onClick={() => setModuleSubTab('fin_m1', 'NORMATIVA')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('fin_m1') === 'NORMATIVA' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'NORMATIVA'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <Scale className="w-3.5 h-3.5" /> Ratios Estratégicos
                       </button>
                       <button
                         onClick={() => setModuleSubTab('fin_m1', 'GROQ_AI')}
-                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          getModuleSubTab('fin_m1') === 'GROQ_AI' ? 'bg-blue-600 text-white shadow-sm' : 'text-app-muted hover:text-app-text'
+                        className={`flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          getModuleSubTab('fin_m1') === 'GROQ_AI'
+                            ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-extrabold'
+                            : 'text-app-muted hover:text-app-text hover:bg-app-hover'
                         }`}
                       >
                         <MessageSquare className="w-3.5 h-3.5" /> GROQ + IA en Vivo
@@ -1337,6 +1322,71 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* MODAL OVERLAY MIS EMPRESAS */}
+      {showCompanyModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowCompanyModal(false)}>
+          <div className="bg-app-surface border border-app-border max-w-md w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center px-5 py-3.5 border-b border-app-border">
+              <div className="flex items-center gap-2">
+                <Building className="w-4 h-4 text-blue-500" />
+                <h3 className="text-xs font-black uppercase text-app-text tracking-wider">Seleccionar Empresa (Mis Empresas)</h3>
+              </div>
+              <button 
+                onClick={() => setShowCompanyModal(false)}
+                className="text-app-muted hover:text-app-text p-1 hover:bg-app-hover rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 border-b border-app-border bg-app-bg">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-app-muted absolute left-3" />
+                <input
+                  type="text"
+                  placeholder="Buscar por RUC o Razón Social..."
+                  value={companySearchTerm}
+                  onChange={(e) => setCompanySearchTerm(e.target.value)}
+                  className="w-full bg-app-surface border border-app-border rounded-xl pl-9 pr-3 py-2 text-xs font-bold outline-none text-app-text focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 overflow-y-auto custom-scrollbar space-y-1.5 flex-1">
+              {(workspaces || [])
+                .filter((w: any) => 
+                  w.name?.toLowerCase().includes(companySearchTerm.toLowerCase()) || 
+                  w.ruc?.includes(companySearchTerm)
+                )
+                .map((c: any) => {
+                  const isSelected = c.ruc === currentCompany?.ruc;
+                  return (
+                    <button
+                      key={c.ruc}
+                      type="button"
+                      onClick={() => {
+                        switchWorkspace(c.ruc);
+                        setShowCompanyModal(false);
+                      }}
+                      className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between cursor-pointer border ${
+                        isSelected 
+                          ? 'bg-blue-600/10 border-blue-500 text-blue-500 font-bold shadow-sm' 
+                          : 'bg-app-bg border-app-border text-app-text hover:bg-app-hover'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-xs font-bold text-app-text">{c.name}</div>
+                        <div className="text-[10px] text-app-muted font-mono mt-0.5">RUC: {c.ruc}</div>
+                      </div>
+                      {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER SOFTPREMIUM */}
       <footer className="border-t border-app-border px-4 py-3 text-center text-[10px] text-app-muted font-medium bg-app-surface mt-auto">

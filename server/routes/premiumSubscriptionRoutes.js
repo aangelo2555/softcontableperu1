@@ -97,13 +97,16 @@ router.get('/status', async (req, res) => {
  */
 router.post('/submit-voucher', async (req, res) => {
     try {
-        const { workspaceId, planTier, billingCycle, priceCentimos, paymentMethod, referenceNumber, voucherBase64 } = req.body;
+        const { workspaceId, planTier, tier, billingCycle, priceCentimos, paymentMethod, referenceNumber, operationNumber, voucherBase64, voucherImage } = req.body;
         const userId = req.user?.id || 'CLIENTE_SISTEMA';
         const userEmail = (req.body.userEmail || req.user?.email || '').toLowerCase().trim();
         const userName = req.body.userName || req.user?.name || req.user?.nombre || userEmail || 'Cliente';
 
         const subId = uuidv4();
         const price = priceCentimos || 4900;
+        const tierToSave = tier || planTier || 'full';
+        const refToSave = operationNumber || referenceNumber || 'PENDIENTE';
+        const voucherToSave = voucherImage || voucherBase64 || null;
 
         if (USE_POSTGRES) {
             try {
@@ -117,12 +120,12 @@ router.post('/submit-voucher', async (req, res) => {
                         userId, 
                         userEmail, 
                         userName, 
-                        planTier || 'full', 
+                        tierToSave, 
                         billingCycle || 'monthly', 
                         price, 
                         paymentMethod || 'YAPE', 
-                        referenceNumber || 'PENDIENTE',
-                        voucherBase64 || null
+                        refToSave,
+                        voucherToSave
                     ]
                 );
             } catch (e) {
@@ -138,8 +141,8 @@ router.post('/submit-voucher', async (req, res) => {
     } catch (error) {
         console.error('[SUBMIT VOUCHER ERROR]', error.message);
         res.json({
-            success: true,
-            message: 'Comprobante registrado exitosamente.'
+            success: false,
+            error: error.message
         });
     }
 });
@@ -156,6 +159,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
         const targetEmail = (userEmail || '').toLowerCase().trim();
         const targetUserId = userId || '';
         const targetWorkspaceRuc = workspaceId || '';
+        const planTierToSet = tiers?.[0] || 'full';
 
         if (USE_POSTGRES) {
             // 1. Activar en tabla USERS por ID o EMAIL
@@ -187,7 +191,7 @@ router.post('/activate-manual', requireAdmin, async (req, res) => {
                     `INSERT INTO premium.premium_subscriptions 
                     (id, workspace_id, user_id, user_email, plan_tier, status, billing_cycle, price_centimos, payment_provider, payment_provider_ref)
                     VALUES ($1, $2, $3, $4, $5, $6, 'monthly', 0, 'admin_manual', 'ACTIVADO_POR_ADMIN')`,
-                    [subId, targetWorkspaceRuc || 'ALL', targetUserId || 'ADMIN', targetEmail, tiers?.[0] || 'full', isEnabled ? 'active' : 'canceled']
+                    [subId, targetWorkspaceRuc || 'ALL', targetUserId || 'ADMIN', targetEmail, planTierToSet, isEnabled ? 'active' : 'canceled']
                 );
             } catch (e) {
                 console.warn('[PREMIUM SUBSCRIPTION INSERT WARN]', e.message);
@@ -227,11 +231,23 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
                     COALESCE(u.premium_enabled, FALSE) as premium_enabled,
                     (SELECT COUNT(DISTINCT ruc) FROM public.workspaces WHERE user_id = u.id) as workspace_count,
                     s.id as subscription_id,
-                    COALESCE(s.plan_tier, 'full') as plan_tier,
+                    CASE 
+                        WHEN s.plan_tier IS NOT NULL THEN s.plan_tier 
+                        WHEN u.premium_enabled = TRUE THEN 'full'
+                        ELSE 'Sin plan' 
+                    END as plan_tier,
                     COALESCE(s.payment_provider, 'N/A') as payment_provider,
-                    COALESCE(s.payment_provider_ref, 'PENDIENTE') as reference_number,
+                    CASE 
+                        WHEN s.payment_provider_ref IS NOT NULL THEN s.payment_provider_ref
+                        WHEN u.premium_enabled = TRUE THEN 'ACTIVADO_POR_ADMIN'
+                        ELSE 'Sin solicitud' 
+                    END as reference_number,
                     s.voucher_base64,
-                    COALESCE(s.status, 'inactive') as subscription_status,
+                    CASE 
+                        WHEN u.premium_enabled = TRUE OR s.status = 'active' THEN 'active'
+                        WHEN s.status IS NOT NULL THEN s.status
+                        ELSE 'inactive' 
+                    END as subscription_status,
                     COALESCE(s.created_at, u.created_at) as created_at
                 FROM users u
                 LEFT JOIN LATERAL (
@@ -241,6 +257,7 @@ router.get('/admin/list-all', requireAdmin, async (req, res) => {
                     ORDER BY created_at DESC 
                     LIMIT 1
                 ) s ON TRUE
+                WHERE s.id IS NOT NULL OR u.premium_enabled = TRUE
                 ORDER BY s.created_at DESC NULLS LAST, u.name ASC
             `);
             list = result.rows || [];

@@ -1408,21 +1408,21 @@ export const AdminView: React.FC = () => {
                             <div className="text-[11px] font-semibold text-app-muted">{req.user_email}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/20">
+                            <span className="text-xs font-bold text-slate-300">
                               🏢 {req.workspace_count || 1} empresa(s)
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="font-bold text-app-text uppercase">{req.plan_tier || 'full'}</div>
-                            <div className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-bold">
-                              {req.payment_provider || 'YAPE'} — Ref: {req.reference_number || 'PENDIENTE'}
+                            <div className="font-extrabold text-app-text uppercase">{req.plan_tier || 'Sin plan'}</div>
+                            <div className="text-[11px] font-mono text-slate-400 font-medium mt-0.5">
+                              {req.payment_provider && req.payment_provider !== 'N/A' ? `${req.payment_provider} — ` : ''}Ref: {req.reference_number || 'Sin solicitud'}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
                             {req.voucher_base64 ? (
                               <button
                                 onClick={() => setZoomedImage(req.voucher_base64)}
-                                className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                                className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white border border-blue-500/30 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                               >
                                 <Eye size={13} />
                                 🖼️ Ver Comprobante
@@ -1433,12 +1433,12 @@ export const AdminView: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-center">
                             {isActive ? (
-                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                                SÚSCRIPCIÓN ACTIVA
+                              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                SUSCRIPCIÓN ACTIVA
                               </span>
                             ) : (
-                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-rose-500/10 text-rose-500 border border-rose-500/30">
-                                PENDIENTE / INACTIVO
+                              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                                INACTIVO
                               </span>
                             )}
                           </td>
