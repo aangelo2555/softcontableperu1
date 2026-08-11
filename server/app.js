@@ -21,9 +21,9 @@ if (USE_POSTGRES) {
 }
 
 // Exponer rawDb para servicios legacy que lo necesitan
-// En PostgreSQL, rawDb será el pool de conexiones
+// En PostgreSQL, rawDb será la instancia db con adaptadores prepare/transaction
 if (!db.rawDb) {
-    db.rawDb = USE_POSTGRES ? db.pool : db;
+    db.rawDb = db;
 }
 // ====================================================================
 const createLibroDiario52Service = require('./libroDiario52Service');
@@ -2469,7 +2469,7 @@ app.get('/api/libro-diario-52/:ruc', authMiddleware, inspectMiddleware, async (r
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo (AAAAMM00)' });
         }
-        const asientos = ld52Service.obtenerAsientosPeriodo(ruc, userId, periodo);
+        const asientos = await ld52Service.obtenerAsientosPeriodo(ruc, userId, periodo);
         res.json({ success: true, data: asientos });
     } catch (error) {
         console.error('[API ERROR] Error en GET libro-diario-52:', error);
@@ -2485,7 +2485,7 @@ app.get('/api/libro-diario-52/:ruc/formato-fisico', authMiddleware, inspectMiddl
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo (AAAAMM00)' });
         }
-        const data = ld52Service.obtenerFormatoFisico(ruc, userId, periodo);
+        const data = await ld52Service.obtenerFormatoFisico(ruc, userId, periodo);
         res.json({ success: true, data });
     } catch (error) {
         console.error('[API ERROR] Error en GET formato-fisico 5.2:', error);
@@ -2498,7 +2498,7 @@ app.post('/api/libro-diario-52/:ruc/registrar', authMiddleware, inspectMiddlewar
         const { ruc } = req.params;
         const { lineas } = req.body;
         const userId = req.targetUserId;
-        const result = ld52Service.registrarAsiento(ruc, userId, lineas);
+        const result = await ld52Service.registrarAsiento(ruc, userId, lineas);
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('[API ERROR] Error en registrar asiento 5.2:', error);
@@ -2514,7 +2514,7 @@ app.post('/api/libro-diario-52/:ruc/generar-masivo', authMiddleware, inspectMidd
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta periodo en el cuerpo de la petición' });
         }
-        const result = ld52Service.generarMasivo(ruc, userId, periodo);
+        const result = await ld52Service.generarMasivo(ruc, userId, periodo);
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('[API ERROR] Error en generar masivo 5.2:', error);
@@ -2527,7 +2527,7 @@ app.put('/api/libro-diario-52/:ruc/corregir', authMiddleware, inspectMiddleware,
         const { ruc } = req.params;
         const { cuoOriginal, tipo, nuevasLineas } = req.body;
         const userId = req.targetUserId;
-        const result = ld52Service.corregirAsiento(ruc, userId, cuoOriginal, parseInt(tipo), nuevasLineas);
+        const result = await ld52Service.corregirAsiento(ruc, userId, cuoOriginal, parseInt(tipo), nuevasLineas);
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('[API ERROR] Error en corregir asiento 5.2:', error);
@@ -2543,7 +2543,7 @@ app.get('/api/libro-diario-52/:ruc/validar-balance', authMiddleware, inspectMidd
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const result = ld52Service.validarBalancePeriodo(ruc, userId, periodo);
+        const result = await ld52Service.validarBalancePeriodo(ruc, userId, periodo);
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('[API ERROR] Error en validar balance 5.2:', error);
@@ -2559,7 +2559,7 @@ app.get('/api/libro-diario-52/:ruc/exportar-txt', authMiddleware, inspectMiddlew
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = ld52Service.generarTXT52(ruc, userId, periodo);
+        const txt = await ld52Service.generarTXT52(ruc, userId, periodo);
         const filename = ld52Service.nombreArchivoTXT(ruc, periodo);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
         res.setHeader('Content-type', 'text/plain; charset=utf-8');
@@ -2579,7 +2579,7 @@ app.get('/api/libro-diario-52/:ruc/exportar-txt-54', authMiddleware, inspectMidd
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = ld52Service.generarTXT54(ruc, userId, periodo);
+        const txt = await ld52Service.generarTXT54(ruc, userId, periodo);
         const filename = ld52Service.nombreArchivoTXT54(ruc, periodo);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
         res.setHeader('Content-type', 'text/plain; charset=utf-8');
@@ -2599,7 +2599,7 @@ app.get('/api/retenciones-41/:ruc', authMiddleware, inspectMiddleware, async (re
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const data = retenciones41Service.obtenerRetenciones(ruc, userId, periodo);
+        const data = await retenciones41Service.obtenerRetenciones(ruc, userId, periodo);
         res.json({ success: true, data });
     } catch (error) {
         console.error('[API ERROR] Error en obtenerRetenciones 4.1:', error);
@@ -2615,7 +2615,7 @@ app.get('/api/retenciones-41/:ruc/exportar-txt', authMiddleware, inspectMiddlewa
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = retenciones41Service.generarTXT41(ruc, userId, periodo);
+        const txt = await retenciones41Service.generarTXT41(ruc, userId, periodo);
         const tieneDatos = txt.length > 0;
         const filename = retenciones41Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
@@ -2636,7 +2636,7 @@ app.get('/api/ple-71/:ruc/exportar-txt', authMiddleware, inspectMiddleware, asyn
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = ple71Service.generarTXT71(ruc, userId, periodo);
+        const txt = await ple71Service.generarTXT71(ruc, userId, periodo);
         const tieneDatos = txt.length > 0;
         const filename = ple71Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
@@ -2657,7 +2657,7 @@ app.get('/api/ple-101/:ruc/exportar-txt', authMiddleware, inspectMiddleware, asy
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = costs101Service.generarTXT101(ruc, userId, periodo);
+        const txt = await costs101Service.generarTXT101(ruc, userId, periodo);
         const tieneDatos = txt.length > 0;
         const filename = costs101Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
@@ -2678,7 +2678,7 @@ app.get('/api/ple-121/:ruc/exportar-txt', authMiddleware, inspectMiddleware, asy
         if (!periodo) {
             return res.status(400).json({ success: false, error: 'Falta parámetro periodo' });
         }
-        const txt = kardex121Service.generarTXT121(ruc, userId, periodo);
+        const txt = await kardex121Service.generarTXT121(ruc, userId, periodo);
         const tieneDatos = txt.length > 0;
         const filename = kardex121Service.nombreArchivoTXT(ruc, periodo, tieneDatos);
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
@@ -2696,10 +2696,10 @@ app.post('/api/libro-diario-52/:ruc/sync-compra', authMiddleware, inspectMiddlew
         const { ruc } = req.params;
         const { id } = req.body;
         const userId = req.targetUserId;
-        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='COMPRAS'`).run(ruc, userId, id);
-        const purchase = db.rawDb.prepare(`SELECT * FROM purchases WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
+        await db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='COMPRAS'`).run(ruc, userId, id);
+        const purchase = await db.rawDb.prepare(`SELECT * FROM purchases WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
         if (purchase) {
-            ld52Service.generarAsientoDesdeCompra(purchase, ruc, userId);
+            await ld52Service.generarAsientoDesdeCompra(purchase, ruc, userId);
         }
         res.json({ success: true });
     } catch (error) {
@@ -2713,10 +2713,10 @@ app.post('/api/libro-diario-52/:ruc/sync-venta', authMiddleware, inspectMiddlewa
         const { ruc } = req.params;
         const { id } = req.body;
         const userId = req.targetUserId;
-        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='VENTAS'`).run(ruc, userId, id);
-        const sale = db.rawDb.prepare(`SELECT * FROM sales WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
+        await db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=? AND origen_modulo='VENTAS'`).run(ruc, userId, id);
+        const sale = await db.rawDb.prepare(`SELECT * FROM sales WHERE id=? AND workspace_id=? AND user_id=?`).get(id, ruc, userId);
         if (sale) {
-            ld52Service.generarAsientoDesdeVenta(sale, ruc, userId);
+            await ld52Service.generarAsientoDesdeVenta(sale, ruc, userId);
         }
         res.json({ success: true });
     } catch (error) {
@@ -2730,7 +2730,7 @@ app.post('/api/libro-diario-52/:ruc/delete-origen', authMiddleware, inspectMiddl
         const { ruc } = req.params;
         const { id } = req.body;
         const userId = req.targetUserId;
-        db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=?`).run(ruc, userId, id);
+        await db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=?`).run(ruc, userId, id);
         res.json({ success: true });
     } catch (error) {
         console.error('[API ERROR] Error en delete-origen:', error);

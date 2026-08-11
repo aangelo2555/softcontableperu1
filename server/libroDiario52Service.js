@@ -1,7 +1,7 @@
 /**
  * LIBRO DIARIO FORMATO 5.2 — Servicio de Negocio
  * RS N° 234-2006/SUNAT · RS N° 286-2009/SUNAT
- * Aritmética entera (céntimos) · Transacciones atómicas SQLite
+ * Aritmética entera (céntimos) · Transacciones atómicas (SQLite y PostgreSQL)
  */
 const path = require('path');
 
@@ -30,20 +30,20 @@ function createLibroDiario52Service(db) {
   };
 
   // ── CUO Generation ──
-  const generarCUO = (workspaceId, userId, periodo) => {
+  const generarCUO = async (workspaceId, userId, periodo) => {
     const periodoCorto = periodo.substring(0, 6);
-    const row = db.prepare(
+    const row = await db.prepare(
       `SELECT ultimo_seq FROM diario_52_secuencia WHERE workspace_id=? AND user_id=? AND periodo=?`
     ).get(workspaceId, userId, periodo);
 
     let nextSeq;
     if (row) {
       nextSeq = row.ultimo_seq + 1;
-      db.prepare(`UPDATE diario_52_secuencia SET ultimo_seq=? WHERE workspace_id=? AND user_id=? AND periodo=?`)
+      await db.prepare(`UPDATE diario_52_secuencia SET ultimo_seq=? WHERE workspace_id=? AND user_id=? AND periodo=?`)
         .run(nextSeq, workspaceId, userId, periodo);
     } else {
       nextSeq = 1;
-      db.prepare(`INSERT INTO diario_52_secuencia (workspace_id, user_id, periodo, ultimo_seq) VALUES (?,?,?,?)`)
+      await db.prepare(`INSERT INTO diario_52_secuencia (workspace_id, user_id, periodo, ultimo_seq) VALUES (?,?,?,?)`)
         .run(workspaceId, userId, periodo, nextSeq);
     }
     return `${periodoCorto}-${String(nextSeq).padStart(5,'0')}`;
@@ -55,35 +55,36 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Obtener denominación de cuenta ──
-  const getDenominacion = (codigoCuenta, userId) => {
-    let row = db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
+  const getDenominacion = async (codigoCuenta, userId) => {
+    if (!codigoCuenta) return '';
+    let row = await db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
     if (!row) {
-      row = db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+      row = await db.prepare(`SELECT description FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
     }
     return row ? row.description : codigoCuenta;
   };
 
   // ── Validar cuenta existe en plan ──
-  const validarCuenta = (codigoCuenta, userId) => {
-    let row = db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
+  const validarCuenta = async (codigoCuenta, userId) => {
+    let row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
     if (!row) {
-      row = db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+      row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
     }
     if (!row) return false;
     return row.div !== 0;
   };
 
   // ── Verificar período abierto ──
-  const isPeriodoAbierto = (workspaceId, userId, periodo) => {
+  const isPeriodoAbierto = async (workspaceId, userId, periodo) => {
     const periodoYM = periodo.substring(0, 4) + '-' + periodo.substring(4, 6);
-    const row = db.prepare(
+    const row = await db.prepare(
       `SELECT estado FROM accounting_periods WHERE workspace_id=? AND user_id=? AND periodo=? AND tipo='MENSUAL'`
     ).get(workspaceId, userId, periodoYM);
     if (!row) return true;
     return row.estado === 'ABIERTO';
   };
 
-  const resolverMapeoTabla9 = (codigoCuenta, montoDebe, montoHaber) => {
+  const resolverMapeoTabla9 = async (codigoCuenta, montoDebe, montoHaber) => {
     if (codigoCuenta.startsWith('4011')) {
       return {
         columna: montoDebe > 0 ? '4011D' : '4011C',
@@ -96,7 +97,7 @@ function createLibroDiario52Service(db) {
         grupo: 'PASIVO'
       };
     }
-    const row = db.prepare(`
+    const row = await db.prepare(`
       SELECT columna_tabla9, grupo
       FROM mapa_pcge_tabla9
       WHERE ? LIKE (codigo_cuenta_prefijo || '%')
@@ -111,11 +112,11 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Registrar Asiento (Transacción Atómica) ──
-  const registrarAsiento = (workspaceId, userId, lineas) => {
+  const registrarAsiento = async (workspaceId, userId, lineas) => {
     if (!lineas || lineas.length === 0) throw new Error('No hay líneas para registrar');
 
     const periodo = lineas[0].periodo;
-    if (!isPeriodoAbierto(workspaceId, userId, periodo)) {
+    if (!(await isPeriodoAbierto(workspaceId, userId, periodo))) {
       throw new Error(`El período ${periodo} está cerrado o bloqueado`);
     }
 
@@ -125,7 +126,7 @@ function createLibroDiario52Service(db) {
       if (l.monto_debe > 0 && l.monto_haber > 0) {
         throw new Error(`Línea ${l.correlativo_asiento}: no puede tener DEBE y HABER simultáneamente`);
       }
-      if (!validarCuenta(l.codigo_cuenta, userId)) {
+      if (!(await validarCuenta(l.codigo_cuenta, userId))) {
         throw new Error(`Línea ${l.correlativo_asiento}: la cuenta ${l.codigo_cuenta} no existe o es una cuenta de cabecera/agrupadora (no permite movimientos).`);
       }
       totalDebe += l.monto_debe;
@@ -137,7 +138,7 @@ function createLibroDiario52Service(db) {
 
     const ejercicio = parseInt(periodo.substring(0, 4));
 
-    const insertStmt = db.prepare(`
+    const insertSql = `
       INSERT INTO libro_diario_52 (
         workspace_id, user_id, periodo, cuo, correlativo_asiento, fecha_operacion, glosa,
         ref_codigo_libro, ref_periodo, ref_cuo, codigo_cuenta, denominacion_cuenta,
@@ -147,15 +148,16 @@ function createLibroDiario52Service(db) {
         columna_tabla9, grupo_tabla9,
         tipo_comprobante, tipo_documento_identidad, serie_comprobante, numero_comprobante
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `);
+    `;
 
-    const transaction = db.transaction((rows) => {
+    const txRunner = db.transaction(async (txDb, rows) => {
       for (const l of rows) {
-        const mapping = resolverMapeoTabla9(l.codigo_cuenta, l.monto_debe, l.monto_haber);
-        insertStmt.run(
+        const mapping = await resolverMapeoTabla9(l.codigo_cuenta, l.monto_debe, l.monto_haber);
+        const den = l.denominacion_cuenta || (await getDenominacion(l.codigo_cuenta, userId));
+        await txDb.prepare(insertSql).run(
           workspaceId, userId, l.periodo, l.cuo, l.correlativo_asiento,
           l.fecha_operacion, l.glosa, l.ref_codigo_libro || null, l.ref_periodo || null,
-          l.ref_cuo || null, l.codigo_cuenta, l.denominacion_cuenta || getDenominacion(l.codigo_cuenta, userId),
+          l.ref_cuo || null, l.codigo_cuenta, den,
           l.codigo_auxiliar || null, l.denominacion_auxiliar || null, l.centro_costos || null,
           l.moneda || '01', l.tipo_cambio || 0, l.fecha_tipo_cambio || null,
           l.monto_debe, l.monto_haber, l.indicador_operacion || null,
@@ -166,16 +168,17 @@ function createLibroDiario52Service(db) {
         );
       }
     });
-    transaction(lineas);
+
+    await txRunner(lineas);
     return { success: true, cuo: lineas[0].cuo, lineas: lineas.length };
   };
 
   // ── Generar Asiento desde Compra ──
-  const generarAsientoDesdeCompra = (purchase, workspaceId, userId) => {
+  const generarAsientoDesdeCompra = async (purchase, workspaceId, userId) => {
     const periodo = fechaToPeriodo(purchase.fecha);
     if (!periodo) throw new Error('Fecha de compra inválida');
 
-    const cuo = generarCUO(workspaceId, userId, periodo);
+    const cuo = await generarCUO(workspaceId, userId, periodo);
     const fecha = fechaToDD_MM_AAAA(purchase.fecha);
     const glosa = (purchase.glosa || `POR COMPRA ${purchase.tipo_doc || ''} ${purchase.serie || ''}-${purchase.numero || ''}`).substring(0, 200);
     const cuoRegistro = purchase.registro || purchase.id;
@@ -210,31 +213,31 @@ function createLibroDiario52Service(db) {
 
     if (biCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto, userId), monto_debe: biCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: await getDenominacion(ctaGasto, userId), monto_debe: biCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (noGravadaCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: getDenominacion(ctaGasto, userId), monto_debe: noGravadaCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaGasto, denominacion_cuenta: await getDenominacion(ctaGasto, userId), monto_debe: noGravadaCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (igvCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: igvCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: await getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: igvCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (iscCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012', userId) || 'ISC', monto_debe: iscCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: await getDenominacion('4012', userId) || 'ISC', monto_debe: iscCentimos, monto_haber: 0, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: Cuentas por Pagar
     lineNum++;
-    lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaAbono, denominacion_cuenta: getDenominacion(ctaAbono, userId) || 'FACTURAS POR PAGAR', monto_debe: 0, monto_haber: totalCentimos, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
+    lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaAbono, denominacion_cuenta: await getDenominacion(ctaAbono, userId) || 'FACTURAS POR PAGAR', monto_debe: 0, monto_haber: totalCentimos, ref_codigo_libro: '08', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('080100', periodo, cuoRegistro, `M${lineNum}`) });
 
     // Destino Clase 9 (si la cuenta es gasto Clase 6)
     const gastoCentimos = biCentimos + noGravadaCentimos;
     if (gastoCentimos > 0 && ctaGasto.startsWith('6')) {
-      let acc = db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
+      let acc = await db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
       if (!acc) {
-        acc = db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
+        acc = await db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
       }
       if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
         const destHaber = acc.destino_haber.trim();
@@ -271,7 +274,7 @@ function createLibroDiario52Service(db) {
               lineasCc.push({
                 ...baseLine,
                 codigo_cuenta: cc.cta,
-                denominacion_cuenta: getDenominacion(cc.cta, userId),
+                denominacion_cuenta: await getDenominacion(cc.cta, userId),
                 monto_debe: montoCc,
                 monto_haber: 0,
                 glosa: 'POR EL DESTINO DEL GASTO'
@@ -293,7 +296,7 @@ function createLibroDiario52Service(db) {
               ...baseLine,
               correlativo_asiento: `M${lineNum}`,
               codigo_cuenta: destHaber,
-              denominacion_cuenta: getDenominacion(destHaber, userId),
+              denominacion_cuenta: await getDenominacion(destHaber, userId),
               monto_debe: 0,
               monto_haber: gastoCentimos,
               glosa: 'POR EL DESTINO DEL GASTO'
@@ -303,15 +306,15 @@ function createLibroDiario52Service(db) {
       }
     }
 
-    return registrarAsiento(workspaceId, userId, lineas);
+    return await registrarAsiento(workspaceId, userId, lineas);
   };
 
   // ── Generar Asiento desde Venta ──
-  const generarAsientoDesdeVenta = (sale, workspaceId, userId) => {
+  const generarAsientoDesdeVenta = async (sale, workspaceId, userId) => {
     const periodo = fechaToPeriodo(sale.fecha);
     if (!periodo) throw new Error('Fecha de venta inválida');
 
-    const cuo = generarCUO(workspaceId, userId, periodo);
+    const cuo = await generarCUO(workspaceId, userId, periodo);
     const fecha = fechaToDD_MM_AAAA(sale.fecha);
     const glosa = (sale.glosa || `POR VENTA ${sale.tipo_doc || ''} ${sale.serie || ''}-${sale.numero || ''}`).substring(0, 200);
     const cuoRegistro = sale.registro || sale.id;
@@ -347,93 +350,332 @@ function createLibroDiario52Service(db) {
     // Debe: Cuentas por Cobrar
     if (totalCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaCargo, denominacion_cuenta: getDenominacion(ctaCargo, userId) || 'FACTURAS POR COBRAR', monto_debe: totalCentimos, monto_haber: 0, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaCargo, denominacion_cuenta: await getDenominacion(ctaCargo, userId) || 'FACTURAS POR COBRAR', monto_debe: totalCentimos, monto_haber: 0, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: IGV
     if (igvCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: 0, monto_haber: igvCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '40111', denominacion_cuenta: await getDenominacion('40111', userId) || 'IGV - CUENTA PROPIA', monto_debe: 0, monto_haber: igvCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
     // Haber: Ingresos
     if (biCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso, userId) || 'VENTAS', monto_debe: 0, monto_haber: biCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: await getDenominacion(ctaIngreso, userId) || 'VENTAS', monto_debe: 0, monto_haber: biCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (noGravadaCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: getDenominacion(ctaIngreso, userId), monto_debe: 0, monto_haber: noGravadaCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: ctaIngreso, denominacion_cuenta: await getDenominacion(ctaIngreso, userId), monto_debe: 0, monto_haber: noGravadaCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
     if (iscCentimos > 0) {
       lineNum++;
-      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: getDenominacion('4012', userId) || 'ISC', monto_debe: 0, monto_haber: iscCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
+      lineas.push({ ...baseLine, correlativo_asiento: `M${lineNum}`, codigo_cuenta: '4012', denominacion_cuenta: await getDenominacion('4012', userId) || 'ISC', monto_debe: 0, monto_haber: iscCentimos, ref_codigo_libro: '14', ref_periodo: periodo, ref_cuo: cuoRegistro, dato_estructurado: construirDatoEstructurado('140100', periodo, cuoRegistro, `M${lineNum}`) });
     }
 
-    return registrarAsiento(workspaceId, userId, lineas);
+    return await registrarAsiento(workspaceId, userId, lineas);
   };
 
-  // ── Generar Masivo (Todas las compras/ventas del período) ──
-  const generarMasivo = (workspaceId, userId, periodo) => {
+  // ── Generar Asiento desde Asiento Manual (Hoja Asientos) ──
+  const generarAsientoDesdeAsientoManual = async (asientoItem, workspaceId, userId, targetPeriodo) => {
+    let header = {}, lines = [];
+    try {
+      header = typeof asientoItem.header_json === 'string' ? JSON.parse(asientoItem.header_json) : (asientoItem.header_json || {});
+    } catch(e) {}
+    try {
+      lines = typeof asientoItem.lines_json === 'string' ? JSON.parse(asientoItem.lines_json) : (asientoItem.lines_json || []);
+    } catch(e) {}
+
+    if (!lines || lines.length === 0) return null;
+
+    const fechaRaw = header.fecha || asientoItem.fecha || '';
+    const periodoCalc = fechaToPeriodo(fechaRaw);
+    if (!periodoCalc) return null;
+
+    // Si se especifica targetPeriodo, filtrar solo asientos del período objetivo
+    if (targetPeriodo && periodoCalc !== targetPeriodo) {
+      return null;
+    }
+
+    const periodo = targetPeriodo || periodoCalc;
+    const cuo = await generarCUO(workspaceId, userId, periodo);
+    const fecha = fechaToDD_MM_AAAA(fechaRaw);
+    const glosaGeneral = (header.glosa || asientoItem.glosa || 'ASIENTO MANUAL DE DIARIO').substring(0, 200);
+
+    const formattedLines = [];
+    let lineNum = 0;
+
+    for (const l of lines) {
+      const debeSoles = Number(l.debe ?? l.monto_debe ?? 0);
+      const haberSoles = Number(l.haber ?? l.monto_haber ?? 0);
+      const debeCentimos = l.monto_debe !== undefined && Number.isInteger(l.monto_debe) && l.debe === undefined ? l.monto_debe : solesToCentimos(debeSoles);
+      const haberCentimos = l.monto_haber !== undefined && Number.isInteger(l.monto_haber) && l.haber === undefined ? l.monto_haber : solesToCentimos(haberSoles);
+
+      if (debeCentimos === 0 && haberCentimos === 0) continue;
+
+      lineNum++;
+      const cta = (l.cta || l.codigo_cuenta || '').trim();
+      if (!cta) continue;
+
+      const denCuenta = (l.ctaNombre || l.denominacion_cuenta || await getDenominacion(cta, userId) || cta).trim();
+
+      formattedLines.push({
+        periodo,
+        cuo,
+        correlativo_asiento: `M${lineNum}`,
+        fecha_operacion: fecha,
+        glosa: (l.glosa || glosaGeneral).substring(0, 200),
+        codigo_cuenta: cta,
+        denominacion_cuenta: denCuenta,
+        moneda: l.moneda || header.moneda || '01',
+        tipo_cambio: Number(l.tipoCambio || header.tipoCambio || 0),
+        monto_debe: debeCentimos,
+        monto_haber: haberCentimos,
+        estado: '1',
+        origen_modulo: 'ASIENTOS',
+        asiento_id_origen: asientoItem.id,
+        tipo_comprobante: l.tipoDoc || header.tipoDoc || null,
+        tipo_documento_identidad: l.docTipo || header.docTipo || null,
+        serie_comprobante: l.serie || header.serie || null,
+        numero_comprobante: l.numero || header.numero || null,
+        codigo_auxiliar: l.docNum || header.docNum || null,
+        denominacion_auxiliar: l.razonSocial || header.razonSocial || null,
+        ref_codigo_libro: l.refLibro || null,
+        ref_periodo: l.refPeriodo || null,
+        ref_cuo: l.refCuo || null
+      });
+    }
+
+    if (formattedLines.length > 0) {
+      return await registrarAsiento(workspaceId, userId, formattedLines);
+    }
+    return null;
+  };
+
+  // ── Generar Asiento desde Honorario ──
+  const generarAsientoDesdeHonorario = async (hon, workspaceId, userId) => {
+    const periodo = fechaToPeriodo(hon.fecha);
+    if (!periodo) throw new Error('Fecha de honorario inválida');
+
+    const cuo = await generarCUO(workspaceId, userId, periodo);
+    const fecha = fechaToDD_MM_AAAA(hon.fecha);
+    const glosa = (hon.glosa || `POR RECIBO HONORARIOS ${hon.serie || ''}-${hon.numero || ''}`).substring(0, 200);
+    const cuoRegistro = hon.registro || hon.id;
+    const lineas = [];
+    let lineNum = 0;
+
+    const biCentimos = solesToCentimos(hon.bi);
+    const retencionCentimos = solesToCentimos(hon.retencion);
+    const totalCentimos = solesToCentimos(hon.total);
+    const ctaGasto = (hon.ctaGasto || '6321').trim();
+    const ctaAbono = (hon.ctaAbono || '4241').trim();
+
+    const baseLine = {
+      periodo,
+      cuo,
+      fecha_operacion: fecha,
+      glosa,
+      moneda: '01',
+      tipo_cambio: 0,
+      estado: '1',
+      origen_modulo: 'HONORARIOS',
+      asiento_id_origen: hon.id,
+      tipo_comprobante: '02', // 02 = Recibo por honorarios
+      tipo_documento_identidad: hon.doc_tipo || null,
+      serie_comprobante: hon.serie || null,
+      numero_comprobante: hon.numero || null,
+      codigo_auxiliar: hon.doc_num || null,
+      denominacion_auxiliar: hon.nombre || null
+    };
+
+    // Debe: Gasto por honorarios
+    if (biCentimos > 0) {
+      lineNum++;
+      lineas.push({
+        ...baseLine,
+        correlativo_asiento: `M${lineNum}`,
+        codigo_cuenta: ctaGasto,
+        denominacion_cuenta: await getDenominacion(ctaGasto, userId),
+        monto_debe: biCentimos,
+        monto_haber: 0,
+        ref_codigo_libro: '04',
+        ref_periodo: periodo,
+        ref_cuo: cuoRegistro,
+        dato_estructurado: construirDatoEstructurado('040100', periodo, cuoRegistro, `M${lineNum}`)
+      });
+    }
+
+    // Haber: Retención IR 4ta Categ (40172)
+    if (retencionCentimos > 0) {
+      lineNum++;
+      lineas.push({
+        ...baseLine,
+        correlativo_asiento: `M${lineNum}`,
+        codigo_cuenta: '40172',
+        denominacion_cuenta: await getDenominacion('40172', userId) || 'RETENCIONES IMPUESTO A LA RENTA 4TA',
+        monto_debe: 0,
+        monto_haber: retencionCentimos,
+        ref_codigo_libro: '04',
+        ref_periodo: periodo,
+        ref_cuo: cuoRegistro,
+        dato_estructurado: construirDatoEstructurado('040100', periodo, cuoRegistro, `M${lineNum}`)
+      });
+    }
+
+    // Haber: Cuentas por pagar honorarios (4241)
+    if (totalCentimos > 0) {
+      lineNum++;
+      lineas.push({
+        ...baseLine,
+        correlativo_asiento: `M${lineNum}`,
+        codigo_cuenta: ctaAbono,
+        denominacion_cuenta: await getDenominacion(ctaAbono, userId) || 'HONORARIOS POR PAGAR',
+        monto_debe: 0,
+        monto_haber: totalCentimos,
+        ref_codigo_libro: '04',
+        ref_periodo: periodo,
+        ref_cuo: cuoRegistro,
+        dato_estructurado: construirDatoEstructurado('040100', periodo, cuoRegistro, `M${lineNum}`)
+      });
+    }
+
+    // Destino Clase 9 (si la cuenta es gasto Clase 6)
+    if (biCentimos > 0 && ctaGasto.startsWith('6')) {
+      let acc = await db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id=?`).get(ctaGasto, userId);
+      if (!acc) {
+        acc = await db.prepare(`SELECT cta_cc1, pct_cc1, cta_cc2, pct_cc2, cta_cc3, pct_cc3, destino_haber FROM plan_global WHERE cta=? AND user_id='system'`).get(ctaGasto);
+      }
+      if (acc && acc.destino_haber && acc.destino_haber.trim() !== '') {
+        const destHaber = acc.destino_haber.trim();
+        const ccList = [];
+        if (acc.cta_cc1 && acc.cta_cc1.trim() !== '' && Number(acc.pct_cc1) > 0) ccList.push({ cta: acc.cta_cc1.trim(), pct: Number(acc.pct_cc1) });
+        if (acc.cta_cc2 && acc.cta_cc2.trim() !== '' && Number(acc.pct_cc2) > 0) ccList.push({ cta: acc.cta_cc2.trim(), pct: Number(acc.pct_cc2) });
+        if (acc.cta_cc3 && acc.cta_cc3.trim() !== '' && Number(acc.pct_cc3) > 0) ccList.push({ cta: acc.cta_cc3.trim(), pct: Number(acc.pct_cc3) });
+
+        if (ccList.length > 0) {
+          let totalAsignado = 0;
+          const lineasCc = [];
+          for (let i = 0; i < ccList.length; i++) {
+            const cc = ccList[i];
+            let montoCc = Math.round(biCentimos * (cc.pct / 100.0));
+            if (i === ccList.length - 1) montoCc = biCentimos - totalAsignado;
+            else totalAsignado += montoCc;
+            if (montoCc > 0) {
+              lineasCc.push({
+                ...baseLine,
+                codigo_cuenta: cc.cta,
+                denominacion_cuenta: await getDenominacion(cc.cta, userId),
+                monto_debe: montoCc,
+                monto_haber: 0,
+                glosa: 'POR EL DESTINO DEL GASTO'
+              });
+            }
+          }
+          if (lineasCc.length > 0) {
+            for (const lc of lineasCc) {
+              lineNum++;
+              lineas.push({ ...lc, correlativo_asiento: `M${lineNum}` });
+            }
+            lineNum++;
+            lineas.push({
+              ...baseLine,
+              correlativo_asiento: `M${lineNum}`,
+              codigo_cuenta: destHaber,
+              denominacion_cuenta: await getDenominacion(destHaber, userId),
+              monto_debe: 0,
+              monto_haber: biCentimos,
+              glosa: 'POR EL DESTINO DEL GASTO'
+            });
+          }
+        }
+      }
+    }
+
+    return await registrarAsiento(workspaceId, userId, lineas);
+  };
+
+  // ── Generar Masivo (Todas las compras, ventas, asientos manuales y honorarios del período) ──
+  const generarMasivo = async (workspaceId, userId, periodo) => {
     const periodoYM = periodo.substring(0, 4) + '-' + periodo.substring(4, 6);
 
     // Limpiar asientos automáticos previos del período
-    db.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? AND origen_modulo IN ('COMPRAS','VENTAS')`)
+    await db.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? AND origen_modulo IN ('COMPRAS','VENTAS','ASIENTOS','HONORARIOS')`)
       .run(workspaceId, userId, periodo);
 
     // Reset secuencia
-    db.prepare(`DELETE FROM diario_52_secuencia WHERE workspace_id=? AND user_id=? AND periodo=?`)
+    await db.prepare(`DELETE FROM diario_52_secuencia WHERE workspace_id=? AND user_id=? AND periodo=?`)
       .run(workspaceId, userId, periodo);
 
-    const purchases = db.prepare(`SELECT * FROM purchases WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
+    const purchases = await db.prepare(`SELECT * FROM purchases WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
       .all(workspaceId, userId, `${periodoYM}%`);
-    const sales = db.prepare(`SELECT * FROM sales WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
+    const sales = await db.prepare(`SELECT * FROM sales WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
       .all(workspaceId, userId, `${periodoYM}%`);
+    const asientosManuales = await db.prepare(`SELECT * FROM asientos WHERE workspace_id=? AND user_id=?`)
+      .all(workspaceId, userId);
+    const honorarios = await db.prepare(`SELECT * FROM honorarios WHERE workspace_id=? AND user_id=? AND (fecha LIKE ? OR fecha LIKE ?)`)
+      .all(workspaceId, userId, `${periodoYM}%`, `%/${periodo.substring(4, 6)}/${periodo.substring(0, 4)}`);
 
-    let countCompras = 0, countVentas = 0, errores = [];
+    let countCompras = 0, countVentas = 0, countAsientos = 0, countHonorarios = 0, errores = [];
 
     for (const p of purchases) {
-      try { generarAsientoDesdeCompra(p, workspaceId, userId); countCompras++; }
+      try { await generarAsientoDesdeCompra(p, workspaceId, userId); countCompras++; }
       catch (e) { errores.push(`Compra ${p.serie}-${p.numero}: ${e.message}`); }
     }
     for (const s of sales) {
-      try { generarAsientoDesdeVenta(s, workspaceId, userId); countVentas++; }
+      try { await generarAsientoDesdeVenta(s, workspaceId, userId); countVentas++; }
       catch (e) { errores.push(`Venta ${s.serie}-${s.numero}: ${e.message}`); }
     }
+    for (const a of asientosManuales) {
+      try {
+        const res = await generarAsientoDesdeAsientoManual(a, workspaceId, userId, periodo);
+        if (res) countAsientos++;
+      } catch (e) { errores.push(`Asiento manual ${a.id}: ${e.message}`); }
+    }
+    for (const h of honorarios) {
+      try { await generarAsientoDesdeHonorario(h, workspaceId, userId); countHonorarios++; }
+      catch (e) { errores.push(`Honorario ${h.serie}-${h.numero}: ${e.message}`); }
+    }
 
-    return { success: true, compras: countCompras, ventas: countVentas, errores };
+    return {
+      success: true,
+      compras: countCompras,
+      ventas: countVentas,
+      asientos: countAsientos,
+      honorarios: countHonorarios,
+      errores
+    };
   };
 
   // ── Corrección de Asientos (Estados 8/9) ──
-  const corregirAsiento = (workspaceId, userId, cuoOriginal, tipo, nuevasLineas) => {
+  const corregirAsiento = async (workspaceId, userId, cuoOriginal, tipo, nuevasLineas) => {
     if (tipo !== 8 && tipo !== 9) throw new Error('Tipo de corrección debe ser 8 (omisión) o 9 (error)');
 
     if (tipo === 9) {
-      db.prepare(`UPDATE libro_diario_52 SET estado='9' WHERE workspace_id=? AND user_id=? AND cuo=?`)
+      await db.prepare(`UPDATE libro_diario_52 SET estado='9' WHERE workspace_id=? AND user_id=? AND cuo=?`)
         .run(workspaceId, userId, cuoOriginal);
     }
 
     if (nuevasLineas && nuevasLineas.length > 0) {
       for (const l of nuevasLineas) { l.estado = String(tipo); }
-      return registrarAsiento(workspaceId, userId, nuevasLineas);
+      return await registrarAsiento(workspaceId, userId, nuevasLineas);
     }
     return { success: true };
   };
 
   // ── Obtener Asientos del Período ──
-  const obtenerAsientosPeriodo = (workspaceId, userId, periodo) => {
-    return db.prepare(
+  const obtenerAsientosPeriodo = async (workspaceId, userId, periodo) => {
+    return await db.prepare(
       `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
     ).all(workspaceId, userId, periodo);
   };
 
   // ── Validar Balance del Período ──
-  const validarBalancePeriodo = (workspaceId, userId, periodo) => {
-    const descuadrados = db.prepare(
+  const validarBalancePeriodo = async (workspaceId, userId, periodo) => {
+    const descuadrados = await db.prepare(
       `SELECT * FROM v_balance_asientos_52 WHERE workspace_id=? AND user_id=? AND periodo=? AND estado_partida_doble='DESCUADRADO'`
     ).all(workspaceId, userId, periodo);
 
-    const totales = db.prepare(
+    const totales = await db.prepare(
       `SELECT COALESCE(SUM(monto_debe),0) AS total_debe, COALESCE(SUM(monto_haber),0) AS total_haber FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? AND estado IN ('1','8')`
     ).get(workspaceId, userId, periodo);
 
@@ -447,8 +689,8 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Obtener Formato Físico (Pivote Tabla 9 PCGE) ──
-  const obtenerFormatoFisico = (workspaceId, userId, periodo) => {
-    const lines = db.prepare(`
+  const obtenerFormatoFisico = async (workspaceId, userId, periodo) => {
+    const lines = await db.prepare(`
       SELECT * FROM libro_diario_52
       WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
       ORDER BY cuo, correlativo_asiento
@@ -530,11 +772,11 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Generar TXT PLE Formato 5.2 ──
-  const generarTXT52 = (workspaceId, userId, periodo) => {
-    const balance = validarBalancePeriodo(workspaceId, userId, periodo);
+  const generarTXT52 = async (workspaceId, userId, periodo) => {
+    const balance = await validarBalancePeriodo(workspaceId, userId, periodo);
     if (!balance.valido) throw new Error(`Existen ${balance.descuadrados.length} asiento(s) descuadrados. Corrija antes de exportar.`);
 
-    const seats = db.prepare(
+    const seats = await db.prepare(
       `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
     ).all(workspaceId, userId, periodo);
     if (seats.length === 0) throw new Error('No hay asientos para el período indicado');
@@ -577,8 +819,8 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Generar TXT Formato 5.4 (Plan Contable) ──
-  const generarTXT54 = (workspaceId, userId, periodo) => {
-    const plan = db.prepare(`SELECT * FROM plan_global WHERE user_id=? ORDER BY cta`).all(userId);
+  const generarTXT54 = async (workspaceId, userId, periodo) => {
+    const plan = await db.prepare(`SELECT * FROM plan_global WHERE user_id=? ORDER BY cta`).all(userId);
     const ejercicio = periodo.substring(0, 4);
     const lines = plan.map(p => [
       `${ejercicio}0100`,                                   // 1. Periodo
@@ -599,14 +841,15 @@ function createLibroDiario52Service(db) {
   };
 
   // ── Reporte Mayor por Cuenta ──
-  const reporteMayor = (workspaceId, userId, cuenta, desde, hasta) => {
-    return db.prepare(
+  const reporteMayor = async (workspaceId, userId, cuenta, desde, hasta) => {
+    return await db.prepare(
       `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND codigo_cuenta=? AND periodo>=? AND periodo<=? AND estado IN ('1','8') ORDER BY periodo, cuo`
     ).all(workspaceId, userId, cuenta, desde, hasta);
   };
 
   return {
     generarCUO, registrarAsiento, generarAsientoDesdeCompra, generarAsientoDesdeVenta,
+    generarAsientoDesdeAsientoManual, generarAsientoDesdeHonorario,
     generarMasivo, corregirAsiento, obtenerAsientosPeriodo, validarBalancePeriodo,
     generarTXT52, generarTXT54, nombreArchivoTXT, nombreArchivoTXT54, reporteMayor,
     obtenerFormatoFisico, solesToCentimos, centimosToSoles, formatSoles, fechaToPeriodo

@@ -192,6 +192,32 @@ const db = {
     // Raw pool access
     pool,
     
+    // Adaptador de sentencias preparadas para compatibilidad con servicios SQLite legacy (prepare, get, all, run)
+    prepare: (sql) => {
+        const executeQuery = async (params) => {
+            const actualParams = (params.length === 1 && Array.isArray(params[0])) ? params[0] : params;
+            const { sql: translatedSql, params: translatedParams } = translateSqliteToPostgres(sql, actualParams);
+            return await pool.query(translatedSql, translatedParams);
+        };
+        return {
+            get: async (...params) => {
+                const res = await executeQuery(params);
+                return res.rows[0] || null;
+            },
+            all: async (...params) => {
+                const res = await executeQuery(params);
+                return res.rows || [];
+            },
+            run: async (...params) => {
+                const res = await executeQuery(params);
+                return {
+                    changes: res.rowCount,
+                    lastInsertRowid: res.rows[0]?.id || null
+                };
+            }
+        };
+    },
+
     // Execute query and return rows
     queryAll: async (sql, params = []) => {
         const result = await query(sql, params);
@@ -213,20 +239,48 @@ const db = {
         };
     },
     
-    // Execute multiple queries in transaction
-    transaction: async (callback) => {
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-            const result = await callback(client);
-            await client.query('COMMIT');
-            return result;
-        } catch (e) {
-            await client.query('ROLLBACK');
-            throw e;
-        } finally {
-            client.release();
-        }
+    // Execute multiple queries in transaction (soporta callback con client o con txDb.prepare)
+    transaction: (callback) => {
+        return async (...args) => {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                const txDb = {
+                    prepare: (sql) => ({
+                        get: async (...params) => {
+                            const actualParams = (params.length === 1 && Array.isArray(params[0])) ? params[0] : params;
+                            const { sql: translatedSql, params: translatedParams } = translateSqliteToPostgres(sql, actualParams);
+                            const res = await client.query(translatedSql, translatedParams);
+                            return res.rows[0] || null;
+                        },
+                        all: async (...params) => {
+                            const actualParams = (params.length === 1 && Array.isArray(params[0])) ? params[0] : params;
+                            const { sql: translatedSql, params: translatedParams } = translateSqliteToPostgres(sql, actualParams);
+                            const res = await client.query(translatedSql, translatedParams);
+                            return res.rows || [];
+                        },
+                        run: async (...params) => {
+                            const actualParams = (params.length === 1 && Array.isArray(params[0])) ? params[0] : params;
+                            const { sql: translatedSql, params: translatedParams } = translateSqliteToPostgres(sql, actualParams);
+                            const res = await client.query(translatedSql, translatedParams);
+                            return {
+                                changes: res.rowCount,
+                                lastInsertRowid: res.rows[0]?.id || null
+                            };
+                        }
+                    }),
+                    query: client.query.bind(client)
+                };
+                const result = await callback(txDb, ...args);
+                await client.query('COMMIT');
+                return result;
+            } catch (e) {
+                await client.query('ROLLBACK');
+                throw e;
+            } finally {
+                client.release();
+            }
+        };
     },
     
     // Get workspaces for user

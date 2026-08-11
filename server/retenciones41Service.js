@@ -13,15 +13,13 @@ function createRetenciones41Service(db) {
     return fecha;
   };
 
-  const obtenerRetenciones = (workspaceId, userId, periodo) => {
+  const obtenerRetenciones = async (workspaceId, userId, periodo) => {
     const y = periodo.substring(0, 4);
     const m = periodo.substring(4, 6);
     const dateLike = `${y}-${m}-%`; 
     const slashLike = `%/${m}/${y}`; 
     
-    // Seleccionar honorarios del período con retención mayor a cero (o todos si queremos listarlos)
-    // El PLE 4.1 es para retenciones efectuadas.
-    const rows = db.prepare(`
+    const rows = await db.prepare(`
       SELECT * FROM honorarios 
       WHERE workspace_id = ? AND user_id = ? AND (fecha LIKE ? OR fecha LIKE ?)
       ORDER BY fecha, serie, numero
@@ -30,11 +28,10 @@ function createRetenciones41Service(db) {
     return rows;
   };
 
-  const generarTXT41 = (workspaceId, userId, periodo) => {
-    const rows = obtenerRetenciones(workspaceId, userId, periodo);
+  const generarTXT41 = async (workspaceId, userId, periodo) => {
+    const rows = await obtenerRetenciones(workspaceId, userId, periodo);
     
     if (rows.length === 0) {
-      // Si no hay datos, PLE de SUNAT acepta el archivo vacío
       return '';
     }
 

@@ -3319,7 +3319,13 @@ export const useStore = create<AppState>()(
         try {
           const res = await electron.ld52GenerarMasivo(ruc, periodo);
           if (res?.success) {
-            toast.success(`✅ Asientos 5.2 generados: ${res.data.compras} compras, ${res.data.ventas} ventas`);
+            const summaryParts = [
+              `${res.data.compras || 0} compras`,
+              `${res.data.ventas || 0} ventas`,
+              `${res.data.asientos || 0} asientos manuales`,
+              `${res.data.honorarios || 0} honorarios`
+            ];
+            toast.success(`✅ Asientos 5.2 generados: ${summaryParts.join(', ')}`);
             await get().loadLd52Entries(periodo);
             return res.data;
           }
