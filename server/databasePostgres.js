@@ -1912,6 +1912,38 @@ async function ensureSchemaConstraints() {
                 `
             },
             {
+                name: 'diario_52_secuencia',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS diario_52_secuencia (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT,
+                        periodo TEXT NOT NULL,
+                        ultimo_seq INTEGER NOT NULL DEFAULT 0,
+                        CONSTRAINT uq_diario52_seq UNIQUE(workspace_id, user_id, periodo)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_diario52_seq ON diario_52_secuencia(workspace_id, user_id, periodo);
+                `
+            },
+            {
+                name: 'formato_54_plan_contable',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS formato_54_plan_contable (
+                        id SERIAL PRIMARY KEY,
+                        workspace_id TEXT NOT NULL,
+                        user_id TEXT,
+                        periodo TEXT NOT NULL,
+                        codigo_cuenta TEXT NOT NULL,
+                        denominacion TEXT NOT NULL,
+                        nivel INTEGER,
+                        tipo_cuenta TEXT,
+                        ejercicio INTEGER NOT NULL,
+                        CONSTRAINT uq_cuenta_periodo_54 UNIQUE (workspace_id, user_id, periodo, codigo_cuenta)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_f54_plan ON formato_54_plan_contable(workspace_id, user_id, periodo);
+                `
+            },
+            {
                 name: 'sbs_rates',
                 schema: `
                     CREATE TABLE IF NOT EXISTS sbs_rates (
@@ -2294,7 +2326,33 @@ async function ensureSchemaConstraints() {
             }
         }
         
-        console.log('[POSTGRES] ✅ Schema, columnas y constraints verificados');
+        // 4. Crear o reemplazar vistas
+        try {
+            await pool.query(`
+                CREATE OR REPLACE VIEW v_balance_asientos_52 AS
+                SELECT
+                    workspace_id,
+                    user_id,
+                    periodo,
+                    cuo,
+                    SUM(monto_debe)   AS total_debe_centimos,
+                    SUM(monto_haber)  AS total_haber_centimos,
+                    CAST(SUM(monto_debe) AS NUMERIC) / 100.0   AS total_debe_soles,
+                    CAST(SUM(monto_haber) AS NUMERIC) / 100.0  AS total_haber_soles,
+                    CASE
+                        WHEN SUM(monto_debe) = SUM(monto_haber) THEN 'CUADRADO'
+                        ELSE 'DESCUADRADO'
+                    END AS estado_partida_doble,
+                    ABS(SUM(monto_debe) - SUM(monto_haber)) / 100.0 AS diferencia_soles
+                FROM libro_diario_52
+                WHERE estado IN ('1','8')
+                GROUP BY workspace_id, user_id, periodo, cuo;
+            `);
+        } catch (e) {
+            console.warn('[POSTGRES] Warning al crear vista v_balance_asientos_52:', e.message);
+        }
+
+        console.log('[POSTGRES] ✅ Schema, columnas, vistas y constraints verificados');
     } catch (error) {
         console.error('[POSTGRES] Error verificando constraints:', error.message);
     }
