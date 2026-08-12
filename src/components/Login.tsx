@@ -509,7 +509,11 @@ export const Login: React.FC = () => {
                 setForgotError(res.error || 'Error al enviar el código de verificación.');
             }
         } catch (err: any) {
-            setForgotError(err.response?.data?.error || 'No se encontró la cuenta con este correo.');
+            const serverErr = err.response?.data?.error;
+            const statusErr = err.response?.status === 502
+                ? 'El servicio de correo tardó en responder. Por favor presiona enviar nuevamente.'
+                : 'Error de conexión con el servidor.';
+            setForgotError(serverErr || statusErr);
         } finally {
             setForgotLoading(false);
         }

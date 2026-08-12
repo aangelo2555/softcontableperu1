@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-// Configuración del transportador de correo Nodemailer (Gmail / SMTP Genérico)
+// Configuración del transportador de correo Nodemailer (Gmail / SMTP Genérico con Timeouts estrictos)
 const createTransporter = () => {
     const user = process.env.GMAIL_USER || process.env.SMTP_USER;
     const rawPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
@@ -17,12 +17,21 @@ const createTransporter = () => {
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT || '465'),
             secure: process.env.SMTP_SECURE !== 'false',
+            connectionTimeout: 4000,
+            greetingTimeout: 4000,
+            socketTimeout: 5000,
             auth: { user, pass }
         });
     }
 
     return nodemailer.createTransport({
         service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 5000,
         auth: {
             user: user,
             pass: pass
@@ -95,13 +104,12 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
         console.log(`\n==================================================`);
         console.log(`[EMAIL SERVICE] ⚠️ No se detectó GMAIL_USER ni GMAIL_PASS en las variables de entorno de Railway.`);
         console.log(`[SECURITY OTP DEV CODE] Correo: ${toEmail} | OTP: ${otpCode}`);
-        console.log(`[AYUDA CONFIGURACIÓN] Agrega GMAIL_USER (tu correo) y GMAIL_PASS (contraseña de aplicación de 16 letras) en Railway.`);
         console.log(`==================================================\n`);
 
         return {
             success: true,
             simulated: true,
-            message: `Código generado. (Para envío real a tu bandeja de Gmail, configura las variables GMAIL_USER y GMAIL_PASS en Railway)`
+            message: `Código generado. (Configura GMAIL_USER y GMAIL_PASS en Railway para recepción por correo)`
         };
     }
 
@@ -114,17 +122,23 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
             html: htmlContent
         };
 
-        const info = await transporter.sendMail(mailOptions);
+        // Timeout preventivo de 5 segundos para evitar bloqueos del proxy Railway (502 Bad Gateway)
+        const sendPromise = transporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT_SMTP_GMAIL')), 5000)
+        );
+
+        const info = await Promise.race([sendPromise, timeoutPromise]);
         console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail}. ID: ${info.messageId}`);
         return { success: true, simulated: false, messageId: info.messageId };
     } catch (err) {
-        console.error(`[EMAIL SERVICE ERROR] ❌ Falló el envío por Gmail SMTP:`, err.message);
-        console.log(`[SECURITY OTP FALLBACK] Código OTP para ${toEmail}: ${otpCode}`);
+        console.error(`[EMAIL SERVICE ERROR] ❌ Falló o tardó el envío por Gmail SMTP (${err.message}).`);
+        console.log(`[SECURITY OTP FALLBACK] Código OTP generado para ${toEmail}: ${otpCode}`);
         return {
             success: true,
             simulated: true,
             error: err.message,
-            message: `Código generado. Si no recibes el correo de Gmail, revisa tu spam o la consola dev.`
+            message: `Código generado. Si el servicio de Gmail tarda en entregar el correo, solicita un nuevo código.`
         };
     }
 }
