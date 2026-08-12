@@ -115,6 +115,7 @@ function createLibroDiario52Service(db) {
   };
 
   const resolverMapeoTabla9 = async (codigoCuenta, montoDebe, montoHaber) => {
+    if (!codigoCuenta) return { columna: '38', grupo: 'ACTIVO' };
     if (codigoCuenta.startsWith('4011')) {
       return {
         columna: montoDebe > 0 ? '4011D' : '4011C',
@@ -127,18 +128,31 @@ function createLibroDiario52Service(db) {
         grupo: 'PASIVO'
       };
     }
-    const row = await db.prepare(`
-      SELECT columna_tabla9, grupo
-      FROM mapa_pcge_tabla9
-      WHERE ? LIKE (codigo_cuenta_prefijo || '%')
-      ORDER BY length(codigo_cuenta_prefijo) DESC
-      LIMIT 1
-    `).get(codigoCuenta);
+    try {
+      let row = await db.prepare(`
+        SELECT columna_tabla9, grupo
+        FROM mapa_pcge_tabla9
+        WHERE ? LIKE (codigo_cuenta_prefijo || '%')
+        ORDER BY length(codigo_cuenta_prefijo) DESC
+        LIMIT 1
+      `).get(codigoCuenta);
 
-    if (row) {
-      return { columna: row.columna_tabla9, grupo: row.grupo };
+      if (row) {
+        return { columna: row.columna_tabla9, grupo: row.grupo };
+      }
+    } catch (e) {
+      // Fallback si la tabla no está disponible o falla la consulta
     }
-    return { columna: '38', grupo: 'ACTIVO' }; // Default fallback
+    
+    // Fallback inteligente basado en el primer dígito de la cuenta
+    const c = codigoCuenta.substring(0, 1);
+    if (c === '1' || c === '2' || c === '3') return { columna: codigoCuenta.substring(0, 2), grupo: 'ACTIVO' };
+    if (c === '4') return { columna: '42', grupo: 'PASIVO' };
+    if (c === '5') return { columna: '50', grupo: 'PATRIMONIO' };
+    if (c === '6' || c === '9') return { columna: '60', grupo: 'GASTOS' };
+    if (c === '7') return { columna: '70', grupo: 'INGRESOS' };
+
+    return { columna: '38', grupo: 'ACTIVO' };
   };
 
   // ── Registrar Asiento (Transacción Atómica) ──
@@ -215,11 +229,21 @@ function createLibroDiario52Service(db) {
     const lineas = [];
     let lineNum = 0;
 
-    const biCentimos = solesToCentimos(purchase.bi);
+    let biCentimos = solesToCentimos(purchase.bi);
     const igvCentimos = solesToCentimos(purchase.igv);
     const noGravadaCentimos = solesToCentimos(purchase.noGravada);
     const iscCentimos = solesToCentimos(purchase.isc);
-    const totalCentimos = solesToCentimos(purchase.total);
+    let totalCentimos = solesToCentimos(purchase.total);
+
+    // Auto-cuadre si la compra tiene total > 0 pero bi, noGravada, igv e isc no suman el total o son 0
+    if (totalCentimos > 0 && (biCentimos + noGravadaCentimos + igvCentimos + iscCentimos) !== totalCentimos) {
+      if (biCentimos === 0 && noGravadaCentimos === 0 && igvCentimos === 0) {
+        biCentimos = totalCentimos;
+      } else {
+        biCentimos = totalCentimos - (igvCentimos + noGravadaCentimos + iscCentimos);
+      }
+    }
+
     const ctaGasto = (purchase.ctaGasto || '6011').trim();
     const ctaAbono = (purchase.ctaAbono || '4212').trim();
 
@@ -351,11 +375,21 @@ function createLibroDiario52Service(db) {
     const lineas = [];
     let lineNum = 0;
 
-    const totalCentimos = solesToCentimos(sale.total);
+    let totalCentimos = solesToCentimos(sale.total);
     const igvCentimos = solesToCentimos(sale.igv);
-    const biCentimos = solesToCentimos(sale.bi);
+    let biCentimos = solesToCentimos(sale.bi);
     const noGravadaCentimos = solesToCentimos(sale.noGravada);
     const iscCentimos = solesToCentimos(sale.isc);
+
+    // Auto-cuadre si la venta tiene total > 0 pero bi, noGravada, igv e isc no suman el total o son 0
+    if (totalCentimos > 0 && (biCentimos + noGravadaCentimos + igvCentimos + iscCentimos) !== totalCentimos) {
+      if (biCentimos === 0 && noGravadaCentimos === 0 && igvCentimos === 0) {
+        biCentimos = totalCentimos;
+      } else {
+        biCentimos = totalCentimos - (igvCentimos + noGravadaCentimos + iscCentimos);
+      }
+    }
+
     const ctaCargo = (sale.ctaCargo || '1212').trim();
     const ctaIngreso = (sale.ctaIngreso || '70111').trim();
 
