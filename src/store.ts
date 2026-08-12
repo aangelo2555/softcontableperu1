@@ -1237,41 +1237,82 @@ const employeeSaveTimeouts = new Map<string, any>();
 const fixedAssetSaveTimeouts = new Map<string, any>();
 let workspaceSaveTimeout: any = null;
 
+const sanitizeEmployee = (e: any): Employee => {
+  const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
+  return {
+    ...e,
+    id: String(e.id || `emp-${Date.now()}-${Math.random()}`),
+    dni: String(e.dni || ''),
+    nombre: String(e.nombre || e.nombres || 'NUEVO TRABAJADOR').toUpperCase(),
+    puesto: String(e.puesto || e.cargo || 'OPERARIO').toUpperCase(),
+    fecha_nacimiento: e.fecha_nacimiento || '2000-01-01',
+    edad: sanitizeNum(e.edad) || 24,
+    fecha_ingreso: e.fecha_ingreso || new Date().toISOString().split('T')[0],
+    fecha_salida: e.fecha_salida || '',
+    fecha_reingreso: e.fecha_reingreso || '',
+    regimen_pensionario: e.regimen_pensionario || 'ONP',
+    cussp: e.cussp || '',
+    dias_trabajados: sanitizeNum(e.dias_trabajados) || 30,
+    jornal_diario: sanitizeNum(e.jornal_diario),
+    sueldo_basico: sanitizeNum(e.sueldo_basico || e.sueldo) || 1130,
+    asignacion_familiar: (e.asignacion_familiar === true || e.asignacion_familiar === 1 || e.asignacion_familiar === '1') ? 1 : 0,
+    asignacion_familiar_monto: sanitizeNum(e.asignacion_familiar_monto),
+    horas_extras_cantidad: sanitizeNum(e.horas_extras_cantidad),
+    horas_extras_importe: sanitizeNum(e.horas_extras_importe),
+    total_remuneracion: sanitizeNum(e.total_remuneracion),
+    descuento_onp: sanitizeNum(e.descuento_onp),
+    essalud_vida: sanitizeNum(e.essalud_vida),
+    impuesto_renta_5ta: sanitizeNum(e.impuesto_renta_5ta),
+    retencion_judicial: sanitizeNum(e.retencion_judicial),
+    afp_fondo: sanitizeNum(e.afp_fondo),
+    afp_seguro: sanitizeNum(e.afp_seguro),
+    afp_comision: sanitizeNum(e.afp_comision),
+    total_descuento: sanitizeNum(e.total_descuento),
+    neto_pagar: sanitizeNum(e.neto_pagar),
+    essalud_empleador: sanitizeNum(e.essalud_empleador),
+    sctr_empleador: sanitizeNum(e.sctr_empleador)
+  };
+};
+
 const debouncedSaveEmployee = (ruc: string, e: any) => {
-  if (employeeSaveTimeouts.has(e.id)) {
-    clearTimeout(employeeSaveTimeouts.get(e.id));
+  const sanitized = sanitizeEmployee(e);
+  if (employeeSaveTimeouts.has(sanitized.id)) {
+    clearTimeout(employeeSaveTimeouts.get(sanitized.id));
   }
   const timeout = setTimeout(async () => {
-    employeeSaveTimeouts.delete(e.id);
+    employeeSaveTimeouts.delete(sanitized.id);
     try {
-      if (webApiBridge && (webApiBridge as any).dbSaveEmployeesBatch) {
-        await (webApiBridge as any).dbSaveEmployeesBatch(ruc, [e]);
-      } else {
-        await electron.dbExecute(`
-          INSERT OR REPLACE INTO employees (
-            id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
-            fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
-            cussp, dias_trabajados, jornal_diario, sueldo_basico, 
-            asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
-            horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
-            impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
-            afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        `, [
-          e.id, ruc, e.dni, e.nombre, e.fecha_nacimiento || '', e.edad || 0, e.puesto,
-          e.fecha_ingreso, e.fecha_salida || '', e.fecha_reingreso || '', e.regimen_pensionario,
-          e.cussp || '', e.dias_trabajados || 30, e.jornal_diario || 0, e.sueldo_basico,
-          e.asignacion_familiar, e.asignacion_familiar_monto || 0, e.horas_extras_cantidad || 0,
-          e.horas_extras_importe || 0, e.total_remuneracion || 0, e.descuento_onp || 0, e.essalud_vida || 0,
-          e.impuesto_renta_5ta || 0, e.retencion_judicial || 0, e.afp_fondo || 0, e.afp_seguro || 0,
-          e.afp_comision || 0, e.total_descuento || 0, e.neto_pagar || 0, e.essalud_empleador || 0, e.sctr_empleador || 0
-        ]);
+      const targetRuc = ruc || useStore.getState().currentCompany?.ruc || '';
+      if (targetRuc) {
+        if (webApiBridge && (webApiBridge as any).dbSaveEmployeesBatch) {
+          await (webApiBridge as any).dbSaveEmployeesBatch(targetRuc, [sanitized]);
+        } else {
+          await electron.dbExecute(`
+            INSERT OR REPLACE INTO employees (
+              id, workspace_id, dni, nombre, fecha_nacimiento, edad, puesto,
+              fecha_ingreso, fecha_salida, fecha_reingreso, regimen_pensionario, 
+              cussp, dias_trabajados, jornal_diario, sueldo_basico, 
+              asignacion_familiar, asignacion_familiar_monto, horas_extras_cantidad,
+              horas_extras_importe, total_remuneracion, descuento_onp, essalud_vida,
+              impuesto_renta_5ta, retencion_judicial, afp_fondo, afp_seguro, 
+              afp_comision, total_descuento, neto_pagar, essalud_empleador, sctr_empleador
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          `, [
+            sanitized.id, targetRuc, sanitized.dni, sanitized.nombre, sanitized.fecha_nacimiento, sanitized.edad, sanitized.puesto,
+            sanitized.fecha_ingreso, sanitized.fecha_salida, sanitized.fecha_reingreso, sanitized.regimen_pensionario,
+            sanitized.cussp, sanitized.dias_trabajados, sanitized.jornal_diario, sanitized.sueldo_basico,
+            sanitized.asignacion_familiar, sanitized.asignacion_familiar_monto, sanitized.horas_extras_cantidad,
+            sanitized.horas_extras_importe, sanitized.total_remuneracion, sanitized.descuento_onp, sanitized.essalud_vida,
+            sanitized.impuesto_renta_5ta, sanitized.retencion_judicial, sanitized.afp_fondo, sanitized.afp_seguro,
+            sanitized.afp_comision, sanitized.total_descuento, sanitized.neto_pagar, sanitized.essalud_empleador, sanitized.sctr_empleador
+          ]);
+        }
       }
     } catch (err) {
       console.error('[STORE] debouncedSaveEmployee failed:', err);
     }
   }, 50);
-  employeeSaveTimeouts.set(e.id, timeout);
+  employeeSaveTimeouts.set(sanitized.id, timeout);
 };
 
 const debouncedSaveFixedAsset = (ruc: string, a: any) => {
@@ -1390,7 +1431,7 @@ export const useStore = create<AppState>()(
                 costs: Array.isArray(data.costs) ? data.costs : [],
                 products: Array.isArray(data.products) ? data.products : [],
                 inventoryMovements: Array.isArray(data.inventoryMovements) ? data.inventoryMovements : [],
-                employees: Array.isArray(data.employees) ? data.employees : [],
+                employees: Array.isArray(data.employees) ? data.employees.map(sanitizeEmployee) : [],
                 fixedAssets: Array.isArray(data.fixedAssets) ? data.fixedAssets : [],
                 cashMovements: Array.isArray(data.cashMovements) ? data.cashMovements : [],
                 bankStatements: Array.isArray(data.bankStatements) ? data.bankStatements : [],
@@ -2730,12 +2771,13 @@ export const useStore = create<AppState>()(
       },
 
       saveEmployee: async (e) => {
+        const sanitized = sanitizeEmployee(e);
         const ruc = get().currentCompany?.ruc || '';
         // Update local React state instantly (0ms latency)
-        set({ employees: [...get().employees.filter(x => x.id !== e.id), e] });
+        set({ employees: [...get().employees.filter(x => x.id !== sanitized.id), sanitized] });
         
         // Debounce database write
-        debouncedSaveEmployee(ruc, e);
+        debouncedSaveEmployee(ruc, sanitized);
       },
       deleteEmployee: async (id) => {
         if (employeeSaveTimeouts.has(id)) {

@@ -822,9 +822,15 @@ app.delete('/api/db/employees/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.targetUserId;
-        await db.run('DELETE FROM employees WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (USE_POSTGRES) {
+            await db.query('DELETE FROM employees WHERE id = $1 AND user_id = $2', [id, userId]);
+        } else {
+            await db.run('DELETE FROM employees WHERE id = ? AND user_id = ?', [id, userId]);
+        }
+        cacheService.invalidatePattern(`workspace_data_.*`);
         res.json({ success: true });
     } catch (error) {
+        console.error('[DB DELETE EMPLOYEE ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -35,11 +35,14 @@ const PlanillaView: React.FC = () => {
   ];
 
   const filteredEmployees = useMemo(() => {
-    return (employees || []).filter(e => 
-      e.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      e.dni.includes(searchTerm) ||
-      e.puesto.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const search = (searchTerm || '').toLowerCase();
+    return (employees || []).filter(e => {
+      if (!e) return false;
+      const nombre = String(e.nombre || (e as any).nombres || '').toLowerCase();
+      const dni = String(e.dni || '');
+      const puesto = String(e.puesto || (e as any).cargo || '').toLowerCase();
+      return nombre.includes(search) || dni.includes(search) || puesto.includes(search);
+    });
   }, [employees, searchTerm]);
 
   // Constantes de Ley 2026 (Perú)
