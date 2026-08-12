@@ -3,11 +3,14 @@ const nodemailer = require('nodemailer');
 // Configuración del transportador de correo Nodemailer (Gmail / SMTP Genérico)
 const createTransporter = () => {
     const user = process.env.GMAIL_USER || process.env.SMTP_USER;
-    const pass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
+    const rawPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
 
-    if (!user || !pass) {
+    if (!user || !rawPass) {
         return null;
     }
+
+    // Quitar espacios automáticamente si se copió de Google con separadores (ej: "fedd psgu vimk sjxv" -> "feddpsguvimksjxv")
+    const pass = rawPass.replace(/\s+/g, '');
 
     if (process.env.SMTP_HOST) {
         return nodemailer.createTransport({
@@ -23,6 +26,9 @@ const createTransporter = () => {
         auth: {
             user: user,
             pass: pass
+        }
+    });
+};
         }
     });
 };
