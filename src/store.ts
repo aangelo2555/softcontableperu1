@@ -1239,12 +1239,14 @@ let workspaceSaveTimeout: any = null;
 
 const sanitizeEmployee = (e: any): Employee => {
   const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
+  const rawNombre = e.nombre !== undefined && e.nombre !== null ? e.nombre : (e.nombres !== undefined && e.nombres !== null ? e.nombres : 'NUEVO TRABAJADOR');
+  const rawPuesto = e.puesto !== undefined && e.puesto !== null ? e.puesto : (e.cargo !== undefined && e.cargo !== null ? e.cargo : 'OPERARIO');
   return {
     ...e,
     id: String(e.id || `emp-${Date.now()}-${Math.random()}`),
     dni: String(e.dni || ''),
-    nombre: String(e.nombre || e.nombres || 'NUEVO TRABAJADOR').toUpperCase(),
-    puesto: String(e.puesto || e.cargo || 'OPERARIO').toUpperCase(),
+    nombre: String(rawNombre).toUpperCase(),
+    puesto: String(rawPuesto).toUpperCase(),
     fecha_nacimiento: e.fecha_nacimiento || '2000-01-01',
     edad: sanitizeNum(e.edad) || 24,
     fecha_ingreso: e.fecha_ingreso || new Date().toISOString().split('T')[0],
