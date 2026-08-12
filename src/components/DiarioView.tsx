@@ -35,21 +35,29 @@ const DiarioView: React.FC = () => {
   const getYearAndMonth = (dateStr: string) => {
     if (!dateStr) return { year: '', month: '' };
     try {
-      if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
+      const clean = dateStr.trim().split('T')[0].split(' ')[0];
+      const sep = clean.includes('/') ? '/' : clean.includes('-') ? '-' : null;
+      if (sep) {
+        const parts = clean.split(sep);
         if (parts.length === 3) {
-          const [d, m, y] = parts;
-          const fullYear = y.length === 2 ? '20' + y : y;
-          return { year: fullYear, month: m.padStart(2, '0') };
+          // Si la primera parte tiene 4 dígitos: YYYY-MM-DD o YYYY/MM/DD
+          if (parts[0].length === 4) {
+            return { year: parts[0], month: parts[1].padStart(2, '0') };
+          }
+          // Si la última parte tiene 4 o 2 dígitos: DD-MM-YYYY o DD/MM/YYYY
+          if (parts[2].length === 4 || parts[2].length === 2) {
+            const fullYear = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            return { year: fullYear, month: parts[1].padStart(2, '0') };
+          }
+        }
+        if (parts.length === 2) {
+          if (parts[0].length === 4) {
+            return { year: parts[0], month: parts[1].padStart(2, '0') };
+          }
         }
       }
-      if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-          const [y, m, d] = parts;
-          const fullYear = y.length === 2 ? '20' + y : y;
-          return { year: fullYear, month: m.padStart(2, '0') };
-        }
+      if (/^\d{6}/.test(clean)) {
+        return { year: clean.substring(0, 4), month: clean.substring(4, 6) };
       }
     } catch (e) {
       // Ignore
@@ -62,17 +70,23 @@ const DiarioView: React.FC = () => {
   }, [selectedAnio, selectedMes]);
 
   const journal = store.journal.filter(entry => {
-    if (entry.cta.trim().toUpperCase() === 'GLOSA') return false;
+    if (!entry.cta || entry.cta.trim().toUpperCase() === 'GLOSA') return false;
     
-    // Filtrar usando la fecha real del asiento/documento (más robusto)
+    // 1. Filtrar por fecha exacta del asiento
     const { year, month } = getYearAndMonth(entry.fecha);
     if (year && month) {
       return year === selectedAnio && month === selectedMes;
     }
     
-    // Fallback si la fecha no se pudo parsear
-    if (!filterPeriodo) return true;
-    return entry.asiento.includes(filterPeriodo);
+    // 2. Fallback por estructura de código del asiento (ej. 06-PROV-08, 06-PLA-08, 202608)
+    if (entry.asiento) {
+      if (filterPeriodo && entry.asiento.includes(filterPeriodo)) return true;
+      if (entry.asiento.includes(`${selectedAnio}-${selectedMes}`)) return true;
+      if (entry.asiento.includes(`${selectedAnio}/${selectedMes}`)) return true;
+      if (entry.asiento.endsWith(`-${selectedMes}`)) return true;
+    }
+    
+    return false;
   });
 
   const totalDebe = journal.reduce((sum, entry) => sum + entry.debe, 0);

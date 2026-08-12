@@ -452,7 +452,7 @@ function createLibroDiario52Service(db) {
 
     if (!lines || lines.length === 0) return null;
 
-    const fechaRaw = header.fecha || asientoItem.fecha || '';
+    const fechaRaw = header.fecha || header.fecEmi || asientoItem.fecha || '';
     const periodoCalc = fechaToPeriodo(fechaRaw);
     if (!periodoCalc) return null;
 
