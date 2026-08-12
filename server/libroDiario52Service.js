@@ -14,18 +14,44 @@ function createLibroDiario52Service(db) {
 
   const fechaToDD_MM_AAAA = (fecha) => {
     if (!fecha) return '';
-    if (fecha.includes('/')) return fecha;
-    const parts = fecha.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return fecha;
+    const clean = String(fecha).trim();
+    if (clean.includes('/')) {
+      const parts = clean.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) return `${parts[2].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[0]}`;
+        return `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`;
+      }
+      return clean;
+    }
+    if (clean.includes('-')) {
+      const parts = clean.split('-');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) return `${parts[2].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[0]}`;
+        return `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`;
+      }
+      return clean;
+    }
+    return clean;
   };
 
   const fechaToPeriodo = (fecha) => {
     if (!fecha) return '';
-    let y, m;
-    if (fecha.includes('-')) { [y, m] = fecha.split('-'); }
-    else if (fecha.includes('/')) { const p = fecha.split('/'); y = p[2]; m = p[1]; }
-    else return '';
+    const clean = String(fecha).trim();
+    let y = '', m = '';
+    if (clean.includes('-')) {
+      const p = clean.split('-');
+      if (p.length === 3) {
+        if (p[0].length === 4) { y = p[0]; m = p[1]; }
+        else { y = p[2]; m = p[1]; }
+      }
+    } else if (clean.includes('/')) {
+      const p = clean.split('/');
+      if (p.length === 3) {
+        if (p[0].length === 4) { y = p[0]; m = p[1]; }
+        else { y = p[2]; m = p[1]; }
+      }
+    }
+    if (!y || !m) return '';
     return `${y}${m.padStart(2,'0')}00`;
   };
 
@@ -600,24 +626,26 @@ function createLibroDiario52Service(db) {
 
   // ── Generar Masivo (Todas las compras, ventas, asientos manuales y honorarios del período) ──
   const generarMasivo = async (workspaceId, userId, periodo) => {
-    const periodoYM = periodo.substring(0, 4) + '-' + periodo.substring(4, 6);
-
     // Limpiar asientos automáticos previos del período
-    await db.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? AND origen_modulo IN ('COMPRAS','VENTAS','ASIENTOS','HONORARIOS')`)
-      .run(workspaceId, userId, periodo);
+    await db.prepare(`DELETE FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? AND origen_modulo IN ('COMPRAS','VENTAS','ASIENTOS','HONORARIOS')`)
+      .run(workspaceId, `${workspaceId}%`, userId, periodo);
 
     // Reset secuencia
-    await db.prepare(`DELETE FROM diario_52_secuencia WHERE workspace_id=? AND user_id=? AND periodo=?`)
-      .run(workspaceId, userId, periodo);
+    await db.prepare(`DELETE FROM diario_52_secuencia WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=?`)
+      .run(workspaceId, `${workspaceId}%`, userId, periodo);
 
-    const purchases = await db.prepare(`SELECT * FROM purchases WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
-      .all(workspaceId, userId, `${periodoYM}%`);
-    const sales = await db.prepare(`SELECT * FROM sales WHERE workspace_id=? AND user_id=? AND fecha LIKE ?`)
-      .all(workspaceId, userId, `${periodoYM}%`);
-    const asientosManuales = await db.prepare(`SELECT * FROM asientos WHERE workspace_id=? AND user_id=?`)
-      .all(workspaceId, userId);
-    const honorarios = await db.prepare(`SELECT * FROM honorarios WHERE workspace_id=? AND user_id=? AND (fecha LIKE ? OR fecha LIKE ?)`)
-      .all(workspaceId, userId, `${periodoYM}%`, `%/${periodo.substring(4, 6)}/${periodo.substring(0, 4)}`);
+    const purchasesRaw = await db.prepare(`SELECT * FROM purchases WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`)
+      .all(workspaceId, `${workspaceId}%`, userId);
+    const salesRaw = await db.prepare(`SELECT * FROM sales WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`)
+      .all(workspaceId, `${workspaceId}%`, userId);
+    const asientosManuales = await db.prepare(`SELECT * FROM asientos WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`)
+      .all(workspaceId, `${workspaceId}%`, userId);
+    const honorariosRaw = await db.prepare(`SELECT * FROM honorarios WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`)
+      .all(workspaceId, `${workspaceId}%`, userId);
+
+    const purchases = purchasesRaw.filter(p => fechaToPeriodo(p.fecha) === periodo);
+    const sales = salesRaw.filter(s => fechaToPeriodo(s.fecha) === periodo);
+    const honorarios = honorariosRaw.filter(h => fechaToPeriodo(h.fecha) === periodo);
 
     let countCompras = 0, countVentas = 0, countAsientos = 0, countHonorarios = 0, errores = [];
 
@@ -668,9 +696,17 @@ function createLibroDiario52Service(db) {
 
   // ── Obtener Asientos del Período ──
   const obtenerAsientosPeriodo = async (workspaceId, userId, periodo) => {
-    return await db.prepare(
-      `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
-    ).all(workspaceId, userId, periodo);
+    let seats = await db.prepare(
+      `SELECT * FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+    ).all(workspaceId, `${workspaceId}%`, userId, periodo);
+
+    if (seats.length === 0) {
+      await generarMasivo(workspaceId, userId, periodo);
+      seats = await db.prepare(
+        `SELECT * FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+      ).all(workspaceId, `${workspaceId}%`, userId, periodo);
+    }
+    return seats;
   };
 
   // ── Validar Balance del Período ──
