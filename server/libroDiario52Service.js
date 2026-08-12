@@ -836,16 +836,36 @@ function createLibroDiario52Service(db) {
       };
 
       for (const line of g) {
-        const col = line.columna_tabla9;
+        const mapping = await resolverMapeoTabla9(line.codigo_cuenta, line.monto_debe, line.monto_haber);
+        const col = mapping.columna || line.columna_tabla9;
         if (!col) continue;
 
-        if (col === '4011D' || col === '4011C' || col === '4017D' || col === '4017C') {
-          row[col] += (line.monto_debe + line.monto_haber) / 100;
+        if (col === '4011D') {
+          row.c4011D += (line.monto_debe || line.monto_haber) / 100;
+        } else if (col === '4011C') {
+          row.c4011C += (line.monto_debe || line.monto_haber) / 100;
+        } else if (col === '4017D') {
+          row.c4017D += (line.monto_debe || line.monto_haber) / 100;
+        } else if (col === '4017C') {
+          row.c4017C += (line.monto_debe || line.monto_haber) / 100;
         } else {
           const keyD = `c${col}_d`;
           const keyH = `c${col}_h`;
-          if (keyD in row) row[keyD] += line.monto_debe / 100;
-          if (keyH in row) row[keyH] += line.monto_haber / 100;
+          if (keyD in row) {
+            row[keyD] += line.monto_debe / 100;
+          } else {
+            const fallbackKey = `c${col.substring(0, 2)}_d`;
+            if (fallbackKey in row) row[fallbackKey] += line.monto_debe / 100;
+            else row.c38_d += line.monto_debe / 100;
+          }
+
+          if (keyH in row) {
+            row[keyH] += line.monto_haber / 100;
+          } else {
+            const fallbackKey = `c${col.substring(0, 2)}_h`;
+            if (fallbackKey in row) row[fallbackKey] += line.monto_haber / 100;
+            else row.c38_h += line.monto_haber / 100;
+          }
         }
       }
       rows.push(row);
