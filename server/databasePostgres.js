@@ -244,9 +244,11 @@ const db = {
         };
     },
     
-    // Execute multiple queries in transaction (soporta callback con client o con txDb.prepare)
+    // Execute multiple queries in transaction (soporta ambos patrones):
+    // Patrón 1 (directo): await db.transaction(async (client) => { ... })
+    // Patrón 2 (thunk):   const tx = db.transaction((rows) => { ... }); tx(data);
     transaction: (callback) => {
-        return async (...args) => {
+        const executeTransaction = async (...args) => {
             const client = await pool.connect();
             try {
                 await client.query('BEGIN');
@@ -286,6 +288,17 @@ const db = {
                 client.release();
             }
         };
+
+        // Detectar si el callback es async (directo) o síncrono (thunk)
+        // Si el callback devuelve una Promise al ser invocado de prueba, ejecutar inmediatamente
+        // Para compatibilidad con ambos patrones, intentamos ejecutar de inmediato:
+        // Si el callback parece ser async (constructor name === 'AsyncFunction'), ejecutar inmediatamente
+        if (callback.constructor.name === 'AsyncFunction') {
+            // Patrón 1: await db.transaction(async (client) => { ... })
+            return executeTransaction();
+        }
+        // Patrón 2: const tx = db.transaction(cb); tx(data);
+        return executeTransaction;
     },
     
     // Get workspaces for user
