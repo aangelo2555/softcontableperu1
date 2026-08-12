@@ -478,10 +478,10 @@ function createLibroDiario52Service(db) {
       if (debeCentimos === 0 && haberCentimos === 0) continue;
 
       lineNum++;
-      const cta = (l.cta || l.codigo_cuenta || '').trim();
+      const cta = (l.cta || l.cuenta || l.codigo_cuenta || '').trim();
       if (!cta) continue;
 
-      const denCuenta = (l.ctaNombre || l.denominacion_cuenta || await getDenominacion(cta, userId) || cta).trim();
+      const denCuenta = (l.detalle || l.desc || l.ctaNombre || l.denominacion_cuenta || await getDenominacion(cta, userId) || cta).trim();
 
       formattedLines.push({
         periodo,

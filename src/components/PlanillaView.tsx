@@ -319,15 +319,15 @@ const PlanillaView: React.FC = () => {
         lines.push({ id: currentId++, cuenta: '4151', detalle: 'CTS POR PAGAR', debe: 0, haber: stats.provCTS });
       }
 
-      // Vacaciones: 6214 → 4115
+      // Vacaciones: 6215 → 4115
       if (stats.provVacaciones > 0) {
-        lines.push({ id: currentId++, cuenta: '6214', detalle: 'PROVISIÓN VACACIONES (1/12)', debe: stats.provVacaciones, haber: 0 });
+        lines.push({ id: currentId++, cuenta: '6215', detalle: 'PROVISIÓN VACACIONES (1/12)', debe: stats.provVacaciones, haber: 0 });
         lines.push({ id: currentId++, cuenta: '4115', detalle: 'VACACIONES POR PAGAR', debe: 0, haber: stats.provVacaciones });
       }
 
-      // Gratificaciones: 6215 → 4114
+      // Gratificaciones: 6214 → 4114
       if (stats.provGratificaciones > 0) {
-        lines.push({ id: currentId++, cuenta: '6215', detalle: 'PROVISIÓN GRATIFICACIONES (1/6)', debe: stats.provGratificaciones, haber: 0 });
+        lines.push({ id: currentId++, cuenta: '6214', detalle: 'PROVISIÓN GRATIFICACIONES (1/6)', debe: stats.provGratificaciones, haber: 0 });
         lines.push({ id: currentId++, cuenta: '4114', detalle: 'GRATIFICACIONES POR PAGAR', debe: 0, haber: stats.provGratificaciones });
       }
 
