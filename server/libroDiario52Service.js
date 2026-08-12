@@ -660,8 +660,8 @@ function createLibroDiario52Service(db) {
 
   // ── Generar Masivo (Todas las compras, ventas, asientos manuales y honorarios del período) ──
   const generarMasivo = async (workspaceId, userId, periodo) => {
-    // Limpiar asientos automáticos previos del período
-    await db.prepare(`DELETE FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? AND origen_modulo IN ('COMPRAS','VENTAS','ASIENTOS','HONORARIOS')`)
+    // Limpiar todos los asientos previos del período para evitar duplicados u orfanos
+    await db.prepare(`DELETE FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=?`)
       .run(workspaceId, `${workspaceId}%`, userId, periodo);
 
     // Reset secuencia

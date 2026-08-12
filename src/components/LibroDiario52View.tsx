@@ -283,8 +283,12 @@ const LibroDiario52View: React.FC = () => {
     setCuoOriginalCorr(cuo);
     setTipoCorreccion(9); // Default to rectify error
 
+    // Filtrar solo líneas activas (estado 1 u 8) para evitar duplicación con líneas anuladas estado 9
+    const activeLines = related.filter(e => e.estado === '1' || e.estado === '8');
+    const targetLines = activeLines.length > 0 ? activeLines : related;
+
     // Map current lines to form inputs
-    const mapped: AsientoLineaInput[] = related.map(r => ({
+    const mapped: AsientoLineaInput[] = targetLines.map(r => ({
       codigo_cuenta: r.codigo_cuenta,
       denominacion_cuenta: r.denominacion_cuenta,
       monto_debe: formatSolesNum(r.monto_debe),
