@@ -690,11 +690,20 @@ function createLibroDiario52Service(db) {
 
   // ── Obtener Formato Físico (Pivote Tabla 9 PCGE) ──
   const obtenerFormatoFisico = async (workspaceId, userId, periodo) => {
-    const lines = await db.prepare(`
+    let lines = await db.prepare(`
       SELECT * FROM libro_diario_52
       WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
       ORDER BY cuo, correlativo_asiento
     `).all(workspaceId, userId, periodo);
+
+    if (lines.length === 0) {
+      await generarMasivo(workspaceId, userId, periodo);
+      lines = await db.prepare(`
+        SELECT * FROM libro_diario_52
+        WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
+        ORDER BY cuo, correlativo_asiento
+      `).all(workspaceId, userId, periodo);
+    }
 
     const groups = {};
     for (const l of lines) {
@@ -773,12 +782,20 @@ function createLibroDiario52Service(db) {
 
   // ── Generar TXT PLE Formato 5.2 ──
   const generarTXT52 = async (workspaceId, userId, periodo) => {
+    let seats = await db.prepare(
+      `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+    ).all(workspaceId, userId, periodo);
+
+    if (seats.length === 0) {
+      await generarMasivo(workspaceId, userId, periodo);
+      seats = await db.prepare(
+        `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+      ).all(workspaceId, userId, periodo);
+    }
+
     const balance = await validarBalancePeriodo(workspaceId, userId, periodo);
     if (!balance.valido) throw new Error(`Existen ${balance.descuadrados.length} asiento(s) descuadrados. Corrija antes de exportar.`);
 
-    const seats = await db.prepare(
-      `SELECT * FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
-    ).all(workspaceId, userId, periodo);
     if (seats.length === 0) throw new Error('No hay asientos para el período indicado');
 
     const lines = seats.map(a => {
