@@ -72,7 +72,12 @@ function translateSqliteToPostgres(sql, params = []) {
     let translatedSql = sql;
     let translatedParams = params ? [...params] : [];
     
-    // 0. Mapear columna 'desc' a 'descripcion' (evitar palabra reservada)
+    // 0a. Convertir sintaxis de corchetes SQLite [column] a columna sin corchetes
+    // Ejemplo: [desc] -> descripcion, [other] -> other
+    translatedSql = translatedSql.replace(/\[desc\]/gi, 'descripcion');
+    translatedSql = translatedSql.replace(/\[(\w+)\]/g, '$1');
+    
+    // 0b. Mapear columna 'desc' a 'descripcion' (evitar palabra reservada)
     // Solo en contextos de columnas (después de SELECT, INSERT, UPDATE, etc.)
     translatedSql = translatedSql.replace(/(\bSELECT\s+[^F]+?)\bdesc\b/gi, '$1descripcion');
     translatedSql = translatedSql.replace(/(\bINSERT\s+INTO\s+\w+\s*\([^)]*?)\bdesc\b/gi, '$1descripcion');
@@ -2218,8 +2223,10 @@ async function ensureSchemaConstraints() {
         const alterStatements = [
             `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
             `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS monto_me NUMERIC;`,
+            `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS tc_origen NUMERIC DEFAULT 1;`,
             `ALTER TABLE sales ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
             `ALTER TABLE sales ADD COLUMN IF NOT EXISTS monto_me NUMERIC;`,
+            `ALTER TABLE sales ADD COLUMN IF NOT EXISTS tc_origen NUMERIC DEFAULT 1;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_id TEXT;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_operacion TEXT;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_doc TEXT;`,
