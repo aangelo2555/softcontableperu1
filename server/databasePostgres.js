@@ -2217,7 +2217,9 @@ async function ensureSchemaConstraints() {
         
         const alterStatements = [
             `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
+            `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS monto_me NUMERIC;`,
             `ALTER TABLE sales ADD COLUMN IF NOT EXISTS periodo_sire TEXT;`,
+            `ALTER TABLE sales ADD COLUMN IF NOT EXISTS monto_me NUMERIC;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_id TEXT;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_operacion TEXT;`,
             `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS tipo_doc TEXT;`,
