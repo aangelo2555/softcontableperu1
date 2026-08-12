@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
-// Configuración del transportador de correo Nodemailer (Gmail / SMTP Genérico con Timeouts estrictos)
-const createTransporter = () => {
+// Configuración del transportador de correo Nodemailer (Gmail / SMTP Genérico para Railway)
+const createTransporter = (usePort587 = true) => {
     const user = process.env.GMAIL_USER || process.env.SMTP_USER;
     const rawPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
 
@@ -15,26 +15,30 @@ const createTransporter = () => {
     if (process.env.SMTP_HOST) {
         return nodemailer.createTransport({
             host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || '465'),
-            secure: process.env.SMTP_SECURE !== 'false',
-            connectionTimeout: 4000,
-            greetingTimeout: 4000,
-            socketTimeout: 5000,
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: process.env.SMTP_SECURE === 'true',
+            connectionTimeout: 7000,
+            greetingTimeout: 7000,
+            socketTimeout: 8000,
             auth: { user, pass }
         });
     }
 
+    // Gmail en entorno Cloud (Railway): Port 587 STARTTLS es la vía estándar compatible
     return nodemailer.createTransport({
-        service: 'gmail',
         host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        connectionTimeout: 4000,
-        greetingTimeout: 4000,
-        socketTimeout: 5000,
+        port: usePort587 ? 587 : 465,
+        secure: !usePort587, // false para 587 (STARTTLS), true para 465 (SSL)
+        requireTLS: usePort587,
+        connectionTimeout: 7000,
+        greetingTimeout: 7000,
+        socketTimeout: 8000,
         auth: {
             user: user,
             pass: pass
+        },
+        tls: {
+            rejectUnauthorized: false
         }
     });
 };
@@ -49,7 +53,7 @@ const createTransporter = () => {
 async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
     console.log(`[EMAIL SERVICE] Intentando enviar OTP para: ${toEmail}`);
     
-    const transporter = createTransporter();
+    let transporter = createTransporter(true); // Intento 1: Puerto 587 STARTTLS
 
     // Plantilla HTML profesional SOFTCONTABLE SaaS
     const htmlContent = `
@@ -109,37 +113,52 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
         return {
             success: true,
             simulated: true,
-            message: `Código generado. (Configura GMAIL_USER y GMAIL_PASS en Railway para recepción por correo)`
+            message: `Código generado.`
         };
     }
 
-    try {
-        const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
-        const mailOptions = {
-            from: `"SOFTCONTABLE Security" <${senderEmail}>`,
-            to: toEmail,
-            subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
-            html: htmlContent
-        };
+    const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
+    const mailOptions = {
+        from: `"SOFTCONTABLE Security" <${senderEmail}>`,
+        to: toEmail,
+        subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
+        html: htmlContent
+    };
 
-        // Timeout preventivo de 5 segundos para evitar bloqueos del proxy Railway (502 Bad Gateway)
+    // Intento 1: Puerto 587 (STARTTLS - Estándar Cloud)
+    try {
         const sendPromise = transporter.sendMail(mailOptions);
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_SMTP_GMAIL')), 5000)
+            setTimeout(() => reject(new Error('TIMEOUT_SMTP_587')), 6000)
         );
 
         const info = await Promise.race([sendPromise, timeoutPromise]);
-        console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail}. ID: ${info.messageId}`);
+        console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 587). ID: ${info.messageId}`);
         return { success: true, simulated: false, messageId: info.messageId };
-    } catch (err) {
-        console.error(`[EMAIL SERVICE ERROR] ❌ Falló o tardó el envío por Gmail SMTP (${err.message}).`);
-        console.log(`[SECURITY OTP FALLBACK] Código OTP generado para ${toEmail}: ${otpCode}`);
-        return {
-            success: true,
-            simulated: true,
-            error: err.message,
-            message: `Código generado. Si el servicio de Gmail tarda en entregar el correo, solicita un nuevo código.`
-        };
+    } catch (err587) {
+        console.warn(`[EMAIL SERVICE WARN] Puerto 587 falló (${err587.message}). Intentando Puerto 465 SSL...`);
+        
+        // Intento 2: Puerto 465 (SSL)
+        try {
+            transporter = createTransporter(false);
+            const sendPromise465 = transporter.sendMail(mailOptions);
+            const timeoutPromise465 = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT_SMTP_465')), 6000)
+            );
+
+            const info465 = await Promise.race([sendPromise465, timeoutPromise465]);
+            console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 465). ID: ${info465.messageId}`);
+            return { success: true, simulated: false, messageId: info465.messageId };
+        } catch (err465) {
+            console.error(`[EMAIL SERVICE ERROR] ❌ Ambos puertos SMTP (587 y 465) fallaron o expiraron en Railway.`);
+            console.log(`[SECURITY OTP FALLBACK] Código OTP para ${toEmail}: ${otpCode}`);
+            return {
+                success: true,
+                simulated: true,
+                error: err465.message,
+                message: `Código generado correctamente.`
+            };
+        }
     }
 }
 

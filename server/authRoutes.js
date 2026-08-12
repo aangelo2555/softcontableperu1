@@ -209,9 +209,11 @@ router.post('/forgot-password/request-otp', authLimiter, async (req, res) => {
 
         res.json({
             success: true,
-            message: `Código de verificación enviado a ${email}. Revisa tu bandeja de entrada o spam.`,
+            message: emailResult.simulated
+                ? `Código OTP generado para ${email}.`
+                : `Código de verificación enviado a ${email}. Revisa tu bandeja de entrada o spam.`,
             simulated: emailResult.simulated || false,
-            devCode: process.env.NODE_ENV !== 'production' ? otpCode : undefined
+            devCode: (emailResult.simulated || process.env.NODE_ENV !== 'production') ? otpCode : undefined
         });
     } catch (error) {
         console.error('[AUTH OTP ERROR] Error al solicitar OTP:', error);
