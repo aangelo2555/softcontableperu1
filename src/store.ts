@@ -1879,7 +1879,7 @@ export const useStore = create<AppState>()(
         
         // Generate journal entries
         const journalEntries: JournalEntry[] = lines
-          .filter(line => line.cuenta !== 'GLOSA')
+          .filter(line => line.cuenta && line.cuenta.trim() !== '' && line.cuenta.trim().toUpperCase() !== 'GLOSA')
           .map((line, index) => ({
             id: `${id}-line-${index}`,
             source: 'ASIENTO',
@@ -1898,17 +1898,44 @@ export const useStore = create<AppState>()(
         } catch (validationError: any) {
           toast.error(`⚠️ Asiento bloqueado: ${validationError.message}`);
           console.error('[VALIDACIÓN] Partida doble falló en saveAsiento:', validationError);
-          return id; // Retorna id sin persistir
+          throw validationError;
         }
 
+        const newAsientoObj = { id, header, lines };
+
+        // 1. Optimistic UI update in Zustand memory immediately
+        const currentAsientos = get().asientos || [];
+        const currentJournal = get().journal || [];
+        const updatedAsientos = [...currentAsientos.filter(a => a.header?.asiento !== header.asiento && a.id !== id), newAsientoObj];
+        const updatedJournal = [...currentJournal.filter(j => j.asiento !== header.asiento && !j.id.startsWith(`${id}-line-`)), ...journalEntries];
+
+        set({ asientos: updatedAsientos, journal: updatedJournal });
+
+        // 2. Save batch to backend DB
         await electron.dbSaveAsientosBatch(ruc, [{ id, header, lines }]);
         if (journalEntries.length > 0) {
           await electron.dbSaveJournalBatch(ruc, journalEntries);
         }
 
-        // Trigger a data reload
-        const data = await electron.dbGetWorkspaceData(ruc);
-        set({ ...data });
+        // 3. Re-fetch and sanitize workspace data
+        try {
+          const data = await electron.dbGetWorkspaceData(ruc);
+          if (data) {
+            const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
+            const safeJournal = Array.isArray(data.journal)
+              ? data.journal.map((j: any) => ({
+                  ...j,
+                  desc: j.desc || j.descripcion || j.glosa || '',
+                  debe: sanitizeNum(j.debe),
+                  haber: sanitizeNum(j.haber)
+                }))
+              : updatedJournal;
+            const safeAsientos = Array.isArray(data.asientos) ? data.asientos : updatedAsientos;
+            set({ ...data, journal: safeJournal, asientos: safeAsientos });
+          }
+        } catch (e) {
+          console.error('[SAVE ASIENTO] Error recargando workspace data:', e);
+        }
 
         // ── Invalidation Cascade Trigger ──
         await get().triggerCascadeInvalidation('journal', fecha);

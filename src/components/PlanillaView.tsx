@@ -21,7 +21,7 @@ import { exportSingleSheet } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
 
 const PlanillaView: React.FC = () => {
-  const { employees, saveEmployee, deleteEmployee, currentCompany, saveAsiento, plan } = useStore();
+  const { employees, saveEmployee, deleteEmployee, currentCompany, saveAsiento, plan, generarLd52Masivo } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [periodoMes, setPeriodoMes] = useState(new Date().getMonth());
   const [periodoAnio, setPeriodoAnio] = useState(parseInt(currentCompany.period) || new Date().getFullYear());
@@ -229,8 +229,10 @@ const PlanillaView: React.FC = () => {
     setShowConfirmModal(false);
     try {
       const monthStr = String(periodoMes + 1).padStart(2, '0');
-      // Formato de fecha dd/mm/yyyy para que el sistema lo tome correctamente
-      const dateStr = `30/${monthStr}/${periodoAnio}`;
+      // Calcular el último día real del mes seleccionado
+      const lastDay = new Date(periodoAnio, periodoMes + 1, 0).getDate();
+      const lastDayStr = String(lastDay).padStart(2, '0');
+      const dateStr = `${lastDayStr}/${monthStr}/${periodoAnio}`;
       
       const header = {
         asiento: `06-PLA-${monthStr}`, // Formato 3 partes: [Libro]-[Prefijo]-[Correlativo]
@@ -264,22 +266,31 @@ const PlanillaView: React.FC = () => {
 
       // Agregar amarres de destino si existen en el plan para las cuentas 62
       const acc6211 = plan.find(a => a.cta === '6211' || a.cta === '621');
-      if (acc6211?.amarreDebe && acc6211?.amarreHaber) {
-        lines.push({ id: currentId++, cuenta: acc6211.amarreDebe, detalle: 'GASTOS ADMIN (PLANILLA)', debe: stats.bruto, haber: 0 });
-        lines.push({ id: currentId++, cuenta: acc6211.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.bruto });
-      }
+      const ctaDebe6211 = (acc6211?.amarreDebe || '941').trim();
+      const ctaHaber6211 = (acc6211?.amarreHaber || '791').trim();
+      lines.push({ id: currentId++, cuenta: ctaDebe6211, detalle: 'GASTOS ADMIN (PLANILLA)', debe: stats.bruto, haber: 0 });
+      lines.push({ id: currentId++, cuenta: ctaHaber6211, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.bruto });
 
       const acc6271 = plan.find(a => a.cta === '6271' || a.cta === '627');
-      if (acc6271?.amarreDebe && acc6271?.amarreHaber) {
-        lines.push({ id: currentId++, cuenta: acc6271.amarreDebe, detalle: 'GASTOS ADMIN (ESSALUD)', debe: stats.essalud, haber: 0 });
-        lines.push({ id: currentId++, cuenta: acc6271.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.essalud });
-      }
+      const ctaDebe6271 = (acc6271?.amarreDebe || '941').trim();
+      const ctaHaber6271 = (acc6271?.amarreHaber || '791').trim();
+      lines.push({ id: currentId++, cuenta: ctaDebe6271, detalle: 'GASTOS ADMIN (ESSALUD)', debe: stats.essalud, haber: 0 });
+      lines.push({ id: currentId++, cuenta: ctaHaber6271, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: stats.essalud });
 
       await saveAsiento(header, lines);
+
+      // Auto-generar Libro Diario 5.2 Simplificado para el periodo
+      const periodoStr = `${periodoAnio}${monthStr}00`;
+      try {
+        await generarLd52Masivo(periodoStr);
+      } catch (ldErr) {
+        console.warn('[PLANILLA] Auto-generación LD 5.2 omitida:', ldErr);
+      }
+
       toast.success(`Asiento generado correctamente: ${header.asiento}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Ocurrió un error al generar el asiento');
+      toast.error(`Ocurrió un error al generar el asiento: ${error?.message || error}`);
     }
   };
 
@@ -287,7 +298,9 @@ const PlanillaView: React.FC = () => {
     setShowProvisionesConfirm(false);
     try {
       const monthStr = String(periodoMes + 1).padStart(2, '0');
-      const dateStr = `30/${monthStr}/${periodoAnio}`;
+      const lastDay = new Date(periodoAnio, periodoMes + 1, 0).getDate();
+      const lastDayStr = String(lastDay).padStart(2, '0');
+      const dateStr = `${lastDayStr}/${monthStr}/${periodoAnio}`;
 
       const header = {
         asiento: `06-PROV-${monthStr}`,
@@ -322,10 +335,10 @@ const PlanillaView: React.FC = () => {
       const totalProvGasto = stats.provCTS + stats.provVacaciones + stats.provGratificaciones;
       if (totalProvGasto > 0) {
         const acc62 = plan.find(a => a.cta === '621' || a.cta === '6211');
-        if (acc62?.amarreDebe && acc62?.amarreHaber) {
-          lines.push({ id: currentId++, cuenta: acc62.amarreDebe, detalle: 'GASTOS ADMIN (PROVISIONES)', debe: totalProvGasto, haber: 0 });
-          lines.push({ id: currentId++, cuenta: acc62.amarreHaber, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: totalProvGasto });
-        }
+        const ctaDebeProv = (acc62?.amarreDebe || '941').trim();
+        const ctaHaberProv = (acc62?.amarreHaber || '791').trim();
+        lines.push({ id: currentId++, cuenta: ctaDebeProv, detalle: 'GASTOS ADMIN (PROVISIONES)', debe: totalProvGasto, haber: 0 });
+        lines.push({ id: currentId++, cuenta: ctaHaberProv, detalle: 'CARGAS IMPUTABLES', debe: 0, haber: totalProvGasto });
       }
 
       if (lines.length === 0) {
@@ -334,10 +347,19 @@ const PlanillaView: React.FC = () => {
       }
 
       await saveAsiento(header, lines);
+
+      // Auto-generar Libro Diario 5.2 Simplificado para el periodo
+      const periodoStr = `${periodoAnio}${monthStr}00`;
+      try {
+        await generarLd52Masivo(periodoStr);
+      } catch (ldErr) {
+        console.warn('[PROVISIONES] Auto-generación LD 5.2 omitida:', ldErr);
+      }
+
       toast.success(`✅ Asiento de provisiones ${MONTHS[periodoMes]} generado correctamente`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Error al generar el asiento de provisiones');
+      toast.error(`Error al generar el asiento de provisiones: ${error?.message || error}`);
     }
   };
 
