@@ -65,8 +65,20 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/register-student', userData);
         return res.data;
     },
-    authForgotPassword: async (data: { email: string; newPassword?: string }) => {
+    authForgotPassword: async (data: { email: string; newPassword?: string; code?: string; action?: string }) => {
         const res = await api.post('/api/auth/forgot-password', data);
+        return res.data;
+    },
+    authRequestResetOtp: async (data: { email: string }) => {
+        const res = await api.post('/api/auth/forgot-password/request-otp', data);
+        return res.data;
+    },
+    authVerifyResetOtp: async (data: { email: string; code: string }) => {
+        const res = await api.post('/api/auth/forgot-password/verify-otp', data);
+        return res.data;
+    },
+    authResetPasswordWithOtp: async (data: { email: string; code?: string; newPassword?: string; resetToken?: string }) => {
+        const res = await api.post('/api/auth/forgot-password/reset', data);
         return res.data;
     },
 
