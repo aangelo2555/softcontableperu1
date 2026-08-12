@@ -471,7 +471,7 @@ app.post('/api/db/purchases/batch', async (req, res) => {
                     ]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -545,7 +545,7 @@ app.post('/api/db/sales/batch', async (req, res) => {
                     ]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -601,7 +601,7 @@ app.post('/api/db/journal/batch', async (req, res) => {
                     `, [j.id, workspace_id, userId, j.source, j.asiento, j.fecha, j.glosa, j.cta, j.desc || j.descripcion || '', j.debe || 0, j.haber || 0, j.medio_pago || null, j.nro_transaccion || null, j.razon_social || null]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -636,7 +636,7 @@ app.post('/api/db/entities/batch', async (req, res) => {
                     `, [e.id, workspace_id, userId, e.tipo || 'CLIENTE', e.ruc, e.descripcion || e.nombre || '']);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -674,7 +674,7 @@ app.post('/api/db/honorarios/batch', async (req, res) => {
                     `, [h.id, workspace_id, userId, h.registro, h.fecha, h.tipo_doc, h.serie, h.numero, h.doc_tipo, h.doc_num, h.nombre, h.ctaGasto, h.ctaAbono, h.bi || 0, h.retencion || 0, h.total || 0]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -728,7 +728,7 @@ app.post('/api/db/asientos/batch', async (req, res) => {
                     `, [a.id, workspace_id, userId, headerStr, linesStr]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
@@ -807,7 +807,7 @@ app.post('/api/db/employees/batch', async (req, res) => {
                     ]);
                 }
             }
-        });
+        })();
 
         cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         res.json({ success: true, count: items.length });
