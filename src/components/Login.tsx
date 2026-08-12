@@ -393,12 +393,26 @@ export const Login: React.FC = () => {
     const [forgotError, setForgotError] = useState<string | null>(null);
     const [forgotMessage, setForgotMessage] = useState<string | null>(null);
 
+    // Contador regresivo para el botón "Reenviar código" (evita abusos)
+    const [resendCooldown, setResendCooldown] = useState(0);
+
     useEffect(() => {
         const timer = setInterval(() => {
             setActiveSlide(prev => (prev + 1) % showcaseViews.length);
         }, 5000);
         return () => clearInterval(timer);
     }, []);
+
+    // Timer regresivo de 60 segundos para el botón de reenvío de OTP
+    useEffect(() => {
+        let interval: any = null;
+        if (resendCooldown > 0) {
+            interval = setInterval(() => {
+                setResendCooldown(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [resendCooldown]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -477,6 +491,7 @@ export const Login: React.FC = () => {
     // Manejo de Recuperación de Contraseña - PASO 1: Enviar Código OTP a Gmail
     const handleForgotRequestOtp = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (resendCooldown > 0) return;
         setForgotLoading(true);
         setForgotError(null);
         setForgotMessage(null);
@@ -489,6 +504,7 @@ export const Login: React.FC = () => {
                     setDevCodeNotice(res.devCode);
                 }
                 setForgotStep(2);
+                setResendCooldown(60); // Inicia el contador regresivo de 60 segundos
             } else {
                 setForgotError(res.error || 'Error al enviar el código de verificación.');
             }
@@ -753,6 +769,7 @@ export const Login: React.FC = () => {
                                             setForgotError(null);
                                             setForgotMessage(null);
                                             setDevCodeNotice(null);
+                                            setResendCooldown(0);
                                         }} 
                                         className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[11px]"
                                     >
@@ -956,7 +973,7 @@ export const Login: React.FC = () => {
                         {forgotMessage && (
                             <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-3 rounded-xl flex items-start gap-2">
                                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-                                <span>{forgotMessage}</span>
+                                <div className="leading-relaxed">{forgotMessage}</div>
                             </div>
                         )}
 
@@ -999,7 +1016,7 @@ export const Login: React.FC = () => {
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={forgotLoading}
+                                    disabled={forgotLoading || resendCooldown > 0}
                                     className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
@@ -1012,7 +1029,7 @@ export const Login: React.FC = () => {
                             </form>
                         )}
 
-                        {/* PASO 2: Ingreso y verificación de Código OTP */}
+                        {/* PASO 2: Ingreso y verificación de Código OTP con contador regresivo de reenvío */}
                         {forgotStep === 2 && (
                             <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
                                 <p className="text-xs text-slate-600 leading-relaxed font-medium">
@@ -1047,17 +1064,31 @@ export const Login: React.FC = () => {
                                 <div className="flex justify-between items-center pt-1 text-[11px]">
                                     <button
                                         type="button"
-                                        onClick={() => setForgotStep(1)}
-                                        className="text-slate-500 hover:text-slate-800 underline font-medium"
+                                        onClick={() => {
+                                            setForgotStep(1);
+                                            setResendCooldown(0);
+                                        }}
+                                        className="text-slate-500 hover:text-slate-800 underline font-medium cursor-pointer"
                                     >
                                         Cambiar correo
                                     </button>
                                     <button
                                         type="button"
+                                        disabled={resendCooldown > 0 || forgotLoading}
                                         onClick={handleForgotRequestOtp}
-                                        className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                                        className={`font-bold flex items-center gap-1 transition-all ${
+                                            resendCooldown > 0 || forgotLoading
+                                                ? 'text-slate-400 cursor-not-allowed opacity-70'
+                                                : 'text-blue-600 hover:text-blue-800 cursor-pointer'
+                                        }`}
                                     >
-                                        <RefreshCw size={11} /> Reenviar código
+                                        <RefreshCw size={11} className={forgotLoading ? 'animate-spin' : ''} />
+                                        <span>
+                                            {resendCooldown > 0
+                                                ? `Reenviar en ${resendCooldown}s`
+                                                : 'Reenviar código'
+                                            }
+                                        </span>
                                     </button>
                                 </div>
                             </form>

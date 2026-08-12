@@ -9,6 +9,15 @@ const createTransporter = () => {
         return null;
     }
 
+    if (process.env.SMTP_HOST) {
+        return nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '465'),
+            secure: process.env.SMTP_SECURE !== 'false',
+            auth: { user, pass }
+        });
+    }
+
     return nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -26,7 +35,7 @@ const createTransporter = () => {
  * @param {string} [params.userName] - Nombre opcional del usuario
  */
 async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
-    console.log(`[EMAIL SERVICE] Preparando envío de OTP para: ${toEmail}`);
+    console.log(`[EMAIL SERVICE] Intentando enviar OTP para: ${toEmail}`);
     
     const transporter = createTransporter();
 
@@ -45,7 +54,7 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
                 .otp-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
                 .otp-code { font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #1e40af; margin: 10px 0; font-family: 'Courier New', Courier, monospace; }
                 .badge { display: inline-block; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px; }
-                .footer { text-align: center; margin-top: 28px; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; pt-16px; padding-top: 16px; }
+                .footer { text-align: center; margin-top: 28px; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 16px; }
             </style>
         </head>
         <body>
@@ -56,7 +65,7 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
                 </div>
 
                 <p style="font-size: 14px; margin-bottom: 8px;">Hola <strong>${userName || 'Usuario'}</strong>,</p>
-                <p style="font-size: 13px; color: #334155; leading-height: 1.6;">
+                <p style="font-size: 13px; color: #334155; line-height: 1.6;">
                     Recibimos una solicitud para restablecer la contraseña de tu cuenta registrada en <strong>SOFTCONTABLE SaaS</strong>.
                 </p>
 
@@ -72,7 +81,7 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
 
                 <div class="footer">
                     <p style="margin: 0;">&copy; 2026 SOFTCONTABLE SaaS. Todos los derechos reservados.</p>
-                    <p style="margin: 4px 0 0 0; color: #94a3b8;">Seguridad Contable &amp; Tributaria SUNAT Peru 2026</p>
+                    <p style="margin: 4px 0 0 0; color: #94a3b8;">Seguridad Contable &amp; Tributaria SUNAT Perú 2026</p>
                 </div>
             </div>
         </body>
@@ -81,37 +90,38 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
 
     if (!transporter) {
         console.log(`\n==================================================`);
-        console.log(`[SECURITY OTP DEV FALLBACK] Correo: ${toEmail}`);
-        console.log(`[SECURITY OTP DEV FALLBACK] Código OTP: ${otpCode}`);
-        console.log(`[SECURITY OTP DEV FALLBACK] Nota: Configura GMAIL_USER y GMAIL_PASS en el servidor para envío automático en producción.`);
+        console.log(`[EMAIL SERVICE] ⚠️ No se detectó GMAIL_USER ni GMAIL_PASS en las variables de entorno de Railway.`);
+        console.log(`[SECURITY OTP DEV CODE] Correo: ${toEmail} | OTP: ${otpCode}`);
+        console.log(`[AYUDA CONFIGURACIÓN] Agrega GMAIL_USER (tu correo) y GMAIL_PASS (contraseña de aplicación de 16 letras) en Railway.`);
         console.log(`==================================================\n`);
 
         return {
             success: true,
             simulated: true,
-            message: `[DEV] Código de verificación generado: ${otpCode}. (Configura GMAIL_USER y GMAIL_PASS en .env para envío real por Gmail)`
+            message: `Código generado. (Para envío real a tu bandeja de Gmail, configura las variables GMAIL_USER y GMAIL_PASS en Railway)`
         };
     }
 
     try {
+        const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
         const mailOptions = {
-            from: `"SOFTCONTABLE Security" <${process.env.GMAIL_USER || process.env.SMTP_USER}>`,
+            from: `"SOFTCONTABLE Security" <${senderEmail}>`,
             to: toEmail,
             subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
             html: htmlContent
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log(`[EMAIL SERVICE SUCCESS] Correo enviado exitosamente a ${toEmail}. MessageId: ${info.messageId}`);
+        console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail}. ID: ${info.messageId}`);
         return { success: true, simulated: false, messageId: info.messageId };
     } catch (err) {
-        console.error(`[EMAIL SERVICE ERROR] Falló el envío por Gmail SMTP:`, err.message);
+        console.error(`[EMAIL SERVICE ERROR] ❌ Falló el envío por Gmail SMTP:`, err.message);
         console.log(`[SECURITY OTP FALLBACK] Código OTP para ${toEmail}: ${otpCode}`);
         return {
             success: true,
             simulated: true,
             error: err.message,
-            message: `Código generado. Si no recibes el correo de Gmail, utiliza el código dev: ${otpCode}`
+            message: `Código generado. Si no recibes el correo de Gmail, revisa tu spam o la consola dev.`
         };
     }
 }
