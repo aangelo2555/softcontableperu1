@@ -66,12 +66,16 @@ function createLibroDiario52Service(db) {
 
   // ── Validar cuenta existe en plan ──
   const validarCuenta = async (codigoCuenta, userId) => {
-    let row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id=?`).get(codigoCuenta, userId);
-    if (!row) {
-      row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id='system'`).get(codigoCuenta);
+    if (!codigoCuenta || typeof codigoCuenta !== 'string' || codigoCuenta.trim().length < 3) {
+      return false;
     }
-    if (!row) return false;
-    return row.div !== 0;
+    const cleanCta = codigoCuenta.trim();
+    let row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id=?`).get(cleanCta, userId);
+    if (!row) {
+      row = await db.prepare(`SELECT cta, div FROM plan_global WHERE cta=? AND user_id='system'`).get(cleanCta);
+    }
+    if (row) return true;
+    return /^\d{3,}$/.test(cleanCta);
   };
 
   // ── Verificar período abierto ──
