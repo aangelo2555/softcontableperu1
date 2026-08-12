@@ -30,43 +30,39 @@ import toast from 'react-hot-toast';
 import { LegalPages } from './LegalPages';
 
 const customStyles = `
-  .glass-card-pro {
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+  .light-card-pro {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     box-shadow: 
-      0 30px 60px -12px rgba(0, 0, 0, 0.65),
-      inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      0 20px 45px -15px rgba(15, 23, 42, 0.08),
+      0 4px 12px -2px rgba(15, 23, 42, 0.04);
   }
-  .glass-card-student {
-    background: rgba(19, 24, 52, 0.9);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(129, 140, 248, 0.28);
+  .light-card-student {
+    background: #ffffff;
+    border: 1px solid #e0e7ff;
     box-shadow: 
-      0 30px 60px -12px rgba(30, 27, 75, 0.5),
-      inset 0 1px 1px rgba(165, 180, 252, 0.2);
+      0 20px 45px -15px rgba(67, 56, 202, 0.1),
+      0 4px 12px -2px rgba(67, 56, 202, 0.05);
   }
-  .glass-input-field {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+  .light-input-field {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
     transition: all 0.2s ease-in-out;
   }
-  .glass-input-field:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.25);
+  .light-input-field:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
   }
-  .glass-input-field:focus-within {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  .light-input-field:focus-within {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   }
-  .glass-input-field-student:focus-within {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(129, 140, 248, 0.85);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+  .light-input-field-student:focus-within {
+    background: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
   }
 `;
 
@@ -75,62 +71,62 @@ const showcaseViews = [
         id: 'dashboard',
         title: 'Panel Principal',
         icon: Layers,
-        activeColor: 'text-blue-400',
+        activeColor: 'text-blue-600',
         badge: 'Resumen Gerencial',
         content: (
-            <div className="space-y-4 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-slate-900/90 border border-blue-500/35 rounded-xl p-3.5 shadow-md">
-                        <span className="text-[9px] text-blue-400 font-extrabold uppercase tracking-wider block mb-1">Ventas del Mes</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 83,536.61</span>
-                        <span className="text-[9.5px] text-emerald-400 font-bold block mt-1">+14.2% vs mes ant.</span>
+            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="grid grid-cols-3 gap-2.5">
+                    <div className="bg-white border border-blue-200/80 rounded-xl p-3 shadow-xs">
+                        <span className="text-[8.5px] text-blue-700 font-extrabold uppercase tracking-wider block mb-0.5">Ventas del Mes</span>
+                        <span className="text-sm lg:text-base font-black text-slate-900">S/ 83,536.61</span>
+                        <span className="text-[9px] text-emerald-600 font-bold block mt-0.5">+14.2% vs mes ant.</span>
                     </div>
-                    <div className="bg-slate-900/90 border border-emerald-500/35 rounded-xl p-3.5 shadow-md">
-                        <span className="text-[9px] text-emerald-400 font-extrabold uppercase tracking-wider block mb-1">Compras del Mes</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 312.92</span>
-                        <span className="text-[9.5px] text-slate-300 font-bold block mt-1">2 comprobantes</span>
+                    <div className="bg-white border border-emerald-200/80 rounded-xl p-3 shadow-xs">
+                        <span className="text-[8.5px] text-emerald-700 font-extrabold uppercase tracking-wider block mb-0.5">Compras del Mes</span>
+                        <span className="text-sm lg:text-base font-black text-slate-900">S/ 312.92</span>
+                        <span className="text-[9px] text-slate-500 font-bold block mt-0.5">2 comprobantes</span>
                     </div>
-                    <div className="bg-slate-900/90 border border-purple-500/35 rounded-xl p-3.5 shadow-md">
-                        <span className="text-[9px] text-purple-300 font-extrabold uppercase tracking-wider block mb-1">IGV Estimado</span>
-                        <span className="text-base lg:text-lg font-black text-white">S/ 12,697.10</span>
-                        <span className="text-[9.5px] text-indigo-300 font-bold block mt-1">Régimen RMT / RG</span>
+                    <div className="bg-white border border-purple-200/80 rounded-xl p-3 shadow-xs">
+                        <span className="text-[8.5px] text-purple-700 font-extrabold uppercase tracking-wider block mb-0.5">IGV Estimado</span>
+                        <span className="text-sm lg:text-base font-black text-slate-900">S/ 12,697.10</span>
+                        <span className="text-[9px] text-indigo-600 font-bold block mt-0.5">Régimen RMT / RG</span>
                     </div>
                 </div>
-                <div className="grid grid-cols-12 gap-3 flex-1">
-                    <div className="col-span-8 bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
-                        <span className="text-[10px] text-white font-extrabold uppercase tracking-wider block mb-2">Flujo de Caja Anual (2026)</span>
-                        <div className="flex items-end justify-between h-32 pt-2 px-1">
+                <div className="grid grid-cols-12 gap-2.5 flex-1">
+                    <div className="col-span-8 bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+                        <span className="text-[9.5px] text-slate-800 font-extrabold uppercase tracking-wider block mb-1">Flujo de Caja Anual (2026)</span>
+                        <div className="flex items-end justify-between h-28 pt-1 px-1">
                             {[40, 60, 45, 75, 50, 90, 65, 80, 55, 70, 85, 95].map((h, i) => (
-                                <div key={i} className="w-[6%] flex flex-col items-center gap-1.5">
-                                    <div className="w-full bg-gradient-to-t from-slate-800 to-blue-500/90 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
-                                    <span className="text-[8.5px] text-slate-300 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
+                                <div key={i} className="w-[6.5%] flex flex-col items-center gap-1">
+                                    <div className="w-full bg-gradient-to-t from-slate-200 to-blue-600/90 rounded-t transition-all duration-500" style={{ height: `${h}%` }}></div>
+                                    <span className="text-[8px] text-slate-500 font-bold">{['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="col-span-4 bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
-                        <span className="text-[10px] text-white font-extrabold uppercase tracking-wider block mb-2">Rendimiento</span>
-                        <div className="space-y-2.5">
+                    <div className="col-span-4 bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+                        <span className="text-[9.5px] text-slate-800 font-extrabold uppercase tracking-wider block mb-1">Rendimiento</span>
+                        <div className="space-y-2">
                             <div>
-                                <div className="flex justify-between text-[9.5px] text-slate-300 mb-1">
+                                <div className="flex justify-between text-[9px] text-slate-600 mb-0.5 font-medium">
                                     <span>Margen Bruto</span>
-                                    <span className="text-white font-bold">99.6%</span>
+                                    <span className="text-slate-900 font-black">99.6%</span>
                                 </div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-blue-500 h-full rounded-full" style={{ width: '99.6%' }}></div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '99.6%' }}></div>
                                 </div>
                             </div>
                             <div>
-                                <div className="flex justify-between text-[9.5px] text-slate-300 mb-1">
+                                <div className="flex justify-between text-[9px] text-slate-600 mb-0.5 font-medium">
                                     <span>Ejecución Presup.</span>
-                                    <span className="text-white font-bold">88.4%</span>
+                                    <span className="text-slate-900 font-black">88.4%</span>
                                 </div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '88.4%' }}></div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="bg-emerald-600 h-full rounded-full" style={{ width: '88.4%' }}></div>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-[8.5px] text-slate-400 mt-2 font-semibold">
+                        <div className="text-[8px] text-slate-500 font-semibold mt-1">
                             Sincronización en tiempo real.
                         </div>
                     </div>
@@ -142,46 +138,46 @@ const showcaseViews = [
         id: 'sire',
         title: 'SIRE SUNAT 2026',
         icon: ReceiptText,
-        activeColor: 'text-indigo-400',
+        activeColor: 'text-indigo-600',
         badge: 'RCE 8.1 & RVIE 14.1',
         content: (
-            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Integración Directa SIRE SUNAT 2026</span>
-                    <span className="text-[9.5px] bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 px-2.5 py-0.5 rounded-full font-extrabold">Sincronizado SOL</span>
+            <div className="space-y-2.5 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[10px] text-slate-900 font-extrabold uppercase tracking-wider">Integración Directa SIRE SUNAT 2026</span>
+                    <span className="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-extrabold">Sincronizado SOL</span>
                 </div>
-                <div className="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-900/90 flex-1 flex flex-col shadow-md">
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex-1 flex flex-col shadow-xs">
                     <table className="w-full text-left border-collapse flex-1">
                         <thead>
-                            <tr className="border-b border-slate-700/80 bg-slate-800/60">
-                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Módulo SIRE</th>
-                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Comprobantes</th>
-                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider">Base Imponible</th>
-                                <th className="p-2.5 text-[9.5px] font-extrabold text-slate-200 uppercase tracking-wider text-right">Estado SUNAT</th>
+                            <tr className="border-b border-slate-200 bg-slate-100/80">
+                                <th className="p-2 text-[9px] font-extrabold text-slate-700 uppercase tracking-wider">Módulo SIRE</th>
+                                <th className="p-2 text-[9px] font-extrabold text-slate-700 uppercase tracking-wider">Comprobantes</th>
+                                <th className="p-2 text-[9px] font-extrabold text-slate-700 uppercase tracking-wider">Base Imponible</th>
+                                <th className="p-2 text-[9px] font-extrabold text-slate-700 uppercase tracking-wider text-right">Estado SUNAT</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800 text-[10px]">
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2.5 font-black text-white flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> RVIE 14.1 (Ventas)
+                        <tbody className="divide-y divide-slate-100 text-[9.5px]">
+                            <tr className="hover:bg-slate-50">
+                                <td className="p-2 font-black text-slate-900 flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-blue-600"></span> RVIE 14.1 (Ventas)
                                 </td>
-                                <td className="p-2.5 text-slate-200 font-mono font-semibold">1 Registros</td>
-                                <td className="p-2.5 text-blue-300 font-black font-mono">S/ 70,793.74</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black">ACEPTADO (Ticket)</td>
+                                <td className="p-2 text-slate-600 font-mono font-semibold">1 Registros</td>
+                                <td className="p-2 text-blue-700 font-black font-mono">S/ 70,793.74</td>
+                                <td className="p-2 text-right text-emerald-700 font-black">ACEPTADO (Ticket)</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/40">
-                                <td className="p-2.5 font-black text-white flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span> RCE 8.1 (Compras)
+                            <tr className="hover:bg-slate-50">
+                                <td className="p-2 font-black text-slate-900 flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-600"></span> RCE 8.1 (Compras)
                                 </td>
-                                <td className="p-2.5 text-slate-200 font-mono font-semibold">2 Registros</td>
-                                <td className="p-2.5 text-purple-300 font-black font-mono">S/ 265.19</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black">ACEPTADO (Ticket)</td>
+                                <td className="p-2 text-slate-600 font-mono font-semibold">2 Registros</td>
+                                <td className="p-2 text-indigo-700 font-black font-mono">S/ 265.19</td>
+                                <td className="p-2 text-right text-emerald-700 font-black">ACEPTADO (Ticket)</td>
                             </tr>
                         </tbody>
                     </table>
-                    <div className="p-3 bg-blue-500/10 border-t border-slate-700/80 flex items-center justify-between text-[9.5px]">
-                        <span className="text-slate-300 font-semibold">Comparativa SIRE vs Local: Sin discrepancias detectadas.</span>
-                        <span className="text-blue-400 font-extrabold">Resumen 100% Ok</span>
+                    <div className="p-2.5 bg-blue-50/70 border-t border-slate-200 flex items-center justify-between text-[9px]">
+                        <span className="text-slate-600 font-semibold">Comparativa SIRE vs Local: Sin discrepancias detectadas.</span>
+                        <span className="text-blue-700 font-extrabold">Resumen 100% Ok</span>
                     </div>
                 </div>
             </div>
@@ -191,59 +187,59 @@ const showcaseViews = [
         id: 'diario',
         title: 'Libro Diario 5.1',
         icon: FileText,
-        activeColor: 'text-emerald-400',
+        activeColor: 'text-emerald-600',
         badge: 'Formato SUNAT 5.1 & 5.2',
         content: (
-            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[11px] text-white font-black uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
-                    <span className="text-[9.5px] bg-emerald-500/25 border border-emerald-500/50 text-emerald-300 px-2.5 py-0.5 rounded-full font-black">Folio: 0048</span>
+            <div className="space-y-2.5 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[10px] text-slate-900 font-extrabold uppercase tracking-wider">Libro Diario General (SUNAT 5.1)</span>
+                    <span className="text-[9px] bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-black">Folio: 0048</span>
                 </div>
-                <div className="border border-slate-700 rounded-xl overflow-hidden bg-[#0a0f1d] flex-1 flex flex-col shadow-xl">
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex-1 flex flex-col shadow-xs">
                     <table className="w-full text-left border-collapse flex-1">
                         <thead>
-                            <tr className="border-b border-slate-700 bg-slate-800/90">
-                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider">Código</th>
-                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider">Cuenta Contable</th>
-                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider text-right">Debe (S/)</th>
-                                <th className="p-2.5 text-[10px] font-black text-slate-100 uppercase tracking-wider text-right">Haber (S/)</th>
+                            <tr className="border-b border-slate-200 bg-slate-100/90">
+                                <th className="p-2 text-[9px] font-black text-slate-700 uppercase tracking-wider">Código</th>
+                                <th className="p-2 text-[9px] font-black text-slate-700 uppercase tracking-wider">Cuenta Contable</th>
+                                <th className="p-2 text-[9px] font-black text-slate-700 uppercase tracking-wider text-right">Debe (S/)</th>
+                                <th className="p-2 text-[9px] font-black text-slate-700 uppercase tracking-wider text-right">Haber (S/)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800 text-[10.5px]">
-                            <tr className="hover:bg-slate-800/60 transition-colors">
-                                <td className="p-2.5 font-mono font-black text-emerald-400">10411</td>
-                                <td className="p-2.5 text-white font-bold">BCP - Moneda Nacional</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black">11,800.00</td>
-                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
+                        <tbody className="divide-y divide-slate-100 text-[9.5px]">
+                            <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2 font-mono font-black text-emerald-700">10411</td>
+                                <td className="p-2 text-slate-900 font-bold">BCP - Moneda Nacional</td>
+                                <td className="p-2 text-right text-emerald-700 font-black">11,800.00</td>
+                                <td className="p-2 text-right text-slate-400 font-bold">-</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/60 transition-colors">
-                                <td className="p-2.5 font-mono font-black text-blue-400">40111</td>
-                                <td className="p-2.5 text-white font-bold">IGV - Cuenta Propia</td>
-                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
-                                <td className="p-2.5 text-right text-blue-300 font-black">1,800.00</td>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2 font-mono font-black text-blue-700">40111</td>
+                                <td className="p-2 text-slate-900 font-bold">IGV - Cuenta Propia</td>
+                                <td className="p-2 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2 text-right text-blue-700 font-black">1,800.00</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/60 transition-colors">
-                                <td className="p-2.5 font-mono font-black text-blue-400">70121</td>
-                                <td className="p-2.5 text-white font-bold">Mercaderías - Venta Local</td>
-                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
-                                <td className="p-2.5 text-right text-blue-300 font-black">10,000.00</td>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2 font-mono font-black text-blue-700">70121</td>
+                                <td className="p-2 text-slate-900 font-bold">Mercaderías - Venta Local</td>
+                                <td className="p-2 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2 text-right text-blue-700 font-black">10,000.00</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/60 transition-colors">
-                                <td className="p-2.5 font-mono font-black text-emerald-400">60111</td>
-                                <td className="p-2.5 text-white font-bold">Mercaderías - Compra Local</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black">5,000.00</td>
-                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2 font-mono font-black text-emerald-700">60111</td>
+                                <td className="p-2 text-slate-900 font-bold">Mercaderías - Compra Local</td>
+                                <td className="p-2 text-right text-emerald-700 font-black">5,000.00</td>
+                                <td className="p-2 text-right text-slate-400 font-bold">-</td>
                             </tr>
-                            <tr className="hover:bg-slate-800/60 transition-colors">
-                                <td className="p-2.5 font-mono font-black text-blue-400">42121</td>
-                                <td className="p-2.5 text-white font-bold">Facturas por Pagar - Local</td>
-                                <td className="p-2.5 text-right text-slate-400 font-bold">-</td>
-                                <td className="p-2.5 text-right text-blue-300 font-black">5,000.00</td>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="p-2 font-mono font-black text-blue-700">42121</td>
+                                <td className="p-2 text-slate-900 font-bold">Facturas por Pagar - Local</td>
+                                <td className="p-2 text-right text-slate-400 font-bold">-</td>
+                                <td className="p-2 text-right text-blue-700 font-black">5,000.00</td>
                             </tr>
-                            <tr className="bg-slate-800/90 font-black border-t-2 border-slate-700">
-                                <td className="p-2.5 text-[9.5px] text-white uppercase tracking-wider font-black" colSpan={2}>Suma de Operaciones del Folio</td>
-                                <td className="p-2.5 text-right text-emerald-400 font-black text-[11px]">16,800.00</td>
-                                <td className="p-2.5 text-right text-blue-300 font-black text-[11px]">16,800.00</td>
+                            <tr className="bg-slate-100 font-black border-t-2 border-slate-300">
+                                <td className="p-2 text-[9px] text-slate-900 uppercase tracking-wider font-black" colSpan={2}>Suma de Operaciones del Folio</td>
+                                <td className="p-2 text-right text-emerald-700 font-black text-[10px]">16,800.00</td>
+                                <td className="p-2 text-right text-blue-700 font-black text-[10px]">16,800.00</td>
                             </tr>
                         </tbody>
                     </table>
@@ -255,30 +251,30 @@ const showcaseViews = [
         id: 'planillas',
         title: 'Planillas & PLAME',
         icon: Users,
-        activeColor: 'text-amber-400',
+        activeColor: 'text-amber-700',
         badge: 'Ley 27735 & CTS',
         content: (
-            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Nómina de Colaboradores &amp; Beneficios Sociales</span>
-                    <span className="text-[9.5px] bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2.5 py-0.5 rounded-full font-extrabold">PLAME Ready</span>
+            <div className="space-y-2.5 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[10px] text-slate-900 font-extrabold uppercase tracking-wider">Nómina de Colaboradores &amp; Beneficios Sociales</span>
+                    <span className="text-[9px] bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-extrabold">PLAME Ready</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 flex-1">
-                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
+                <div className="grid grid-cols-2 gap-2.5 flex-1">
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-xs">
                         <div>
-                            <span className="text-[9.5px] text-amber-300 font-extrabold uppercase block mb-1">Gratificaciones Ley 27735</span>
-                            <span className="text-base font-black text-white">S/ 3,450.00</span>
-                            <p className="text-[8.5px] text-slate-300 mt-1 font-medium">Cálculo proyectado Julio/Diciembre con Bonificación Extraordinaria (9%).</p>
+                            <span className="text-[9px] text-amber-800 font-extrabold uppercase block mb-1">Gratificaciones Ley 27735</span>
+                            <span className="text-sm lg:text-base font-black text-slate-900">S/ 3,450.00</span>
+                            <p className="text-[8.5px] text-slate-500 mt-1 font-medium leading-tight">Cálculo proyectado Julio/Diciembre con Bonificación Extraordinaria (9%).</p>
                         </div>
-                        <span className="text-[9px] text-emerald-400 font-black mt-2">● Cálculo Automatizado</span>
+                        <span className="text-[9px] text-emerald-700 font-black mt-1">● Cálculo Automatizado</span>
                     </div>
-                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between shadow-md">
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-xs">
                         <div>
-                            <span className="text-[9.5px] text-blue-300 font-extrabold uppercase block mb-1">CTS D.S. 001-97-TR</span>
-                            <span className="text-base font-black text-white">S/ 1,725.00</span>
-                            <p className="text-[8.5px] text-slate-300 mt-1 font-medium">Depósito Mayo/Noviembre computable con 1/6 de gratificación.</p>
+                            <span className="text-[9px] text-blue-700 font-extrabold uppercase block mb-1">CTS D.S. 001-97-TR</span>
+                            <span className="text-sm lg:text-base font-black text-slate-900">S/ 1,725.00</span>
+                            <p className="text-[8.5px] text-slate-500 mt-1 font-medium leading-tight">Depósito Mayo/Noviembre computable con 1/6 de gratificación.</p>
                         </div>
-                        <span className="text-[9px] text-blue-400 font-black mt-2">● Sincronizado PLAME</span>
+                        <span className="text-[9px] text-blue-700 font-black mt-1">● Sincronizado PLAME</span>
                     </div>
                 </div>
             </div>
@@ -288,28 +284,28 @@ const showcaseViews = [
         id: 'bancos',
         title: 'Tesorería & Bancos',
         icon: Landmark,
-        activeColor: 'text-cyan-400',
+        activeColor: 'text-cyan-700',
         badge: 'Auto-Match Bancario',
         content: (
-            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Conciliación Bancaria Automática</span>
-                    <span className="text-[9.5px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 px-2.5 py-0.5 rounded-full font-extrabold">BCP / BBVA / Interbank</span>
+            <div className="space-y-2.5 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[10px] text-slate-900 font-extrabold uppercase tracking-wider">Conciliación Bancaria Automática</span>
+                    <span className="text-[9px] bg-cyan-50 border border-cyan-200 text-cyan-800 px-2 py-0.5 rounded-full font-extrabold">BCP / BBVA / Interbank</span>
                 </div>
-                <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between shadow-md">
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
-                            <span className="text-white font-bold font-mono">MOV-2026-0814 • Depósito Cliente</span>
-                            <span className="text-emerald-400 font-black font-mono">+S/ 11,800.00</span>
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2 flex-1 flex flex-col justify-between shadow-xs">
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between items-center text-[9.5px] bg-slate-50 p-2 rounded-lg border border-slate-200">
+                            <span className="text-slate-800 font-bold font-mono">MOV-2026-0814 • Depósito Cliente</span>
+                            <span className="text-emerald-700 font-black font-mono">+S/ 11,800.00</span>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
-                            <span className="text-white font-bold font-mono">MOV-2026-0815 • Pago Proveedor</span>
-                            <span className="text-blue-400 font-black font-mono">-S/ 5,000.00</span>
+                        <div className="flex justify-between items-center text-[9.5px] bg-slate-50 p-2 rounded-lg border border-slate-200">
+                            <span className="text-slate-800 font-bold font-mono">MOV-2026-0815 • Pago Proveedor</span>
+                            <span className="text-blue-700 font-black font-mono">-S/ 5,000.00</span>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center text-[9.5px] text-slate-300 border-t border-slate-700/80 pt-2 font-semibold">
+                    <div className="flex justify-between items-center text-[9px] text-slate-600 border-t border-slate-200 pt-2 font-semibold">
                         <span>Conciliado: 100% de Extractos Bancarios</span>
-                        <span className="text-cyan-400 font-black">Match Automático OK</span>
+                        <span className="text-cyan-700 font-black">Match Automático OK</span>
                     </div>
                 </div>
             </div>
@@ -319,24 +315,24 @@ const showcaseViews = [
         id: 'softpremium',
         title: 'SoftPremium Groq AI',
         icon: Cpu,
-        activeColor: 'text-purple-400',
+        activeColor: 'text-purple-700',
         badge: 'Groq LLaMA-3.3 RAG 4.0',
         content: (
-            <div className="space-y-3 h-full flex flex-col justify-center animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10.5px] text-white font-extrabold uppercase tracking-wider">Auditoría Tributaria Preventiva &amp; RAG AI</span>
-                    <span className="text-[9.5px] bg-purple-500/20 border border-purple-500/40 text-purple-300 px-2.5 py-0.5 rounded-full font-extrabold">Riesgo SUNAT: BAJO</span>
+            <div className="space-y-2.5 h-full flex flex-col justify-center animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[10px] text-slate-900 font-extrabold uppercase tracking-wider">Auditoría Tributaria Preventiva &amp; RAG AI</span>
+                    <span className="text-[9px] bg-purple-50 border border-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-extrabold">Riesgo SUNAT: BAJO</span>
                 </div>
-                <div className="bg-slate-900/90 border border-purple-500/35 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col justify-between shadow-md">
+                <div className="bg-white border border-purple-200/80 rounded-xl p-3 space-y-2 flex-1 flex flex-col justify-between shadow-xs">
                     <div>
-                        <span className="text-[9.5px] text-purple-300 font-extrabold uppercase tracking-wider block mb-1">Dictamen de Inteligencia Normativa 2026</span>
-                        <p className="text-[10px] text-slate-100 leading-relaxed font-medium">
+                        <span className="text-[9px] text-purple-800 font-extrabold uppercase tracking-wider block mb-1">Dictamen de Inteligencia Normativa 2026</span>
+                        <p className="text-[9.5px] text-slate-700 leading-relaxed font-medium">
                             "Tu ratio de compras vs ventas se encuentra en 0.37%, dentro de los márgenes óptimos sustentables. No se detectan inconsistencias bancarias Ley 28194."
                         </p>
                     </div>
-                    <div className="flex justify-between items-center text-[9px] text-slate-300 border-t border-purple-500/30 pt-2 font-semibold">
+                    <div className="flex justify-between items-center text-[8.5px] text-slate-500 border-t border-purple-100 pt-2 font-semibold">
                         <span>Motor de Inferencia: Groq LLaMA-3.3 70B</span>
-                        <span className="text-purple-300 font-black">IA RAG 4.0 Activo</span>
+                        <span className="text-purple-800 font-black">IA RAG 4.0 Activo</span>
                     </div>
                 </div>
             </div>
@@ -494,45 +490,45 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-[#07090e] text-slate-100 flex items-center justify-center font-sans selection:bg-blue-600/30 selection:text-blue-200 overflow-x-hidden relative p-4 md:p-8">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200/80 text-slate-800 flex items-center justify-center font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-x-hidden relative p-3 md:p-6">
             <style>{customStyles}</style>
 
             {/* Layout Principal Contenedor */}
-            <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-8 lg:gap-12 relative z-10 my-auto">
+            <div className="w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-6 lg:gap-10 relative z-10 my-auto">
                 
                 {/* COLUMNA IZQUIERDA: Formulario de Login / Registro */}
-                <div className="w-full md:w-[450px] shrink-0">
+                <div className="w-full md:w-[420px] shrink-0">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-6">
-                        <div className="inline-flex items-center justify-center p-2.5 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl mb-3">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-12 h-12 object-contain" />
+                    <div className="text-center mb-3">
+                        <div className="inline-flex items-center justify-center p-2 bg-white border border-slate-200 rounded-2xl shadow-sm mb-2">
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-10 h-10 object-contain" />
                         </div>
-                        <h1 className="text-2xl lg:text-3xl font-black tracking-wider text-white uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
-                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-400">CONTABLE</span>
+                        <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
+                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
                         </h1>
-                        <p className="text-slate-400 text-[10.5px] font-bold tracking-widest uppercase mt-1 notranslate" translate="no">
+                        <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mt-0.5 notranslate" translate="no">
                             Sistema Contable en la Nube v2.0
                         </p>
                     </div>
 
-                    {/* Tarjeta de Formulario (Glassmorphic) */}
-                    <div className={`p-6 lg:p-8 rounded-3xl transition-all duration-300 ${
-                        isStudentModeActive ? 'glass-card-student' : 'glass-card-pro'
+                    {/* Tarjeta de Formulario (Modo Claro Sobrio) */}
+                    <div className={`p-5 lg:p-6 rounded-3xl transition-all duration-300 ${
+                        isStudentModeActive ? 'light-card-student' : 'light-card-pro'
                     }`}>
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-5 bg-black/40 p-1 rounded-2xl border border-white/10 flex items-center gap-1">
+                        <div className="mb-4 bg-slate-100 p-1 rounded-2xl border border-slate-200/70 flex items-center gap-1">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsStudentModeActive(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
                                     !isStudentModeActive 
-                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25' 
-                                        : 'text-slate-400 hover:text-white'
+                                        ? 'bg-white text-blue-700 shadow-sm border border-slate-200/60 font-black' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
                                 <Building2 size={13} />
@@ -545,10 +541,10 @@ export const Login: React.FC = () => {
                                     setIsStudentModeActive(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
                                     isStudentModeActive 
-                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30' 
-                                        : 'text-slate-400 hover:text-white'
+                                        ? 'bg-white text-indigo-700 shadow-sm border border-indigo-200/60 font-black' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
                                 <GraduationCap size={14} />
@@ -557,36 +553,36 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Banner de contexto informativo del modo activo */}
-                        <div className={`mb-5 p-2.5 rounded-xl border text-[10.5px] font-medium flex items-center gap-2 ${
+                        <div className={`mb-4 p-2.5 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
-                                ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
-                                : 'bg-blue-500/10 border-blue-500/25 text-blue-200/90'
+                                ? 'bg-indigo-50 border-indigo-200/80 text-indigo-900'
+                                : 'bg-blue-50 border-blue-200/80 text-blue-900'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={16} className="shrink-0 text-indigo-400" />
-                                    <span>Entorno educativo para aprendizaje de contabilidad sin riesgo SUNAT.</span>
+                                    <GraduationCap size={15} className="shrink-0 text-indigo-600" />
+                                    <span>Entorno educativo para aprendizaje contable sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={16} className="shrink-0 text-blue-400" />
+                                    <ShieldCheck size={15} className="shrink-0 text-blue-600" />
                                     <span>Acceso al sistema contable oficial y cartera de empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs de Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-6 border-b border-white/10 pb-1">
+                        <div className="flex mb-4 border-b border-slate-200 pb-1">
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-blue-400 text-blue-300' 
-                                        : 'border-transparent text-slate-500 hover:text-slate-300'
+                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                        : 'border-transparent text-slate-400 hover:text-slate-700'
                                 }`}
                             >
                                 Iniciar Sesión
@@ -597,10 +593,10 @@ export const Login: React.FC = () => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     !isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-400 text-indigo-300' : 'border-blue-400 text-blue-300' 
-                                        : 'border-transparent text-slate-500 hover:text-slate-300'
+                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                        : 'border-transparent text-slate-400 hover:text-slate-700'
                                 }`}
                             >
                                 Crear Cuenta
@@ -608,26 +604,26 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-3" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs py-3 px-3.5 rounded-xl flex items-start gap-2.5 animate-in fade-in duration-200">
-                                    <span className="text-rose-400 mt-0.5 text-sm shrink-0">⚠️</span>
-                                    <div className="flex-1 font-medium leading-relaxed">{errorAlert}</div>
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2.5 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
+                                    <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
+                                    <div className="flex-1 font-medium leading-tight">{errorAlert}</div>
                                 </div>
                             )}
 
                             {!isLogin && (
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-slate-400 ml-1 uppercase tracking-wider">Nombre Completo</label>
-                                    <div className={`relative flex items-center rounded-xl glass-input-field ${isStudentModeActive ? 'glass-input-field-student' : ''}`}>
-                                        <User className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                    <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Nombre Completo</label>
+                                    <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
+                                        <User className="absolute left-3 w-4 h-4 text-slate-400" />
                                         <input 
                                             type="text"
                                             required
                                             autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
-                                            className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
-                                            style={{ paddingLeft: '2.75rem' }}
+                                            className="w-full py-2.5 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            style={{ paddingLeft: '2.5rem' }}
                                             value={formData.name}
                                             onChange={e => setFormData({...formData, name: e.target.value})}
                                         />
@@ -636,16 +632,16 @@ export const Login: React.FC = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-[11px] font-bold text-slate-400 ml-1 uppercase tracking-wider">Correo Electrónico</label>
-                                <div className={`relative flex items-center rounded-xl glass-input-field ${isStudentModeActive ? 'glass-input-field-student' : ''}`}>
-                                    <Mail className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Correo Electrónico</label>
+                                <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
+                                    <Mail className="absolute left-3 w-4 h-4 text-slate-400" />
                                     <input 
                                         type="email"
                                         required
                                         autoComplete="username"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
-                                        className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
-                                        style={{ paddingLeft: '2.75rem' }}
+                                        className="w-full py-2.5 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        style={{ paddingLeft: '2.5rem' }}
                                         value={formData.email}
                                         onChange={e => setFormData({...formData, email: e.target.value})}
                                     />
@@ -653,32 +649,32 @@ export const Login: React.FC = () => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[11px] font-bold text-slate-400 ml-1 uppercase tracking-wider">Contraseña</label>
-                                <div className={`relative flex items-center rounded-xl glass-input-field ${isStudentModeActive ? 'glass-input-field-student' : ''}`}>
-                                    <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Contraseña</label>
+                                <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
+                                    <Lock className="absolute left-3 w-4 h-4 text-slate-400" />
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder="••••••••"
-                                        className="w-full py-3 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
-                                        style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
+                                        className="w-full py-2.5 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
                                     />
                                     <button 
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        className="absolute right-3 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                                         title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                     >
-                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                     </button>
                                 </div>
                             </div>
 
                             {isLogin && (
-                                <div className="flex items-center justify-end px-1 pt-1 text-xs">
+                                <div className="flex items-center justify-end px-1 pt-0.5 text-xs">
                                     <button 
                                         type="button" 
                                         onClick={() => {
@@ -688,7 +684,7 @@ export const Login: React.FC = () => {
                                             setForgotError(null);
                                             setForgotMessage(null);
                                         }} 
-                                        className="text-blue-400 hover:text-blue-300 transition-colors font-bold cursor-pointer hover:underline"
+                                        className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[11px]"
                                     >
                                         ¿Olvidaste tu clave?
                                     </button>
@@ -698,14 +694,14 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-3.5 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 mt-5 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-3 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
-                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-900/40'
-                                        : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/25'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-indigo-600/20'
+                                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-blue-600/20'
                                 } disabled:opacity-50 disabled:pointer-events-none`}
                             >
                                 {isLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
                                         {isLogin 
@@ -720,36 +716,36 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-5 text-center space-y-2">
-                        <p className="text-slate-500 text-[10.5px] font-medium">
+                    <div className="mt-3 text-center space-y-1">
+                        <p className="text-slate-500 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
-                            <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-400 hover:text-white underline cursor-pointer">Términos</button>{' '}y{' '}
-                            <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-400 hover:text-white underline cursor-pointer">Privacidad</button>.
+                            <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-700 hover:text-blue-700 underline font-semibold cursor-pointer">Términos</button>{' '}y{' '}
+                            <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-700 hover:text-blue-700 underline font-semibold cursor-pointer">Privacidad</button>.
                         </p>
-                        <p className="text-slate-600 text-[10px] tracking-wider notranslate" translate="no">
+                        <p className="text-slate-400 text-[9.5px] tracking-wider notranslate" translate="no">
                             &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
                         </p>
                     </div>
                 </div>
 
                 {/* COLUMNA DERECHA: Carrusel Interactivo de Tablas Dinámicas y Maqueta 3D */}
-                <div className="hidden md:flex flex-1 max-w-2xl h-[560px] flex-col justify-center [perspective:1400px]">
+                <div className="hidden md:flex flex-1 max-w-xl lg:max-w-2xl h-[470px] flex-col justify-center [perspective:1400px]">
                     
-                    {/* Contenedor Mockup Sistema (Inclinado 3D 45°) */}
-                    <div className="w-full h-full bg-[#0b0f19] border border-slate-700/80 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative transition-all duration-700 ease-out [transform:rotateY(-14deg)_rotateX(7deg)_rotate(-2deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)_rotate(0deg)] hover:shadow-blue-500/10">
+                    {/* Contenedor Mockup Sistema (Inclinado 3D Sobrio) */}
+                    <div className="w-full h-full bg-white border border-slate-300/80 rounded-3xl overflow-hidden flex flex-col shadow-2xl shadow-slate-300/60 relative transition-all duration-700 ease-out [transform:rotateY(-10deg)_rotateX(5deg)_rotate(-1deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)_rotate(0deg)] hover:shadow-blue-500/10">
                         
                         {/* Ventana Header macOS style */}
-                        <div className="h-10 border-b border-white/10 bg-black/50 flex items-center justify-between px-4 shrink-0">
+                        <div className="h-9 border-b border-slate-200 bg-slate-100/90 flex items-center justify-between px-3.5 shrink-0">
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></span>
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></span>
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></span>
                             </div>
-                            <div className="text-[9.5px] text-slate-300 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                <Sparkles size={11} className="text-blue-400" />
+                            <div className="text-[9.5px] text-slate-600 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                                <Sparkles size={11} className="text-blue-600" />
                                 SOFTCONTABLE ERP PREVIEW
                             </div>
-                            <div className="text-[9px] bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded text-blue-400 font-mono font-bold">
+                            <div className="text-[9px] bg-blue-100 border border-blue-200 px-2 py-0.5 rounded text-blue-700 font-mono font-bold">
                                 LIVE DEMO
                             </div>
                         </div>
@@ -758,8 +754,8 @@ export const Login: React.FC = () => {
                         <div className="flex-1 flex overflow-hidden">
                             
                             {/* Sidebar de Módulos (Navegable por clic) */}
-                            <div className="w-48 border-r border-white/5 p-3 flex flex-col gap-1.5 shrink-0 bg-black/40">
-                                <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2.5">
+                            <div className="w-44 border-r border-slate-200 p-2.5 flex flex-col gap-1 shrink-0 bg-slate-50/80">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-2">
                                     Módulos Activos
                                 </span>
                                 {showcaseViews.map((view, idx) => {
@@ -770,36 +766,36 @@ export const Login: React.FC = () => {
                                             key={view.id}
                                             type="button"
                                             onClick={() => setActiveSlide(idx)}
-                                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-200 cursor-pointer ${
+                                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left transition-all duration-200 cursor-pointer ${
                                                 isActive 
-                                                    ? 'bg-blue-600/15 text-white font-bold border border-blue-500/30 shadow-sm' 
-                                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                                    ? 'bg-white text-blue-700 font-bold border border-slate-200 shadow-xs' 
+                                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Icon size={14} className={isActive ? view.activeColor : 'text-slate-500'} />
-                                                <span className="text-[10px] tracking-wider uppercase font-semibold">{view.title}</span>
+                                            <div className="flex items-center gap-2">
+                                                <Icon size={13} className={isActive ? view.activeColor : 'text-slate-400'} />
+                                                <span className="text-[9.5px] tracking-wider uppercase font-semibold">{view.title}</span>
                                             </div>
                                         </button>
                                     );
                                 })}
 
-                                <div className="mt-auto p-2.5 bg-blue-500/[0.04] border border-blue-500/15 rounded-xl text-[9px] text-slate-400 space-y-1">
-                                    <div className="font-bold text-blue-300">SUNAT 2026 Ready</div>
+                                <div className="mt-auto p-2 bg-blue-50/60 border border-blue-200/60 rounded-xl text-[8.5px] text-slate-600 space-y-0.5">
+                                    <div className="font-extrabold text-blue-800">SUNAT 2026 Ready</div>
                                     <div className="text-[8px] text-slate-500">PLE / SIRE / PLAME integrado automáticamente.</div>
                                 </div>
                             </div>
 
                             {/* Área de Visualización del Carrusel */}
-                            <div className="flex-1 p-5 flex flex-col overflow-hidden bg-gradient-to-br from-slate-950/60 to-black/80 relative">
+                            <div className="flex-1 p-4 flex flex-col overflow-hidden bg-slate-50/40 relative">
                                 
                                 {/* Header Vista Activa */}
-                                <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3 shrink-0">
+                                <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-2 shrink-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-extrabold text-white uppercase tracking-wider">
+                                        <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
                                             {showcaseViews[activeSlide].title}
                                         </span>
-                                        <span className="text-[8.5px] bg-blue-500/10 border border-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-bold">
+                                        <span className="text-[8.5px] bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded font-bold">
                                             {showcaseViews[activeSlide].badge}
                                         </span>
                                     </div>
@@ -810,7 +806,7 @@ export const Login: React.FC = () => {
                                                 type="button"
                                                 onClick={() => setActiveSlide(i)}
                                                 className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                                    i === activeSlide ? 'w-5 bg-blue-500' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                                                    i === activeSlide ? 'w-4 bg-blue-600' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
                                                 }`}
                                             />
                                         ))}
@@ -843,53 +839,53 @@ export const Login: React.FC = () => {
 
             {/* MODAL RECUPERACIÓN DE CONTRASEÑA */}
             {showForgotPasswordModal && (
-                <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-                    <div className="w-full max-w-md bg-[#0f172a] border border-slate-700/80 rounded-3xl p-6 shadow-2xl relative animate-scale-up">
+                <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                    <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl relative animate-scale-up text-slate-800">
                         <button
                             onClick={() => setShowForgotPasswordModal(false)}
-                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-xl transition-colors cursor-pointer"
                         >
                             <X size={18} />
                         </button>
 
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-2xl border border-blue-500/30">
+                            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl border border-blue-200">
                                 <KeyRound size={20} />
                             </div>
                             <div>
-                                <h3 className="text-base font-black text-white uppercase tracking-wider">Recuperar Contraseña</h3>
-                                <p className="text-xs text-slate-400 font-medium">SOFTCONTABLE SaaS Security</p>
+                                <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">Recuperar Contraseña</h3>
+                                <p className="text-xs text-slate-500 font-medium">SOFTCONTABLE SaaS Security</p>
                             </div>
                         </div>
 
                         {forgotError && (
-                            <div className="mb-4 bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs p-3 rounded-xl flex items-center gap-2">
-                                <AlertCircle size={16} className="text-rose-400 shrink-0" />
+                            <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-center gap-2">
+                                <AlertCircle size={16} className="text-rose-600 shrink-0" />
                                 <span>{forgotError}</span>
                             </div>
                         )}
 
                         {forgotMessage && (
-                            <div className="mb-4 bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-xs p-3 rounded-xl flex items-center gap-2">
-                                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                            <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-3 rounded-xl flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
                                 <span>{forgotMessage}</span>
                             </div>
                         )}
 
                         {forgotStep === 1 ? (
                             <form onSubmit={handleForgotVerify} className="space-y-4">
-                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                <p className="text-xs text-slate-600 leading-relaxed font-medium">
                                     Ingresa el correo electrónico asociado a tu cuenta para verificar tu identidad y restablecer tu clave de acceso.
                                 </p>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Correo Registrado</label>
-                                    <div className="relative flex items-center rounded-xl glass-input-field">
+                                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Correo Registrado</label>
+                                    <div className="relative flex items-center rounded-xl light-input-field">
                                         <Mail className="absolute left-3.5 w-4 h-4 text-slate-400" />
                                         <input
                                             type="email"
                                             required
                                             placeholder="usuario@empresa.com"
-                                            className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
+                                            className="w-full py-2.5 pr-4 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.75rem' }}
                                             value={forgotEmail}
                                             onChange={e => setForgotEmail(e.target.value)}
@@ -899,26 +895,26 @@ export const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={forgotLoading}
-                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs uppercase tracking-wider cursor-pointer shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar Cuenta'}
                                 </button>
                             </form>
                         ) : (
                             <form onSubmit={handleForgotReset} className="space-y-4">
-                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                                    Cuenta verificada: <strong className="text-blue-400">{forgotEmail}</strong>. Ingresa tu nueva contraseña para actualizar tu acceso.
+                                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                                    Cuenta verificada: <strong className="text-blue-600">{forgotEmail}</strong>. Ingresa tu nueva contraseña para actualizar tu acceso.
                                 </p>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nueva Contraseña</label>
-                                    <div className="relative flex items-center rounded-xl glass-input-field">
+                                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Nueva Contraseña</label>
+                                    <div className="relative flex items-center rounded-xl light-input-field">
                                         <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
                                         <input
                                             type="password"
                                             required
                                             minLength={6}
                                             placeholder="••••••••"
-                                            className="w-full py-3 pr-4 bg-transparent placeholder:text-slate-600 text-sm focus:outline-none"
+                                            className="w-full py-2.5 pr-4 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.75rem' }}
                                             value={forgotNewPassword}
                                             onChange={e => setForgotNewPassword(e.target.value)}
@@ -928,7 +924,7 @@ export const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={forgotLoading}
-                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs uppercase tracking-wider cursor-pointer shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar Nueva Contraseña'}
                                 </button>
@@ -945,4 +941,3 @@ export const Login: React.FC = () => {
         </div>
     );
 };
-
