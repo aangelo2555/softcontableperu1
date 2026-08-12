@@ -29,9 +29,6 @@ const createTransporter = () => {
         }
     });
 };
-        }
-    });
-};
 
 /**
  * Envia un correo electrónico con el código OTP de 6 dígitos para restablecer contraseña.
