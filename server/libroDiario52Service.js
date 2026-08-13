@@ -681,6 +681,20 @@ function createLibroDiario52Service(db) {
     const sales = salesRaw.filter(s => fechaToPeriodo(s.fecha) === periodo);
     const honorarios = honorariosRaw.filter(h => fechaToPeriodo(h.fecha) === periodo);
 
+    // Deduplicar asientos manuales por código (header.asiento) conservando la versión más reciente por ID
+    const uniqueAsientosMap = new Map();
+    for (const a of asientosManuales) {
+      let header = a.header || {};
+      try {
+        if (a.header_json) header = typeof a.header_json === 'string' ? JSON.parse(a.header_json) : a.header_json;
+      } catch (e) {}
+      const key = (header.asiento || a.id || '').trim();
+      if (!uniqueAsientosMap.has(key) || String(a.id) > String(uniqueAsientosMap.get(key).id)) {
+        uniqueAsientosMap.set(key, a);
+      }
+    }
+    const asientosDeduplicados = Array.from(uniqueAsientosMap.values());
+
     let countCompras = 0, countVentas = 0, countAsientos = 0, countHonorarios = 0, errores = [];
 
     for (const p of purchases) {
@@ -691,7 +705,7 @@ function createLibroDiario52Service(db) {
       try { await generarAsientoDesdeVenta(s, workspaceId, userId); countVentas++; }
       catch (e) { errores.push(`Venta ${s.serie}-${s.numero}: ${e.message}`); }
     }
-    for (const a of asientosManuales) {
+    for (const a of asientosDeduplicados) {
       try {
         const res = await generarAsientoDesdeAsientoManual(a, workspaceId, userId, periodo);
         if (res) countAsientos++;

@@ -1422,13 +1422,41 @@ export const useStore = create<AppState>()(
             if (data) {
               const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
 
+              // Deduplicar asientos por código de asiento (header.asiento) conservando la versión más reciente por ID
+              const rawAsientos = Array.isArray(data.asientos) ? data.asientos : [];
+              const mapAsientos = new Map<string, any>();
+              for (const a of rawAsientos) {
+                const code = (a.header?.asiento || a.id || '').trim();
+                if (!mapAsientos.has(code) || String(a.id) > String(mapAsientos.get(code).id)) {
+                  mapAsientos.set(code, a);
+                }
+              }
+              const safeAsientos = Array.from(mapAsientos.values());
+              const validAsientoIds = new Set(safeAsientos.map(a => a.id));
+
+              const rawJournal = Array.isArray(data.journal) ? data.journal : [];
+              const safeJournal = rawJournal
+                .filter((j: any) => {
+                  if (j.source === 'ASIENTO') {
+                    const linePrefix = j.id ? j.id.split('-line-')[0] : '';
+                    return validAsientoIds.has(linePrefix) || validAsientoIds.has(j.asiento);
+                  }
+                  return true;
+                })
+                .map((j: any) => ({
+                  ...j,
+                  desc: j.desc || j.descripcion || j.glosa || '',
+                  debe: sanitizeNum(j.debe),
+                  haber: sanitizeNum(j.haber)
+                }));
+
               // Asegurar que todos los arrays existan y sus campos numéricos sean números reales
               const safeData = {
                 ...data,
                 plan: data.plan && data.plan.length > 0 ? sortPlan(data.plan) : INITIAL_PLAN,
                 purchases: Array.isArray(data.purchases) ? data.purchases.map((p: any) => ({ ...p, SUBTOT: sanitizeNum(p.SUBTOT), IGV: sanitizeNum(p.IGV), TOTAL: sanitizeNum(p.TOTAL), NOGRAV: sanitizeNum(p.NOGRAV) })) : [],
                 sales: Array.isArray(data.sales) ? data.sales.map((s: any) => ({ ...s, SUBTOT: sanitizeNum(s.SUBTOT), IGV: sanitizeNum(s.IGV), TOTAL: sanitizeNum(s.TOTAL), NOGRAV: sanitizeNum(s.NOGRAV) })) : [],
-                journal: Array.isArray(data.journal) ? data.journal.map((j: any) => ({ ...j, debe: sanitizeNum(j.debe), haber: sanitizeNum(j.haber) })) : [],
+                journal: safeJournal,
                 entities: Array.isArray(data.entities) ? data.entities : [],
                 costs: Array.isArray(data.costs) ? data.costs : [],
                 products: Array.isArray(data.products) ? data.products : [],
@@ -1438,7 +1466,7 @@ export const useStore = create<AppState>()(
                 cashMovements: Array.isArray(data.cashMovements) ? data.cashMovements : [],
                 bankStatements: Array.isArray(data.bankStatements) ? data.bankStatements : [],
                 balanceInicial: Array.isArray(data.balanceInicial) ? data.balanceInicial.map((b: any) => ({ ...b, debe: sanitizeNum(b.debe), haber: sanitizeNum(b.haber), monto: sanitizeNum(b.monto) })) : [],
-                asientos: Array.isArray(data.asientos) ? data.asientos : [],
+                asientos: safeAsientos,
                 glosasHabituales: Array.isArray(data.glosasHabituales) ? data.glosasHabituales : [],
                 movimientosData: Array.isArray(data.movimientosData) ? data.movimientosData : [],
                 periodsList: Array.isArray(data.periodsList) ? data.periodsList : [],
@@ -1918,6 +1946,25 @@ export const useStore = create<AppState>()(
           return `asiento-blocked-${Date.now()}`;
         }
 
+        const asientoCode = (header.asiento || '').trim();
+
+        // 1. Eliminar cualquier versión previa de este asiento en la BD y en memoria (por id o por header.asiento)
+        const currentAsientos = get().asientos || [];
+        if (asientoCode) {
+          const oldAsientos = currentAsientos.filter(a => a.header?.asiento === asientoCode);
+          for (const old of oldAsientos) {
+            try {
+              await electron.dbDeleteAsiento(old.id, ruc);
+            } catch (e) {
+              console.warn('[SAVE ASIENTO] Error eliminando asiento antiguo:', e);
+            }
+          }
+          try {
+            // Eliminar entradas huérfanas en journal con el mismo código de asiento
+            await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND asiento = ?', [ruc, asientoCode]);
+          } catch (e) {}
+        }
+
         const id = `asiento-${Date.now()}`;
         
         // Generate journal entries
@@ -1926,7 +1973,7 @@ export const useStore = create<AppState>()(
           .map((line, index) => ({
             id: `${id}-line-${index}`,
             source: 'ASIENTO',
-            asiento: header.asiento || '',
+            asiento: asientoCode,
             fecha,
             glosa: header.glosa || 'ASIENTO MANUAL',
             cta: (line.cuenta || '').trim(),
@@ -1946,34 +1993,53 @@ export const useStore = create<AppState>()(
 
         const newAsientoObj = { id, header, lines };
 
-        // 1. Optimistic UI update in Zustand memory immediately
-        const currentAsientos = get().asientos || [];
+        // 2. Optimistic UI update in Zustand memory immediately
+        const updatedAsientos = [...currentAsientos.filter(a => a.header?.asiento !== asientoCode && a.id !== id), newAsientoObj];
         const currentJournal = get().journal || [];
-        const updatedAsientos = [...currentAsientos.filter(a => a.header?.asiento !== header.asiento && a.id !== id), newAsientoObj];
-        const updatedJournal = [...currentJournal.filter(j => j.asiento !== header.asiento && !j.id.startsWith(`${id}-line-`)), ...journalEntries];
+        const updatedJournal = [...currentJournal.filter(j => j.asiento !== asientoCode && !j.id.startsWith(`${id}-line-`)), ...journalEntries];
 
         set({ asientos: updatedAsientos, journal: updatedJournal });
 
-        // 2. Save batch to backend DB
+        // 3. Save batch to backend DB
         await electron.dbSaveAsientosBatch(ruc, [{ id, header, lines }]);
         if (journalEntries.length > 0) {
           await electron.dbSaveJournalBatch(ruc, journalEntries);
         }
 
-        // 3. Re-fetch and sanitize workspace data
+        // 4. Re-fetch and sanitize workspace data
         try {
           const data = await electron.dbGetWorkspaceData(ruc);
           if (data) {
             const sanitizeNum = (v: any) => typeof v === 'number' ? v : (parseFloat(String(v || 0)) || 0);
-            const safeJournal = Array.isArray(data.journal)
-              ? data.journal.map((j: any) => ({
-                  ...j,
-                  desc: j.desc || j.descripcion || j.glosa || '',
-                  debe: sanitizeNum(j.debe),
-                  haber: sanitizeNum(j.haber)
-                }))
-              : updatedJournal;
-            const safeAsientos = Array.isArray(data.asientos) ? data.asientos : updatedAsientos;
+
+            // Deduplicar asientos por código
+            const rawAsientos = Array.isArray(data.asientos) ? data.asientos : updatedAsientos;
+            const mapAsientos = new Map<string, any>();
+            for (const a of rawAsientos) {
+              const code = a.header?.asiento || a.id;
+              if (!mapAsientos.has(code) || String(a.id) > String(mapAsientos.get(code).id)) {
+                mapAsientos.set(code, a);
+              }
+            }
+            const safeAsientos = Array.from(mapAsientos.values());
+            const validAsientoIds = new Set(safeAsientos.map(a => a.id));
+
+            const rawJournal = Array.isArray(data.journal) ? data.journal : updatedJournal;
+            const safeJournal = rawJournal
+              .filter((j: any) => {
+                if (j.source === 'ASIENTO') {
+                  const linePrefix = j.id ? j.id.split('-line-')[0] : '';
+                  return validAsientoIds.has(linePrefix) || validAsientoIds.has(j.asiento);
+                }
+                return true;
+              })
+              .map((j: any) => ({
+                ...j,
+                desc: j.desc || j.descripcion || j.glosa || '',
+                debe: sanitizeNum(j.debe),
+                haber: sanitizeNum(j.haber)
+              }));
+
             set({ ...data, journal: safeJournal, asientos: safeAsientos });
           }
         } catch (e) {
