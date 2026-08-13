@@ -816,81 +816,80 @@ const App: React.FC = () => {
           })}
         </nav>
 
-        {/* User Profile & Logout (Full) */}
-        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600 shadow-indigo-600/10' : 'from-blue-600 to-indigo-600 shadow-blue-600/10'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate`} translate="no">
-              {userInitial}
+        {/* Compact Bottom Sidebar (Expanded) */}
+        <div className={`p-2.5 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+          <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
+            {/* User Avatar + Info */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
+                {userInitial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
+                <p className={`text-[8px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-              <p className={`text-[9px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
+
+            {/* Quick Actions: Theme & Logout */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={toggleTheme}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
+                title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              >
+                {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+              </button>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={13} />
+              </button>
             </div>
           </div>
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-          >
-            <LogOut size={12} />
-            <span>Cerrar Sesión</span>
-          </button>
+
+          {/* PWA Install Button */}
+          {deferredPrompt && (
+            <button
+              onClick={handleInstallApp}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
+            >
+              <CloudDownload size={12} className="animate-bounce" />
+              <span>Instalar Aplicación</span>
+            </button>
+          )}
         </div>
 
-        {/* User Profile & Logout (Collapsed) */}
-        <div className={`p-4 border-t border-app-border flex-col gap-3 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
-          <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600 shadow-indigo-600/10' : 'from-blue-600 to-indigo-600 shadow-blue-600/10'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate animate-fade-in`} translate="no" title={userName}>
+        {/* Compact Bottom Sidebar (Collapsed Desktop) */}
+        <div className={`p-2 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+          <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
             {userInitial}
           </div>
           <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-8 h-8 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
-            title="Cerrar Sesión"
-          >
-            <LogOut size={14} />
-          </button>
-        </div>
-
-        {/* Bottom: Theme */}
-        <div className={`p-4 flex items-center shrink-0 border-t border-app-border bg-app-surface ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-          {!isSidebarCollapsed && (
-            <span className="text-[11px] font-black tracking-widest uppercase text-app-muted">
-              Modo
-            </span>
-          )}
-          <button
             onClick={toggleTheme}
-            className="p-2.5 bg-app-bg rounded-full hover:bg-app-hover transition-colors border border-app-border text-app-muted"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted transition-colors cursor-pointer"
             title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
           >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
           </button>
-        </div>
-
-        {/* PWA Install Button (Full Sidebar) */}
-        {deferredPrompt && !isSidebarCollapsed && (
-          <div className="p-4 border-t border-app-border bg-app-surface flex flex-col gap-2 shrink-0 animate-fade-in">
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-7 h-7 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
+            title="Cerrar Sesión"
+          >
+            <LogOut size={13} />
+          </button>
+          {deferredPrompt && (
             <button
               onClick={handleInstallApp}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
-            >
-              <CloudDownload size={14} className="animate-bounce" />
-              <span>Instalar Aplicación</span>
-            </button>
-          </div>
-        )}
-
-        {/* PWA Install Button (Collapsed Sidebar) */}
-        {deferredPrompt && isSidebarCollapsed && (
-          <div className="p-4 border-t border-app-border bg-app-surface flex flex-col gap-2 shrink-0 items-center justify-center animate-fade-in">
-            <button
-              onClick={handleInstallApp}
-              className="w-9 h-9 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all border border-blue-500/20 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
+              className="w-7 h-7 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all border border-blue-500/20 cursor-pointer shadow-sm active:scale-95"
               title="Instalar Aplicación"
             >
-              <CloudDownload size={16} className="animate-bounce" />
+              <CloudDownload size={13} className="animate-bounce" />
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* ═══ MAIN CONTENT ═══ */}
