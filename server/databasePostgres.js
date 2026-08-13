@@ -853,6 +853,11 @@ const db = {
         return result.rows[0] || null;
     },
 
+    updateUserPassword: async (email, hashedPassword) => {
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        return await query('UPDATE users SET password = $1 WHERE LOWER(email) = LOWER($2)', [hashedPassword, normalizedEmail]);
+    },
+
     createUser: async (u) => {
         const normalizedEmail = u.email ? u.email.trim().toLowerCase() : '';
         const result = await query(

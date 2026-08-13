@@ -1313,7 +1313,13 @@ const dbManager = {
     },
 
     getUserByEmail: (email) => {
-        return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        return db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(normalizedEmail);
+    },
+
+    updateUserPassword: (email, hashedPassword) => {
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        return db.prepare('UPDATE users SET password = ? WHERE LOWER(email) = ?').run(hashedPassword, normalizedEmail);
     },
 
     // --- Gestión de Workspaces (Filtrado por Usuario) ---

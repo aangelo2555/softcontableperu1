@@ -306,10 +306,7 @@ router.post('/forgot-password/reset', authLimiter, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await dbManager.query(
-            USE_POSTGRES ? 'UPDATE users SET password = $1 WHERE email = $2' : 'UPDATE users SET password = ? WHERE email = ?',
-            [hashedPassword, email]
-        );
+        await dbManager.updateUserPassword(email, hashedPassword);
 
         otpStore.delete(email.toLowerCase());
 
@@ -360,10 +357,7 @@ router.post('/change-password', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await dbManager.query(
-            USE_POSTGRES ? 'UPDATE users SET password = $1 WHERE email = $2' : 'UPDATE users SET password = ? WHERE email = ?',
-            [hashedPassword, decoded.email]
-        );
+        await dbManager.updateUserPassword(decoded.email, hashedPassword);
 
         res.json({ success: true, message: '¡Tu contraseña ha sido actualizada exitosamente!' });
     } catch (error) {
