@@ -288,29 +288,49 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200/80 text-slate-800 flex items-center justify-center font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-x-hidden relative p-3 md:p-6">
-            <style>{customStyles}</style>
+        <div className="min-h-screen w-full flex font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-hidden relative">
+            <style>{customStyles}{`
+                .login-hero-bg {
+                    background-image: url('/assets/login-hero.png');
+                    background-size: cover;
+                    background-position: center top;
+                    background-repeat: no-repeat;
+                }
+                .login-glass-panel {
+                    background: rgba(255, 255, 255, 0.92);
+                    backdrop-filter: blur(20px) saturate(1.8);
+                    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+                    border-right: 1px solid rgba(226, 232, 240, 0.7);
+                }
+                @media (max-width: 1023px) {
+                    .login-glass-panel {
+                        background: rgba(255, 255, 255, 0.97);
+                    }
+                }
+                .login-scroll::-webkit-scrollbar { width: 4px; }
+                .login-scroll::-webkit-scrollbar-track { background: transparent; }
+                .login-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 10px; }
+                .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+            `}</style>
 
-            {/* Layout Principal Contenedor */}
-            <div className="w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-6 lg:gap-10 relative z-10 my-auto">
-                
-                {/* COLUMNA IZQUIERDA: Formulario de Login / Registro */}
-                <div className="w-full md:w-[420px] shrink-0">
+            {/* PANEL IZQUIERDO: Formulario de Login / Registro con efecto glass */}
+            <div className="login-glass-panel w-full lg:w-[480px] xl:w-[520px] shrink-0 flex flex-col min-h-screen relative z-10">
+                <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-10 xl:px-14 py-8 login-scroll overflow-y-auto">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-3">
-                        <div className="inline-flex items-center justify-center p-2 bg-white border border-slate-200 rounded-2xl shadow-sm mb-2">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-10 h-10 object-contain" />
+                    <div className="text-center mb-5">
+                        <div className="inline-flex items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm mb-2.5">
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-11 h-11 object-contain" />
                         </div>
                         <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
                             SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
                         </h1>
-                        <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mt-0.5 notranslate" translate="no">
+                        <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mt-1 notranslate" translate="no">
                             Sistema Contable en la Nube v2.0
                         </p>
                     </div>
 
-                    {/* Tarjeta de Formulario (Modo Claro Sobrio) */}
+                    {/* Tarjeta de Formulario */}
                     <div className={`p-5 lg:p-6 rounded-3xl transition-all duration-300 ${
                         isStudentModeActive ? 'light-card-student' : 'light-card-pro'
                     }`}>
@@ -538,7 +558,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-3 text-center space-y-1">
+                    <div className="mt-4 text-center space-y-1">
                         <p className="text-slate-500 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-700 hover:text-blue-700 underline font-semibold cursor-pointer">Términos</button>{' '}y{' '}
@@ -549,17 +569,12 @@ export const Login: React.FC = () => {
                         </p>
                     </div>
                 </div>
+            </div>
 
-                {/* COLUMNA DERECHA: Imagen Publicitaria Hero Banner */}
-                <div className="hidden md:flex flex-1 max-w-md lg:max-w-lg items-center justify-center animate-fade-in">
-                    <div className="w-full relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 bg-white group transition-all duration-500 hover:shadow-blue-500/20">
-                        <img 
-                            src="/assets/login-hero.png" 
-                            alt="SoftContable - Sistema Contable en la Nube" 
-                            className="w-full h-auto max-h-[620px] object-contain object-center transition-transform duration-700 ease-out group-hover:scale-[1.01]" 
-                        />
-                    </div>
-                </div>
+            {/* PANEL DERECHO: Imagen Hero Banner a pantalla completa */}
+            <div className="hidden lg:block flex-1 relative login-hero-bg">
+                {/* Overlay sutil para integración visual */}
+                <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/10 pointer-events-none" />
             </div>
 
             {/* MODAL RECUPERACIÓN DE CONTRASEÑA EN 3 PASOS CON CÓDIGO OTP POR GMAIL */}
