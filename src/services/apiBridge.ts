@@ -81,6 +81,10 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/forgot-password/reset', data);
         return res.data;
     },
+    authChangePassword: async (data: { currentPassword?: string; newPassword?: string }) => {
+        const res = await api.post('/api/auth/change-password', data);
+        return res.data;
+    },
 
     // --- Database API ---
     dbGetWorkspaces: async () => {

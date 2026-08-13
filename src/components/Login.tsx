@@ -32,6 +32,7 @@ import {
 import toast from 'react-hot-toast';
 import { LegalPages } from './LegalPages';
 import { CookieBanner } from './CookieBanner';
+import { PasswordStrengthChecker, checkPasswordStrength } from './ui/PasswordStrengthChecker';
 
 const customStyles = `
   .light-card-pro {
@@ -457,6 +458,15 @@ export const Login: React.FC = () => {
                     toast.error(errMsg);
                 }
             } else {
+                const strength = checkPasswordStrength(formData.password);
+                if (!strength.isValid) {
+                    const msg = 'La contraseña debe tener al menos 8 caracteres y combinar mayúsculas, minúsculas, números y símbolos (!@#$%...).';
+                    setErrorAlert(msg);
+                    toast.error(msg);
+                    setIsLoading(false);
+                    return;
+                }
+
                 const res = isStudentModeActive
                     ? await webApiBridge.authRegisterStudent(formData)
                     : await webApiBridge.authRegister(formData);
@@ -547,6 +557,11 @@ export const Login: React.FC = () => {
     // Manejo de Recuperación de Contraseña - PASO 3: Guardar Nueva Contraseña
     const handleForgotResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
+        const strength = checkPasswordStrength(forgotNewPassword);
+        if (!strength.isValid) {
+            setForgotError('La nueva contraseña debe tener al menos 8 caracteres y combinar mayúsculas, minúsculas, números y símbolos (!@#$%...).');
+            return;
+        }
         if (forgotNewPassword !== forgotConfirmPassword) {
             setForgotError('Las contraseñas ingresadas no coinciden.');
             return;
@@ -736,28 +751,47 @@ export const Login: React.FC = () => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Contraseña</label>
-                                <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                    <Lock className="absolute left-3 w-4 h-4 text-slate-400" />
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Contraseña</label>
+                                    {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                        <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                            <CheckCircle2 size={12} /> Segura
+                                        </span>
+                                    )}
+                                </div>
+                                <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
+                                    !isLogin && checkPasswordStrength(formData.password).isValid
+                                        ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
+                                        : isStudentModeActive ? 'light-input-field-student' : ''
+                                }`}>
+                                    <Lock className={`absolute left-3 w-4 h-4 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
-                                        placeholder="••••••••"
+                                        placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
                                         className="w-full py-2.5 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+                                        style={{ paddingLeft: '2.5rem', paddingRight: '4.5rem' }}
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
                                     />
-                                    <button 
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                                        title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                                    >
-                                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                    </button>
+                                    <div className="absolute right-3 flex items-center gap-1.5">
+                                        {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                            <CheckCircle2 size={16} className="text-emerald-500" />
+                                        )}
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
+                                            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                        >
+                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                        </button>
+                                    </div>
                                 </div>
+                                {!isLogin && formData.password.length > 0 && (
+                                    <PasswordStrengthChecker password={formData.password} />
+                                )}
                             </div>
 
                             {isLogin && (
@@ -1106,41 +1140,68 @@ export const Login: React.FC = () => {
                                     Identidad verificada para <strong className="text-blue-700">{forgotEmail}</strong>. Crea tu nueva contraseña de acceso.
                                 </p>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Nueva Contraseña</label>
-                                    <div className="relative flex items-center rounded-xl light-input-field">
-                                        <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Nueva Contraseña</label>
+                                        {checkPasswordStrength(forgotNewPassword).isValid && (
+                                            <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle2 size={12} /> Segura
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
+                                        checkPasswordStrength(forgotNewPassword).isValid
+                                            ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
+                                            : ''
+                                    }`}>
+                                        <Lock className={`absolute left-3.5 w-4 h-4 ${checkPasswordStrength(forgotNewPassword).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
                                         <input
                                             type="password"
                                             required
-                                            minLength={6}
-                                            placeholder="••••••••"
-                                            className="w-full py-2.5 pr-4 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            placeholder="Mín. 8 caracteres, mayúscula, núm y símbolo"
+                                            className="w-full py-2.5 pr-10 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.75rem' }}
                                             value={forgotNewPassword}
                                             onChange={e => setForgotNewPassword(e.target.value)}
                                         />
+                                        {checkPasswordStrength(forgotNewPassword).isValid && (
+                                            <CheckCircle2 size={16} className="absolute right-3 text-emerald-500" />
+                                        )}
                                     </div>
+                                    <PasswordStrengthChecker password={forgotNewPassword} />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Confirmar Nueva Contraseña</label>
-                                    <div className="relative flex items-center rounded-xl light-input-field">
-                                        <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Confirmar Nueva Contraseña</label>
+                                        {forgotConfirmPassword.length > 0 && forgotConfirmPassword === forgotNewPassword && (
+                                            <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle2 size={12} /> Coincide
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
+                                        forgotConfirmPassword.length > 0 && forgotConfirmPassword === forgotNewPassword
+                                            ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
+                                            : ''
+                                    }`}>
+                                        <Lock className={`absolute left-3.5 w-4 h-4 ${forgotConfirmPassword.length > 0 && forgotConfirmPassword === forgotNewPassword ? 'text-emerald-600' : 'text-slate-400'}`} />
                                         <input
                                             type="password"
                                             required
-                                            minLength={6}
-                                            placeholder="••••••••"
-                                            className="w-full py-2.5 pr-4 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            placeholder="Repite la nueva contraseña"
+                                            className="w-full py-2.5 pr-10 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.75rem' }}
                                             value={forgotConfirmPassword}
                                             onChange={e => setForgotConfirmPassword(e.target.value)}
                                         />
+                                        {forgotConfirmPassword.length > 0 && forgotConfirmPassword === forgotNewPassword && (
+                                            <CheckCircle2 size={16} className="absolute right-3 text-emerald-500" />
+                                        )}
                                     </div>
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={forgotLoading}
-                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    disabled={forgotLoading || !checkPasswordStrength(forgotNewPassword).isValid || forgotNewPassword !== forgotConfirmPassword}
+                                    className="w-full font-black py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar Nueva Contraseña'}
                                 </button>

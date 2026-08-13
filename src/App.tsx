@@ -48,8 +48,9 @@ import StudentDashboard from './components/StudentDashboard';
 import { SoftPremiumDashboard } from './components/SoftPremiumDashboard';
 import { LegalPages } from './components/LegalPages';
 import { CookieBanner } from './components/CookieBanner';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { isStudentMode } from './store';
-import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles, KeyRound } from 'lucide-react';
 
 import {
   LayoutDashboard,
@@ -284,6 +285,7 @@ const App: React.FC = () => {
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showLegalPage, setShowLegalPage] = useState<'terms' | 'privacy' | 'security' | 'confidentiality' | 'cookies' | 'eula' | 'legal' | null>(null);
 
   useEffect(() => {
@@ -867,8 +869,15 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Actions: Theme & Logout */}
+            {/* Quick Actions: Password, Theme & Logout */}
             <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setShowChangePasswordModal(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+                title="Cambiar Contraseña"
+              >
+                <KeyRound size={13} />
+              </button>
               <button
                 onClick={toggleTheme}
                 className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
@@ -903,6 +912,13 @@ const App: React.FC = () => {
           <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
             {userInitial}
           </div>
+          <button
+            onClick={() => setShowChangePasswordModal(true)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+            title="Cambiar Contraseña"
+          >
+            <KeyRound size={13} />
+          </button>
           <button
             onClick={toggleTheme}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted transition-colors cursor-pointer"
@@ -1227,6 +1243,11 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ═══ Modal Cambio de Contraseña ═══ */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
       )}
     </div>
   </div>

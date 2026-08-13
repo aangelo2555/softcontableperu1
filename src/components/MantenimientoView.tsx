@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Trash2, Search, AlertTriangle, Edit2, X, Save, Lock, Unlock, Calendar, ShieldCheck, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, Trash2, Search, AlertTriangle, Edit2, X, Save, Lock, Unlock, Calendar, ShieldCheck, CheckCircle, XCircle, KeyRound } from 'lucide-react';
 import { DataTable } from './DataTable';
 import { useStore } from '../store';
 import PageHeader from './ui/PageHeader';
 import type { MaintenanceRecord } from '../store';
 import toast from 'react-hot-toast';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 const ANEXOS = [
   { code: '01', label: '01 - REGISTRO VENTAS' },
@@ -24,6 +25,7 @@ const ANEXOS = [
 const MantenimientoView: React.FC = () => {
   const { currentCompany, maintenanceRecords, clearAllData, updateMaintenance, loadPeriods, periodsList, closePeriodAction, reopenPeriodAction } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [editingRec, setEditingRec] = useState<MaintenanceRecord | null>(null);
   const [activeSection, setActiveSection] = useState<'comprobantes' | 'periodos'>('comprobantes');
   const [closingPeriodo, setClosingPeriodo] = useState<string | null>(null);
@@ -207,6 +209,12 @@ const MantenimientoView: React.FC = () => {
                 Períodos
               </button>
             </div>
+            <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="h-8 bg-blue-500/10 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 font-bold px-3 rounded-xl flex items-center gap-1.5 border border-blue-500/20 transition-all text-[10px] uppercase tracking-wider cursor-pointer"
+            >
+              <KeyRound size={12} /> Cambiar Clave
+            </button>
             <button
               onClick={() => setShowClearConfirm(true)}
               className="h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold px-3 rounded-xl flex items-center gap-1.5 border border-red-500/20 transition-all text-[10px] uppercase tracking-wider"
@@ -465,6 +473,11 @@ const MantenimientoView: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal de Cambio de Contraseña */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
       )}
     </div>
   );

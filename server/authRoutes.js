@@ -323,16 +323,53 @@ router.post('/forgot-password/reset', authLimiter, async (req, res) => {
     }
 });
 
-// Endpoint principal mantenido por compatibilidad
-router.post('/forgot-password', authLimiter, async (req, res) => {
-    const { action, email, code, newPassword, resetToken } = req.body;
-    if (action === 'verify' || (code && !newPassword)) {
-        return router.handle({ ...req, url: '/forgot-password/verify-otp' }, res);
+// --- CAMBIO DE CONTRASEÑA DIRECTO (SESIÓN ACTIVA) ---
+router.post('/change-password', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, error: 'No autenticado. Por favor inicia sesión.' });
+        }
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ success: false, error: 'Sesión inválida o expirada.' });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, error: 'Todos los campos son obligatorios.' });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, error: 'La nueva contraseña debe tener al menos 8 caracteres.' });
+        }
+
+        const user = await dbManager.getUserByEmail(decoded.email);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, error: 'La contraseña actual ingresada es incorrecta.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await dbManager.query(
+            USE_POSTGRES ? 'UPDATE users SET password = $1 WHERE email = $2' : 'UPDATE users SET password = ? WHERE email = ?',
+            [hashedPassword, decoded.email]
+        );
+
+        res.json({ success: true, message: '¡Tu contraseña ha sido actualizada exitosamente!' });
+    } catch (error) {
+        console.error('[CHANGE PASSWORD ERROR]:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
-    if (action === 'reset' || (code && newPassword) || (resetToken && newPassword)) {
-        return router.handle({ ...req, url: '/forgot-password/reset' }, res);
-    }
-    return router.handle({ ...req, url: '/forgot-password/request-otp' }, res);
 });
 
 module.exports = router;
