@@ -676,16 +676,52 @@ const App: React.FC = () => {
 
   if (isInitializing) {
     return (
-      <div className={`h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-10 text-center transition-opacity duration-500 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}>
-        <img 
-          src="assets/logo.png" 
-          alt="Logo" 
-          onLoad={() => setLogoLoaded(true)}
-          className="w-24 h-24 object-contain mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.3)]" 
-        />
-        <h1 className="text-2xl font-black mb-2 tracking-tighter text-blue-500">SOFTCONTABLE</h1>
-        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.15em] mb-3">Sistema Contable en la Nube • SaaS</p>
-        <p className="text-sm text-slate-400 animate-pulse">Iniciando motor de base de datos...</p>
+      <div className={`fixed inset-0 h-screen w-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/70 flex flex-col items-center justify-center p-6 text-center transition-all duration-700 select-none overflow-hidden ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}>
+        
+        {/* Ambient Pearl Sheen & Window Reflection Glows */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-blue-200/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-tl from-indigo-200/35 via-purple-100/25 to-transparent rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.12),rgba(255,255,255,0))] pointer-events-none" />
+
+        {/* Central Reluciente Pearl Glass Card */}
+        <div className="relative z-10 w-full max-w-sm bg-white/80 backdrop-blur-2xl border border-white/90 rounded-3xl p-8 sm:p-10 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.9)_inset] flex flex-col items-center animate-fade-in">
+          
+          {/* Logo Emblem Container with Crystal Glow */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-blue-500/20 rounded-3xl blur-xl animate-pulse" />
+            <div className="relative p-4 bg-gradient-to-b from-white to-slate-50 border border-white shadow-[0_8px_25px_rgba(37,99,235,0.12)] rounded-2xl flex items-center justify-center">
+              <img 
+                src="/assets/logo.png" 
+                alt="SoftContable Logo" 
+                onLoad={() => setLogoLoaded(true)}
+                className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-sm transition-transform duration-500 hover:scale-105" 
+              />
+            </div>
+          </div>
+
+          {/* Typography */}
+          <h1 className="text-xl sm:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1 mb-1" translate="no">
+            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
+          </h1>
+          <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-[0.2em] mb-6">
+            Sistema Contable en la Nube • SaaS
+          </p>
+
+          {/* Elegant Loading Progress Bar */}
+          <div className="w-full max-w-[200px] h-1.5 bg-slate-200/80 rounded-full overflow-hidden mb-3 relative">
+            <div className="absolute top-0 bottom-0 left-0 w-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 rounded-full animate-indeterminate" />
+          </div>
+
+          <p className="text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+            <span>Iniciando motor de base de datos...</span>
+          </p>
+        </div>
+
+        {/* Footer Meta */}
+        <p className="absolute bottom-6 text-[10px] font-bold text-slate-400/80 tracking-widest uppercase">
+          Versión 2.0 • 2026
+        </p>
       </div>
     );
   }
