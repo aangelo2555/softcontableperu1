@@ -31,6 +31,7 @@ import {
 
 import toast from 'react-hot-toast';
 import { LegalPages } from './LegalPages';
+import { CookieBanner } from './CookieBanner';
 
 const customStyles = `
   .light-card-pro {
@@ -1153,6 +1154,9 @@ export const Login: React.FC = () => {
             {showLoginLegal && (
                 <LegalPages initialSection={showLoginLegal} onClose={() => setShowLoginLegal(null)} />
             )}
+
+            {/* Banner de Cookies */}
+            <CookieBanner onOpenLegalCookies={() => setShowLoginLegal('cookies')} />
         </div>
     );
 };

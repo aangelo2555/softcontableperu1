@@ -698,7 +698,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* ═══ SIDEBAR DESKTOP ═══ */}
           <nav className="hidden md:flex flex-col w-64 border-r border-app-border bg-app-bg/30 py-3 px-2 shrink-0 overflow-y-auto">
             {sections.map((section) => {
@@ -730,41 +730,30 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
             </div>
           </nav>
 
-          {/* ═══ MOBILE NAV ═══ */}
-          <div className="md:hidden border-b border-app-border bg-app-bg/30 shrink-0">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="flex items-center justify-between w-full px-4 py-3 text-xs font-black uppercase tracking-wider text-app-text cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                {currentSection && <currentSection.icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
-                {currentSection?.label}
-              </span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${mobileMenuOpen ? 'rotate-90' : ''}`} />
-            </button>
-            {mobileMenuOpen && (
-              <div className="px-2 pb-2 space-y-0.5 animate-fade-in">
-                {sections.map((section) => {
-                  const Icon = section.icon;
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => { setActiveSection(section.id); setMobileMenuOpen(false); }}
-                      className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider cursor-pointer ${
-                        section.id === activeSection ? 'bg-blue-600/10 text-blue-600' : 'text-app-muted hover:bg-app-hover'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {section.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          {/* ═══ MOBILE TABS HORIZONTAL SCROLLBAR ═══ */}
+          <div className="md:hidden border-b border-app-border bg-app-bg/50 p-2 shrink-0 overflow-x-auto flex items-center gap-1.5 custom-scrollbar">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const isActive = section.id === activeSection;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-app-surface text-app-muted border border-app-border/40 hover:bg-app-hover hover:text-app-text'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{section.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* ═══ CONTENT ═══ */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 legal-scroll">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-5 sm:py-6 legal-scroll break-words">
             {renderContent()}
           </div>
         </div>

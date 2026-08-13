@@ -47,6 +47,7 @@ import { SuggestionBox } from './components/SuggestionBox';
 import StudentDashboard from './components/StudentDashboard';
 import { SoftPremiumDashboard } from './components/SoftPremiumDashboard';
 import { LegalPages } from './components/LegalPages';
+import { CookieBanner } from './components/CookieBanner';
 import { isStudentMode } from './store';
 import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles } from 'lucide-react';
 
@@ -1131,6 +1132,9 @@ const App: React.FC = () => {
       {showLegalPage && (
         <LegalPages initialSection={showLegalPage} onClose={() => setShowLegalPage(null)} />
       )}
+
+      {/* ═══ Banner de Consentimiento de Cookies ═══ */}
+      <CookieBanner onOpenLegalCookies={() => setShowLegalPage('cookies')} />
 
       {/* Banner flotante para iOS */}
       {showIosTip && (
