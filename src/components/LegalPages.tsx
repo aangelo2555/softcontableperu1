@@ -671,7 +671,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ initialSection = 'terms'
   const currentSection = sections.find(s => s.id === activeSection);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[100000] bg-black/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
       <div className="w-full max-w-5xl h-[95vh] sm:h-[90vh] bg-app-surface border border-app-border rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-up">
         
         {/* ═══ HEADER ═══ */}
