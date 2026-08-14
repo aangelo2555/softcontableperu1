@@ -61,29 +61,59 @@ export async function generateMassiveWorkbook(state: AppState) {
   }
 
   if (obligations.libroDiarioSimplificado) {
-    const yearStr = companyInfo.period.substring(0, 4);
-    const monthPromises = Array.from({ length: 12 }, async (_, idx) => {
-      const monthStr = String(idx + 1).padStart(2, '0');
-      const periodo = `${yearStr}${monthStr}00`;
+    // 1. Si el store ya tiene cargadas las entradas del formato físico (del periodo activo en pantalla), usarlas prioritariamente
+    if (state.ld52FisicoEntries && state.ld52FisicoEntries.length > 0) {
+      ld52FisicoEntries = [...state.ld52FisicoEntries];
+    } else {
+      // 2. Si no están en memoria, determinar el periodo objetivo en base a los registros activos
+      const yearStr = companyInfo.period.substring(0, 4) || String(new Date().getFullYear());
+      
+      const allRecords = [...(purchases || []), ...(sales || []), ...(journal || []), ...(honorarios || [])];
+      const monthCounts: Record<string, number> = {};
+      for (const r of allRecords) {
+        const fechaStr = String(r.fecha || (r as any).fecEmi || '');
+        if (fechaStr.includes('/')) {
+          const parts = fechaStr.split('/');
+          if (parts.length === 3 && parts[1]) monthCounts[parts[1].padStart(2, '0')] = (monthCounts[parts[1].padStart(2, '0')] || 0) + 1;
+        } else if (fechaStr.includes('-')) {
+          const parts = fechaStr.split('-');
+          if (parts.length === 3) {
+            const m = parts[0].length === 4 ? parts[1] : parts[1];
+            if (m) monthCounts[m.padStart(2, '0')] = (monthCounts[m.padStart(2, '0')] || 0) + 1;
+          }
+        }
+      }
+      
+      const dominantMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || String(new Date().getMonth() + 1).padStart(2, '0');
+      const periodoActivo = `${yearStr}${dominantMonth}00`;
+
       try {
-        const res = await webApiBridge.ld52GetFormatoFisico(companyInfo.ruc, periodo);
-        if (res && res.success && Array.isArray(res.data)) {
-          return res.data;
+        const res = await webApiBridge.ld52GetFormatoFisico(companyInfo.ruc, periodoActivo);
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          ld52FisicoEntries = res.data;
         }
       } catch (err) {
-        console.warn(`[MassiveExport] Error loading LD 5.2 fisico entries for period ${periodo}:`, err);
+        console.warn(`[MassiveExport] Error loading LD 5.2 fisico entries for period ${periodoActivo}:`, err);
       }
-      return [];
-    });
-    const results = await Promise.all(monthPromises);
-    ld52FisicoEntries = results.flat();
-
-    // Si la API no devolvió datos para todos los meses pero en memoria local hay registros físicos, usarlos
-    if (ld52FisicoEntries.length === 0 && state.ld52FisicoEntries && state.ld52FisicoEntries.length > 0) {
-      ld52FisicoEntries = state.ld52FisicoEntries;
     }
 
-    // Calcular suma de columnas para la fila de TOTALES
+    // 3. Deduplicación rigurosa por CUO para garantizar que no existan filas duplicadas
+    const seenCuos = new Set<string>();
+    const uniqueEntries: any[] = [];
+    for (const entry of ld52FisicoEntries) {
+      const cuoKey = (entry.cuo || '').trim();
+      if (cuoKey) {
+        if (!seenCuos.has(cuoKey)) {
+          seenCuos.add(cuoKey);
+          uniqueEntries.push(entry);
+        }
+      } else {
+        uniqueEntries.push(entry);
+      }
+    }
+    ld52FisicoEntries = uniqueEntries;
+
+    // 4. Calcular suma de columnas para la fila de TOTALES
     for (const row of ld52FisicoEntries) {
       for (const key of LD52_PCGE_KEYS) {
         ld52ColumnTotals[key] += row[key] || 0;
