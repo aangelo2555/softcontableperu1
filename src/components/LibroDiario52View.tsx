@@ -1153,8 +1153,8 @@ const LibroDiario52View: React.FC = () => {
       <style>{`
         @media print {
           @page {
-            size: portrait;
-            margin: 8mm 8mm 8mm 8mm;
+            size: landscape;
+            margin: 6mm 6mm 6mm 6mm;
           }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
@@ -1555,9 +1555,6 @@ const LibroDiario52View: React.FC = () => {
         ))}
       </datalist>
     </div>
-
-        </div>
-      </div>
   );
 };
 

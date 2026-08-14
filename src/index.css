@@ -202,8 +202,7 @@ label {
 /* ═══ Print ═══ */
 @media print {
   @page {
-    size: portrait;
-    margin: 8mm 8mm 8mm 8mm;
+    margin: 6mm 6mm 6mm 6mm;
   }
   aside, nav, header, footer, .no-print, .toolbar, .action-bar, .theme-toggle, button, select, input, .print\:hidden {
     display: none !important;
