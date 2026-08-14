@@ -288,23 +288,17 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-hidden relative">
+        <div className="h-screen w-screen min-h-screen flex flex-col lg:flex-row font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-hidden relative bg-[#070e1a]">
             <style>{customStyles}{`
-                .login-hero-bg {
-                    background-image: url('/assets/login-hero.png');
-                    background-size: cover;
-                    background-position: center top;
-                    background-repeat: no-repeat;
-                }
                 .login-glass-panel {
-                    background: rgba(255, 255, 255, 0.92);
-                    backdrop-filter: blur(20px) saturate(1.8);
-                    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-                    border-right: 1px solid rgba(226, 232, 240, 0.7);
+                    background: rgba(255, 255, 255, 0.96);
+                    backdrop-filter: blur(24px) saturate(1.8);
+                    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+                    border-right: 1px solid rgba(226, 232, 240, 0.85);
                 }
                 @media (max-width: 1023px) {
                     .login-glass-panel {
-                        background: rgba(255, 255, 255, 0.97);
+                        background: #ffffff;
                     }
                 }
                 .login-scroll::-webkit-scrollbar { width: 4px; }
@@ -313,19 +307,19 @@ export const Login: React.FC = () => {
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
             `}</style>
 
-            {/* PANEL IZQUIERDO: Formulario de Login / Registro con efecto glass */}
-            <div className="login-glass-panel w-full lg:w-[480px] xl:w-[520px] shrink-0 flex flex-col min-h-screen relative z-10">
-                <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-10 xl:px-14 py-8 login-scroll overflow-y-auto">
+            {/* PANEL IZQUIERDO: Formulario de Login / Registro */}
+            <div className="login-glass-panel w-full lg:w-[460px] xl:w-[500px] shrink-0 flex flex-col h-full max-h-screen relative z-10 shadow-2xl">
+                <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-8 xl:px-12 py-5 lg:py-6 login-scroll overflow-y-auto">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-5">
-                        <div className="inline-flex items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm mb-2.5">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-11 h-11 object-contain" />
+                    <div className="text-center mb-3.5">
+                        <div className="inline-flex items-center justify-center p-2 bg-white border border-slate-200 rounded-2xl shadow-sm mb-1.5">
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-10 h-10 object-contain" />
                         </div>
                         <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
                             SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
                         </h1>
-                        <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mt-1 notranslate" translate="no">
+                        <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mt-0.5 notranslate" translate="no">
                             Sistema Contable en la Nube v2.0
                         </p>
                     </div>
@@ -336,14 +330,14 @@ export const Login: React.FC = () => {
                     }`}>
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-4 bg-slate-200/70 p-1 rounded-2xl border border-slate-300/60 flex items-center gap-1.5 select-none">
+                        <div className="mb-3 bg-slate-200/70 p-1 rounded-2xl border border-slate-300/60 flex items-center gap-1.5 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsStudentModeActive(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
                                     !isStudentModeActive 
                                         ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 scale-[1.02]' 
                                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -359,7 +353,7 @@ export const Login: React.FC = () => {
                                     setIsStudentModeActive(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
                                     isStudentModeActive 
                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-[1.02]' 
                                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -371,33 +365,33 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Banner de contexto informativo del modo activo */}
-                        <div className={`mb-4 p-2.5 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
+                        <div className={`mb-3 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50 border-indigo-200/80 text-indigo-900'
                                 : 'bg-blue-50 border-blue-200/80 text-blue-900'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={15} className="shrink-0 text-indigo-600" />
+                                    <GraduationCap size={14} className="shrink-0 text-indigo-600" />
                                     <span>Entorno educativo para aprendizaje contable sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={15} className="shrink-0 text-blue-600" />
+                                    <ShieldCheck size={14} className="shrink-0 text-blue-600" />
                                     <span>Acceso al sistema contable oficial y cartera de empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs de Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-4 border-b border-slate-200 pb-1">
+                        <div className="flex mb-3 border-b border-slate-200 pb-1">
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     isLogin 
                                         ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
                                         : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -411,7 +405,7 @@ export const Login: React.FC = () => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     !isLogin 
                                         ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
                                         : 'border-transparent text-slate-400 hover:text-slate-700'
@@ -422,9 +416,9 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-3" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2.5 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
                                     <div className="flex-1 font-medium leading-tight">{errorAlert}</div>
                                 </div>
@@ -432,7 +426,7 @@ export const Login: React.FC = () => {
 
                             {!isLogin && (
                                 <div className="space-y-1">
-                                    <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Nombre Completo</label>
+                                    <label className="text-[10px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Nombre Completo</label>
                                     <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
                                         <User className="absolute left-3 w-4 h-4 text-slate-400" />
                                         <input 
@@ -440,7 +434,7 @@ export const Login: React.FC = () => {
                                             required
                                             autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
-                                            className="w-full py-2.5 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.5rem' }}
                                             value={formData.name}
                                             onChange={e => setFormData({...formData, name: e.target.value})}
@@ -450,7 +444,7 @@ export const Login: React.FC = () => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Correo Electrónico</label>
+                                <label className="text-[10px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Correo Electrónico</label>
                                 <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
                                     <Mail className="absolute left-3 w-4 h-4 text-slate-400" />
                                     <input 
@@ -458,7 +452,7 @@ export const Login: React.FC = () => {
                                         required
                                         autoComplete="username"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
-                                        className="w-full py-2.5 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                         style={{ paddingLeft: '2.5rem' }}
                                         value={formData.email}
                                         onChange={e => setFormData({...formData, email: e.target.value})}
@@ -468,7 +462,7 @@ export const Login: React.FC = () => {
 
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[10.5px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Contraseña</label>
+                                    <label className="text-[10px] font-extrabold text-slate-600 ml-1 uppercase tracking-wider">Contraseña</label>
                                     {!isLogin && checkPasswordStrength(formData.password).isValid && (
                                         <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                             <CheckCircle2 size={12} /> Segura
@@ -486,7 +480,7 @@ export const Login: React.FC = () => {
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full py-2.5 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        className="w-full py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                         style={{ paddingLeft: '2.5rem', paddingRight: '4.5rem' }}
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
@@ -536,7 +530,7 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-3 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2.5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-indigo-600/20'
                                         : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-blue-600/20'
@@ -558,7 +552,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-4 text-center space-y-1">
+                    <div className="mt-2.5 text-center space-y-0.5">
                         <p className="text-slate-500 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-700 hover:text-blue-700 underline font-semibold cursor-pointer">Términos</button>{' '}y{' '}
@@ -571,10 +565,27 @@ export const Login: React.FC = () => {
                 </div>
             </div>
 
-            {/* PANEL DERECHO: Imagen Hero Banner a pantalla completa */}
-            <div className="hidden lg:block flex-1 relative login-hero-bg">
-                {/* Overlay sutil para integración visual */}
-                <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/10 pointer-events-none" />
+            {/* PANEL DERECHO: Hero Showcase Unificado de la Imagen Proporcional */}
+            <div className="hidden lg:flex flex-1 items-center justify-center p-4 xl:p-8 relative overflow-hidden bg-gradient-to-br from-[#0a1526] via-[#07111e] to-[#040a14]">
+                {/* Destellos de iluminación ambiental detrás del poster */}
+                <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.08),transparent_70%)] pointer-events-none" />
+
+                {/* Contenedor Enmarcado y Proporcional del Hero Banner */}
+                <div className="relative z-10 flex items-center justify-center w-full h-full max-h-[94vh]">
+                    <div className="relative group max-h-[86vh] xl:max-h-[90vh] flex items-center justify-center">
+                        {/* Halo sutil de fondo */}
+                        <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-600/25 via-cyan-500/20 to-indigo-600/25 rounded-[30px] blur-xl opacity-70 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+
+                        {/* Imagen completa, contenida, nítida y perfectamente proporcionada en su ratio 3:4 */}
+                        <img 
+                            src="/assets/login-hero.png" 
+                            alt="Softcontable 2026 - Sistema Contable en la Nube" 
+                            className="relative max-h-[84vh] xl:max-h-[88vh] w-auto max-w-full object-contain rounded-2xl xl:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] border border-white/15 ring-1 ring-white/10 select-none transition-transform duration-500 hover:scale-[1.008]" 
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* MODAL RECUPERACIÓN DE CONTRASEÑA EN 3 PASOS CON CÓDIGO OTP POR GMAIL */}
