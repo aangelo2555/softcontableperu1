@@ -299,7 +299,7 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* LADO IZQUIERDO: Panel de Formulario — Fondo blanco limpio     */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="w-full lg:w-[44%] xl:w-[42%] bg-white flex flex-col justify-between px-6 sm:px-10 lg:px-12 xl:px-14 py-6 lg:py-8 overflow-y-auto login-scroll shrink-0 relative z-10">
+            <div className="w-full lg:w-[44%] xl:w-[42%] bg-white flex flex-col justify-between px-6 sm:px-10 lg:px-12 xl:px-14 py-6 lg:py-8 overflow-y-auto login-scroll shrink-0 relative z-20 shadow-[6px_0_30px_rgba(0,0,0,0.06)] border-r border-slate-100">
                     
                 {/* Header Marca */}
                 <div className="text-center mb-3 lg:mb-4">
@@ -557,7 +557,7 @@ export const Login: React.FC = () => {
             {/* La imagen tiene fondo blanco arriba-izq y navy abajo-der,     */}
             {/* así que usamos un fondo que armoniza con esos bordes.          */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="hidden lg:flex flex-1 relative overflow-hidden items-center justify-center"
+            <div className="hidden lg:flex flex-1 relative overflow-hidden items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-10"
                  style={{ background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 25%, #1e3a5f 60%, #0f1f33 100%)' }}>
                 
                 {/* Sutil efecto de profundidad */}
@@ -568,7 +568,7 @@ export const Login: React.FC = () => {
                 <img 
                     src="/assets/login-hero.png" 
                     alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                    className="relative z-10 h-full w-full object-contain select-none animate-fade-in" 
+                    className="relative z-10 max-h-full max-w-full object-contain rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] select-none animate-fade-in transition-transform duration-500 hover:scale-[1.008]" 
                 />
             </div>
 
