@@ -170,8 +170,9 @@ export const webApiBridge = {
         const res = await api.delete(`/api/db/sales/${id}${query}`);
         return res.data;
     },
-    dbDeleteHonorario: async (id: string) => {
-        const res = await api.delete(`/api/db/honorarios/${id}`);
+    dbDeleteHonorario: async (id: string, workspace_id?: string) => {
+        const query = workspace_id ? `?workspace_id=${workspace_id}` : '';
+        const res = await api.delete(`/api/db/honorarios/${id}${query}`);
         return res.data;
     },
     dbDeleteAsiento: async (id: string, workspace_id?: string) => {

@@ -463,11 +463,11 @@ export interface AppState extends WorkspaceState {
   
   addAccount: (account: Account) => Promise<void>;
   updateAccount: (cta: string, data: Partial<Account>) => Promise<void>;
-  deleteAccount: (cta: string) => Promise<void>;
+  deleteAccount: (cta: string) => Promise<boolean | void>;
   resetPlanToBase: () => Promise<void>;
 
   saveProduct: (p: Product) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
+  deleteProduct: (id: string) => Promise<boolean | void>;
   recordInventoryMovement: (m: Omit<InventoryMovement, 'cantidad_saldo' | 'costo_unit_saldo' | 'total_saldo'> & { id?: string }) => Promise<void>;
   deleteInventoryMovement: (id: string) => Promise<void>;
   recalculateKardex: (productId: string) => Promise<void>;
@@ -1666,6 +1666,14 @@ export const useStore = create<AppState>()(
           }
         }
 
+        // Capturar IDs de productos afectados en Kárdex antes de eliminar
+        const affectedProducts = Array.from(new Set(
+          (get().inventoryMovements || [])
+            .filter(m => m.reference_id === id)
+            .map(m => m.product_id)
+            .filter(Boolean)
+        ));
+
         await electron.dbExecute('DELETE FROM purchases WHERE id = ?', [id]);
         await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${id}-%`]);
         await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
@@ -1676,6 +1684,15 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        // Recalcular Kárdex automáticamente para los productos afectados
+        for (const pId of affectedProducts) {
+          try {
+            await get().recalculateKardex(pId);
+          } catch (e) {
+            console.warn('[STORE] recalculateKardex falló tras deletePurchase:', pId, e);
+          }
+        }
 
         // ── Invalidation Cascade Trigger ──
         if (item) {
@@ -1703,6 +1720,13 @@ export const useStore = create<AppState>()(
           }
         }
 
+        const affectedProducts = Array.from(new Set(
+          (get().inventoryMovements || [])
+            .filter(m => m.reference_id && ids.includes(m.reference_id))
+            .map(m => m.product_id)
+            .filter(Boolean)
+        ));
+
         for (const id of ids) {
           await electron.dbExecute('DELETE FROM purchases WHERE id = ?', [id]);
           await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `compra-${id}-%`]);
@@ -1721,6 +1745,14 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        for (const pId of affectedProducts) {
+          try {
+            await get().recalculateKardex(pId);
+          } catch (e) {
+            console.warn('[STORE] recalculateKardex falló tras deletePurchases:', pId, e);
+          }
+        }
 
         for (const date of datesToCheck) {
           await get().triggerCascadeInvalidation('journal', date);
@@ -1817,7 +1849,17 @@ export const useStore = create<AppState>()(
           }
         }
 
+        // Capturar IDs de productos afectados en Kárdex antes de eliminar
+        const affectedProducts = Array.from(new Set(
+          (get().inventoryMovements || [])
+            .filter(m => m.reference_id === id)
+            .map(m => m.product_id)
+            .filter(Boolean)
+        ));
+
         await electron.dbDeleteSale(id, ruc);
+        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${id}-%`]);
+        await electron.dbExecute('DELETE FROM inventory_movements WHERE reference_id = ?', [id]);
 
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ 
@@ -1825,6 +1867,15 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        // Recalcular Kárdex automáticamente para los productos afectados
+        for (const pId of affectedProducts) {
+          try {
+            await get().recalculateKardex(pId);
+          } catch (e) {
+            console.warn('[STORE] recalculateKardex falló tras deleteSale:', pId, e);
+          }
+        }
 
         // ── Invalidation Cascade Trigger ──
         if (item) {
@@ -1852,6 +1903,13 @@ export const useStore = create<AppState>()(
           }
         }
 
+        const affectedProducts = Array.from(new Set(
+          (get().inventoryMovements || [])
+            .filter(m => m.reference_id && ids.includes(m.reference_id))
+            .map(m => m.product_id)
+            .filter(Boolean)
+        ));
+
         for (const id of ids) {
           await electron.dbExecute('DELETE FROM sales WHERE id = ?', [id]);
           await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `venta-${id}-%`]);
@@ -1870,6 +1928,14 @@ export const useStore = create<AppState>()(
           journal: data.journal,
           inventoryMovements: data.inventoryMovements 
         });
+
+        for (const pId of affectedProducts) {
+          try {
+            await get().recalculateKardex(pId);
+          } catch (e) {
+            console.warn('[STORE] recalculateKardex falló tras deleteSales:', pId, e);
+          }
+        }
 
         for (const date of datesToCheck) {
           await get().triggerCascadeInvalidation('journal', date);
@@ -1927,8 +1993,20 @@ export const useStore = create<AppState>()(
           }
         }
 
-        await electron.dbDeleteHonorario(id);
-        set({ honorarios: get().honorarios.filter(h => h.id !== id) });
+        await electron.dbDeleteHonorario(id, ruc);
+        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ?', [ruc, `honor-${id}-%`]);
+
+        try {
+          await electron.ld52DeleteOrigen(ruc, id);
+        } catch (err) {
+          console.warn('[STORE] ld52DeleteOrigen failed:', err);
+        }
+
+        const data = await electron.dbGetWorkspaceData(ruc);
+        set({ 
+          honorarios: data?.honorarios || get().honorarios.filter(h => h.id !== id),
+          journal: data?.journal || get().journal.filter(j => !j.id.startsWith(`honor-${id}-`))
+        });
 
         // ── Invalidation Cascade Trigger ──
         if (item) {
@@ -2070,6 +2148,12 @@ export const useStore = create<AppState>()(
         }
 
         await electron.dbDeleteAsiento(id, ruc);
+        try {
+          await electron.ld52DeleteOrigen(ruc, id);
+        } catch (e) {
+          console.warn('[STORE] ld52DeleteOrigen failed for asiento:', id, e);
+        }
+
         const data = await electron.dbGetWorkspaceData(ruc);
         set({ ...data });
 
@@ -2648,8 +2732,34 @@ export const useStore = create<AppState>()(
       },
 
       deleteAccount: async (cta) => {
-        await electron.dbExecute('DELETE FROM plan_global WHERE cta = ?', [cta]);
-        set({ plan: get().plan.filter(a => a.cta !== cta) });
+        const cleanCta = (cta || '').trim();
+        if (!cleanCta) return false;
+
+        // Verificar si la cuenta está siendo utilizada en alguna transacción activa
+        const inJournal = (get().journal || []).some(j => j.cta === cleanCta);
+        const inPurchases = (get().purchases || []).some(p => p.ctaGasto === cleanCta || p.ctaAbono === cleanCta);
+        const inSales = (get().sales || []).some(s => s.ctaCargo === cleanCta || s.ctaIngreso === cleanCta);
+        const inHonorarios = (get().honorarios || []).some(h => h.ctaGasto === cleanCta || h.ctaAbono === cleanCta);
+        const inBalanceInicial = (get().balanceInicial || []).some(b => b.cta === cleanCta);
+        const inCosts = (get().costs || []).some(c => c.cuenta_debe === cleanCta || c.cuenta_haber === cleanCta);
+
+        if (inJournal || inPurchases || inSales || inHonorarios || inBalanceInicial || inCosts) {
+          const reasons: string[] = [];
+          if (inJournal) reasons.push('Libro Diario / Mayor');
+          if (inPurchases) reasons.push('Registro de Compras');
+          if (inSales) reasons.push('Registro de Ventas');
+          if (inHonorarios) reasons.push('Recibos por Honorarios');
+          if (inBalanceInicial) reasons.push('Balance Inicial');
+          if (inCosts) reasons.push('Centros de Costo');
+
+          toast.error(`⚠️ No se puede eliminar la cuenta ${cleanCta}: Está siendo utilizada en ${reasons.join(', ')}.`);
+          return false;
+        }
+
+        await electron.dbExecute('DELETE FROM plan_global WHERE cta = ?', [cleanCta]);
+        set({ plan: get().plan.filter(a => a.cta !== cleanCta) });
+        toast.success(`Cuenta ${cleanCta} eliminada del plan contable.`);
+        return true;
       },
       resetPlanToBase: async () => {
         const ruc = get().currentCompany?.ruc || '';
@@ -2699,8 +2809,15 @@ export const useStore = create<AppState>()(
       },
 
       deleteProduct: async (id) => {
+        const inMovements = (get().inventoryMovements || []).some(m => m.product_id === id);
+        if (inMovements) {
+          toast.error('⚠️ No se puede eliminar el producto: Cuenta con movimientos registrados en el Kárdex.');
+          return false;
+        }
         await electron.dbExecute('DELETE FROM products WHERE id = ?', [id]);
         set({ products: get().products.filter(p => p.id !== id) });
+        toast.success('Producto eliminado correctamente.');
+        return true;
       },
 
       recordInventoryMovement: async (m) => {

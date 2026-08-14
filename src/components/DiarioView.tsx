@@ -44,7 +44,7 @@ const DiarioView: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // Modal confirmation states
-  const [entryToDelete, setEntryToDelete] = useState<{ id: string; desc: string } | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<{ id: string; source: string; asiento: string; desc: string } | null>(null);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -125,8 +125,58 @@ const DiarioView: React.FC = () => {
     if (!entryToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteJournalEntry(entryToDelete.id);
-      toast.success('Línea eliminada del libro diario correctamente');
+      const { source, id, asiento } = entryToDelete;
+
+      if (source === 'ASIENTO') {
+        const asientoId = id.split('-line-')[0];
+        const item = store.asientos.find(a => a.id === asientoId || a.header?.asiento === asiento);
+        if (item) {
+          await store.deleteAsientoById(item.id);
+        } else {
+          const matchingIds = store.journal.filter(j => j.asiento === asiento).map(j => j.id);
+          if (matchingIds.length > 0) {
+            await deleteJournalEntries(matchingIds);
+          } else {
+            await deleteJournalEntry(id);
+          }
+        }
+      } else if (source === 'COMPRA') {
+        const purchaseId = id.replace(/^compra-/, '').replace(/-[^-]+$/, '');
+        const p = store.purchases.find(x => x.id === purchaseId || x.registro === asiento);
+        if (p) {
+          await store.deletePurchase(p.id);
+        } else {
+          const matchingIds = store.journal.filter(j => j.asiento === asiento || j.id.startsWith(`compra-${purchaseId}`)).map(j => j.id);
+          await deleteJournalEntries(matchingIds.length > 0 ? matchingIds : [id]);
+        }
+      } else if (source === 'VENTA') {
+        const saleId = id.replace(/^venta-/, '').replace(/-[^-]+$/, '');
+        const s = store.sales.find(x => x.id === saleId || x.registro === asiento);
+        if (s) {
+          await store.deleteSale(s.id);
+        } else {
+          const matchingIds = store.journal.filter(j => j.asiento === asiento || j.id.startsWith(`venta-${saleId}`)).map(j => j.id);
+          await deleteJournalEntries(matchingIds.length > 0 ? matchingIds : [id]);
+        }
+      } else if (source === 'HONORARIO') {
+        const honorarioId = id.replace(/^honor-/, '').replace(/-[^-]+$/, '');
+        const h = store.honorarios.find(x => x.id === honorarioId || x.registro === asiento);
+        if (h) {
+          await store.deleteHonorario(h.id);
+        } else {
+          const matchingIds = store.journal.filter(j => j.asiento === asiento || j.id.startsWith(`honor-${honorarioId}`)).map(j => j.id);
+          await deleteJournalEntries(matchingIds.length > 0 ? matchingIds : [id]);
+        }
+      } else {
+        const matchingIds = store.journal.filter(j => j.asiento === asiento).map(j => j.id);
+        if (matchingIds.length > 0) {
+          await deleteJournalEntries(matchingIds);
+        } else {
+          await deleteJournalEntry(id);
+        }
+      }
+
+      toast.success('Asiento contable y documento de origen eliminados ✓');
       setEntryToDelete(null);
     } catch (e: any) {
       toast.error(`Error al eliminar: ${e.message}`);
@@ -449,9 +499,14 @@ const DiarioView: React.FC = () => {
                           <Edit size={12} />
                         </button>
                         <button
-                          onClick={() => setEntryToDelete({ id: row.id, desc: `${row.cta} - ${row.glosa || 'Asiento'}` })}
+                          onClick={() => setEntryToDelete({
+                            id: row.id,
+                            source: row.source,
+                            asiento: row.asiento,
+                            desc: `Asiento ${row.asiento} (${row.glosa || 'Sin glosa'})`
+                          })}
                           className="p-1 text-app-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition-colors bg-app-bg/60 border border-app-border rounded-lg"
-                          title="Eliminar Asiento"
+                          title="Eliminar Asiento Contable y Origen"
                         >
                           <Trash2 size={12} />
                         </button>

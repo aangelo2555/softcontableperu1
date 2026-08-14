@@ -842,12 +842,15 @@ app.delete('/api/db/purchases/:id', async (req, res) => {
         const { workspace_id } = req.query;
         const userId = req.targetUserId;
         await db.run('DELETE FROM purchases WHERE id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM inventory_movements WHERE reference_id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `compra-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
+        console.error('[DB DELETE PURCHASE ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -863,12 +866,15 @@ app.delete('/api/db/sales/:id', async (req, res) => {
         const { workspace_id } = req.query;
         const userId = req.targetUserId;
         await db.run('DELETE FROM sales WHERE id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM inventory_movements WHERE reference_id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `venta-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
+        console.error('[DB DELETE SALE ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -881,10 +887,17 @@ app.delete('/api/db/honorarios/:id', async (req, res) => {
             return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
         }
         const { id } = req.params;
+        const { workspace_id } = req.query;
         const userId = req.targetUserId;
         await db.run('DELETE FROM honorarios WHERE id = $1 AND user_id = $2', [id, userId]);
+        if (workspace_id) {
+            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `honor-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
+            cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        }
         res.json({ success: true });
     } catch (error) {
+        console.error('[DB DELETE HONORARIO ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -902,10 +915,12 @@ app.delete('/api/db/asientos/:id', async (req, res) => {
         await db.run('DELETE FROM asientos WHERE id = $1 AND user_id = $2', [id, userId]);
         if (workspace_id) {
             await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `${id}-line-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND (asiento_id_origen = $3 OR asiento_id_origen LIKE $4)', [workspace_id, userId, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
     } catch (error) {
+        console.error('[DB DELETE ASIENTO ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -2732,7 +2747,7 @@ app.post('/api/libro-diario-52/:ruc/delete-origen', authMiddleware, inspectMiddl
         const { ruc } = req.params;
         const { id } = req.body;
         const userId = req.targetUserId;
-        await db.rawDb.prepare(`DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND asiento_id_origen=?`).run(ruc, userId, id);
+        await db.run('DELETE FROM libro_diario_52 WHERE workspace_id=? AND user_id=? AND (asiento_id_origen=? OR asiento_id_origen LIKE ?)', [ruc, userId, id, `${id}%`]);
         res.json({ success: true });
     } catch (error) {
         console.error('[API ERROR] Error en delete-origen:', error);
