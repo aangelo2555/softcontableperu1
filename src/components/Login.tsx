@@ -288,7 +288,7 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-[#040e1d] via-[#071933] to-[#030914] flex items-center justify-center p-3 sm:p-5 lg:p-6 relative overflow-hidden font-sans selection:bg-blue-600/20 selection:text-blue-900">
+        <div className="min-h-screen w-screen bg-gradient-to-br from-slate-100 via-blue-50/70 to-slate-200/80 flex items-center justify-center p-3 sm:p-5 lg:p-6 xl:p-8 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-y-auto">
             <style>{customStyles}{`
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -296,32 +296,21 @@ export const Login: React.FC = () => {
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
             `}</style>
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* FONDO AZUL MARINO CON DISEÑO DE REFLEJOS & DEGRADADOS CANVAS    */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* Reflejos luminosos de fondo estilo Canvas */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_15%,rgba(14,165,233,0.22),transparent_70%)] pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_85%_80%,rgba(37,99,235,0.25),transparent_70%)] pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_50%,rgba(6,182,212,0.16),transparent_60%)] pointer-events-none" />
-            
-            {/* Destello diagonal especular (efecto reflejo canvas) */}
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(14,165,233,0.1)_35%,transparent_65%)] pointer-events-none" />
-
-            {/* Orbes de iluminación ambiental difusa */}
-            <div className="absolute -top-32 -left-32 w-[30rem] h-[30rem] bg-cyan-400/15 rounded-full blur-3xl pointer-events-none animate-pulse" />
-            <div className="absolute -bottom-32 -right-32 w-[30rem] h-[30rem] bg-blue-600/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
+            {/* Iluminación de Fondo Suave y Elegante */}
+            <div className="absolute top-0 right-0 w-[35rem] h-[35rem] bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[35rem] h-[35rem] bg-indigo-200/35 rounded-full blur-3xl pointer-events-none" />
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* TARJETA UNIFICADA CENTRADA (Panel Blanco + Imagen Pegados)     */}
+            {/* TARJETA UNIFICADA (Formulario + Imagen en un Solo Lienzo)       */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[960px] xl:max-w-[1000px] h-[88vh] max-h-[670px] min-h-[560px] bg-[#040e1d] rounded-[26px] xl:rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.65),0_0_60px_rgba(14,165,233,0.12)] border border-white/15 overflow-hidden flex flex-col lg:flex-row animate-fade-in">
+            <div className="relative z-10 w-full max-w-md lg:max-w-4xl xl:max-w-5xl bg-white rounded-3xl shadow-[0_20px_60px_rgba(15,23,42,0.1),0_1px_3px_rgba(15,23,42,0.06)] border border-slate-200/80 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación (Blanco) */}
-                <div className="w-full lg:w-[430px] xl:w-[450px] bg-white px-6 sm:px-8 lg:px-8 xl:px-9 py-5 sm:py-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.08)]">
+                {/* LADO IZQUIERDO: Formulario de Autenticación */}
+                <div className="w-full lg:w-[420px] xl:w-[450px] bg-white p-6 sm:p-8 lg:p-8 xl:p-9 flex flex-col justify-between shrink-0">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-2">
-                        <div className="inline-flex items-center justify-center p-2 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl shadow-sm mb-1.5">
+                    <div className="text-center mb-3">
+                        <div className="inline-flex items-center justify-center p-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl shadow-sm mb-2">
                             <img src="/assets/logo.png" alt="Softcontable Logo" className="w-9 h-9 object-contain" />
                         </div>
                         <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
@@ -336,7 +325,7 @@ export const Login: React.FC = () => {
                     <div className="flex-1 flex flex-col justify-center py-1">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-2.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
+                        <div className="mb-3 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -371,7 +360,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Banner informativo del modo */}
-                        <div className={`mb-2.5 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
+                        <div className={`mb-3 p-2.5 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
                                 : 'bg-blue-50/90 border-blue-200/80 text-blue-900'
@@ -390,7 +379,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-2.5 border-b border-slate-200 pb-1">
+                        <div className="flex mb-3 border-b border-slate-200 pb-1">
                             <button 
                                 type="button"
                                 onClick={() => {
@@ -422,7 +411,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-3" autoComplete="on">
                             {errorAlert && (
                                 <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
@@ -536,7 +525,7 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2.5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
                                         : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-blue-600/25'
@@ -558,7 +547,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-2 text-center space-y-0.5">
+                    <div className="mt-3 text-center space-y-0.5">
                         <p className="text-slate-400 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
@@ -570,12 +559,12 @@ export const Login: React.FC = () => {
                     </div>
                 </div>
 
-                {/* LADO DERECHO: Hero Showcase — Pegado directamente al panel blanco sin brechas y 100% visible */}
-                <div className="hidden lg:flex flex-1 relative bg-[#040e1d] items-center justify-center p-0 overflow-hidden">
+                {/* LADO DERECHO: Hero Showcase — Unificado directamente en fondo blanco */}
+                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-3 xl:p-5 overflow-hidden relative">
                     <img 
                         src="/assets/login-hero.png" 
                         alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                        className="w-full h-full object-contain select-none animate-fade-in" 
+                        className="w-full h-auto max-h-[640px] object-contain select-none animate-fade-in" 
                     />
                 </div>
             </div>
