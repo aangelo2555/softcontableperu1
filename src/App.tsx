@@ -1162,7 +1162,7 @@ const App: React.FC = () => {
         </main>
 
         {/* Faint Footer */}
-        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
+        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 print:hidden">
           <span className="text-[9px] font-black uppercase tracking-widest text-app-muted/85">
             © 2026 Angelo Thomas Serna Simeon • SOFTCONTABLE SaaS
           </span>
@@ -1178,7 +1178,9 @@ const App: React.FC = () => {
           </span>
         </div>
       </div>
-      <SuggestionBox />
+      <div className="print:hidden">
+        <SuggestionBox />
+      </div>
 
       {/* ═══ Modal Legal ═══ */}
       {showLegalPage && (

@@ -201,45 +201,55 @@ label {
 
 /* ═══ Print ═══ */
 @media print {
-  aside, nav, header, footer, .no-print, .toolbar, .action-bar, .theme-toggle, button {
+  @page {
+    size: portrait;
+    margin: 8mm 8mm 8mm 8mm;
+  }
+  aside, nav, header, footer, .no-print, .toolbar, .action-bar, .theme-toggle, button, select, input, .print\:hidden {
     display: none !important;
   }
-  body, html, #root, .flex {
-    background: white !important;
-    color: black !important;
+  body, html, #root, #root > div, main, main > div, .flex-1, .h-screen, .w-screen {
+    background: #ffffff !important;
+    color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
     height: auto !important;
-    min-height: auto !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-  main, .flex-1 {
-    display: block !important;
+    min-height: 0 !important;
+    max-height: none !important;
     width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     overflow: visible !important;
     position: static !important;
+    display: block !important;
   }
-  .overflow-auto, .overflow-y-auto, .overflow-x-auto {
+  .overflow-auto, .overflow-y-auto, .overflow-x-auto, .custom-scrollbar {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    display: block !important;
   }
   table {
     width: 100% !important;
     table-layout: auto !important;
     border-collapse: collapse !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid #1e293b !important;
+    page-break-inside: auto !important;
   }
   th, td {
-    border: 1px solid #ddd !important;
-    padding: 3px 4px !important;
-    font-size: 7pt !important;
+    border: 1px solid #475569 !important;
+    padding: 2.5px 3.5px !important;
+    font-size: 7.5pt !important;
+    color: #000000 !important;
   }
-  thead { display: table-header-group !important; }
-  tr { page-break-inside: avoid !important; }
+  thead { 
+    display: table-header-group !important; 
+  }
+  tfoot {
+    display: table-footer-group !important;
+  }
+  tr { 
+    page-break-inside: avoid !important; 
+    page-break-after: auto !important;
+  }
   * {
     animation: none !important;
     transition: none !important;

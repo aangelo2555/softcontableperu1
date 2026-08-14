@@ -17,7 +17,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   actions,
   accentColor = 'text-pld-blue',
 }) => (
-  <div className="min-h-14 md:h-14 py-3 md:py-0 px-4 md:px-6 bg-app-surface border-b border-app-border flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0 shrink-0 z-10">
+  <div className="min-h-14 md:h-14 py-3 md:py-0 px-4 md:px-6 bg-app-surface border-b border-app-border flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0 shrink-0 z-10 print:hidden">
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded-lg bg-pld-blue/10 shrink-0 ${accentColor}`}>
         {icon}
