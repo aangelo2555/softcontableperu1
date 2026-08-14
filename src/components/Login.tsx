@@ -296,82 +296,82 @@ export const Login: React.FC = () => {
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
 
                 @keyframes driftLR1 {
-                    0% { transform: translateX(-260px); }
-                    100% { transform: translateX(calc(100vw + 260px)); }
+                    0% { transform: translateX(-300px); }
+                    100% { transform: translateX(calc(100vw + 300px)); }
                 }
                 @keyframes driftLR2 {
-                    0% { transform: translateX(-380px); }
-                    100% { transform: translateX(calc(100vw + 380px)); }
+                    0% { transform: translateX(-400px); }
+                    100% { transform: translateX(calc(100vw + 400px)); }
                 }
                 @keyframes driftLR3 {
-                    0% { transform: translateX(-220px); }
-                    100% { transform: translateX(calc(100vw + 220px)); }
+                    0% { transform: translateX(-240px); }
+                    100% { transform: translateX(calc(100vw + 240px)); }
                 }
-                @keyframes driftRL1 {
-                    0% { transform: translateX(calc(100vw + 320px)); }
-                    100% { transform: translateX(-320px); }
-                }
-                @keyframes driftRL2 {
-                    0% { transform: translateX(calc(100vw + 240px)); }
-                    100% { transform: translateX(-240px); }
-                }
-                @keyframes driftRL3 {
-                    0% { transform: translateX(calc(100vw + 290px)); }
-                    100% { transform: translateX(-290px); }
+                @keyframes driftLR4 {
+                    0% { transform: translateX(-320px); }
+                    100% { transform: translateX(calc(100vw + 320px)); }
                 }
 
-                .cloud-drift-lr-1 { animation: driftLR1 48s linear infinite; }
-                .cloud-drift-lr-2 { animation: driftLR2 68s linear infinite -15s; }
-                .cloud-drift-lr-3 { animation: driftLR3 38s linear infinite -8s; }
-                .cloud-drift-rl-1 { animation: driftRL1 54s linear infinite -5s; }
-                .cloud-drift-rl-2 { animation: driftRL2 42s linear infinite -20s; }
-                .cloud-drift-rl-3 { animation: driftRL3 62s linear infinite -28s; }
+                @keyframes driftRL1 {
+                    0% { transform: translateX(calc(100vw + 340px)); }
+                    100% { transform: translateX(-340px); }
+                }
+                @keyframes driftRL2 {
+                    0% { transform: translateX(calc(100vw + 260px)); }
+                    100% { transform: translateX(-260px); }
+                }
+                @keyframes driftRL3 {
+                    0% { transform: translateX(calc(100vw + 300px)); }
+                    100% { transform: translateX(-300px); }
+                }
+
+                .cloud-drift-lr-1 { animation: driftLR1 46s linear infinite; }
+                .cloud-drift-lr-2 { animation: driftLR2 66s linear infinite -18s; }
+                .cloud-drift-lr-3 { animation: driftLR3 38s linear infinite -10s; }
+                .cloud-drift-lr-4 { animation: driftLR4 54s linear infinite -32s; }
+
+                .cloud-drift-rl-1 { animation: driftRL1 52s linear infinite -6s; }
+                .cloud-drift-rl-2 { animation: driftRL2 40s linear infinite -22s; }
+                .cloud-drift-rl-3 { animation: driftRL3 60s linear infinite -36s; }
             `}</style>
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* NUBES EN MOVIMIENTO (Izquierda y Derecha - Suaves y Elegantes)  */}
+            {/* 7 NUBES EN MOVIMIENTO ("nube.png" - Izquierda y Derecha)       */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Nube 1: Izq -> Der (Superior) */}
-                <div className="absolute top-[8%] cloud-drift-lr-1 opacity-20">
-                    <svg width="240" height="75" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                <div className="absolute top-[6%] cloud-drift-lr-1 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[240px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
                 {/* Nube 2: Der -> Izq (Medio Superior) */}
-                <div className="absolute top-[22%] cloud-drift-rl-1 opacity-15">
-                    <svg width="300" height="95" viewBox="0 0 100 35" fill="white" className="blur-[1.5px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                <div className="absolute top-[18%] cloud-drift-rl-1 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[300px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
                 {/* Nube 3: Izq -> Der (Medio) */}
-                <div className="absolute top-[48%] cloud-drift-lr-3 opacity-15">
-                    <svg width="190" height="60" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                <div className="absolute top-[38%] cloud-drift-lr-3 opacity-20 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[190px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
-                {/* Nube 4: Der -> Izq (Inferior) */}
-                <div className="absolute top-[72%] cloud-drift-rl-2 opacity-20">
-                    <svg width="260" height="85" viewBox="0 0 100 35" fill="white" className="blur-[1.5px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                {/* Nube 4: Der -> Izq (Medio Inferior) */}
+                <div className="absolute top-[56%] cloud-drift-rl-2 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[260px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
                 {/* Nube 5: Izq -> Der (Inferior Profunda) */}
-                <div className="absolute top-[84%] cloud-drift-lr-2 opacity-15">
-                    <svg width="360" height="115" viewBox="0 0 100 35" fill="white" className="blur-[2px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                <div className="absolute top-[75%] cloud-drift-lr-2 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[350px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
-                {/* Nube 6: Der -> Izq (Superior Sutil) */}
-                <div className="absolute top-[3%] cloud-drift-rl-3 opacity-15">
-                    <svg width="220" height="70" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
-                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
-                    </svg>
+                {/* Nube 6: Der -> Izq (Inferior Base) */}
+                <div className="absolute top-[88%] cloud-drift-rl-3 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[220px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+
+                {/* Nube 7: Izq -> Der (Superior Alta) */}
+                <div className="absolute top-[1%] cloud-drift-lr-4 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[280px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
             </div>
 
