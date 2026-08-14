@@ -288,293 +288,298 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-[#061426] via-[#092244] to-[#040d1a] flex items-center justify-center p-3 sm:p-5 lg:p-6 xl:p-8 relative overflow-hidden font-sans selection:bg-blue-600/20 selection:text-blue-900">
+        <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-[#0080c8] via-[#0066a3] to-[#004473] flex items-center justify-center p-3 sm:p-5 lg:p-6 relative overflow-hidden font-sans selection:bg-blue-600/20 selection:text-blue-900">
             <style>{customStyles}{`
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
                 .login-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 10px; }
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+                
+                .mirror-card-reflect {
+                    -webkit-box-reflect: below 2px linear-gradient(to bottom, transparent 65%, rgba(255,255,255,0.06) 82%, rgba(255,255,255,0.24) 100%);
+                }
             `}</style>
 
-            {/* Efectos de Iluminación Ambiental Corporativa */}
-            <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none animate-pulse" />
-            <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1.5s' }} />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.06),transparent)] pointer-events-none" />
+            {/* Efectos de Iluminación y Resplandor de Fondo (Tono Azul Vibrante) */}
+            <div className="absolute -top-40 -left-40 w-[32rem] h-[32rem] bg-cyan-300/25 rounded-full blur-3xl pointer-events-none animate-pulse" />
+            <div className="absolute -bottom-40 -right-40 w-[32rem] h-[32rem] bg-blue-400/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1.5s' }} />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_70%_at_50%_30%,rgba(255,255,255,0.18),transparent)] pointer-events-none" />
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* CONTENEDOR MAESTRO CENTRADO (Formulario + Showcase Unificados)  */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-5xl xl:max-w-[1240px] h-[94vh] max-h-[740px] min-h-[600px] bg-[#07152b] rounded-[28px] xl:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.6)] border border-white/15 overflow-hidden flex flex-col lg:flex-row animate-fade-in">
+            {/* Contenedor relativo para alojar la tarjeta y su reflejo espejo */}
+            <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-[980px] xl:max-w-[1020px]">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[44%] xl:w-[42%] bg-white px-6 sm:px-8 lg:px-9 xl:px-10 py-5 sm:py-6 lg:py-7 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative z-20 shadow-[6px_0_30px_rgba(0,0,0,0.12)]">
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* TARJETA UNIFICADA (Panel Blanco + Imagen Pegados Sin Brechas)  */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                <div className="relative w-full h-[92vh] max-h-[690px] min-h-[580px] bg-white rounded-[26px] xl:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.35),0_0_50px_rgba(255,255,255,0.1)] border border-white/40 overflow-hidden flex flex-col lg:flex-row animate-fade-in mirror-card-reflect">
                     
-                    {/* Header Marca */}
-                    <div className="text-center mb-2">
-                        <div className="inline-flex items-center justify-center p-2 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl shadow-sm mb-1.5">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-9 h-9 object-contain" />
-                        </div>
-                        <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
-                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
-                        </h1>
-                        <p className="text-slate-400 text-[10px] font-bold tracking-[0.2em] uppercase mt-0.5 notranslate" translate="no">
-                            Sistema Contable en la Nube v2.0
-                        </p>
-                    </div>
-
-                    {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-1">
+                    {/* LADO IZQUIERDO: Formulario de Autenticación (Blanco) */}
+                    <div className="w-full lg:w-[440px] xl:w-[460px] bg-white px-6 sm:px-8 lg:px-8 xl:px-9 py-5 sm:py-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative z-20">
                         
-                        {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-2.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsStudentModeActive(false);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
-                                    !isStudentModeActive 
-                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]' 
-                                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
-                                }`}
-                            >
-                                <Building2 size={14} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Profesional</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsStudentModeActive(true);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
-                                    isStudentModeActive 
-                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]' 
-                                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
-                                }`}
-                            >
-                                <GraduationCap size={15} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Estudiante</span>
-                            </button>
+                        {/* Header Marca */}
+                        <div className="text-center mb-2">
+                            <div className="inline-flex items-center justify-center p-2 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl shadow-sm mb-1.5">
+                                <img src="/assets/logo.png" alt="Softcontable Logo" className="w-9 h-9 object-contain" />
+                            </div>
+                            <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
+                                SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
+                            </h1>
+                            <p className="text-slate-400 text-[10px] font-bold tracking-[0.2em] uppercase mt-0.5 notranslate" translate="no">
+                                Sistema Contable en la Nube v2.0
+                            </p>
                         </div>
 
-                        {/* Banner informativo del modo */}
-                        <div className={`mb-2.5 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
-                            isStudentModeActive
-                                ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
-                                : 'bg-blue-50/90 border-blue-200/80 text-blue-900'
-                        }`}>
-                            {isStudentModeActive ? (
-                                <>
-                                    <GraduationCap size={14} className="shrink-0 text-indigo-600" />
-                                    <span>Entorno educativo para aprendizaje contable sin riesgo SUNAT.</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ShieldCheck size={14} className="shrink-0 text-blue-600" />
-                                    <span>Acceso al sistema contable oficial y cartera de empresas.</span>
-                                </>
-                            )}
-                        </div>
+                        {/* Contenedor del Formulario */}
+                        <div className="flex-1 flex flex-col justify-center py-1">
+                            
+                            {/* Selector de Modo: Profesional vs Estudiante */}
+                            <div className="mb-2.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsStudentModeActive(false);
+                                        setErrorAlert(null);
+                                    }}
+                                    className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                        !isStudentModeActive 
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]' 
+                                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                                    }`}
+                                >
+                                    <Building2 size={14} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                    <span>Profesional</span>
+                                </button>
 
-                        {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-2.5 border-b border-slate-200 pb-1">
-                            <button 
-                                type="button"
-                                onClick={() => {
-                                    setIsLogin(true);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                                    isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                Iniciar Sesión
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={() => {
-                                    setIsLogin(false);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                                    !isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                Crear Cuenta
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsStudentModeActive(true);
+                                        setErrorAlert(null);
+                                    }}
+                                    className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                        isStudentModeActive 
+                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]' 
+                                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                                    }`}
+                                >
+                                    <GraduationCap size={15} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                    <span>Estudiante</span>
+                                </button>
+                            </div>
 
-                        {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
-                            {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
-                                    <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
-                                    <div className="flex-1 font-medium leading-tight">{errorAlert}</div>
-                                </div>
-                            )}
+                            {/* Banner informativo del modo */}
+                            <div className={`mb-2.5 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
+                                isStudentModeActive
+                                    ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
+                                    : 'bg-blue-50/90 border-blue-200/80 text-blue-900'
+                            }`}>
+                                {isStudentModeActive ? (
+                                    <>
+                                        <GraduationCap size={14} className="shrink-0 text-indigo-600" />
+                                        <span>Entorno educativo para aprendizaje contable sin riesgo SUNAT.</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldCheck size={14} className="shrink-0 text-blue-600" />
+                                        <span>Acceso al sistema contable oficial y cartera de empresas.</span>
+                                    </>
+                                )}
+                            </div>
 
-                            {!isLogin && (
+                            {/* Tabs: Iniciar Sesión / Registrarse */}
+                            <div className="flex mb-2.5 border-b border-slate-200 pb-1">
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setIsLogin(true);
+                                        setErrorAlert(null);
+                                    }}
+                                    className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                        isLogin 
+                                            ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                            : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
+                                    Iniciar Sesión
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setIsLogin(false);
+                                        setErrorAlert(null);
+                                    }}
+                                    className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                        !isLogin 
+                                            ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                            : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
+                                    Crear Cuenta
+                                </button>
+                            </div>
+
+                            {/* Formulario */}
+                            <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
+                                {errorAlert && (
+                                    <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
+                                        <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
+                                        <div className="flex-1 font-medium leading-tight">{errorAlert}</div>
+                                    </div>
+                                )}
+
+                                {!isLogin && (
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Nombre Completo</label>
+                                        <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
+                                            <User className="absolute left-3 w-4 h-4 text-slate-400" />
+                                            <input 
+                                                type="text"
+                                                required
+                                                autoComplete="name"
+                                                placeholder="Ej. Juan Pérez"
+                                                className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                                style={{ paddingLeft: '2.5rem' }}
+                                                value={formData.name}
+                                                onChange={e => setFormData({...formData, name: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Nombre Completo</label>
+                                    <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
                                     <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                        <User className="absolute left-3 w-4 h-4 text-slate-400" />
+                                        <Mail className="absolute left-3 w-4 h-4 text-slate-400" />
                                         <input 
-                                            type="text"
+                                            type="email"
                                             required
-                                            autoComplete="name"
-                                            placeholder="Ej. Juan Pérez"
+                                            autoComplete="username"
+                                            placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
                                             className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
                                             style={{ paddingLeft: '2.5rem' }}
-                                            value={formData.name}
-                                            onChange={e => setFormData({...formData, name: e.target.value})}
+                                            value={formData.email}
+                                            onChange={e => setFormData({...formData, email: e.target.value})}
                                         />
                                     </div>
                                 </div>
-                            )}
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
-                                <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                    <Mail className="absolute left-3 w-4 h-4 text-slate-400" />
-                                    <input 
-                                        type="email"
-                                        required
-                                        autoComplete="username"
-                                        placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
-                                        className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.5rem' }}
-                                        value={formData.email}
-                                        onChange={e => setFormData({...formData, email: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Contraseña</label>
-                                    {!isLogin && checkPasswordStrength(formData.password).isValid && (
-                                        <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
-                                            <CheckCircle2 size={12} /> Segura
-                                        </span>
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Contraseña</label>
+                                        {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                            <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle2 size={12} /> Segura
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
+                                        !isLogin && checkPasswordStrength(formData.password).isValid
+                                            ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
+                                            : isStudentModeActive ? 'light-input-field-student' : ''
+                                    }`}>
+                                        <Lock className={`absolute left-3 w-4 h-4 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                        <input 
+                                            type={showPassword ? "text" : "password"}
+                                            required
+                                            autoComplete={isLogin ? "current-password" : "new-password"}
+                                            placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
+                                            className="w-full py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            style={{ paddingLeft: '2.5rem', paddingRight: '4.5rem' }}
+                                            value={formData.password}
+                                            onChange={e => setFormData({...formData, password: e.target.value})}
+                                        />
+                                        <div className="absolute right-3 flex items-center gap-1.5">
+                                            {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                                <CheckCircle2 size={16} className="text-emerald-500" />
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
+                                                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                            >
+                                                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {!isLogin && formData.password.length > 0 && (
+                                        <PasswordStrengthChecker password={formData.password} />
                                     )}
                                 </div>
-                                <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
-                                    !isLogin && checkPasswordStrength(formData.password).isValid
-                                        ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
-                                        : isStudentModeActive ? 'light-input-field-student' : ''
-                                }`}>
-                                    <Lock className={`absolute left-3 w-4 h-4 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
-                                    <input 
-                                        type={showPassword ? "text" : "password"}
-                                        required
-                                        autoComplete={isLogin ? "current-password" : "new-password"}
-                                        placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.5rem', paddingRight: '4.5rem' }}
-                                        value={formData.password}
-                                        onChange={e => setFormData({...formData, password: e.target.value})}
-                                    />
-                                    <div className="absolute right-3 flex items-center gap-1.5">
-                                        {!isLogin && checkPasswordStrength(formData.password).isValid && (
-                                            <CheckCircle2 size={16} className="text-emerald-500" />
-                                        )}
+
+                                {isLogin && (
+                                    <div className="flex items-center justify-end px-1 pt-0.5 text-xs">
                                         <button 
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
-                                            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                            type="button" 
+                                            onClick={() => {
+                                                setForgotEmail(formData.email);
+                                                setShowForgotPasswordModal(true);
+                                                setForgotStep(1);
+                                                setForgotOtpCode('');
+                                                setForgotNewPassword('');
+                                                setForgotConfirmPassword('');
+                                                setForgotError(null);
+                                                setForgotMessage(null);
+                                                setDevCodeNotice(null);
+                                                setResendCooldown(0);
+                                            }} 
+                                            className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[11px]"
                                         >
-                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                            ¿Olvidaste tu clave?
                                         </button>
                                     </div>
-                                </div>
-                                {!isLogin && formData.password.length > 0 && (
-                                    <PasswordStrengthChecker password={formData.password} />
                                 )}
-                            </div>
 
-                            {isLogin && (
-                                <div className="flex items-center justify-end px-1 pt-0.5 text-xs">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => {
-                                            setForgotEmail(formData.email);
-                                            setShowForgotPasswordModal(true);
-                                            setForgotStep(1);
-                                            setForgotOtpCode('');
-                                            setForgotNewPassword('');
-                                            setForgotConfirmPassword('');
-                                            setForgotError(null);
-                                            setForgotMessage(null);
-                                            setDevCodeNotice(null);
-                                            setResendCooldown(0);
-                                        }} 
-                                        className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[11px]"
-                                    >
-                                        ¿Olvidaste tu clave?
-                                    </button>
-                                </div>
-                            )}
+                                <button 
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
+                                        isStudentModeActive
+                                            ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
+                                            : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-blue-600/25'
+                                    } disabled:opacity-50 disabled:pointer-events-none`}
+                                >
+                                    {isLoading ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            {isLogin 
+                                                ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
+                                                : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
+                                            }
+                                            <ArrowRight className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
 
-                            <button 
-                                type="submit"
-                                disabled={isLoading}
-                                className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
-                                    isStudentModeActive
-                                        ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
-                                        : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-blue-600/25'
-                                } disabled:opacity-50 disabled:pointer-events-none`}
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <>
-                                        {isLogin 
-                                            ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
-                                            : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
-                                        }
-                                        <ArrowRight className="w-4 h-4" />
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                        {/* Avisos Legales y Derechos */}
+                        <div className="mt-2 text-center space-y-0.5">
+                            <p className="text-slate-400 text-[10px] font-medium">
+                                Al ingresar aceptas nuestros{' '}
+                                <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
+                                <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Privacidad</button>.
+                            </p>
+                            <p className="text-slate-300 text-[9.5px] tracking-wider notranslate" translate="no">
+                                &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Avisos Legales y Derechos */}
-                    <div className="mt-2 text-center space-y-0.5">
-                        <p className="text-slate-400 text-[10px] font-medium">
-                            Al ingresar aceptas nuestros{' '}
-                            <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
-                            <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Privacidad</button>.
-                        </p>
-                        <p className="text-slate-300 text-[9.5px] tracking-wider notranslate" translate="no">
-                            &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
-                        </p>
-                    </div>
-                </div>
-
-                {/* LADO DERECHO: Hero Showcase — Ocupa todo el espacio disponible sin recortes */}
-                <div className="hidden lg:flex flex-1 relative bg-[#07152b] items-center justify-center p-0 overflow-hidden">
-                    {/* Efectos de luz sutil en el fondo del poster */}
-                    <div className="absolute top-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-10 left-10 w-60 h-60 bg-cyan-400/10 rounded-full blur-2xl pointer-events-none" />
-
-                    {/* Imagen que llena la altura completa de la tarjeta sin recorte */}
-                    <div className="relative z-10 w-full h-full flex items-center justify-center">
+                    {/* LADO DERECHO: Hero Showcase — Pegado directamente al panel blanco sin brechas */}
+                    <div className="hidden lg:block flex-1 relative bg-[#040e1d] overflow-hidden">
                         <img 
                             src="/assets/login-hero.png" 
                             alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                            className="w-full h-full object-contain select-none animate-fade-in transition-transform duration-500 hover:scale-[1.01]" 
+                            className="w-full h-full object-cover object-left-top select-none animate-fade-in" 
                         />
                     </div>
                 </div>
+
+                {/* Sombra y Brillo de Reflejo Inferior Estilo Espejo */}
+                <div className="w-[85%] h-8 bg-cyan-200/20 blur-xl rounded-full pointer-events-none -mt-3" />
+                <div className="w-[70%] h-12 bg-black/25 blur-2xl rounded-full pointer-events-none -mt-4" />
             </div>
 
             {/* MODAL RECUPERACIÓN DE CONTRASEÑA EN 3 PASOS CON CÓDIGO OTP POR GMAIL */}
