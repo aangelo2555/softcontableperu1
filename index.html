@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#f6f7f9" />
     <link rel="apple-touch-icon" href="/assets/logo_pwa.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="google" content="notranslate" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,8 +19,30 @@
     <meta name="keywords" content="contabilidad, SUNAT, SIRE, planillas, libros contables, SaaS, software contable, Perú, inteligencia artificial, softcontable" />
     <title>SOFTCONTABLE — Sistema Contable en la Nube</title>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="margin: 0; background-color: #f6f7f9;">
+    <div id="root">
+      <!-- PANTALLA DE CARGA INICIAL (COLOR PERLA) PREVIO A REACT / LOGIN -->
+      <div style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #fafbfc 0%, #f4f6f8 50%, #e9edf2 100%); font-family: 'Outfit', sans-serif; z-index: 99999; user-select: none;">
+        <div style="padding: 16px; background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 26px; box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07); margin-bottom: 16px;">
+          <img src="/assets/logo.png" alt="Softcontable Logo" style="width: 72px; height: 72px; object-fit: contain;" />
+        </div>
+        <div style="font-size: 19px; font-weight: 900; color: #0f172a; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">
+          SOFT<span style="color: #2563eb;">CONTABLE</span>
+        </div>
+        <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 20px;">
+          Sistema Contable en la Nube
+        </div>
+        <div style="width: 140px; height: 4px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; position: relative;">
+          <div style="width: 60px; height: 100%; background: linear-gradient(90deg, #2563eb, #4f46e5); border-radius: 9999px; animation: pearlLoading 1.3s infinite ease-in-out;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes pearlLoading {
+          0% { transform: translateX(-60px); }
+          100% { transform: translateX(140px); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
