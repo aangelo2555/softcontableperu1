@@ -1,4 +1,6 @@
-import { exportMultipleSheets, type SheetData, type ColumnDef } from './excelExport';
+import { addStyledSheet, addLd52FisicoWorksheet, type SheetData, type ColumnDef } from './excelExport';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import type { AppState } from '../store';
 import { calculateDeferredTaxSchedule } from '../engine/deferredTax';
 import { generateNotesTemplates } from '../engine/notesGenerator';
@@ -23,6 +25,16 @@ function getSum(balances: Record<string, { debe: number; haber: number }>, prefi
   }, 0);
 }
 
+const LD52_PCGE_KEYS = [
+  'c10_d', 'c10_h', 'c12_d', 'c12_h', 'c16_d', 'c16_h', 'c20_d', 'c20_h', 'c21_d', 'c21_h',
+  'c33_d', 'c33_h', 'c34_d', 'c34_h', 'c38_d', 'c38_h', 'c39_d', 'c39_h',
+  'c4011D', 'c4011C', 'c4017D', 'c4017C', 'c402_d', 'c402_h', 'c42_d', 'c42_h', 'c46_d', 'c46_h',
+  'c50_d', 'c50_h', 'c58_d', 'c58_h', 'c59_d', 'c59_h',
+  'c60_d', 'c60_h', 'c61_d', 'c61_h', 'c62_d', 'c62_h', 'c63_d', 'c63_h', 'c65_d', 'c65_h',
+  'c66_d', 'c66_h', 'c67_d', 'c67_h', 'c68_d', 'c68_h', 'c69_d', 'c69_h', 'c96_d', 'c96_h', 'c97_d', 'c97_h',
+  'c70_d', 'c70_h', 'c75_d', 'c75_h', 'c76_d', 'c76_h', 'c77_d', 'c77_h', 'c79_d', 'c79_h'
+];
+
 /**
  * Generates a massive workbook with all accounting sheets from the store
  */
@@ -42,24 +54,41 @@ export async function generateMassiveWorkbook(state: AppState) {
   const ingresosSoles = i * valorUIT;
   const obligations = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
 
-  let ld52Entries: any[] = [];
+  let ld52FisicoEntries: any[] = [];
+  const ld52ColumnTotals: Record<string, number> = {};
+  for (const key of LD52_PCGE_KEYS) {
+    ld52ColumnTotals[key] = 0;
+  }
+
   if (obligations.libroDiarioSimplificado) {
     const yearStr = companyInfo.period.substring(0, 4);
     const monthPromises = Array.from({ length: 12 }, async (_, idx) => {
       const monthStr = String(idx + 1).padStart(2, '0');
       const periodo = `${yearStr}${monthStr}00`;
       try {
-        const res = await webApiBridge.ld52GetAsientos(companyInfo.ruc, periodo);
+        const res = await webApiBridge.ld52GetFormatoFisico(companyInfo.ruc, periodo);
         if (res && res.success && Array.isArray(res.data)) {
           return res.data;
         }
       } catch (err) {
-        console.warn(`[MassiveExport] Error loading LD 5.2 entries for period ${periodo}:`, err);
+        console.warn(`[MassiveExport] Error loading LD 5.2 fisico entries for period ${periodo}:`, err);
       }
       return [];
     });
     const results = await Promise.all(monthPromises);
-    ld52Entries = results.flat();
+    ld52FisicoEntries = results.flat();
+
+    // Si la API no devolvió datos para todos los meses pero en memoria local hay registros físicos, usarlos
+    if (ld52FisicoEntries.length === 0 && state.ld52FisicoEntries && state.ld52FisicoEntries.length > 0) {
+      ld52FisicoEntries = state.ld52FisicoEntries;
+    }
+
+    // Calcular suma de columnas para la fila de TOTALES
+    for (const row of ld52FisicoEntries) {
+      for (const key of LD52_PCGE_KEYS) {
+        ld52ColumnTotals[key] += row[key] || 0;
+      }
+    }
   }
 
   const sheets: SheetData[] = [];
@@ -196,43 +225,12 @@ export async function generateMassiveWorkbook(state: AppState) {
     });
   }
 
-  // ═══ 6. LIBRO DIARIO 5.2 ═══
-  if (obligations.libroDiarioSimplificado && ld52Entries.length > 0) {
-    const ld52TotalDebe = ld52Entries.reduce((s, e) => s + (e.monto_debe || 0), 0) / 100;
-    const ld52TotalHaber = ld52Entries.reduce((s, e) => s + (e.monto_haber || 0), 0) / 100;
+  // ═══ 6. LIBRO DIARIO 5.2 (FÍSICO MULTICOLUMNA PCGE) ═══
+  if (obligations.libroDiarioSimplificado && ld52FisicoEntries.length > 0) {
     sheets.push({
-      sheetName: '6. Libro Diario 5.2',
-      title: 'LIBRO DIARIO DE FORMATO SIMPLIFICADO - FORMATO 5.2',
-      columns: [
-        { header: 'PERIODO', key: 'periodo', width: 12, alignment: 'center' },
-        { header: 'CUO', key: 'cuo', width: 14, alignment: 'center' },
-        { header: 'CORRELATIVO', key: 'correlativo', width: 14, alignment: 'center' },
-        { header: 'FECHA', key: 'fecha', width: 12, alignment: 'center' },
-        { header: 'GLOSA', key: 'glosa', width: 40 },
-        { header: 'CUENTA', key: 'cuenta', width: 10, alignment: 'center' },
-        { header: 'DENOMINACIÓN', key: 'denominacion', width: 30 },
-        { header: 'DEBE', key: 'debe', width: 16, style: 'currency' },
-        { header: 'HABER', key: 'haber', width: 16, style: 'currency' },
-        { header: 'ORIGEN', key: 'origen', width: 12, alignment: 'center' },
-        { header: 'ESTADO', key: 'estado', width: 8, alignment: 'center' },
-      ],
-      rows: ld52Entries.map(e => ({
-        periodo: e.periodo,
-        cuo: e.cuo,
-        correlativo: e.correlativo_asiento,
-        fecha: e.fecha_operacion,
-        glosa: e.glosa,
-        cuenta: e.codigo_cuenta,
-        denominacion: e.denominacion_cuenta,
-        debe: (e.monto_debe || 0) / 100,
-        haber: (e.monto_haber || 0) / 100,
-        origen: e.origen_modulo,
-        estado: e.estado
-      })),
-      totals: {
-        periodo: '', cuo: '', correlativo: '', fecha: '', glosa: '', cuenta: '', denominacion: 'TOTALES',
-        debe: ld52TotalDebe, haber: ld52TotalHaber, origen: '', estado: ''
-      },
+      sheetName: '__LD52_FISICO_SPECIAL__',
+      columns: [],
+      rows: [],
       companyInfo,
     });
   }
@@ -593,8 +591,23 @@ export async function generateMassiveWorkbook(state: AppState) {
     });
   }
 
-  // ─── Generate & Download ───
+  // ─── Generate & Download Massive Workbook ───
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SoftContable';
+  wb.created = new Date();
+
+  for (const sheet of sheets) {
+    if (sheet.sheetName === '__LD52_FISICO_SPECIAL__') {
+      addLd52FisicoWorksheet(wb, ld52FisicoEntries, ld52ColumnTotals, companyInfo, '6. Libro Diario 5.2');
+    } else {
+      addStyledSheet(wb, sheet);
+    }
+  }
+
   const filename = `LibroContable_${companyInfo.ruc}_${companyInfo.period}`;
-  await exportMultipleSheets(sheets, filename);
-  return sheets.length;
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `${filename}.xlsx`);
+
+  return wb.worksheets.length;
 }

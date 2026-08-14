@@ -203,19 +203,16 @@ export async function exportMultipleSheets(sheets: SheetData[], filename: string
 }
 
 /**
- * Export Libro Diario 5.2 physical structure with multi-level groups and proper corporate design
+ * Adds a styled Libro Diario 5.2 physical structure worksheet to an existing workbook
  */
-export async function exportLd52FisicoToXLSX(
+export function addLd52FisicoWorksheet(
+  wb: ExcelJS.Workbook,
   entries: any[],
   columnTotals: any,
   companyInfo: { ruc: string; name: string; period: string },
-  filename: string
-) {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'SoftContable';
-  wb.created = new Date();
-
-  const ws = wb.addWorksheet('Libro Diario 5.2 Físico');
+  sheetName = '6. Libro Diario 5.2'
+): ExcelJS.Worksheet {
+  const ws = wb.addWorksheet(sheetName);
   let currentRow = 1;
 
   // 1. Company Info Header
@@ -278,8 +275,8 @@ export async function exportLd52FisicoToXLSX(
     { header: 'CUO', key: 'cuo', width: 15, alignment: 'center' },
     { header: 'FECHA', key: 'fecha', width: 12, alignment: 'center' },
     { header: 'GLOSA', key: 'glosa', width: 35 },
-    { header: 'CAR', key: 'car', width: 12, alignment: 'center' },
-    
+    { header: 'CAR', key: 'car', width: 25, alignment: 'center' },
+
     // Activo
     { header: '10 D', key: 'c10_d', width: 11, style: 'currency' },
     { header: '10 H', key: 'c10_h', width: 11, style: 'currency' },
@@ -428,6 +425,24 @@ export async function exportLd52FisicoToXLSX(
     from: { row: 5, column: 1 },
     to: { row: 5, column: 70 },
   };
+
+  return ws;
+}
+
+/**
+ * Export Libro Diario 5.2 physical structure with multi-level groups and proper corporate design
+ */
+export async function exportLd52FisicoToXLSX(
+  entries: any[],
+  columnTotals: any,
+  companyInfo: { ruc: string; name: string; period: string },
+  filename: string
+) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SoftContable';
+  wb.created = new Date();
+
+  addLd52FisicoWorksheet(wb, entries, columnTotals, companyInfo, 'Libro Diario 5.2 Físico');
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
