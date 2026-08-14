@@ -288,33 +288,29 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-screen min-h-screen flex flex-col lg:flex-row font-sans selection:bg-blue-600/20 selection:text-blue-900 overflow-hidden relative bg-[#070e1a]">
+        <div className="min-h-screen w-screen bg-gradient-to-br from-[#071c36] via-[#09355e] to-[#0284c7] flex items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-hidden font-sans selection:bg-blue-600/20 selection:text-blue-900">
             <style>{customStyles}{`
-                .login-glass-panel {
-                    background: rgba(255, 255, 255, 0.96);
-                    backdrop-filter: blur(24px) saturate(1.8);
-                    -webkit-backdrop-filter: blur(24px) saturate(1.8);
-                    border-right: 1px solid rgba(226, 232, 240, 0.85);
-                }
-                @media (max-width: 1023px) {
-                    .login-glass-panel {
-                        background: #ffffff;
-                    }
-                }
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
                 .login-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 10px; }
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
             `}</style>
 
-            {/* PANEL IZQUIERDO: Formulario de Login / Registro */}
-            <div className="login-glass-panel w-full lg:w-[460px] xl:w-[500px] shrink-0 flex flex-col h-full max-h-screen relative z-10 shadow-2xl">
-                <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-8 xl:px-12 py-5 lg:py-6 login-scroll overflow-y-auto">
+            {/* Efectos de Iluminación Ambiental de Fondo */}
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none animate-pulse" />
+            <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/25 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.08),transparent)] pointer-events-none" />
+
+            {/* TARJETA MAESTRA CENTRAL UNIFICADA (Inspirada en la referencia de PSE Perú) */}
+            <div className="relative z-10 w-full max-w-5xl xl:max-w-6xl h-[92vh] max-h-[700px] xl:max-h-[740px] bg-white rounded-[28px] xl:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.45)] border border-white/20 overflow-hidden flex flex-col lg:flex-row animate-fade-in">
+                
+                {/* LADO IZQUIERDO: Formulario de Autenticación */}
+                <div className="w-full lg:w-[48%] xl:w-[46%] bg-white p-5 sm:p-7 xl:p-8 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-3.5">
-                        <div className="inline-flex items-center justify-center p-2 bg-white border border-slate-200 rounded-2xl shadow-sm mb-1.5">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-10 h-10 object-contain" />
+                    <div className="text-center mb-2.5">
+                        <div className="inline-flex items-center justify-center p-2 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm mb-1.5">
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-9 h-9 object-contain" />
                         </div>
                         <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
                             SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
@@ -324,13 +320,11 @@ export const Login: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* Tarjeta de Formulario */}
-                    <div className={`p-5 lg:p-6 rounded-3xl transition-all duration-300 ${
-                        isStudentModeActive ? 'light-card-student' : 'light-card-pro'
-                    }`}>
+                    {/* Tarjeta / Contenedor de Formulario */}
+                    <div className="flex-1 flex flex-col justify-center py-1">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-3 bg-slate-200/70 p-1 rounded-2xl border border-slate-300/60 flex items-center gap-1.5 select-none">
+                        <div className="mb-2.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -364,8 +358,8 @@ export const Login: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Banner de contexto informativo del modo activo */}
-                        <div className={`mb-3 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
+                        {/* Banner informativo del modo */}
+                        <div className={`mb-2.5 p-2 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50 border-indigo-200/80 text-indigo-900'
                                 : 'bg-blue-50 border-blue-200/80 text-blue-900'
@@ -383,8 +377,8 @@ export const Login: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Tabs de Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-3 border-b border-slate-200 pb-1">
+                        {/* Tabs: Iniciar Sesión / Registrarse */}
+                        <div className="flex mb-2.5 border-b border-slate-200 pb-1">
                             <button 
                                 type="button"
                                 onClick={() => {
@@ -552,7 +546,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-2.5 text-center space-y-0.5">
+                    <div className="mt-2 text-center space-y-0.5">
                         <p className="text-slate-500 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-700 hover:text-blue-700 underline font-semibold cursor-pointer">Términos</button>{' '}y{' '}
@@ -563,27 +557,25 @@ export const Login: React.FC = () => {
                         </p>
                     </div>
                 </div>
-            </div>
 
-            {/* PANEL DERECHO: Hero Showcase Unificado de la Imagen Proporcional */}
-            <div className="hidden lg:flex flex-1 items-center justify-center p-4 xl:p-8 relative overflow-hidden bg-gradient-to-br from-[#0a1526] via-[#07111e] to-[#040a14]">
-                {/* Destellos de iluminación ambiental detrás del poster */}
-                <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.08),transparent_70%)] pointer-events-none" />
+                {/* LADO DERECHO: Showcase Hero Banner Unificado dentro de la Tarjeta */}
+                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-[#061224] via-[#091b35] to-[#040d1a] p-4 xl:p-6 relative items-center justify-center overflow-hidden border-l border-slate-100/10">
+                    {/* Iluminación sutil detrás del poster */}
+                    <div className="absolute -top-20 -right-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
 
-                {/* Contenedor Enmarcado y Proporcional del Hero Banner */}
-                <div className="relative z-10 flex items-center justify-center w-full h-full max-h-[94vh]">
-                    <div className="relative group max-h-[86vh] xl:max-h-[90vh] flex items-center justify-center">
-                        {/* Halo sutil de fondo */}
-                        <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-600/25 via-cyan-500/20 to-indigo-600/25 rounded-[30px] blur-xl opacity-70 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+                    {/* Poster 3:4 contenido armónicamente en el alto de la tarjeta */}
+                    <div className="relative z-10 flex items-center justify-center w-full h-full">
+                        <div className="relative group max-h-full flex items-center justify-center">
+                            {/* Halo brillante */}
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/30 via-cyan-400/20 to-indigo-600/30 rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition duration-500 pointer-events-none" />
 
-                        {/* Imagen completa, contenida, nítida y perfectamente proporcionada en su ratio 3:4 */}
-                        <img 
-                            src="/assets/login-hero.png" 
-                            alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                            className="relative max-h-[84vh] xl:max-h-[88vh] w-auto max-w-full object-contain rounded-2xl xl:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] border border-white/15 ring-1 ring-white/10 select-none transition-transform duration-500 hover:scale-[1.008]" 
-                        />
+                            <img 
+                                src="/assets/login-hero.png" 
+                                alt="Softcontable 2026 - Sistema Contable en la Nube" 
+                                className="relative max-h-[80vh] max-h-[620px] xl:max-h-[660px] w-auto max-w-full object-contain rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)] border border-white/10 select-none transition-transform duration-500 hover:scale-[1.01]" 
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
