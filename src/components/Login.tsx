@@ -288,57 +288,136 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-screen bg-gradient-to-br from-slate-100 via-blue-50/70 to-slate-200/80 flex items-center justify-center p-3 sm:p-5 lg:p-6 xl:p-8 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-y-auto">
+        <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-2 sm:p-4 lg:p-5 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-hidden">
             <style>{customStyles}{`
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
                 .login-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 10px; }
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+
+                @keyframes driftLR1 {
+                    0% { transform: translateX(-260px); }
+                    100% { transform: translateX(calc(100vw + 260px)); }
+                }
+                @keyframes driftLR2 {
+                    0% { transform: translateX(-380px); }
+                    100% { transform: translateX(calc(100vw + 380px)); }
+                }
+                @keyframes driftLR3 {
+                    0% { transform: translateX(-220px); }
+                    100% { transform: translateX(calc(100vw + 220px)); }
+                }
+                @keyframes driftRL1 {
+                    0% { transform: translateX(calc(100vw + 320px)); }
+                    100% { transform: translateX(-320px); }
+                }
+                @keyframes driftRL2 {
+                    0% { transform: translateX(calc(100vw + 240px)); }
+                    100% { transform: translateX(-240px); }
+                }
+                @keyframes driftRL3 {
+                    0% { transform: translateX(calc(100vw + 290px)); }
+                    100% { transform: translateX(-290px); }
+                }
+
+                .cloud-drift-lr-1 { animation: driftLR1 48s linear infinite; }
+                .cloud-drift-lr-2 { animation: driftLR2 68s linear infinite -15s; }
+                .cloud-drift-lr-3 { animation: driftLR3 38s linear infinite -8s; }
+                .cloud-drift-rl-1 { animation: driftRL1 54s linear infinite -5s; }
+                .cloud-drift-rl-2 { animation: driftRL2 42s linear infinite -20s; }
+                .cloud-drift-rl-3 { animation: driftRL3 62s linear infinite -28s; }
             `}</style>
 
-            {/* Iluminación de Fondo Suave y Elegante */}
-            <div className="absolute top-0 right-0 w-[35rem] h-[35rem] bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[35rem] h-[35rem] bg-indigo-200/35 rounded-full blur-3xl pointer-events-none" />
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* NUBES EN MOVIMIENTO (Izquierda y Derecha - Suaves y Elegantes)  */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                {/* Nube 1: Izq -> Der (Superior) */}
+                <div className="absolute top-[8%] cloud-drift-lr-1 opacity-20">
+                    <svg width="240" height="75" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+
+                {/* Nube 2: Der -> Izq (Medio Superior) */}
+                <div className="absolute top-[22%] cloud-drift-rl-1 opacity-15">
+                    <svg width="300" height="95" viewBox="0 0 100 35" fill="white" className="blur-[1.5px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+
+                {/* Nube 3: Izq -> Der (Medio) */}
+                <div className="absolute top-[48%] cloud-drift-lr-3 opacity-15">
+                    <svg width="190" height="60" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+
+                {/* Nube 4: Der -> Izq (Inferior) */}
+                <div className="absolute top-[72%] cloud-drift-rl-2 opacity-20">
+                    <svg width="260" height="85" viewBox="0 0 100 35" fill="white" className="blur-[1.5px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+
+                {/* Nube 5: Izq -> Der (Inferior Profunda) */}
+                <div className="absolute top-[84%] cloud-drift-lr-2 opacity-15">
+                    <svg width="360" height="115" viewBox="0 0 100 35" fill="white" className="blur-[2px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+
+                {/* Nube 6: Der -> Izq (Superior Sutil) */}
+                <div className="absolute top-[3%] cloud-drift-rl-3 opacity-15">
+                    <svg width="220" height="70" viewBox="0 0 100 35" fill="white" className="blur-[1px]">
+                        <path d="M 10,25 Q 10,15 20,15 Q 25,5 40,8 Q 50,2 65,10 Q 75,5 85,15 Q 95,20 90,28 Q 90,35 10,35 Z" />
+                    </svg>
+                </div>
+            </div>
+
+            {/* Efectos de Iluminación Ambiental Suave en Azul Marino */}
+            <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* TARJETA UNIFICADA (Formulario + Imagen en un Solo Lienzo)       */}
+            {/* TARJETA UNIFICADA CALIBRADA PARA LAPTOPS (Full Size Ajustado)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-md lg:max-w-4xl xl:max-w-5xl bg-white rounded-3xl shadow-[0_20px_60px_rgba(15,23,42,0.1),0_1px_3px_rgba(15,23,42,0.06)] border border-slate-200/80 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-md lg:max-w-[860px] xl:max-w-[940px] 2xl:max-w-[1020px] h-[92vh] max-h-[580px] xl:max-h-[630px] bg-white rounded-2xl xl:rounded-3xl shadow-[0_20px_70px_rgba(0,0,0,0.4)] border border-white/30 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[420px] xl:w-[450px] bg-white p-6 sm:p-8 lg:p-8 xl:p-9 flex flex-col justify-between shrink-0">
+                <div className="w-full lg:w-[380px] xl:w-[410px] bg-white p-4 sm:p-5 xl:p-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-3">
-                        <div className="inline-flex items-center justify-center p-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl shadow-sm mb-2">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-9 h-9 object-contain" />
+                    <div className="text-center mb-1.5">
+                        <div className="inline-flex items-center justify-center p-1.5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl shadow-sm mb-1">
+                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-8 h-8 object-contain" />
                         </div>
-                        <h1 className="text-xl lg:text-2xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
+                        <h1 className="text-lg lg:text-xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
                             SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
                         </h1>
-                        <p className="text-slate-400 text-[10px] font-bold tracking-[0.2em] uppercase mt-0.5 notranslate" translate="no">
+                        <p className="text-slate-400 text-[9.5px] font-bold tracking-[0.2em] uppercase mt-0.5 notranslate" translate="no">
                             Sistema Contable en la Nube v2.0
                         </p>
                     </div>
 
                     {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-1">
+                    <div className="flex-1 flex flex-col justify-center py-0.5">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-3 bg-slate-100 p-1 rounded-2xl border border-slate-200 flex items-center gap-1.5 select-none">
+                        <div className="mb-2 bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsStudentModeActive(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
                                     !isStudentModeActive 
                                         ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]' 
                                         : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
                                 }`}
                             >
-                                <Building2 size={14} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Profesional</span>
                             </button>
 
@@ -348,45 +427,45 @@ export const Login: React.FC = () => {
                                     setIsStudentModeActive(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
                                     isStudentModeActive 
                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]' 
                                         : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
                                 }`}
                             >
-                                <GraduationCap size={15} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Estudiante</span>
                             </button>
                         </div>
 
                         {/* Banner informativo del modo */}
-                        <div className={`mb-3 p-2.5 rounded-xl border text-[10px] font-medium flex items-center gap-2 ${
+                        <div className={`mb-2 p-1.5 sm:p-2 rounded-xl border text-[9.5px] font-medium flex items-center gap-1.5 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
                                 : 'bg-blue-50/90 border-blue-200/80 text-blue-900'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={14} className="shrink-0 text-indigo-600" />
-                                    <span>Entorno educativo para aprendizaje contable sin riesgo SUNAT.</span>
+                                    <GraduationCap size={13} className="shrink-0 text-indigo-600" />
+                                    <span>Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={14} className="shrink-0 text-blue-600" />
-                                    <span>Acceso al sistema contable oficial y cartera de empresas.</span>
+                                    <ShieldCheck size={13} className="shrink-0 text-blue-600" />
+                                    <span>Acceso al sistema contable oficial y empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-3 border-b border-slate-200 pb-1">
+                        <div className="flex mb-2 border-b border-slate-200 pb-0.5">
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     isLogin 
                                         ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -400,7 +479,7 @@ export const Login: React.FC = () => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                                     !isLogin 
                                         ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -411,26 +490,26 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-3" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-3 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
-                                    <span className="text-rose-600 mt-0.5 text-sm shrink-0">⚠️</span>
-                                    <div className="flex-1 font-medium leading-tight">{errorAlert}</div>
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-2.5 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
+                                    <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
+                                    <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
                                 </div>
                             )}
 
                             {!isLogin && (
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Nombre Completo</label>
+                                <div className="space-y-0.5">
+                                    <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Nombre Completo</label>
                                     <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                        <User className="absolute left-3 w-4 h-4 text-slate-400" />
+                                        <User className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
                                         <input 
                                             type="text"
                                             required
                                             autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
-                                            className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                            style={{ paddingLeft: '2.5rem' }}
+                                            className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            style={{ paddingLeft: '2.3rem' }}
                                             value={formData.name}
                                             onChange={e => setFormData({...formData, name: e.target.value})}
                                         />
@@ -438,29 +517,29 @@ export const Login: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
+                            <div className="space-y-0.5">
+                                <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
                                 <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                    <Mail className="absolute left-3 w-4 h-4 text-slate-400" />
+                                    <Mail className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
                                     <input 
                                         type="email"
                                         required
                                         autoComplete="username"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
-                                        className="w-full py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.5rem' }}
+                                        className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        style={{ paddingLeft: '2.3rem' }}
                                         value={formData.email}
                                         onChange={e => setFormData({...formData, email: e.target.value})}
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Contraseña</label>
+                                    <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Contraseña</label>
                                     {!isLogin && checkPasswordStrength(formData.password).isValid && (
-                                        <span className="text-[9px] font-black uppercase text-emerald-600 flex items-center gap-1">
-                                            <CheckCircle2 size={12} /> Segura
+                                        <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                            <CheckCircle2 size={11} /> Segura
                                         </span>
                                     )}
                                 </div>
@@ -469,20 +548,20 @@ export const Login: React.FC = () => {
                                         ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
                                         : isStudentModeActive ? 'light-input-field-student' : ''
                                 }`}>
-                                    <Lock className={`absolute left-3 w-4 h-4 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                    <Lock className={`absolute left-3 w-3.5 h-3.5 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.5rem', paddingRight: '4.5rem' }}
+                                        className="w-full py-1.5 sm:py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                        style={{ paddingLeft: '2.3rem', paddingRight: '4rem' }}
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
                                     />
-                                    <div className="absolute right-3 flex items-center gap-1.5">
+                                    <div className="absolute right-2.5 flex items-center gap-1">
                                         {!isLogin && checkPasswordStrength(formData.password).isValid && (
-                                            <CheckCircle2 size={16} className="text-emerald-500" />
+                                            <CheckCircle2 size={15} className="text-emerald-500" />
                                         )}
                                         <button 
                                             type="button"
@@ -490,7 +569,7 @@ export const Login: React.FC = () => {
                                             className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
                                             title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                         >
-                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                                         </button>
                                     </div>
                                 </div>
@@ -515,7 +594,7 @@ export const Login: React.FC = () => {
                                             setDevCodeNotice(null);
                                             setResendCooldown(0);
                                         }} 
-                                        className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[11px]"
+                                        className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[10.5px]"
                                     >
                                         ¿Olvidaste tu clave?
                                     </button>
@@ -525,21 +604,21 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2.5 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-2 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-1.5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
                                         : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-blue-600/25'
                                 } disabled:opacity-50 disabled:pointer-events-none`}
                             >
                                 {isLoading ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 ) : (
                                     <>
                                         {isLogin 
                                             ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
                                             : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
                                         }
-                                        <ArrowRight className="w-4 h-4" />
+                                        <ArrowRight className="w-3.5 h-3.5" />
                                     </>
                                 )}
                             </button>
@@ -547,24 +626,24 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-3 text-center space-y-0.5">
-                        <p className="text-slate-400 text-[10px] font-medium">
+                    <div className="mt-1.5 text-center space-y-0.5">
+                        <p className="text-slate-400 text-[9.5px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
                             <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Privacidad</button>.
                         </p>
-                        <p className="text-slate-300 text-[9.5px] tracking-wider notranslate" translate="no">
+                        <p className="text-slate-300 text-[9px] tracking-wider notranslate" translate="no">
                             &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
                         </p>
                     </div>
                 </div>
 
-                {/* LADO DERECHO: Hero Showcase — Unificado directamente en fondo blanco */}
-                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-3 xl:p-5 overflow-hidden relative">
+                {/* LADO DERECHO: Hero Showcase — Unificado directamente en fondo blanco y 100% visible en laptops */}
+                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-2 xl:p-3 overflow-hidden relative">
                     <img 
                         src="/assets/login-hero.png" 
                         alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                        className="w-full h-auto max-h-[640px] object-contain select-none animate-fade-in" 
+                        className="w-full h-full object-contain select-none animate-fade-in" 
                     />
                 </div>
             </div>
