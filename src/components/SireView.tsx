@@ -28,6 +28,17 @@ import { reconcileSireWithERP, type ReconciliationSummary, type DiagnosticLevel 
 import PageHeader from './ui/PageHeader';
 import { usePagination } from '../hooks/usePagination';
 import Pagination from './ui/Pagination';
+import { CustomSelect, type SelectOption } from './ui/CustomSelect';
+
+const SIRE_MONTHS: SelectOption[] = [
+  'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+  'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+].map((m, idx) => ({ value: String(idx), label: m }));
+
+const SIRE_YEARS: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
+  const y = String(new Date().getFullYear() - i);
+  return { value: y, label: y };
+});
 
 const SireView: React.FC = () => {
   const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, deletePurchases, deleteSales, setActiveTab } = useStore();
@@ -665,20 +676,20 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
             </div>
 
             <div className="flex items-center gap-1.5">
-              <select
-                value={periodoMes}
-                onChange={(e) => setPeriodoMes(parseInt(e.target.value))}
-                className="bg-app-bg border-app-border text-[10px] font-black uppercase px-2 py-1.5 h-8"
-              >
-                {meses.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-              <select
-                value={periodoAnio}
-                onChange={(e) => setPeriodoAnio(parseInt(e.target.value))}
-                className="bg-app-bg border-app-border text-[10px] font-black uppercase px-2 py-1.5 h-8"
-              >
-                {anios.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <CustomSelect
+                value={String(periodoMes)}
+                onChange={(val) => setPeriodoMes(parseInt(val))}
+                options={SIRE_MONTHS}
+                compact
+                className="w-32"
+              />
+              <CustomSelect
+                value={String(periodoAnio)}
+                onChange={(val) => setPeriodoAnio(parseInt(val))}
+                options={SIRE_YEARS}
+                compact
+                className="w-20"
+              />
             </div>
           </div>
 

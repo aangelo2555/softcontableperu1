@@ -6,20 +6,22 @@ import PageHeader from './ui/PageHeader';
 import type { MaintenanceRecord } from '../store';
 import toast from 'react-hot-toast';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { CustomSelect, type SelectOption } from './ui/CustomSelect';
+import { ConfirmModal } from './ui/ConfirmModal';
 
-const ANEXOS = [
-  { code: '01', label: '01 - REGISTRO VENTAS' },
-  { code: '02', label: '02 - REGISTRO COMPRAS' },
-  { code: '03', label: '03 - CAJA / EFECTIVO' },
-  { code: '04', label: '04 - BANCOS' },
-  { code: '05', label: '05 - HONORARIOS' },
-  { code: '06', label: '06 - PLANILLAS' },
-  { code: '07', label: '07 - ACTIVOS FIJOS' },
-  { code: '10', label: '10 - MOVIMIENTOS ALMACÉN (KARDEX)' },
-  { code: '11', label: '11 - CAJA CHICA' },
-  { code: '31', label: '31 - LIBRO DIARIO' },
-  { code: '32', label: '32 - ASIENTOS DE AJUSTE' },
-  { code: '33', label: '33 - CIERRE CONTABLE' },
+const ANEXOS: SelectOption[] = [
+  { value: '01', label: '01 - REGISTRO VENTAS' },
+  { value: '02', label: '02 - REGISTRO COMPRAS' },
+  { value: '03', label: '03 - CAJA / EFECTIVO' },
+  { value: '04', label: '04 - BANCOS' },
+  { value: '05', label: '05 - HONORARIOS' },
+  { value: '06', label: '06 - PLANILLAS' },
+  { value: '07', label: '07 - ACTIVOS FIJOS' },
+  { value: '10', label: '10 - MOVIMIENTOS ALMACÉN (KARDEX)' },
+  { value: '11', label: '11 - CAJA CHICA' },
+  { value: '31', label: '31 - LIBRO DIARIO' },
+  { value: '32', label: '32 - ASIENTOS DE AJUSTE' },
+  { value: '33', label: '33 - CIERRE CONTABLE' },
 ];
 
 const MantenimientoView: React.FC = () => {
@@ -36,7 +38,7 @@ const MantenimientoView: React.FC = () => {
   const [editDesc, setEditDesc] = useState('');
   const [editMonto, setEditMonto] = useState('');
 
-  const meses = [
+  const meses: SelectOption[] = [
     { value: '01', label: 'Enero' },
     { value: '02', label: 'Febrero' },
     { value: '03', label: 'Marzo' },
@@ -52,7 +54,10 @@ const MantenimientoView: React.FC = () => {
   ];
 
   const currentYear = new Date().getFullYear();
-  const anios = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const anios: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
+    const y = String(currentYear - i);
+    return { value: y, label: y };
+  });
 
   const initialYear = currentCompany.period || String(currentYear);
   const initialMonth = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -135,10 +140,10 @@ const MantenimientoView: React.FC = () => {
     }
   ];
 
-  const handleClearBase = () => {
-    clearAllData();
+  const handleClearBase = async () => {
+    await clearAllData();
     setShowClearConfirm(false);
-    alert("Base de datos limpiada con éxito.");
+    toast.success("Base de datos limpiada con éxito.");
   };
 
   // --- Period Management ---
@@ -307,25 +312,32 @@ const MantenimientoView: React.FC = () => {
              </h3>
 
              <div className="flex flex-wrap items-end gap-6">
-                <div className="w-56 space-y-2">
+                <div className="w-64 space-y-2">
                    <label className="block text-[10px] font-black text-app-muted uppercase tracking-widest">Periodo</label>
                    <div className="flex gap-2 w-full">
-                     <select className="flex-1 h-11 bg-app-bg border border-app-border text-app-text rounded-xl px-3 outline-none focus:border-pld-blue transition-all text-xs font-bold"
-                       value={selectedMes} onChange={e => setSelectedMes(e.target.value)}>
-                       {meses.map(m => <option key={m.value} value={m.value} className="bg-app-surface text-app-text">{m.label}</option>)}
-                     </select>
-                     <select className="w-24 h-11 bg-app-bg border border-app-border text-app-text rounded-xl px-3 outline-none focus:border-pld-blue transition-all text-xs font-bold"
-                       value={selectedAnio} onChange={e => setSelectedAnio(e.target.value)}>
-                       {anios.map(y => <option key={y} value={y} className="bg-app-surface text-app-text">{y}</option>)}
-                     </select>
+                     <CustomSelect
+                       value={selectedMes}
+                       onChange={setSelectedMes}
+                       options={meses}
+                       className="flex-1"
+                     />
+                     <CustomSelect
+                       value={selectedAnio}
+                       onChange={setSelectedAnio}
+                       options={anios}
+                       className="w-24"
+                     />
                    </div>
                 </div>
-                <div className="w-64 space-y-2">
+                <div className="w-80 space-y-2">
                    <label className="block text-[10px] font-black text-app-muted uppercase tracking-widest">Sub-Diario (Anexo)</label>
-                   <select className="w-full h-11 text-xs bg-app-bg border border-app-border text-app-text rounded-xl px-4 outline-none focus:border-pld-blue transition-all font-bold"
-                     value={filterAnexo} onChange={e => setFilterAnexo(e.target.value)}>
-                      {ANEXOS.map(a => <option key={a.code} value={a.code}>{a.label}</option>)}
-                   </select>
+                   <CustomSelect
+                     value={filterAnexo}
+                     onChange={setFilterAnexo}
+                     options={ANEXOS}
+                     searchable
+                     className="w-full"
+                   />
                 </div>
                 <div className="flex-1 h-11 flex items-center gap-3 text-[10px] font-bold text-pld-accent uppercase italic bg-pld-accent/5 px-4 rounded-xl border border-pld-accent/10">
                    Nota: El ajuste de asientos permite modificar glosa y montos consolidados.
@@ -393,29 +405,26 @@ const MantenimientoView: React.FC = () => {
         </div>
       )}
 
-      {/* Legacy Styled Confirmation Dialog */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-           <div className="bg-app-surface text-app-text border border-app-border w-full max-w-sm rounded-2xl shadow-[0_0_50px_rgba(255,0,0,0.2)] overflow-hidden animate-in zoom-in duration-200">
-              <div className="p-4 border-b border-app-border bg-red-500/10 flex items-center justify-between">
-                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Alerta Crítica</span>
-                 <AlertTriangle size={18} className="text-red-500" />
-              </div>
-              <div className="p-8 text-center">
-                 <p className="text-sm font-bold leading-relaxed">
-                   ¿Confirmar eliminación masiva de base de datos?
-                 </p>
-                 <p className="text-[10px] text-red-500/60 mt-4 uppercase font-black">
-                   Esta acción no se puede deshacer
-                 </p>
-              </div>
-              <div className="flex border-t border-app-border">
-                 <button onClick={handleClearBase} className="flex-1 h-14 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase transition-colors">BORRAR TODO</button>
-                 <button onClick={() => setShowClearConfirm(false)} className="flex-1 h-14 bg-app-surface hover:bg-app-hover text-app-text font-bold text-xs uppercase transition-colors">CANCELAR</button>
-              </div>
-           </div>
-        </div>
-      )}
+      {/* Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearBase}
+        title="¿Confirmar Eliminación Masiva de Base de Datos?"
+        message={
+          <div>
+            <p className="text-xs font-bold text-app-text">
+              ¿Estás seguro de que deseas limpiar toda la base de datos de la empresa actual?
+            </p>
+            <div className="mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] text-rose-600 dark:text-rose-400 font-bold">
+              ⚠️ Esta acción es destructiva y no se puede deshacer. Se eliminarán todas las compras, ventas, honorarios, planillas y asientos contables.
+            </div>
+          </div>
+        }
+        confirmText="Sí, Borrar Todo"
+        cancelText="Cancelar"
+        variant="danger"
+      />
 
       {/* Edit Record Modal */}
       {editingRec && (

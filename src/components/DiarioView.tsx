@@ -1,36 +1,52 @@
-import React from 'react';
-import { Book, Printer, FileDown, Trash2, Edit } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Book, Printer, FileDown, Trash2, Edit, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
+import { CustomSelect, type SelectOption } from './ui/CustomSelect';
+import { ConfirmModal } from './ui/ConfirmModal';
+import Pagination from './ui/Pagination';
+import toast from 'react-hot-toast';
+
+const MESES: SelectOption[] = [
+  { value: '01', label: 'Enero' },
+  { value: '02', label: 'Febrero' },
+  { value: '03', label: 'Marzo' },
+  { value: '04', label: 'Abril' },
+  { value: '05', label: 'Mayo' },
+  { value: '06', label: 'Junio' },
+  { value: '07', label: 'Julio' },
+  { value: '08', label: 'Agosto' },
+  { value: '09', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+];
 
 const DiarioView: React.FC = () => {
   const store = useStore();
   const { currentCompany, deleteJournalEntry } = store;
-  
-  const meses = [
-    { value: '01', label: 'Enero' },
-    { value: '02', label: 'Febrero' },
-    { value: '03', label: 'Marzo' },
-    { value: '04', label: 'Abril' },
-    { value: '05', label: 'Mayo' },
-    { value: '06', label: 'Junio' },
-    { value: '07', label: 'Julio' },
-    { value: '08', label: 'Agosto' },
-    { value: '09', label: 'Septiembre' },
-    { value: '10', label: 'Octubre' },
-    { value: '11', label: 'Noviembre' },
-    { value: '12', label: 'Diciembre' },
-  ];
 
   const currentYear = new Date().getFullYear();
-  const anios = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const aniosOptions: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
+    const y = String(currentYear - i);
+    return { value: y, label: y };
+  });
 
   const initialYear = currentCompany.period || String(currentYear);
   const initialMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 
-  const [selectedAnio, setSelectedAnio] = React.useState(initialYear);
-  const [selectedMes, setSelectedMes] = React.useState(initialMonth);
+  const [selectedAnio, setSelectedAnio] = useState(initialYear);
+  const [selectedMes, setSelectedMes] = useState(initialMonth);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  // Modal confirmation states
+  const [entryToDelete, setEntryToDelete] = useState<{ id: string; desc: string } | null>(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const getYearAndMonth = (dateStr: string) => {
     if (!dateStr) return { year: '', month: '' };
@@ -40,11 +56,9 @@ const DiarioView: React.FC = () => {
       if (sep) {
         const parts = clean.split(sep);
         if (parts.length === 3) {
-          // Si la primera parte tiene 4 dígitos: YYYY-MM-DD o YYYY/MM/DD
           if (parts[0].length === 4) {
             return { year: parts[0], month: parts[1].padStart(2, '0') };
           }
-          // Si la última parte tiene 4 o 2 dígitos: DD-MM-YYYY o DD/MM/YYYY
           if (parts[2].length === 4 || parts[2].length === 2) {
             const fullYear = parts[2].length === 2 ? '20' + parts[2] : parts[2];
             return { year: fullYear, month: parts[1].padStart(2, '0') };
@@ -65,36 +79,84 @@ const DiarioView: React.FC = () => {
     return { year: '', month: '' };
   };
 
-  const filterPeriodo = React.useMemo(() => {
+  const filterPeriodo = useMemo(() => {
     return `${selectedAnio}${selectedMes}`;
   }, [selectedAnio, selectedMes]);
 
-  const journal = store.journal.filter(entry => {
-    if (!entry.cta || entry.cta.trim().toUpperCase() === 'GLOSA') return false;
-    
-    // 1. Filtrar por fecha exacta del asiento
-    const { year, month } = getYearAndMonth(entry.fecha);
-    if (year && month) {
-      return year === selectedAnio && month === selectedMes;
-    }
-    
-    // 2. Fallback por estructura de código del asiento (ej. 06-PROV-08, 06-PLA-08, 202608)
-    if (entry.asiento) {
-      if (filterPeriodo && entry.asiento.includes(filterPeriodo)) return true;
-      if (entry.asiento.includes(`${selectedAnio}-${selectedMes}`)) return true;
-      if (entry.asiento.includes(`${selectedAnio}/${selectedMes}`)) return true;
-      if (entry.asiento.endsWith(`-${selectedMes}`)) return true;
-    }
-    
-    return false;
-  });
+  const journal = useMemo(() => {
+    return store.journal.filter(entry => {
+      if (!entry.cta || entry.cta.trim().toUpperCase() === 'GLOSA') return false;
 
-  const totalDebe = journal.reduce((sum, entry) => sum + entry.debe, 0);
-  const totalHaber = journal.reduce((sum, entry) => sum + entry.haber, 0);
+      // 1. Filtrar por fecha exacta del asiento
+      const { year, month } = getYearAndMonth(entry.fecha);
+      if (year && month) {
+        return year === selectedAnio && month === selectedMes;
+      }
 
-  const handleDelete = (fullId: string) => {
-    if (!window.confirm('¿Desea eliminar esta línea del libro diario?')) return;
-    deleteJournalEntry(fullId);
+      // 2. Fallback por estructura de código del asiento
+      if (entry.asiento) {
+        if (filterPeriodo && entry.asiento.includes(filterPeriodo)) return true;
+        if (entry.asiento.includes(`${selectedAnio}-${selectedMes}`)) return true;
+        if (entry.asiento.includes(`${selectedAnio}/${selectedMes}`)) return true;
+        if (entry.asiento.endsWith(`-${selectedMes}`)) return true;
+      }
+
+      return false;
+    });
+  }, [store.journal, selectedAnio, selectedMes, filterPeriodo]);
+
+  const totalDebe = useMemo(() => journal.reduce((sum, entry) => sum + (entry.debe || 0), 0), [journal]);
+  const totalHaber = useMemo(() => journal.reduce((sum, entry) => sum + (entry.haber || 0), 0), [journal]);
+
+  // Pagination calculation
+  const totalPages = Math.ceil(journal.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, journal.length);
+  const paginatedEntries = useMemo(() => {
+    return journal.slice(startIndex, endIndex);
+  }, [journal, startIndex, endIndex]);
+
+  // Reset to page 1 on filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedAnio, selectedMes]);
+
+  const handleDeleteSingle = async () => {
+    if (!entryToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteJournalEntry(entryToDelete.id);
+      toast.success('Línea eliminada del libro diario correctamente');
+      setEntryToDelete(null);
+    } catch (e: any) {
+      toast.error(`Error al eliminar: ${e.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (journal.length === 0) return;
+    setIsDeleting(true);
+    const loadingToast = toast.loading('Eliminando asientos del período...');
+    try {
+      const electron = (window as any).electronAPI;
+      const ruc = currentCompany.ruc;
+      if (electron && ruc) {
+        // Delete all matching entries in DB
+        for (const entry of journal) {
+          await electron.dbExecute(`DELETE FROM journal WHERE id = ? AND workspace_id = ?`, [entry.id, ruc]);
+        }
+        const data = await electron.dbGetWorkspaceData(ruc);
+        store.setWorkspaceData(data);
+      }
+      toast.success(`Se eliminaron ${journal.length} registros del Libro Diario`, { id: loadingToast });
+      setShowDeleteAllModal(false);
+    } catch (e: any) {
+      toast.error(`Error al eliminar asientos: ${e.message}`, { id: loadingToast });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleEdit = (source: string, fullId: string) => {
@@ -102,29 +164,29 @@ const DiarioView: React.FC = () => {
       const purchaseId = fullId.replace(/^compra-/, '').replace(/-[^-]+$/, '');
       const item = store.purchases.find(p => p.id === purchaseId);
       if (item) {
-         store.setDraftCompra(item);
-         store.setActiveTab('COMPRAS');
+        store.setDraftCompra(item);
+        store.setActiveTab('COMPRAS');
       }
     } else if (source === 'VENTA') {
       const saleId = fullId.replace(/^venta-/, '').replace(/-[^-]+$/, '');
       const item = store.sales.find(p => p.id === saleId);
       if (item) {
-         store.setDraftVenta(item);
-         store.setActiveTab('VENTAS');
+        store.setDraftVenta(item);
+        store.setActiveTab('VENTAS');
       }
     } else if (source === 'HONORARIO') {
       const honorarioId = fullId.replace(/^honor-/, '').replace(/-[^-]+$/, '');
       const item = store.honorarios.find(p => p.id === honorarioId);
       if (item) {
-         store.setDraftHonorario(item);
-         store.setActiveTab('HONORARIOS');
+        store.setDraftHonorario(item);
+        store.setActiveTab('HONORARIOS');
       }
     } else if (source === 'ASIENTO') {
       const asientoId = fullId.split('-line-')[0];
       const item = store.asientos.find(p => p.id === asientoId);
       if (item) {
-         store.setDraftAsiento({ header: item.header, lines: item.lines, editingId: item.id });
-         store.setActiveTab('ASIENTOS');
+        store.setDraftAsiento({ header: item.header, lines: item.lines, editingId: item.id });
+        store.setActiveTab('ASIENTOS');
       }
     }
   };
@@ -143,7 +205,6 @@ const DiarioView: React.FC = () => {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
-      // Caso dd/mm/yyyy o dd/mm/yy
       if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
         if (parts.length === 3) {
@@ -151,7 +212,6 @@ const DiarioView: React.FC = () => {
           return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y.slice(-2)}`;
         }
       }
-      // Caso yyyy-mm-dd
       if (dateStr.includes('-')) {
         const parts = dateStr.split('-');
         if (parts.length === 3) {
@@ -181,7 +241,7 @@ const DiarioView: React.FC = () => {
       const libro = parts.length >= 3 ? parts[0] : (row.source === 'COMPRA' ? '08' : row.source === 'VENTA' ? '14' : row.source === 'HONORARIO' ? '08' : '05');
       const correlat = parts.length >= 3 ? parts[parts.length - 1] : (i+1).toString();
       const strictCuo = getLocalStrictCuo(row.asiento);
-      
+
       let refDoc = '-';
       if (row.source === 'COMPRA') {
         const p = store.purchases.find(x => x.registro === row.asiento);
@@ -237,78 +297,107 @@ const DiarioView: React.FC = () => {
     }, `Libro_Diario_${selectedAnio}_${selectedMes}`);
   };
 
-   return (
+  return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
       <PageHeader
         icon={<Book size={18} />}
         title="Libro Diario (5.1)"
-        badge={<span className="px-2 py-0.5 rounded-lg bg-pld-blue/10 text-[9px] text-pld-blue border border-pld-blue/10 tracking-[0.2em] uppercase">Formato 5.1</span>}
-        subtitle={`Periodo: ${currentCompany.period || '2025'} • RUC: ${currentCompany.ruc}`}
+        badge={<span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[9px] text-blue-600 dark:text-blue-400 border border-blue-500/20 tracking-[0.2em] uppercase font-bold">Formato 5.1</span>}
+        subtitle={`Periodo: ${selectedAnio}-${selectedMes} • RUC: ${currentCompany.ruc || ''} • ${journal.length} Registros`}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-app-bg border border-app-border rounded-lg px-2 mr-2 gap-1 h-8">
-              <span className="text-[9px] font-bold text-app-muted uppercase mr-1">Periodo:</span>
-              <select
+            {/* Period selector dropdowns */}
+            <div className="flex items-center bg-app-surface border border-app-border rounded-xl p-1 gap-1.5 shadow-sm">
+              <span className="text-[9px] font-black text-app-muted uppercase px-1.5">Periodo:</span>
+              <CustomSelect
                 value={selectedMes}
-                onChange={(e) => setSelectedMes(e.target.value)}
-                className="bg-transparent border-none outline-none text-[10px] font-bold text-pld-blue uppercase cursor-pointer"
-              >
-                {meses.map((m) => (
-                  <option key={m.value} value={m.value} className="bg-app-surface text-app-text">
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={setSelectedMes}
+                options={MESES}
+                compact
+                className="w-28"
+              />
+              <CustomSelect
                 value={selectedAnio}
-                onChange={(e) => setSelectedAnio(e.target.value)}
-                className="bg-transparent border-none outline-none text-[10px] font-bold text-pld-blue cursor-pointer"
-              >
-                {anios.map((y) => (
-                  <option key={y} value={y} className="bg-app-surface text-app-text">
-                    {y}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedAnio}
+                options={aniosOptions}
+                compact
+                className="w-20"
+              />
             </div>
-            <button onClick={() => window.print()} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Imprimir"><Printer size={14} /> Imprimir</button>
-            <button onClick={handleExportExcel} className="h-8 px-3 bg-app-bg border border-app-border rounded-lg hover:text-pld-blue transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted" title="Exportar a Excel"><FileDown size={14} /> Excel</button>
+
+            {/* Delete All Button */}
+            {journal.length > 0 && (
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="h-8 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-xl transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                title="Eliminar todos los asientos del período"
+              >
+                <Trash2 size={13} />
+                <span>Eliminar Todos</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => window.print()}
+              className="h-8 px-3 bg-app-surface border border-app-border rounded-xl hover:text-blue-600 hover:border-blue-500/30 transition-colors flex items-center gap-1.5 text-[10px] font-bold text-app-muted shadow-sm cursor-pointer"
+              title="Imprimir Libro Diario"
+            >
+              <Printer size={14} /> Imprimir
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors flex items-center gap-1.5 text-[10px] font-bold shadow-md shadow-emerald-600/20 cursor-pointer"
+              title="Exportar a Excel"
+            >
+              <FileDown size={14} /> Excel
+            </button>
           </div>
         }
       />
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">
-        <div className="min-w-[1250px] border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
-          <table id="diario-table" className="w-full text-left border-collapse">
+      <div className="flex-1 overflow-hidden flex flex-col p-4">
+        {/* Table Container */}
+        <div className="flex-1 overflow-auto custom-scrollbar border border-app-border rounded-2xl shadow-xl bg-app-surface">
+          <table id="diario-table" className="w-full text-left border-collapse text-[9px]">
+            {/* Minimalist White / App Surface Table Header */}
             <thead>
-              <tr className="bg-pld-blue text-white text-[9px] font-bold uppercase tracking-tighter">
-                <th rowSpan={2} className="p-2 border border-blue-700/50 text-center w-24">CUO</th>
-                <th rowSpan={2} className="p-2 border border-blue-700/50 text-center w-24">FECHA</th>
-                <th rowSpan={2} className="p-2 border border-blue-700/50 text-center">GLOSA / DESCRIPCIÓN</th>
-                <th colSpan={3} className="p-2 border border-blue-700/50 text-center">REFERENCIA</th>
-                <th colSpan={2} className="p-2 border border-blue-700/50 text-center">CUENTA CONTABLE</th>
-                <th colSpan={2} className="p-2 border border-blue-700/50 text-center">MOVIMIENTO</th>
-                <th rowSpan={2} className="p-2 border border-blue-700/50 text-center w-16">ACC</th>
+              <tr className="bg-app-surface text-app-text text-[8px] font-black uppercase text-center border-b border-app-border">
+                <th rowSpan={2} className="p-2 border-r border-app-border text-center w-24">CUO</th>
+                <th rowSpan={2} className="p-2 border-r border-app-border text-center w-20">FECHA</th>
+                <th rowSpan={2} className="p-2 border-r border-app-border text-left min-w-[200px] px-3">GLOSA / DESCRIPCIÓN</th>
+                <th colSpan={3} className="p-2 border-r border-app-border text-center bg-blue-500/5">REFERENCIA</th>
+                <th colSpan={2} className="p-2 border-r border-app-border text-center bg-purple-500/5">CUENTA CONTABLE</th>
+                <th colSpan={2} className="p-2 border-r border-app-border text-center bg-emerald-500/5">MOVIMIENTO (S/)</th>
+                <th rowSpan={2} className="p-2 text-center w-16">ACCIONES</th>
               </tr>
-              <tr className="bg-pld-blue text-white text-[8px] font-bold uppercase tracking-tighter">
-                <th className="p-1 border border-blue-400/30 text-center w-20">LIBRO</th>
-                <th className="p-1 border border-blue-400/30 text-center w-20">CORRELAT</th>
-                <th className="p-1 border border-blue-400/30 text-center w-24">DOC</th>
-                <th className="p-1 border border-blue-400/30 text-center w-20">CÓDIGO</th>
-                <th className="p-1 border border-blue-400/30 text-center">DENOMINACIÓN</th>
-                <th className="p-1 border border-blue-400/30 text-center w-24">DEBE</th>
-                <th className="p-1 border border-blue-400/30 text-center w-24">HABER</th>
+              <tr className="bg-app-surface/90 text-app-muted text-[7.5px] font-extrabold uppercase text-center border-b border-app-border">
+                <th className="py-1.5 px-2 border-r border-app-border text-center w-16">LIBRO</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-center w-16">CORRELAT</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-center w-20">DOC</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-center w-16">CÓDIGO</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-left">DENOMINACIÓN</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-right w-24 text-emerald-600 dark:text-emerald-400">DEBE</th>
+                <th className="py-1.5 px-2 border-r border-app-border text-right w-24 text-rose-600 dark:text-rose-400">HABER</th>
               </tr>
             </thead>
-            <tbody className="bg-app-surface text-app-text">
-              {journal.map((row, i) => {
+
+            {/* Table Body */}
+            <tbody className="bg-app-surface text-app-text font-mono text-[9px]">
+              {paginatedEntries.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="text-center py-20 text-app-muted font-sans italic text-sm">
+                    No se encontraron asientos contables en el Libro Diario 5.1 para este periodo ({selectedAnio}-{selectedMes})
+                  </td>
+                </tr>
+              )}
+
+              {paginatedEntries.map((row, i) => {
                 const parts = row.asiento.split('-');
                 const libro = parts.length >= 3 ? parts[0] : (row.source === 'COMPRA' ? '08' : row.source === 'VENTA' ? '14' : row.source === 'HONORARIO' ? '08' : '05');
-                const correlat = parts.length >= 3 ? parts[parts.length - 1] : (i+1).toString();
+                const correlat = parts.length >= 3 ? parts[parts.length - 1] : (startIndex + i + 1).toString();
                 const strictCuo = getStrictCuo(row.asiento);
-                
-                // Lookup Document Reference
+
                 let refDoc = '-';
                 if (row.source === 'COMPRA') {
                   const p = store.purchases.find(x => x.registro === row.asiento);
@@ -322,70 +411,162 @@ const DiarioView: React.FC = () => {
                 }
 
                 return (
-                  <tr key={i} className="hover:bg-app-hover transition-colors border-b border-app-border/50 text-[11px] font-mono">
-                    <td className="p-2 border border-app-border/50 text-center text-pld-blue uppercase">{strictCuo}</td>
-                    <td className="p-2 border border-app-border/50 text-center">{formatDate(row.fecha)}</td>
-                    <td className="p-2 border border-app-border/50 uppercase truncate max-w-[300px] font-sans">{row.glosa}</td>
-                    <td className="p-2 border border-app-border/50 text-center text-app-muted font-bold">{libro}</td>
-                    <td className="p-2 border border-app-border/50 text-center text-app-muted font-bold">{correlat}</td>
-                    <td className="p-2 border border-app-border/50 text-center">{refDoc}</td>
-                    <td className="p-2 border border-app-border/50 text-center font-bold font-mono text-pld-blue">{row.cta}</td>
-                    <td className="p-2 border border-app-border/50 uppercase text-app-muted font-sans text-[10px]">{row.desc}</td>
-                    <td className="p-2 border border-app-border/50 text-right font-bold text-pld-blue">{row.debe > 0 ? row.debe.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
-                    <td className="p-2 border border-app-border/50 text-right font-bold text-red-500">{row.haber > 0 ? row.haber.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
-                    <td className="p-2 border border-app-border/50 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(row.source, row.id)} 
-                          className="text-app-muted hover:text-pld-blue transition-colors" 
+                  <tr
+                    key={row.id || i}
+                    className="hover:bg-app-text/[0.03] transition-colors border-b border-app-border/40"
+                  >
+                    <td className="p-2 border-r border-app-border/40 text-center font-bold text-blue-600 dark:text-blue-400">
+                      {strictCuo}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-center text-app-muted font-sans">
+                      {formatDate(row.fecha)}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 font-sans text-app-text text-[9px] uppercase truncate max-w-[280px]" title={row.glosa}>
+                      {row.glosa}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-center text-app-muted font-bold">
+                      <span className="px-1.5 py-0.5 rounded bg-app-bg border border-app-border text-[8.5px]">
+                        {libro}
+                      </span>
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-center text-app-muted font-bold">
+                      {correlat}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-center font-sans text-app-muted">
+                      {refDoc}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-center font-black font-mono text-blue-600 dark:text-blue-400">
+                      {row.cta}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 uppercase text-app-muted font-sans text-[8.5px] truncate max-w-[180px]" title={row.desc}>
+                      {row.desc}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-right font-black text-emerald-600 dark:text-emerald-400">
+                      {row.debe > 0 ? row.debe.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                    </td>
+                    <td className="p-2 border-r border-app-border/40 text-right font-black text-rose-600 dark:text-rose-400">
+                      {row.haber > 0 ? row.haber.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                    </td>
+                    <td className="p-2 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleEdit(row.source, row.id)}
+                          className="p-1 text-app-muted hover:text-blue-600 transition-colors bg-app-bg/60 border border-app-border rounded-lg"
                           title="Editar Registro de Origen"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} />
                         </button>
-                        <button 
-                          onClick={() => handleDelete(row.id)} 
-                          className="text-app-muted hover:text-red-500 transition-colors" 
-                          title="Eliminar Asiento (Línea o Voucher)"
+                        <button
+                          onClick={() => setEntryToDelete({ id: row.id, desc: `${row.cta} - ${row.glosa || 'Asiento'}` })}
+                          className="p-1 text-app-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition-colors bg-app-bg/60 border border-app-border rounded-lg"
+                          title="Eliminar Asiento"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
                   </tr>
                 );
               })}
-              {/* Dummy rows for visual density if empty */}
-              {journal.length === 0 && Array.from({ length: 15 }).map((_, i) => (
-                <tr key={`empty-${i}`} className="border-b border-app-border/50 h-8 opacity-20">
-                   {Array.from({ length: 11 }).map((_, j) => <td key={j} className="p-2 border border-app-border/50"></td>)}
-                </tr>
-              ))}
-              {journal.length > 0 && journal.length < 10 && Array.from({ length: 10 - journal.length }).map((_, i) => (
-                <tr key={`pad-${i}`} className="border-b border-app-border/50 h-8 opacity-10">
-                   {Array.from({ length: 11 }).map((_, j) => <td key={j} className="p-2 border border-app-border/50"></td>)}
-                </tr>
-              ))}
             </tbody>
-            <tfoot className="bg-app-surface sticky bottom-0">
-               <tr className="font-black text-[12px] bg-blue-500/10 text-app-text">
-                  <td colSpan={8} className="p-3 text-right border border-app-border uppercase tracking-[0.3em] text-pld-blue">Totales S/</td>
-                  <td className="p-3 text-right border border-app-border font-mono text-pld-blue underline decoration-double">
-                    {totalDebe.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="p-3 text-right border border-app-border font-mono text-red-500 underline decoration-double">
-                    {totalHaber.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="p-3 border border-app-border"></td>
-               </tr>
+
+            {/* Table Footer - Grand Totals */}
+            <tfoot className="bg-app-surface sticky bottom-0 border-t-2 border-app-border">
+              <tr className="font-black text-xs bg-app-surface text-app-text">
+                <td colSpan={8} className="p-3 text-right border-r border-app-border uppercase tracking-[0.2em] text-app-muted font-sans text-[10px]">
+                  Total General ({journal.length} filas):
+                </td>
+                <td className="p-3 text-right border-r border-app-border font-mono text-emerald-600 dark:text-emerald-400">
+                  {totalDebe.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-3 text-right border-r border-app-border font-mono text-rose-600 dark:text-rose-400">
+                  {totalHaber.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-3 text-center">
+                  {Math.abs(totalDebe - totalHaber) < 0.01 ? (
+                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Cuadrado
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                      Descuadre: S/ {(Math.abs(totalDebe - totalHaber)).toFixed(2)}
+                    </span>
+                  )}
+                </td>
+              </tr>
             </tfoot>
           </table>
         </div>
 
-        </div>
+        {/* Pagination Controls */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onFirstPage={() => setCurrentPage(1)}
+          onLastPage={() => setCurrentPage(totalPages)}
+          onPrevPage={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          onNextPage={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(val) => {
+            setItemsPerPage(val);
+            setCurrentPage(1);
+          }}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          totalItems={journal.length}
+        />
       </div>
+
+      {/* Confirmation Modal - Delete Single Line */}
+      <ConfirmModal
+        isOpen={!!entryToDelete}
+        onClose={() => setEntryToDelete(null)}
+        onConfirm={handleDeleteSingle}
+        title="¿Eliminar Asiento Contable?"
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas eliminar esta línea del libro diario?</p>
+            {entryToDelete && (
+              <div className="mt-2 p-2.5 rounded-xl bg-app-bg border border-app-border font-mono text-[11px] text-app-text font-bold">
+                {entryToDelete.desc}
+              </div>
+            )}
+            <p className="mt-2 text-[10px] text-app-muted">
+              Esta acción eliminará el registro contable seleccionado de forma permanente.
+            </p>
+          </div>
+        }
+        confirmText="Sí, Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      />
+
+      {/* Confirmation Modal - Delete All Entries */}
+      <ConfirmModal
+        isOpen={showDeleteAllModal}
+        onClose={() => setShowDeleteAllModal(false)}
+        onConfirm={handleDeleteAll}
+        title="¿Eliminar Todos los Asientos del Período?"
+        message={
+          <div>
+            <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 font-bold mb-3">
+              <AlertTriangle size={16} className="shrink-0" />
+              <span>Esta acción es irreversible y eliminará {journal.length} asientos del período {selectedAnio}-{selectedMes}.</span>
+            </div>
+            <p className="text-xs text-app-muted">
+              Se eliminarán todas las líneas de libro diario generadas o registradas para el mes de {MESES.find(m => m.value === selectedMes)?.label} {selectedAnio}.
+            </p>
+          </div>
+        }
+        confirmText="Sí, Eliminar Todos"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
 
 export default DiarioView;
-

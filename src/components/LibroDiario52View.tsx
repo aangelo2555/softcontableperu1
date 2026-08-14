@@ -20,11 +20,18 @@ import { toast } from 'react-hot-toast';
 import { exportTableToXLSX } from '../utils/export';
 import { exportLd52FisicoToXLSX } from '../utils/excelExport';
 import PageHeader from './ui/PageHeader';
+import { CustomSelect, type SelectOption } from './ui/CustomSelect';
+import Pagination from './ui/Pagination';
 
 const MONTHS = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
 ];
+
+const MESES_OPTIONS: SelectOption[] = MONTHS.map((m, idx) => ({
+  value: String(idx),
+  label: m
+}));
 
 interface AsientoLineaInput {
   codigo_cuenta: string;
@@ -147,6 +154,34 @@ const LibroDiario52View: React.FC = () => {
       e.denominacion_cuenta.toLowerCase().includes(term)
     );
   }, [ld52Entries, searchTerm]);
+
+  // ── Pagination States ──
+  const [pagePle, setPagePle] = useState(1);
+  const [pageSizePle, setPageSizePle] = useState(25);
+  const [pageFisico, setPageFisico] = useState(1);
+  const [pageSizeFisico, setPageSizeFisico] = useState(25);
+
+  // Reset pagination on filter or period change
+  useEffect(() => {
+    setPagePle(1);
+    setPageFisico(1);
+  }, [periodoMes, periodoAnio, searchTerm, activeTabSub]);
+
+  // Paginated PLE Entries
+  const totalPagesPle = Math.ceil(filteredEntries.length / pageSizePle) || 1;
+  const startIndexPle = (pagePle - 1) * pageSizePle;
+  const endIndexPle = Math.min(startIndexPle + pageSizePle, filteredEntries.length);
+  const paginatedPleEntries = useMemo(() => {
+    return filteredEntries.slice(startIndexPle, endIndexPle);
+  }, [filteredEntries, startIndexPle, endIndexPle]);
+
+  // Paginated Físico Entries
+  const totalPagesFisico = Math.ceil(ld52FisicoEntries.length / pageSizeFisico) || 1;
+  const startIndexFisico = (pageFisico - 1) * pageSizeFisico;
+  const endIndexFisico = Math.min(startIndexFisico + pageSizeFisico, ld52FisicoEntries.length);
+  const paginatedFisicoEntries = useMemo(() => {
+    return ld52FisicoEntries.slice(startIndexFisico, endIndexFisico);
+  }, [ld52FisicoEntries, startIndexFisico, endIndexFisico]);
 
   // Helper formatting function
   const fmt = (n: number) => n !== 0
@@ -469,22 +504,24 @@ const LibroDiario52View: React.FC = () => {
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {/* ── Period Selector ── */}
-            <div className="flex items-center bg-app-bg border border-app-border rounded-lg p-0.5">
-              <select
-                value={periodoMes}
-                onChange={(e) => setPeriodoMes(parseInt(e.target.value))}
-                className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 px-2 py-1 cursor-pointer"
-              >
-                {MONTHS.map((m, idx) => (
-                  <option key={idx} value={idx}>{m}</option>
-                ))}
-              </select>
-              <div className="w-[1px] h-4 bg-app-border" />
-              <input
-                type="number"
-                value={periodoAnio}
-                onChange={(e) => setPeriodoAnio(parseInt(e.target.value))}
-                className="bg-transparent border-0 text-[11px] font-bold text-app-text focus:ring-0 w-16 text-center py-1 font-mono"
+            <div className="flex items-center bg-app-surface border border-app-border rounded-xl p-1 gap-1.5 shadow-sm">
+              <span className="text-[9px] font-black text-app-muted uppercase px-1.5">Periodo:</span>
+              <CustomSelect
+                value={String(periodoMes)}
+                onChange={(val) => setPeriodoMes(parseInt(val))}
+                options={MESES_OPTIONS}
+                compact
+                className="w-32"
+              />
+              <CustomSelect
+                value={String(periodoAnio)}
+                onChange={(val) => setPeriodoAnio(parseInt(val))}
+                options={Array.from({ length: 6 }, (_, i) => {
+                  const y = String(new Date().getFullYear() - i);
+                  return { value: y, label: y };
+                })}
+                compact
+                className="w-20"
               />
             </div>
 
@@ -668,6 +705,7 @@ const LibroDiario52View: React.FC = () => {
           <div className="flex-1 overflow-auto p-4 custom-scrollbar">
             <div className="inline-block min-w-full border border-app-border shadow-2xl rounded-sm overflow-hidden bg-app-surface">
               {activeTabSub === 'ple' ? (
+                <>
                 <table className="min-w-full border-collapse text-[9px] border border-app-border bg-app-surface">
                   <thead>
                     <tr className="bg-app-surface text-app-text text-[8px] font-black uppercase text-center">
@@ -694,7 +732,7 @@ const LibroDiario52View: React.FC = () => {
                       </tr>
                     )}
 
-                    {filteredEntries.map((e) => (
+                    {paginatedPleEntries.map((e) => (
                       <tr key={e.id} className="hover:bg-app-text/[0.03] transition-colors border-b border-app-border/40">
                         <td className="px-2 py-1.5 border-r border-app-border/30 text-center text-app-muted">{e.periodo}</td>
                         <td className="px-2 py-1.5 border-r border-app-border/30 font-bold text-app-text text-center">{e.cuo}</td>
@@ -724,7 +762,26 @@ const LibroDiario52View: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                <Pagination
+                  currentPage={pagePle}
+                  totalPages={totalPagesPle}
+                  onPageChange={setPagePle}
+                  onFirstPage={() => setPagePle(1)}
+                  onLastPage={() => setPagePle(totalPagesPle)}
+                  onPrevPage={() => setPagePle(prev => Math.max(1, prev - 1))}
+                  onNextPage={() => setPagePle(prev => Math.min(totalPagesPle, prev + 1))}
+                  itemsPerPage={pageSizePle}
+                  onItemsPerPageChange={(val) => {
+                    setPageSizePle(val);
+                    setPagePle(1);
+                  }}
+                  startIndex={startIndexPle}
+                  endIndex={endIndexPle}
+                  totalItems={filteredEntries.length}
+                />
+              </>
               ) : (
+                <>
                 <table id="tabla9-pcge-table" className="min-w-[2800px] border-collapse text-[8px] border border-app-border bg-app-surface table-fixed">
                   <thead>
                     {/* Row 1: Groups */}
@@ -828,7 +885,7 @@ const LibroDiario52View: React.FC = () => {
                         </td>
                       </tr>
                     )}
-                    {ld52FisicoEntries.map((r, idx) => (
+                    {paginatedFisicoEntries.map((r, idx) => (
                       <tr key={idx} className="hover:bg-app-bg/30">
                         <td className="px-1 py-1 border border-app-border text-center font-bold text-app-text">{r.cuo}</td>
                         <td className="px-1 py-1 border border-app-border text-center text-app-muted">{r.fecha}</td>
@@ -1008,6 +1065,24 @@ const LibroDiario52View: React.FC = () => {
                     </tr>
                   </tfoot>
                 </table>
+                <Pagination
+                  currentPage={pageFisico}
+                  totalPages={totalPagesFisico}
+                  onPageChange={setPageFisico}
+                  onFirstPage={() => setPageFisico(1)}
+                  onLastPage={() => setPageFisico(totalPagesFisico)}
+                  onPrevPage={() => setPageFisico(prev => Math.max(1, prev - 1))}
+                  onNextPage={() => setPageFisico(prev => Math.min(totalPagesFisico, prev + 1))}
+                  itemsPerPage={pageSizeFisico}
+                  onItemsPerPageChange={(val) => {
+                    setPageSizeFisico(val);
+                    setPageFisico(1);
+                  }}
+                  startIndex={startIndexFisico}
+                  endIndex={endIndexFisico}
+                  totalItems={ld52FisicoEntries.length}
+                />
+              </>
               )}
             </div>
           </div>
