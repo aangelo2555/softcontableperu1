@@ -25,7 +25,7 @@ const MESES: SelectOption[] = [
 
 const DiarioView: React.FC = () => {
   const store = useStore();
-  const { currentCompany, deleteJournalEntry } = store;
+  const { currentCompany, deleteJournalEntry, deleteJournalEntries } = store;
 
   const currentYear = new Date().getFullYear();
   const aniosOptions: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
@@ -140,16 +140,8 @@ const DiarioView: React.FC = () => {
     setIsDeleting(true);
     const loadingToast = toast.loading('Eliminando asientos del período...');
     try {
-      const electron = (window as any).electronAPI;
-      const ruc = currentCompany.ruc;
-      if (electron && ruc) {
-        // Delete all matching entries in DB
-        for (const entry of journal) {
-          await electron.dbExecute(`DELETE FROM journal WHERE id = ? AND workspace_id = ?`, [entry.id, ruc]);
-        }
-        const data = await electron.dbGetWorkspaceData(ruc);
-        store.setWorkspaceData(data);
-      }
+      const ids = journal.map(entry => entry.id);
+      await deleteJournalEntries(ids);
       toast.success(`Se eliminaron ${journal.length} registros del Libro Diario`, { id: loadingToast });
       setShowDeleteAllModal(false);
     } catch (e: any) {

@@ -440,6 +440,7 @@ export interface AppState extends WorkspaceState {
   saveAsiento: (header: AsientoHeader, lines: AsientoLine[]) => Promise<string>;
   deleteAsientoById: (id: string, justificacion?: string) => Promise<void>;
   deleteJournalEntry: (id: string) => Promise<void>;
+  deleteJournalEntries: (ids: string[]) => Promise<void>;
   saveAuditLog: (cuo: string, accion: string, previo: any, nuevo: any, justificacion: string) => Promise<void>;
 
   saveGlosaHabitual: (glosa: string, lines: { cuenta: string, detalle: string }[], category?: string) => Promise<void>;
@@ -2117,6 +2118,31 @@ export const useStore = create<AppState>()(
 
         if (entry) {
           await get().triggerCascadeInvalidation('journal', entry.fecha);
+        }
+      },
+
+      deleteJournalEntries: async (ids) => {
+        const ruc = get().currentCompany?.ruc || '';
+        if (!ruc || !electron || ids.length === 0) return;
+        
+        let sampleFecha: string | undefined;
+        for (const id of ids) {
+          const entry = get().journal.find(x => x.id === id);
+          if (entry) {
+            sampleFecha = entry.fecha;
+            if (await get().checkIfPeriodClosed(entry.fecha)) {
+              toast.error(`⚠️ Eliminación bloqueada: El período ${entry.fecha.substring(0, 7)} está CERRADO.`);
+              return;
+            }
+          }
+          await electron.dbExecute(`DELETE FROM journal WHERE id = ? AND workspace_id = ?`, [id, ruc]);
+        }
+        
+        const data = await electron.dbGetWorkspaceData(ruc);
+        set({ ...data });
+
+        if (sampleFecha) {
+          await get().triggerCascadeInvalidation('journal', sampleFecha);
         }
       },
 

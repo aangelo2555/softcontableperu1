@@ -32,9 +32,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop without blur to keep frontend visible and sharp */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-black/25 transition-opacity animate-fade-in"
         onClick={!isLoading ? onClose : undefined}
       />
 
