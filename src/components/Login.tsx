@@ -296,82 +296,101 @@ export const Login: React.FC = () => {
                 .login-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
 
                 @keyframes driftLR1 {
-                    0% { transform: translateX(-300px); }
-                    100% { transform: translateX(calc(100vw + 300px)); }
-                }
-                @keyframes driftLR2 {
-                    0% { transform: translateX(-400px); }
-                    100% { transform: translateX(calc(100vw + 400px)); }
-                }
-                @keyframes driftLR3 {
-                    0% { transform: translateX(-240px); }
-                    100% { transform: translateX(calc(100vw + 240px)); }
-                }
-                @keyframes driftLR4 {
                     0% { transform: translateX(-320px); }
                     100% { transform: translateX(calc(100vw + 320px)); }
                 }
+                @keyframes driftLR2 {
+                    0% { transform: translateX(-420px); }
+                    100% { transform: translateX(calc(100vw + 420px)); }
+                }
+                @keyframes driftLR3 {
+                    0% { transform: translateX(-250px); }
+                    100% { transform: translateX(calc(100vw + 250px)); }
+                }
+                @keyframes driftLR4 {
+                    0% { transform: translateX(-350px); }
+                    100% { transform: translateX(calc(100vw + 350px)); }
+                }
+                @keyframes driftLR5 {
+                    0% { transform: translateX(-280px); }
+                    100% { transform: translateX(calc(100vw + 280px)); }
+                }
 
                 @keyframes driftRL1 {
-                    0% { transform: translateX(calc(100vw + 340px)); }
-                    100% { transform: translateX(-340px); }
+                    0% { transform: translateX(calc(100vw + 350px)); }
+                    100% { transform: translateX(-350px); }
                 }
                 @keyframes driftRL2 {
-                    0% { transform: translateX(calc(100vw + 260px)); }
-                    100% { transform: translateX(-260px); }
+                    0% { transform: translateX(calc(100vw + 270px)); }
+                    100% { transform: translateX(-270px); }
                 }
                 @keyframes driftRL3 {
-                    0% { transform: translateX(calc(100vw + 300px)); }
-                    100% { transform: translateX(-300px); }
+                    0% { transform: translateX(calc(100vw + 320px)); }
+                    100% { transform: translateX(-320px); }
+                }
+                @keyframes driftRL4 {
+                    0% { transform: translateX(calc(100vw + 380px)); }
+                    100% { transform: translateX(-380px); }
+                }
+                @keyframes driftRL5 {
+                    0% { transform: translateX(calc(100vw + 290px)); }
+                    100% { transform: translateX(-290px); }
                 }
 
-                .cloud-drift-lr-1 { animation: driftLR1 46s linear infinite; }
-                .cloud-drift-lr-2 { animation: driftLR2 66s linear infinite -18s; }
-                .cloud-drift-lr-3 { animation: driftLR3 38s linear infinite -10s; }
-                .cloud-drift-lr-4 { animation: driftLR4 54s linear infinite -32s; }
+                .cloud-drift-lr-1 { animation: driftLR1 44s linear infinite; }
+                .cloud-drift-lr-2 { animation: driftLR2 64s linear infinite -18s; }
+                .cloud-drift-lr-3 { animation: driftLR3 36s linear infinite -10s; }
+                .cloud-drift-lr-4 { animation: driftLR4 52s linear infinite -30s; }
+                .cloud-drift-lr-5 { animation: driftLR5 48s linear infinite -22s; }
 
-                .cloud-drift-rl-1 { animation: driftRL1 52s linear infinite -6s; }
-                .cloud-drift-rl-2 { animation: driftRL2 40s linear infinite -22s; }
-                .cloud-drift-rl-3 { animation: driftRL3 60s linear infinite -36s; }
+                .cloud-drift-rl-1 { animation: driftRL1 50s linear infinite -6s; }
+                .cloud-drift-rl-2 { animation: driftRL2 38s linear infinite -20s; }
+                .cloud-drift-rl-3 { animation: driftRL3 58s linear infinite -34s; }
+                .cloud-drift-rl-4 { animation: driftRL4 66s linear infinite -12s; }
+                .cloud-drift-rl-5 { animation: driftRL5 42s linear infinite -26s; }
             `}</style>
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* 7 NUBES EN MOVIMIENTO ("nube.png" - Izquierda y Derecha)       */}
+            {/* NUBES EN MOVIMIENTO (Arriba, Centro y Abajo del Panel)         */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-                {/* Nube 1: Izq -> Der (Superior) */}
-                <div className="absolute top-[6%] cloud-drift-lr-1 opacity-30 select-none">
+                {/* ── NUBES SUPERIORES (Arriba del panel) ── */}
+                <div className="absolute -top-[3%] cloud-drift-lr-1 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[260px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+                <div className="absolute top-[2%] cloud-drift-rl-1 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[320px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+                <div className="absolute top-[8%] cloud-drift-lr-4 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[220px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+                <div className="absolute top-[13%] cloud-drift-rl-4 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[280px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+
+                {/* ── NUBES CENTRALES (Detrás del panel en vidrio) ── */}
+                <div className="absolute top-[32%] cloud-drift-lr-3 opacity-20 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[200px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+                <div className="absolute top-[48%] cloud-drift-rl-2 opacity-20 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[340px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                </div>
+                <div className="absolute top-[62%] cloud-drift-lr-5 opacity-25 select-none">
                     <img src="/assets/nube.png" alt="Nube" className="w-[240px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
 
-                {/* Nube 2: Der -> Izq (Medio Superior) */}
-                <div className="absolute top-[18%] cloud-drift-rl-1 opacity-25 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[300px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                {/* ── NUBES INFERIORES (Abajo del panel) ── */}
+                <div className="absolute top-[78%] cloud-drift-rl-3 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[290px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
-
-                {/* Nube 3: Izq -> Der (Medio) */}
-                <div className="absolute top-[38%] cloud-drift-lr-3 opacity-20 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[190px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                <div className="absolute top-[85%] cloud-drift-lr-2 opacity-25 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[360px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
-
-                {/* Nube 4: Der -> Izq (Medio Inferior) */}
-                <div className="absolute top-[56%] cloud-drift-rl-2 opacity-30 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[260px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                <div className="absolute top-[92%] cloud-drift-rl-5 opacity-35 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[230px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
-
-                {/* Nube 5: Izq -> Der (Inferior Profunda) */}
-                <div className="absolute top-[75%] cloud-drift-lr-2 opacity-25 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[350px] h-auto object-contain pointer-events-none drop-shadow-sm" />
-                </div>
-
-                {/* Nube 6: Der -> Izq (Inferior Base) */}
-                <div className="absolute top-[88%] cloud-drift-rl-3 opacity-30 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[220px] h-auto object-contain pointer-events-none drop-shadow-sm" />
-                </div>
-
-                {/* Nube 7: Izq -> Der (Superior Alta) */}
-                <div className="absolute top-[1%] cloud-drift-lr-4 opacity-25 select-none">
-                    <img src="/assets/nube.png" alt="Nube" className="w-[280px] h-auto object-contain pointer-events-none drop-shadow-sm" />
+                <div className="absolute -bottom-[2%] cloud-drift-lr-1 opacity-30 select-none">
+                    <img src="/assets/nube.png" alt="Nube" className="w-[310px] h-auto object-contain pointer-events-none drop-shadow-sm" />
                 </div>
             </div>
 
@@ -380,12 +399,12 @@ export const Login: React.FC = () => {
             <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* TARJETA UNIFICADA CALIBRADA PARA LAPTOPS (Full Size Ajustado)   */}
+            {/* TARJETA UNIFICADA CON GLASSMORPHISM 70% (Elegante & Legible)    */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-md lg:max-w-[860px] xl:max-w-[940px] 2xl:max-w-[1020px] h-[92vh] max-h-[580px] xl:max-h-[630px] bg-white rounded-2xl xl:rounded-3xl shadow-[0_20px_70px_rgba(0,0,0,0.4)] border border-white/30 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-md lg:max-w-[860px] xl:max-w-[940px] 2xl:max-w-[1020px] h-[92vh] max-h-[580px] xl:max-h-[630px] bg-white/70 backdrop-blur-2xl rounded-2xl xl:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.45),inset_0_1px_2px_rgba(255,255,255,0.75)] border border-white/50 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[380px] xl:w-[410px] bg-white p-4 sm:p-5 xl:p-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
+                {/* LADO IZQUIERDO: Formulario de Autenticación con Glassmorphism */}
+                <div className="w-full lg:w-[380px] xl:w-[410px] bg-white/70 backdrop-blur-md p-4 sm:p-5 xl:p-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
                     
                     {/* Header Marca */}
                     <div className="text-center mb-1.5">
@@ -638,8 +657,8 @@ export const Login: React.FC = () => {
                     </div>
                 </div>
 
-                {/* LADO DERECHO: Hero Showcase — Unificado directamente en fondo blanco y 100% visible en laptops */}
-                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-2 xl:p-3 overflow-hidden relative">
+                {/* LADO DERECHO: Hero Showcase — Unificado con Glassmorphism 70% y 100% visible en laptops */}
+                <div className="hidden lg:flex flex-1 bg-white/70 backdrop-blur-md items-center justify-center p-2 xl:p-3 overflow-hidden relative">
                     <img 
                         src="/assets/login-hero.png" 
                         alt="Softcontable 2026 - Sistema Contable en la Nube" 
