@@ -298,7 +298,8 @@ const SireView: React.FC = () => {
 
   useEffect(() => {
     loadArchivos();
-  }, [currentCompany?.ruc]);
+    syncCurrentWorkspace();
+  }, [currentCompany?.ruc, periodoAnio, periodoMes, proceso]);
 
   const proceedWithEjecutar = async () => {
     const monthStr = String(periodoMes + 1).padStart(2, '0');

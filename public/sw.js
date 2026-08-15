@@ -1,4 +1,4 @@
-const CACHE_NAME = "softcontable-cache-v2";
+const CACHE_NAME = "softcontable-cache-v5";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
@@ -35,10 +35,11 @@ self.addEventListener("fetch", (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
   if (event.request.url.includes('/api/')) return;
 
+  // Network First for all assets to ensure freshest code
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response && response.status === 200) {
+        if (response && response.status === 200 && event.request.url.startsWith('http')) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
