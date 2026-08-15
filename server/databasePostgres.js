@@ -319,7 +319,7 @@ const db = {
         const offset = (page - 1) * limit;
         
         const wsInfo = await query(
-            'SELECT * FROM workspaces WHERE ruc = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY CASE WHEN user_id = $2 THEN 1 ELSE 2 END LIMIT 1',
+            'SELECT * FROM workspaces WHERE ruc = $1 ORDER BY CASE WHEN user_id = $2 THEN 1 ELSE 2 END LIMIT 1',
             [ruc, userId]
         );
         
@@ -328,20 +328,20 @@ const db = {
         // Cargar datos de tablas principales con paginación
         const [purchases, sales, journal, honorarios] = await Promise.all([
             query(
-                'SELECT * FROM purchases WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
-                [ruc, userId, limit, offset]
+                'SELECT * FROM purchases WHERE workspace_id = $1 ORDER BY fecha DESC LIMIT $2 OFFSET $3',
+                [ruc, limit, offset]
             ),
             query(
-                'SELECT * FROM sales WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
-                [ruc, userId, limit, offset]
+                'SELECT * FROM sales WHERE workspace_id = $1 ORDER BY fecha DESC LIMIT $2 OFFSET $3',
+                [ruc, limit, offset]
             ),
             query(
-                'SELECT * FROM journal WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
-                [ruc, userId, limit, offset]
+                'SELECT * FROM journal WHERE workspace_id = $1 ORDER BY fecha DESC LIMIT $2 OFFSET $3',
+                [ruc, limit, offset]
             ),
             query(
-                'SELECT * FROM honorarios WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
-                [ruc, userId, limit, offset]
+                'SELECT * FROM honorarios WHERE workspace_id = $1 ORDER BY fecha DESC LIMIT $2 OFFSET $3',
+                [ruc, limit, offset]
             )
         ]);
         
@@ -351,19 +351,19 @@ const db = {
             asientos, glosasHabituales, inventoryMovements, cashMovements,
             fixedAssets, employees, balanceInicial, bankStatements
         ] = await Promise.all([
-            query('SELECT * FROM entities WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM costs WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM products WHERE workspace_id = $1 AND user_id = $2 LIMIT 1000', [ruc, userId]),
-            query('SELECT * FROM maintenance WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM movimientos_data WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM asientos WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM glosas_habituales WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM inventory_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM cash_movements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM fixed_assets WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM employees WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR user_id = \'\')', [ruc, userId]),
-            query('SELECT * FROM balance_inicial WHERE workspace_id = $1 AND user_id = $2', [ruc, userId]),
-            query('SELECT * FROM bank_statements WHERE workspace_id = $1 AND user_id = $2', [ruc, userId])
+            query('SELECT * FROM entities WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM costs WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM products WHERE workspace_id = $1 LIMIT 1000', [ruc]),
+            query('SELECT * FROM maintenance WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM movimientos_data WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM asientos WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM glosas_habituales WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM inventory_movements WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM cash_movements WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM fixed_assets WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM employees WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM balance_inicial WHERE workspace_id = $1', [ruc]),
+            query('SELECT * FROM bank_statements WHERE workspace_id = $1', [ruc])
         ]);
         
         // Plan contable del usuario

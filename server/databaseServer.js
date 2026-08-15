@@ -1372,14 +1372,14 @@ const dbManager = {
     },
 
     getWorkspaceData: (ruc, userId, options = {}) => {
-        const wsInfo = db.prepare('SELECT * FROM workspaces WHERE ruc = ? AND user_id = ?').get(ruc, userId);
+        const wsInfo = db.prepare('SELECT * FROM workspaces WHERE ruc = ?').get(ruc);
         if (!wsInfo) return null;
 
-        const purchases = db.prepare('SELECT * FROM purchases WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const sales = db.prepare('SELECT * FROM sales WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const journal = db.prepare('SELECT * FROM journal WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const honorarios = db.prepare('SELECT * FROM honorarios WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
-        const entities = db.prepare('SELECT * FROM entities WHERE workspace_id = ? AND user_id = ?').all(ruc, userId);
+        const purchases = db.prepare('SELECT * FROM purchases WHERE workspace_id = ?').all(ruc);
+        const sales = db.prepare('SELECT * FROM sales WHERE workspace_id = ?').all(ruc);
+        const journal = db.prepare('SELECT * FROM journal WHERE workspace_id = ?').all(ruc);
+        const honorarios = db.prepare('SELECT * FROM honorarios WHERE workspace_id = ?').all(ruc);
+        const entities = db.prepare('SELECT * FROM entities WHERE workspace_id = ?').all(ruc);
         
         // --- Cargar plan contable del usuario o inicializarlo si no existe ---
         let plan = [];
