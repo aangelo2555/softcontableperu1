@@ -106,6 +106,7 @@ function translateSqliteToPostgres(sql, params = []) {
             if (tblLower === 'mapa_pcge_tabla9') return 'codigo_cuenta_prefijo';
             if (tblLower === 'accounting_periods') return 'workspace_id, periodo, user_id';
             if (tblLower === 'formato_54_plan_contable') return 'workspace_id, user_id, periodo, codigo_cuenta';
+            if (tblLower === 'hhtt_adjustments') return 'workspace_id, cta';
             return 'id';
         };
 
@@ -2013,6 +2014,20 @@ async function ensureSchemaConstraints() {
                     );
                     CREATE INDEX IF NOT EXISTS idx_balance_inicial_workspace ON balance_inicial(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_balance_inicial_user ON balance_inicial(user_id);
+                `
+            },
+            {
+                name: 'hhtt_adjustments',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS hhtt_adjustments (
+                        workspace_id TEXT NOT NULL,
+                        cta TEXT NOT NULL,
+                        debe NUMERIC DEFAULT 0,
+                        haber NUMERIC DEFAULT 0,
+                        user_id TEXT,
+                        PRIMARY KEY (workspace_id, cta)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_hhtt_adjustments_workspace ON hhtt_adjustments(workspace_id);
                 `
             },
             {

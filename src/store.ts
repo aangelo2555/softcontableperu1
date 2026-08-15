@@ -3128,19 +3128,55 @@ export const useStore = create<AppState>()(
         const ruc = get().currentCompany?.ruc || '';
         if (!ruc || !electron) return;
         
-        await electron.dbExecute('DELETE FROM purchases WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM sales WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM journal WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM asientos WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM honorarios WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM entities WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM maintenance WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM costs WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM hhtt_adjustments WHERE workspace_id = ?', [ruc]);
-        await electron.dbExecute('DELETE FROM movimientos_data WHERE workspace_id = ?', [ruc]);
+        const tablesToClear = [
+          'purchases',
+          'sales',
+          'journal',
+          'asientos',
+          'honorarios',
+          'entities',
+          'maintenance',
+          'costs',
+          'hhtt_adjustments',
+          'movimientos_data',
+          'inventory_movements',
+          'libro_diario_52',
+          'diario_52_secuencia',
+          'cash_movements',
+          'fixed_assets',
+          'balance_inicial',
+          'audit_logs',
+          'glosas_habituales'
+        ];
+
+        for (const tbl of tablesToClear) {
+          try {
+            await electron.dbExecute(`DELETE FROM ${tbl} WHERE workspace_id = ?`, [ruc]);
+          } catch (err) {
+            console.warn(`[CLEAR DATA] Ignorado al limpiar tabla ${tbl}:`, err);
+          }
+        }
         
-        // Reload
+        // Limpiar estado en memoria inmediatamente
+        set({
+          purchases: [],
+          sales: [],
+          journal: [],
+          asientos: [],
+          honorarios: [],
+          costs: [],
+          inventoryMovements: [],
+          ld52Entries: [],
+          ld52FisicoEntries: [],
+          ld52TotalDebe: 0,
+          ld52TotalHaber: 0,
+          hhttAdjustments: {},
+          balanceInicial: []
+        });
+
+        // Reload workspace
         await get().syncCurrentWorkspace();
+        toast.success('Base de datos limpiada correctamente ✓');
       },
 
       setBuzonMensajes: (mensajes, ruc) => {
