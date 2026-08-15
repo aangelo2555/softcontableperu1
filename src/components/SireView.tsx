@@ -17,7 +17,11 @@ import {
   FileDown,
   Database,
   FileJson,
-  Trash2
+  Trash2,
+  Calendar,
+  Clock,
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../services/apiBridge';
@@ -29,11 +33,28 @@ import PageHeader from './ui/PageHeader';
 import { usePagination } from '../hooks/usePagination';
 import Pagination from './ui/Pagination';
 import { CustomSelect, type SelectOption } from './ui/CustomSelect';
+import { ConfirmModal } from './ui/ConfirmModal';
 
-const SIRE_MONTHS: SelectOption[] = [
+const MESES_NOMBRES = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-].map((m, idx) => ({ value: String(idx), label: m }));
+];
+
+export const formatSirePeriod = (periodoRaw?: string, fileName?: string): string => {
+  let periodStr = (periodoRaw || '').trim();
+  if ((!periodStr || periodStr.length < 6) && fileName) {
+    const match = fileName.match(/(20\d{4})/);
+    if (match) periodStr = match[1];
+  }
+  if (!periodStr || periodStr.length < 6) return 'PERÍODO GENERAL';
+  
+  const anio = periodStr.substring(0, 4);
+  const mesNum = parseInt(periodStr.substring(4, 6), 10);
+  const nombreMes = (mesNum >= 1 && mesNum <= 12) ? MESES_NOMBRES[mesNum - 1] : `MES ${mesNum}`;
+  return `${nombreMes} ${anio}`;
+};
+
+const SIRE_MONTHS: SelectOption[] = MESES_NOMBRES.map((m, idx) => ({ value: String(idx), label: m }));
 
 const SIRE_YEARS: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
   const y = String(new Date().getFullYear() - i);
@@ -48,11 +69,35 @@ const SireView: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [viewMode, setViewMode] = useState<'comparacion' | 'archivos' | 'auditoria'>('comparacion');
   const [searchTerm, setSearchTerm] = useState('');
-  const [archivos, setArchivos] = useState<{ nombre: string; fecha: string }[]>([]);
+  const [archivos, setArchivos] = useState<{ nombre: string; fecha: string; size?: number; periodo?: string; proceso?: string }[]>([]);
   const [isLoadingArchivos, setIsLoadingArchivos] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // 🔧 FIX: Key para forzar re-render
+
+  // Modal states for premium confirmation UI
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    confirmText: string;
+    cancelText?: string;
+    variant: 'danger' | 'warning' | 'info';
+    onConfirm: () => Promise<void> | void;
+    isLoading?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    variant: 'danger',
+    onConfirm: () => {}
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   const electron = (window as any).electronAPI;
 
@@ -216,40 +261,9 @@ const SireView: React.FC = () => {
     loadArchivos();
   }, [currentCompany?.ruc]);
 
-  const handleEjecutar = async () => {
-    if (!currentCompany.sol_user || !currentCompany.sol_pass || !currentCompany.sunatClientId || !currentCompany.sunatClientSecret) {
-      toast.error('Faltan credenciales SOL o API en Configuración.');
-      return;
-    }
-
+  const proceedWithEjecutar = async () => {
     const monthStr = String(periodoMes + 1).padStart(2, '0');
     const periodo = `${periodoAnio}${monthStr}`;
-    const periodoNombre = `${meses[periodoMes]} ${periodoAnio}`;
-
-    // ⚠️ ADVERTENCIA: Verificar si el periodo ya fue descargado previamente
-    const hasExistingSunatData = comparedData.some(item => item.sunat !== null);
-    
-    const isProcessMatch = (fName: string) => 
-      proceso === 'Generar RCE' 
-        ? (fName.includes('RCE') || fName.includes('080400')) 
-        : (fName.includes('RVIE') || fName.includes('140400'));
-
-    const hasExistingFile = archivos.some(file => {
-      const nameUpper = file.nombre.toUpperCase();
-      return nameUpper.includes(currentCompany?.ruc || '') && 
-             nameUpper.includes(periodo) &&
-             isProcessMatch(nameUpper);
-    });
-
-    if (hasExistingSunatData || hasExistingFile) {
-      const confirmText = `⚠️ ADVERTENCIA: El período ${periodoNombre} (${proceso === 'Generar RCE' ? 'Compras' : 'Ventas'}) ya fue descargado previamente.\n\n` +
-        `Si continúas, se volverá a sincronizar con SUNAT y se actualizarán los datos de la propuesta.\n\n` +
-        `¿Deseas continuar de todas formas?`;
-      if (!window.confirm(confirmText)) {
-        return;
-      }
-    }
-
     setIsRunning(true);
     const loadingToast = toast.loading(`Sincronizando con SUNAT para el periodo ${periodo}...`);
 
@@ -276,19 +290,15 @@ const SireView: React.FC = () => {
         : await api.post('/api/sire/ejecutar', payload).then((r: any) => r.data);
 
       if (result.success) {
-        // MEJORA #3: Ya no centraliza automáticamente, el usuario debe usar el botón "CENTRALIZAR"
         toast.success(`✅ Sincronización exitosa. Use el botón "CENTRALIZAR" para importar los datos al sistema.`, { id: loadingToast });
-        
         console.log('[SIRE] Recargando datos después de sincronización SUNAT...');
-        await syncCurrentWorkspace(); // Recargar datos desde DB
-        
-        // 🔧 FIX: Esperar a que React procese la actualización del store antes de incrementar refreshKey
+        await syncCurrentWorkspace();
         setTimeout(() => {
           setRefreshKey(prev => prev + 1);
           console.log('[SIRE] ✅ Datos recargados y componente actualizado');
-        }, 100); // 100ms es suficiente para que React actualice el store
-        
+        }, 100);
         loadArchivos();
+        closeModal();
       } else {
         toast.error(`Error: ${result.error}`, { id: loadingToast });
       }
@@ -297,6 +307,56 @@ const SireView: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleEjecutar = async () => {
+    if (!currentCompany.sol_user || !currentCompany.sol_pass || !currentCompany.sunatClientId || !currentCompany.sunatClientSecret) {
+      toast.error('Faltan credenciales SOL o API en Configuración.');
+      return;
+    }
+
+    const monthStr = String(periodoMes + 1).padStart(2, '0');
+    const periodo = `${periodoAnio}${monthStr}`;
+    const periodoNombre = `${MESES_NOMBRES[periodoMes]} ${periodoAnio}`;
+
+    // ⚠️ ADVERTENCIA: Verificar si el periodo ya fue descargado previamente
+    const hasExistingSunatData = comparedData.some(item => item.sunat !== null);
+    
+    const isProcessMatch = (fName: string) => 
+      proceso === 'Generar RCE' 
+        ? (fName.includes('RCE') || fName.includes('080400')) 
+        : (fName.includes('RVIE') || fName.includes('140400'));
+
+    const hasExistingFile = archivos.some(file => {
+      const nameUpper = file.nombre.toUpperCase();
+      return nameUpper.includes(currentCompany?.ruc || '') && 
+             nameUpper.includes(periodo) &&
+             isProcessMatch(nameUpper);
+    });
+
+    if (hasExistingSunatData || hasExistingFile) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Período Sincronizado Previamente',
+        variant: 'warning',
+        confirmText: 'Volver a Sincronizar',
+        cancelText: 'Cancelar',
+        message: (
+          <div className="space-y-3">
+            <p className="text-sm text-app-text">
+              El período <strong className="text-amber-400">{periodoNombre}</strong> ({proceso === 'Generar RCE' ? 'Compras' : 'Ventas'}) ya cuenta con información descargada en el sistema.
+            </p>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300">
+              Si continúas, se volverá a consultar a SUNAT y se actualizarán los datos de la propuesta.
+            </div>
+          </div>
+        ),
+        onConfirm: proceedWithEjecutar
+      });
+      return;
+    }
+
+    await proceedWithEjecutar();
   };
 
   const handleGenerarArchivoReemplazo = async () => {
@@ -343,7 +403,7 @@ const SireView: React.FC = () => {
     }
   };
 
-  const handleDeleteRecord = async (item: any) => {
+  const handleDeleteRecord = (item: any) => {
     let targetId = '';
     let isSunatRecord = false;
     let label = '';
@@ -359,24 +419,44 @@ const SireView: React.FC = () => {
     }
     
     if (!targetId) return;
-    
-    const confirmMessage = isSunatRecord
-      ? `¿Estás seguro de que deseas eliminar ${label} de la propuesta del SIRE? (Podrás volver a sincronizarlo desde SUNAT)`
-      : `⚠️ ADVERTENCIA: ¿Estás seguro de que deseas eliminar ${label}? Esto borrará el asiento contable local asociado.`;
-      
-    if (!window.confirm(confirmMessage)) return;
-    
-    try {
-      if (proceso === 'Generar RCE') {
-        await deletePurchase(targetId);
-      } else {
-        await deleteSale(targetId);
+
+    setModalConfig({
+      isOpen: true,
+      title: isSunatRecord ? '¿Eliminar Registro de Propuesta?' : '¿Eliminar Comprobante Local?',
+      variant: 'danger',
+      confirmText: 'Sí, Eliminar',
+      cancelText: 'Cancelar',
+      message: (
+        <div className="space-y-2">
+          <p className="text-sm text-app-text">
+            ¿Estás seguro de que deseas eliminar <strong className="text-rose-400">{label}</strong>?
+          </p>
+          {!isSunatRecord ? (
+            <p className="text-xs text-rose-400/90 font-medium">
+              ⚠️ Esta acción eliminará el comprobante y todos sus asientos contables vinculados de forma bidireccional.
+            </p>
+          ) : (
+            <p className="text-xs text-app-muted">
+              Podrás volver a sincronizarlo desde SUNAT cuando lo desees.
+            </p>
+          )}
+        </div>
+      ),
+      onConfirm: async () => {
+        try {
+          if (proceso === 'Generar RCE') {
+            await deletePurchase(targetId);
+          } else {
+            await deleteSale(targetId);
+          }
+          toast.success('Registro eliminado correctamente.');
+          await syncCurrentWorkspace();
+          closeModal();
+        } catch (e: any) {
+          toast.error(`Error al eliminar: ${e.message}`);
+        }
       }
-      toast.success('Registro eliminado correctamente.');
-      await syncCurrentWorkspace();
-    } catch (e: any) {
-      toast.error(`Error al eliminar: ${e.message}`);
-    }
+    });
   };
 
   const showDiscrepancyDetails = (item: any) => {
@@ -394,23 +474,50 @@ const SireView: React.FC = () => {
     ), { duration: 6000, icon: '🔍' });
   };
 
-  const handleDeleteArchivo = async (nombre: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar el archivo ${nombre}?`)) return;
-    
-    try {
-      const result = electron 
-        ? await electron.eliminarArchivoSire(nombre)
-        : await api.delete(`/api/sire/archivos/${encodeURIComponent(nombre)}`, { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data);
+  const handleDeleteArchivo = (nombre: string) => {
+    const filePeriodMatch = nombre.match(/(20\d{4})/);
+    const periodDisplay = filePeriodMatch ? formatSirePeriod(filePeriodMatch[1], nombre) : '';
 
-      if (result.success) {
-        toast.success('Archivo eliminado correctamente.');
-        loadArchivos();
-      } else {
-        toast.error(`Error: ${result.error || 'No se pudo eliminar'}`);
+    setModalConfig({
+      isOpen: true,
+      title: '¿Eliminar Archivo del Historial SIRE?',
+      variant: 'danger',
+      confirmText: 'Sí, Eliminar Archivo',
+      cancelText: 'Cancelar',
+      message: (
+        <div className="space-y-3">
+          <p className="text-sm text-app-text">
+            ¿Estás seguro de que deseas eliminar permanentemente el archivo <strong className="font-mono text-rose-400 break-all">{nombre}</strong>?
+          </p>
+          {periodDisplay && (
+            <div className="p-2.5 rounded-xl bg-app-bg border border-app-border text-xs text-app-muted flex items-center gap-2">
+              <Calendar size={13} className="text-emerald-400 shrink-0" />
+              <span>Período correspondiente: <strong className="text-app-text">{periodDisplay}</strong></span>
+            </div>
+          )}
+          <p className="text-xs text-rose-400/90 font-medium">
+            Esta acción eliminará el archivo del servidor y del historial de descargas. Podrás volver a descargarlo desde SUNAT si es necesario.
+          </p>
+        </div>
+      ),
+      onConfirm: async () => {
+        try {
+          const result = electron 
+            ? await electron.eliminarArchivoSire(nombre)
+            : await api.delete(`/api/sire/archivos/${encodeURIComponent(nombre)}`, { params: { ruc: currentCompany?.ruc } }).then((r: any) => r.data);
+
+          if (result.success) {
+            toast.success('Archivo eliminado correctamente.');
+            loadArchivos();
+            closeModal();
+          } else {
+            toast.error(`Error: ${result.error || 'No se pudo eliminar'}`);
+          }
+        } catch (error: any) {
+          toast.error(`Error: ${error.message}`);
+        }
       }
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
+    });
   };
 
   const handleDescargarArchivo = async (nombre: string) => {
@@ -488,82 +595,102 @@ const SireView: React.FC = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedIds.size === 0) {
       toast.error('Selecciona al menos un documento.');
       return;
     }
 
-    const confirmMessage = `¿Estás seguro de que deseas eliminar los ${selectedIds.size} registros seleccionados de la conciliación?
-⚠️ ADVERTENCIA: Se eliminarán los registros importados de SUNAT y los comprobantes contables locales seleccionados (junto con sus asientos contables asociados).`;
+    setModalConfig({
+      isOpen: true,
+      title: `¿Eliminar ${selectedIds.size} Registros Seleccionados?`,
+      variant: 'danger',
+      confirmText: `Sí, Eliminar (${selectedIds.size})`,
+      cancelText: 'Cancelar',
+      message: (
+        <div className="space-y-3">
+          <p className="text-sm text-app-text">
+            ¿Estás seguro de que deseas eliminar los <strong>{selectedIds.size}</strong> registros seleccionados de la conciliación?
+          </p>
+          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300 space-y-1">
+            <p className="font-bold">⚠️ Advertencia de impacto bidireccional:</p>
+            <p>Se eliminarán tanto los registros importados de SUNAT como los comprobantes contables locales seleccionados junto con sus asientos del Libro Diario.</p>
+          </div>
+        </div>
+      ),
+      onConfirm: async () => {
+        const loadingToast = toast.loading(`Eliminando ${selectedIds.size} documentos...`);
+        try {
+          const targetIds = comparedData
+            .filter(d => selectedIds.has(d.id))
+            .map(d => d.sunat?.id || d.local?.id)
+            .filter(Boolean) as string[];
 
-    if (!window.confirm(confirmMessage)) return;
+          if (proceso === 'Generar RCE') {
+            await deletePurchases(targetIds);
+          } else {
+            await deleteSales(targetIds);
+          }
 
-    const loadingToast = toast.loading(`Eliminando ${selectedIds.size} documentos...`);
-
-    try {
-      const targetIds = comparedData
-        .filter(d => selectedIds.has(d.id))
-        .map(d => d.sunat?.id || d.local?.id)
-        .filter(Boolean) as string[];
-
-      if (proceso === 'Generar RCE') {
-        await deletePurchases(targetIds);
-      } else {
-        await deleteSales(targetIds);
+          toast.success('Registros eliminados correctamente.', { id: loadingToast });
+          setSelectedIds(new Set());
+          await syncCurrentWorkspace();
+          setTimeout(() => {
+            setRefreshKey(prev => prev + 1);
+          }, 100);
+          closeModal();
+        } catch (error: any) {
+          toast.error(`Error al eliminar: ${error.message}`, { id: loadingToast });
+        }
       }
-
-      toast.success('Registros eliminados correctamente.', { id: loadingToast });
-      setSelectedIds(new Set());
-      
-      // 🔧 FIX: Recargar datos y forzar re-render con delay
-      console.log('[SIRE] Recargando datos después de eliminación...');
-      await syncCurrentWorkspace();
-      
-      setTimeout(() => {
-        setRefreshKey(prev => prev + 1);
-        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
-      }, 100);
-    } catch (error: any) {
-      toast.error(`Error al eliminar: ${error.message}`, { id: loadingToast });
-    }
+    });
   };
 
-  const handleDeleteAll = async () => {
+  const handleDeleteAll = () => {
     if (comparedData.length === 0) return;
 
-    const confirmMessage = `⚠️ ADVERTENCIA CRÍTICA: ¿Estás seguro de que deseas eliminar TODOS los ${comparedData.length} registros listados en la conciliación?
-Esto eliminará tanto los registros importados de SUNAT como los comprobantes locales de este período (con sus asientos asociados).`;
+    setModalConfig({
+      isOpen: true,
+      title: '⚠️ ¿Eliminar TODOS los Registros de la Conciliación?',
+      variant: 'danger',
+      confirmText: `Sí, Eliminar Todos (${comparedData.length})`,
+      cancelText: 'Cancelar',
+      message: (
+        <div className="space-y-3">
+          <p className="text-sm text-app-text">
+            ¿Estás seguro de que deseas eliminar <strong>TODOS los {comparedData.length} registros</strong> listados en este período?
+          </p>
+          <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-xs text-rose-300 space-y-1">
+            <p className="font-bold">⚠️ Acción Destructiva:</p>
+            <p>Se eliminarán los registros de SUNAT y los comprobantes contables locales del período (con sus respectivos asientos en el Libro Diario).</p>
+          </div>
+        </div>
+      ),
+      onConfirm: async () => {
+        const loadingToast = toast.loading(`Eliminando todos los ${comparedData.length} registros...`);
+        try {
+          const targetIds = comparedData
+            .map(d => d.sunat?.id || d.local?.id)
+            .filter(Boolean) as string[];
 
-    if (!window.confirm(confirmMessage)) return;
+          if (proceso === 'Generar RCE') {
+            await deletePurchases(targetIds);
+          } else {
+            await deleteSales(targetIds);
+          }
 
-    const loadingToast = toast.loading(`Eliminando todos los ${comparedData.length} registros...`);
-
-    try {
-      const targetIds = comparedData
-        .map(d => d.sunat?.id || d.local?.id)
-        .filter(Boolean) as string[];
-
-      if (proceso === 'Generar RCE') {
-        await deletePurchases(targetIds);
-      } else {
-        await deleteSales(targetIds);
+          toast.success('Todos los registros del período fueron eliminados.', { id: loadingToast });
+          setSelectedIds(new Set());
+          await syncCurrentWorkspace();
+          setTimeout(() => {
+            setRefreshKey(prev => prev + 1);
+          }, 100);
+          closeModal();
+        } catch (error: any) {
+          toast.error(`Error al eliminar todo: ${error.message}`, { id: loadingToast });
+        }
       }
-
-      toast.success('Todos los registros del período fueron eliminados.', { id: loadingToast });
-      setSelectedIds(new Set());
-      
-      // 🔧 FIX: Recargar datos y forzar re-render con delay
-      console.log('[SIRE] Recargando datos después de eliminación masiva...');
-      await syncCurrentWorkspace();
-      
-      setTimeout(() => {
-        setRefreshKey(prev => prev + 1);
-        console.log('[SIRE] ✅ Datos recargados y componente actualizado');
-      }, 100);
-    } catch (error: any) {
-      toast.error(`Error al eliminar todo: ${error.message}`, { id: loadingToast });
-    }
+    });
   };
 
   const toggleSelectAll = () => {
@@ -1018,13 +1145,15 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
             <div className="px-5 py-3 border-b border-app-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <History size={16} className="text-blue-500" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-app-text">Archivos Generados</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-app-text">Historial de Archivos ZIP / XLSX Descargados</h3>
               </div>
               <button 
                 onClick={loadArchivos}
-                className="p-2 text-app-muted hover:text-app-text transition-colors"
+                className="p-2 text-app-muted hover:text-app-text transition-colors flex items-center gap-1.5 text-[10px] font-bold"
+                title="Actualizar lista de archivos"
               >
                 <Loader2 size={14} className={isLoadingArchivos ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">Actualizar</span>
               </button>
             </div>
             
@@ -1042,53 +1171,92 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
                 }
                 const currentPeriodStr = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
                 const filePeriodMatch = file.nombre.match(/(20\d{4})/);
-                const filePeriodStr = filePeriodMatch ? filePeriodMatch[1] : '';
+                const filePeriodStr = file.periodo || (filePeriodMatch ? filePeriodMatch[1] : '');
                 const isCurrentPeriodFile = filePeriodStr === currentPeriodStr;
+                const periodDisplay = formatSirePeriod(filePeriodStr, file.nombre);
+                const isCompras = file.nombre.toUpperCase().includes('RCE') || file.nombre.includes('080400') || file.proceso === 'Generar RCE';
+                const extension = file.nombre.split('.').pop()?.toUpperCase() || 'ZIP';
 
                 return (
-                <div key={idx} className={`bg-app-bg/50 border rounded-xl p-3 flex items-center gap-3 group transition-all ${isCurrentPeriodFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-app-border hover:border-blue-500/30'}`}>
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${file.nombre.includes('RCE') ? 'bg-violet-500/10 text-violet-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                    <FileCheck size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-[10px] font-black text-app-text truncate uppercase tracking-tight group-hover:text-blue-500 transition-colors">{file.nombre}</p>
-                      <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider ${isCurrentPeriodFile ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
-                        PERIODO DESCARGADO
-                      </span>
+                  <div 
+                    key={file.nombre || idx} 
+                    className={`bg-app-surface/70 border rounded-2xl p-4 flex flex-col justify-between gap-3 group transition-all shadow-sm hover:shadow-md ${
+                      isCurrentPeriodFile 
+                        ? 'border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20' 
+                        : 'border-app-border hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                        isCompras 
+                          ? 'bg-violet-500/10 text-violet-400 border border-violet-500/25' 
+                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
+                      }`}>
+                        <FileCheck size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span className={`px-2 py-0.5 rounded-md text-[8.5px] font-black tracking-wider uppercase border ${
+                            isCompras 
+                              ? 'bg-violet-500/15 text-violet-400 border-violet-500/30' 
+                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            {isCompras ? 'RCE COMPRAS' : 'RVIE VENTAS'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-md text-[8.5px] font-black tracking-wider uppercase flex items-center gap-1 border ${
+                            isCurrentPeriodFile 
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                              : 'bg-blue-500/10 text-blue-300 border-blue-500/25'
+                          }`}>
+                            <Calendar size={10} />
+                            {periodDisplay}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-app-bg text-app-muted border border-app-border uppercase">
+                            .{extension}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-bold text-app-text truncate tracking-tight group-hover:text-blue-400 transition-colors font-mono" title={file.nombre}>
+                          {file.nombre}
+                        </p>
+                        <p className="text-[9.5px] text-app-muted font-medium mt-1 flex items-center gap-1.5">
+                          <Clock size={11} className="text-app-muted/70 shrink-0" />
+                          <span>{exactTime}</span>
+                          {file.size ? <span className="text-app-muted/60">• {(file.size / 1024).toFixed(1)} KB</span> : null}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[9px] text-app-muted font-bold mt-1">{exactTime}</p>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-app-border/40">
+                      <button 
+                        onClick={() => handleRestoreFromHistorial(file.nombre)}
+                        className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Cargar comprobantes de este archivo en la propuesta de Conciliación"
+                      >
+                        <Database size={12} />
+                        Restaurar
+                      </button>
+                      <button 
+                        onClick={() => handleDescargarArchivo(file.nombre)}
+                        className="p-1.5 text-app-muted hover:text-emerald-400 hover:bg-emerald-500/10 bg-app-surface rounded-lg border border-app-border transition-all cursor-pointer active:scale-95"
+                        title="Descargar archivo"
+                      >
+                        <Download size={13} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteArchivo(file.nombre)}
+                        className="p-1.5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 bg-app-surface rounded-lg border border-app-border transition-all cursor-pointer active:scale-95"
+                        title="Eliminar del historial"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      onClick={() => handleRestoreFromHistorial(file.nombre)}
-                      className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md text-[8.5px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer"
-                      title="Cargar comprobantes de este archivo en la pestaña Conciliación"
-                    >
-                      <Database size={11} />
-                      Restaurar
-                    </button>
-                    <button 
-                      onClick={() => handleDescargarArchivo(file.nombre)}
-                      className="p-1.5 text-app-muted hover:text-emerald-500 bg-app-surface rounded-md border border-app-border transition-all cursor-pointer"
-                      title="Abrir/Descargar"
-                    >
-                      <Download size={12} />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteArchivo(file.nombre)}
-                      className="p-1.5 text-app-muted hover:text-rose-500 bg-app-surface rounded-md border border-app-border transition-all cursor-pointer"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              )})}
+                );
+              })}
               {uniqueArchivos.length === 0 && (
-                <div className="col-span-full py-20 flex flex-col items-center opacity-20">
+                <div className="col-span-full py-20 flex flex-col items-center opacity-30">
                   <FileJson size={40} className="mb-3" />
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em]">Sin archivos disponibles</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em]">Sin archivos disponibles en el historial</p>
                 </div>
               )}
             </div>
@@ -1165,6 +1333,19 @@ Esto eliminará tanto los registros importados de SUNAT como los comprobantes lo
 
         </div>
       </div>
+
+      {/* ═══ MODERN CONFIRMATION MODAL ═══ */}
+      <ConfirmModal
+        isOpen={modalConfig.isOpen}
+        onClose={closeModal}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+        variant={modalConfig.variant}
+        isLoading={modalConfig.isLoading}
+      />
     </div>
   );
 };
