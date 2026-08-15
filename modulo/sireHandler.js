@@ -139,10 +139,11 @@ class SireHandler {
   async persistirRegistrosSire(ruc, proceso, datosRaw, userId, periodo) {
     try {
       const { headers, data } = datosRaw;
-      const strPeriodo = String(periodo || '');
-      const normalizedPeriod = strPeriodo.includes('-')
-        ? strPeriodo
-        : (strPeriodo.length === 6 ? `${strPeriodo.slice(0, 4)}-${strPeriodo.slice(4)}` : strPeriodo);
+      const strPeriodo = String(periodo || '').trim();
+      const cleanDigits = strPeriodo.replace(/[^0-9]/g, '');
+      const normalizedPeriod = cleanDigits.length >= 6
+        ? `${cleanDigits.slice(0, 4)}-${cleanDigits.slice(4, 6)}`
+        : (strPeriodo.includes('-') ? strPeriodo : strPeriodo);
 
       const parseNum = (val) => {
         if (!val) return 0;
@@ -151,8 +152,16 @@ class SireHandler {
         return parseFloat(clean) || 0;
       };
 
-      // El backend recibe la data limpia del parser de TXT del ZIP, no tiene metadatos adicionales de cabecera.
-      const dataRows = data;
+      // Filtrar filas que sean de comprobantes reales (descartando encabezados, filas vacías o metadata)
+      const dataRows = (data || []).filter(row => {
+        if (!row || !Array.isArray(row) || row.length < 5) return false;
+        const rowStr = row.join(' ').toUpperCase();
+        if (rowStr.includes('REGISTRO DE') || rowStr.includes('EMPRESA:') || rowStr.includes('PERÍODO:')) return false;
+        // Debe tener fecha o tipo de documento
+        const hasDate = row[4] && (String(row[4]).includes('/') || String(row[4]).includes('-'));
+        const hasTipoDoc = row[6] && String(row[6]).trim().length > 0;
+        return hasDate || hasTipoDoc || Boolean(row[3]);
+      });
       
       const isRVIE = proceso.includes('RVIE');
       
@@ -228,7 +237,7 @@ class SireHandler {
         await this.db.saveSireSales(ruc, mappedRecords, userId);
       }
 
-      logger.info(`Persistidos ${mappedRecords.length} registros del SIRE para el RUC ${ruc}`);
+      logger.info(`Persistidos ${mappedRecords.length} registros del SIRE para el RUC ${ruc} (Periodo: ${normalizedPeriod})`);
     } catch (error) {
       logger.error('Error persistiendo registros SIRE', { error: error.message });
     }
@@ -381,10 +390,21 @@ WScript.Echo "Proceso SIRE completado"
       }
 
       // Determinar proceso (RCE vs RVIE) y período desde el nombre del archivo
-      const isRVIE = nombreArchivo.includes('RVIE');
+      const isRVIE = nombreArchivo.toUpperCase().includes('RVIE') || nombreArchivo.includes('140400');
       const proceso = isRVIE ? 'Generar RVIE' : 'Generar RCE';
-      const periodMatch = nombreArchivo.match(/(20\d{4})/);
-      const periodoRaw = periodMatch ? periodMatch[1] : '';
+      
+      const extractPeriodFromFilename = (fName) => {
+        const parts = fName.split('_');
+        for (const part of parts) {
+          if (/^(20\d{2})(0[1-9]|1[0-2])$/.test(part)) return part;
+        }
+        const match = fName.match(/[_\-](20\d{2})(0[1-9]|1[0-2])[_\-\.]/);
+        if (match) return `${match[1]}${match[2]}`;
+        const pleMatch = fName.match(/LE\d{11}(20\d{2})(0[1-9]|1[0-2])/);
+        if (pleMatch) return `${pleMatch[1]}${pleMatch[2]}`;
+        return '';
+      };
+      const periodoRaw = extractPeriodFromFilename(nombreArchivo);
 
       let dataRows = [];
 
@@ -402,10 +422,26 @@ WScript.Echo "Proceso SIRE completado"
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // Omitir fila de encabezados si existe
-        dataRows = (rows.length > 0 && typeof rows[0][0] === 'string' && isNaN(Number(rows[0][0]))) 
-          ? rows.slice(1) 
-          : rows;
+        // Encontrar la fila donde inician los datos reales (después de encabezados y títulos)
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(15, rows.length); i++) {
+          const r = rows[i];
+          if (Array.isArray(r) && r.length >= 8) {
+            const c0 = String(r[0] || '').toUpperCase();
+            const c1 = String(r[1] || '').toUpperCase();
+            if (c0.includes('RUC') || c0.includes('NUM') || c1.includes('RAZON') || c1.includes('EMISOR') || c0 === 'CAR') {
+              headerIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (headerIndex !== -1) {
+          dataRows = rows.slice(headerIndex + 1);
+        } else {
+          // Filtrar metadatos iniciales
+          dataRows = rows.filter(r => Array.isArray(r) && r.length >= 8 && !String(r[0]).startsWith('REGISTRO') && !String(r[0]).startsWith('Período') && !String(r[0]).startsWith('RUC:'));
+        }
       }
 
       const datosRaw = { headers: [], data: dataRows };

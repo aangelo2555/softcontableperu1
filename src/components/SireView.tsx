@@ -583,7 +583,27 @@ const SireView: React.FC = () => {
       });
       if (res.data.success) {
         toast.success(res.data.message || 'Comprobantes cargados en Conciliación', { id: loadingToast });
+        
+        // Auto-seleccionar el período y proceso correspondiente al archivo restaurado
+        const filePeriod = extractSirePeriod(res.data.periodo, nombre);
+        if (filePeriod && filePeriod.length === 6) {
+          const y = parseInt(filePeriod.substring(0, 4), 10);
+          const m = parseInt(filePeriod.substring(4, 6), 10) - 1;
+          if (!isNaN(y) && !isNaN(m) && m >= 0 && m <= 11) {
+            setPeriodoAnio(y);
+            setPeriodoMes(m);
+          }
+        }
+        if (nombre.toUpperCase().includes('RCE') || nombre.includes('080400') || res.data.proceso === 'Generar RCE') {
+          setProceso('Generar RCE');
+        } else if (nombre.toUpperCase().includes('RVIE') || nombre.includes('140400') || res.data.proceso === 'Generar RVIE') {
+          setProceso('Generar RVIE');
+        }
+
         await syncCurrentWorkspace();
+        setTimeout(() => {
+          setRefreshKey(prev => prev + 1);
+        }, 100);
         setViewMode('comparacion');
       } else {
         toast.error(`Error: ${res.data.error}`, { id: loadingToast });
@@ -1091,8 +1111,9 @@ const SireView: React.FC = () => {
                             const matchingPeriodFile = archivos.find(f => {
                               const nameUpper = f.nombre.toUpperCase();
                               const rucFilter = currentCompany?.ruc || '';
+                              const filePeriod = extractSirePeriod(f.periodo, f.nombre);
                               return isProcessMatchLocal(nameUpper) && 
-                                     nameUpper.includes(currentPeriodStr) &&
+                                     filePeriod === currentPeriodStr &&
                                      (!rucFilter || nameUpper.includes(rucFilter.toUpperCase()));
                             });
 

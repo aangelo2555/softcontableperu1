@@ -984,7 +984,7 @@ const db = {
             // Limpiar únicamente las propuestas del SIRE del PERÍODO ESPECÍFICO
             const targetPeriod = records[0]?.periodo_sire || '';
             if (targetPeriod) {
-                await client.query(`DELETE FROM purchases WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND periodo_sire = $2`, [ruc, targetPeriod]);
+                await client.query(`DELETE FROM purchases WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND (periodo_sire = $2 OR periodo_sire = $3)`, [ruc, targetPeriod, targetPeriod.replace('-', '')]);
             } else {
                 await client.query(`DELETE FROM purchases WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND (periodo_sire IS NULL OR periodo_sire = '')`, [ruc]);
             }
@@ -1001,7 +1001,8 @@ const db = {
                         r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
                         r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
                         r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta',
-                        '6011', '4212', 'COMPRA INTERNA GRAVADA', '02', 'SOLES', 'POR LA COMPRA DE MERCADERIA', 0, userId
+                        '6011', '4212', 'COMPRA INTERNA GRAVADA', '02', 'SOLES', 'POR LA COMPRA DE MERCADERIA', 0, userId,
+                        r.periodo_sire || null
                     ];
                     values.push(...rowParams);
                     const placeholders = rowParams.map(() => `$${paramIndex++}`).join(', ');
@@ -1013,7 +1014,7 @@ const db = {
                         id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
                         doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
                         otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono,
-                        tipOper, tipOperCode, moneda, glosa, detraccion, user_id
+                        tipOper, tipOperCode, moneda, glosa, detraccion, user_id, periodo_sire
                     ) VALUES ${valueClauses.join(', ')}
                     ON CONFLICT (id) DO UPDATE SET
                         workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
@@ -1022,7 +1023,8 @@ const db = {
                         nombre = EXCLUDED.nombre, tc = EXCLUDED.tc, bi = EXCLUDED.bi, igv = EXCLUDED.igv,
                         noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
                         otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
-                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
+                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id,
+                        periodo_sire = EXCLUDED.periodo_sire
                 `;
                 await client.query(sql, values);
             }
@@ -1035,7 +1037,7 @@ const db = {
             // Limpiar únicamente las propuestas del SIRE del PERÍODO ESPECÍFICO
             const targetPeriod = records[0]?.periodo_sire || '';
             if (targetPeriod) {
-                await client.query(`DELETE FROM sales WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND periodo_sire = $2`, [ruc, targetPeriod]);
+                await client.query(`DELETE FROM sales WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND (periodo_sire = $2 OR periodo_sire = $3)`, [ruc, targetPeriod, targetPeriod.replace('-', '')]);
             } else {
                 await client.query(`DELETE FROM sales WHERE workspace_id = $1 AND estado_sire = 'Propuesta' AND (periodo_sire IS NULL OR periodo_sire = '')`, [ruc]);
             }
@@ -1051,7 +1053,8 @@ const db = {
                     const rowParams = [
                         r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, 
                         r.doc_tipo, r.doc_num, r.nombre, r.tc || 1, r.bi || 0, r.igv || 0, r.noGravada || 0, r.isc || 0, 
-                        r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta', userId
+                        r.icbper || 0, r.otros_tributos || 0, r.total || 0, r.car || '', r.estado_sire || 'Propuesta', userId,
+                        r.periodo_sire || null
                     ];
                     values.push(...rowParams);
                     const placeholders = rowParams.map(() => `$${paramIndex++}`).join(', ');
@@ -1062,7 +1065,7 @@ const db = {
                     INSERT INTO sales (
                         id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero,
                         doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper,
-                        otros_tributos, total, car, estado_sire, user_id
+                        otros_tributos, total, car, estado_sire, user_id, periodo_sire
                     ) VALUES ${valueClauses.join(', ')}
                     ON CONFLICT (id) DO UPDATE SET
                         workspace_id = EXCLUDED.workspace_id, registro = EXCLUDED.registro, fecha = EXCLUDED.fecha,
@@ -1071,7 +1074,8 @@ const db = {
                         nombre = EXCLUDED.nombre, tc = EXCLUDED.tc, bi = EXCLUDED.bi, igv = EXCLUDED.igv,
                         noGravada = EXCLUDED.noGravada, isc = EXCLUDED.isc, icbper = EXCLUDED.icbper,
                         otros_tributos = EXCLUDED.otros_tributos, total = EXCLUDED.total, car = EXCLUDED.car,
-                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id
+                        estado_sire = EXCLUDED.estado_sire, user_id = EXCLUDED.user_id,
+                        periodo_sire = EXCLUDED.periodo_sire
                 `;
                 await client.query(sql, values);
             }

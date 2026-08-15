@@ -1494,8 +1494,8 @@ const dbManager = {
     saveSirePurchases: (ruc, records, userId) => {
         const insert = db.prepare(`
             INSERT OR REPLACE INTO purchases 
-            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono, tipOper, tipOperCode, moneda, glosa, detraccion, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, ctaGasto, ctaAbono, tipOper, tipOperCode, moneda, glosa, detraccion, user_id, periodo_sire)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const transaction = db.transaction((recs) => {
             for (const r of recs) {
@@ -1510,7 +1510,8 @@ const dbManager = {
                     'SOLES', // moneda por defecto
                     'POR LA COMPRA DE MERCADERIA', // glosa por defecto
                     0,       // detraccion
-                    userId
+                    userId,
+                    r.periodo_sire || null
                 );
             }
         });
@@ -1520,12 +1521,12 @@ const dbManager = {
     saveSireSales: (ruc, records, userId) => {
         const insert = db.prepare(`
             INSERT OR REPLACE INTO sales 
-            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, workspace_id, registro, fecha, fecVcto, tipo_doc, serie, numero, doc_tipo, doc_num, nombre, tc, bi, igv, noGravada, isc, icbper, otros_tributos, total, car, estado_sire, user_id, periodo_sire)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const transaction = db.transaction((recs) => {
             for (const r of recs) {
-                insert.run(r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, r.doc_tipo, r.doc_num, r.nombre, r.tc, r.bi, r.igv, r.noGravada, r.isc, r.icbper, r.otros_tributos, r.total, r.car, r.estado_sire, userId);
+                insert.run(r.id, ruc, r.registro, r.fecha, r.fecVcto, r.tipo_doc, r.serie, r.numero, r.doc_tipo, r.doc_num, r.nombre, r.tc, r.bi, r.igv, r.noGravada, r.isc, r.icbper, r.otros_tributos, r.total, r.car, r.estado_sire, userId, r.periodo_sire || null);
             }
         });
         transaction(records);
