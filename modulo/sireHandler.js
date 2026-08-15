@@ -8,6 +8,56 @@ const SireOrchestrator = require('./sireOrchestrator');
 const SireFileGenerator = require('./sireFileGenerator');
 const excelReader = require('./excelReader');
 const { sireDir } = require('../server/storageConfig');
+const cacheService = require('../server/cacheService');
+
+function normalizeExcelDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    const y = val.getUTCFullYear();
+    const m = String(val.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(val.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const str = String(val).trim();
+  if (!str) return '';
+  
+  // Format DD/MM/YYYY
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+  
+  // Format YYYY-MM-DD
+  if (str.includes('-')) {
+    const parts = str.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+
+  // Excel serial number (e.g. 45000+)
+  const num = Number(str);
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return str;
+}
 
 class SireHandler {
   constructor() {
@@ -132,57 +182,6 @@ class SireHandler {
       };
     }
   }
-
-const cacheService = require('../server/cacheService');
-
-function normalizeExcelDate(val) {
-  if (!val) return '';
-  if (val instanceof Date) {
-    if (isNaN(val.getTime())) return '';
-    const y = val.getUTCFullYear();
-    const m = String(val.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(val.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  const str = String(val).trim();
-  if (!str) return '';
-  
-  // Format DD/MM/YYYY
-  if (str.includes('/')) {
-    const parts = str.split('/');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      } else {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-      }
-    }
-  }
-  
-  // Format YYYY-MM-DD
-  if (str.includes('-')) {
-    const parts = str.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      } else {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-      }
-    }
-  }
-
-  // Excel serial number (e.g. 45000+)
-  const num = Number(str);
-  if (!isNaN(num) && num > 30000 && num < 60000) {
-    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(date.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-
-  return str;
-}
 
   /**
    * Persiste los registros descargados del SIRE en la base de datos local
