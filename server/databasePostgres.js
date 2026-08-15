@@ -328,19 +328,19 @@ const db = {
         // Cargar datos de tablas principales con paginación
         const [purchases, sales, journal, honorarios] = await Promise.all([
             query(
-                'SELECT * FROM purchases WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
+                'SELECT * FROM purchases WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
             ),
             query(
-                'SELECT * FROM sales WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
+                'SELECT * FROM sales WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
             ),
             query(
-                'SELECT * FROM journal WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
+                'SELECT * FROM journal WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
             ),
             query(
-                'SELECT * FROM honorarios WHERE workspace_id = $1 AND user_id = $2 ORDER BY fecha DESC LIMIT $3 OFFSET $4',
+                'SELECT * FROM honorarios WHERE workspace_id = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY fecha DESC LIMIT $3 OFFSET $4',
                 [ruc, userId, limit, offset]
             )
         ]);

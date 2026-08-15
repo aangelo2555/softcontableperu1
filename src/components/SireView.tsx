@@ -145,27 +145,27 @@ const SireView: React.FC = () => {
     const allDocLocal = (proceso === 'Generar RCE' ? purchases : sales) as (PurchaseEntry | SaleEntry)[];
     
     // Filtrar por periodo (la fecha está en YYYY-MM-DD)
-    // Agregamos HELPER para comparación de fechas y período SIRE robusta
     const isSamePeriod = (d: any) => {
       if (!d) return false;
       const explicitPeriod = d.periodo_sire || d.periodo;
       if (explicitPeriod) {
-        const cleanP = String(explicitPeriod).replace('-', '');
+        const cleanP = String(explicitPeriod).replace(/[^0-9]/g, '');
         const targetP = `${periodoAnio}${monthStr}`;
-        if (cleanP === targetP) return true;
+        if (cleanP.startsWith(targetP) || cleanP === targetP) return true;
       }
       
       const dateStr = typeof d === 'string' ? d : d.fecha;
       if (!dateStr) return false;
-      if (dateStr.includes('-')) {
-        const [y, m] = dateStr.split('-');
-        return y === String(periodoAnio) && m === monthStr;
-      } else if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts[0].length === 4) return parts[0] === String(periodoAnio) && parts[1] === monthStr;
-        return parts[2] === String(periodoAnio) && parts[1] === monthStr;
+      const cleanDate = String(dateStr).trim();
+      if (cleanDate.includes('-')) {
+        const [y, m] = cleanDate.split('-');
+        return String(y) === String(periodoAnio) && String(m).padStart(2, '0') === monthStr;
+      } else if (cleanDate.includes('/')) {
+        const parts = cleanDate.split('/');
+        if (parts[0].length === 4) return String(parts[0]) === String(periodoAnio) && String(parts[1]).padStart(2, '0') === monthStr;
+        return String(parts[2]) === String(periodoAnio) && String(parts[1]).padStart(2, '0') === monthStr;
       }
-      return dateStr.startsWith(periodoStr);
+      return cleanDate.startsWith(periodoStr);
     };
     
     // Filtrar por periodo con la nueva lógica
@@ -177,19 +177,22 @@ const SireView: React.FC = () => {
 
     sunatInPeriod.forEach(s => {
       const match = localInPeriod.find(l => 
-        l.tipo_doc === s.tipo_doc && 
-        l.serie?.toUpperCase() === s.serie?.toUpperCase() && 
-        l.numero === s.numero
+        String(l.tipo_doc || '').trim() === String(s.tipo_doc || '').trim() && 
+        String(l.serie || '').trim().toUpperCase() === String(s.serie || '').trim().toUpperCase() && 
+        String(l.numero || '').trim() === String(s.numero || '').trim()
       );
       
       if (match) matchedLocalIds.add(match.id);
       
+      const sTot = Number(s.total || 0);
+      const lTot = match ? Number(match.total || 0) : 0;
+
       result.push({
         id: String(s.id),
         sunat: s,
         local: match || null,
         status: match 
-          ? (Math.abs(s.total - match.total) < 0.1 ? 'MATCH' : 'DISCREPANCY') 
+          ? (Math.abs(sTot - lTot) < 0.1 ? 'MATCH' : 'DISCREPANCY') 
           : 'ONLY_SUNAT'
       });
     });
@@ -206,15 +209,18 @@ const SireView: React.FC = () => {
     });
 
     return result.filter(item => {
-      const term = searchTerm.toLowerCase();
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase().trim();
       const doc = item.sunat || item.local;
+      if (!doc) return false;
       return (
-        doc.numero.toLowerCase().includes(term) ||
-        doc.nombre.toLowerCase().includes(term) ||
-        doc.doc_num.toLowerCase().includes(term)
+        String(doc.numero || '').toLowerCase().includes(term) ||
+        String(doc.nombre || '').toLowerCase().includes(term) ||
+        String(doc.doc_num || '').toLowerCase().includes(term) ||
+        String(doc.serie || '').toLowerCase().includes(term)
       );
     });
-  }, [purchases, sales, proceso, periodoMes, periodoAnio, searchTerm, refreshKey]); // 🔧 FIX: Agregado refreshKey
+  }, [purchases, sales, proceso, periodoMes, periodoAnio, searchTerm, refreshKey]);
 
   const stats = useMemo(() => {
     return {
@@ -222,8 +228,8 @@ const SireView: React.FC = () => {
       discrepancias: comparedData.filter(d => d.status === 'DISCREPANCY').length,
       soloSunat: comparedData.filter(d => d.status === 'ONLY_SUNAT').length,
       soloLocal: comparedData.filter(d => d.status === 'ONLY_LOCAL').length,
-      totalSunat: comparedData.filter(d => d.sunat).reduce((acc, d) => acc + (d.sunat?.total || 0), 0),
-      totalLocal: comparedData.filter(d => d.local).reduce((acc, d) => acc + (d.local?.total || 0), 0)
+      totalSunat: comparedData.filter(d => d.sunat).reduce((acc, d) => acc + Number(d.sunat?.total || 0), 0),
+      totalLocal: comparedData.filter(d => d.local).reduce((acc, d) => acc + Number(d.local?.total || 0), 0)
     };
   }, [comparedData]);
 
@@ -1041,10 +1047,10 @@ const SireView: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-3 py-2 text-right font-mono font-bold text-app-text">
-                          {item.sunat ? item.sunat.total.toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '-'}
+                          {item.sunat ? Number(item.sunat.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '-'}
                         </td>
                         <td className="px-3 py-2 text-right font-mono font-bold text-app-text">
-                          {item.local ? item.local.total.toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '-'}
+                          {item.local ? Number(item.local.total || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '-'}
                         </td>
                         <td className="px-3 py-2 text-center">
                           {Math.abs(diff) > 0.01 ? (
