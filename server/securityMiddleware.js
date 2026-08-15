@@ -21,6 +21,7 @@
 
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
 
 // ═══════════════════════════════════════════════════════════════════════
 // 1. RATE LIMITING GLOBAL — Protección volumétrica para toda la API
@@ -28,20 +29,29 @@ const { v4: uuidv4 } = require('uuid');
 
 const globalApiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // Ventana de 1 minuto
-    max: 100,                 // Máximo 100 peticiones por IP por minuto
+    max: 3000,                // Máximo 3000 peticiones por minuto (adaptado para SPA contable)
     standardHeaders: true,    // Incluir headers RateLimit-* en la respuesta
     legacyHeaders: false,
     validate: false,
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const decoded = jwt.decode(authHeader.substring(7));
+                if (decoded && (decoded.id || decoded.userId)) {
+                    return `user_${decoded.id || decoded.userId}`;
+                }
+            } catch (e) {}
+        }
         return req.ip || req.connection?.remoteAddress || 'unknown';
     },
     handler: (req, res) => {
-        console.warn(`[SECURITY] Rate limit GLOBAL excedido para IP: ${req.ip} — Ruta: ${req.originalUrl}`);
+        console.warn(`[SECURITY] Rate limit GLOBAL excedido para IP/User: ${req.ip} — Ruta: ${req.originalUrl}`);
         res.status(429).json({
             success: false,
-            error: 'Demasiadas solicitudes. Has excedido el límite de 100 peticiones por minuto. Intenta nuevamente en un momento.',
-            retryAfter: 60
+            error: 'Demasiadas solicitudes continuas. Por favor espera unos segundos e intenta nuevamente.',
+            retryAfter: 10
         });
     }
 });
@@ -52,7 +62,7 @@ const globalApiLimiter = rateLimit({
 
 const authStrictLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 15,
+    max: 30,
     standardHeaders: true,
     legacyHeaders: false,
     validate: false,
@@ -73,7 +83,7 @@ const authStrictLimiter = rateLimit({
 
 const premiumAiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 20,
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
     validate: false,
@@ -82,7 +92,7 @@ const premiumAiLimiter = rateLimit({
         console.warn(`[SECURITY] Rate limit PREMIUM/AI excedido para IP: ${req.ip} — Ruta IA: ${req.originalUrl}`);
         res.status(429).json({
             success: false,
-            error: 'Has excedido el límite de consultas de Inteligencia Artificial (20/min). Espera un momento para continuar.',
+            error: 'Has excedido el límite de consultas de Inteligencia Artificial (60/min). Espera un momento para continuar.',
             retryAfter: 60
         });
     }
@@ -90,13 +100,13 @@ const premiumAiLimiter = rateLimit({
 
 // ═══════════════════════════════════════════════════════════════════════
 // 6 & 7. REQUEST FREQUENCY MONITOR + IP BLACKLIST DINÁMICA
-// Detección de ráfagas anómalas (>300 req/min → bloqueo temporal 5 min)
+// Detección de ráfagas anómalas (>3000 req/min → bloqueo temporal 5 min)
 // ═══════════════════════════════════════════════════════════════════════
 
 const ipRequestCounters = new Map();    // Map<ip, { count, windowStart }>
 const blacklistedIPs = new Map();       // Map<ip, unblockTimestamp>
 
-const BURST_THRESHOLD = 300;            // Peticiones por minuto para considerar ráfaga
+const BURST_THRESHOLD = 3000;           // Peticiones por minuto para considerar ráfaga abusiva
 const BLACKLIST_DURATION_MS = 5 * 60 * 1000; // 5 minutos de bloqueo temporal
 const COUNTER_WINDOW_MS = 60 * 1000;    // Ventana de conteo: 1 minuto
 
