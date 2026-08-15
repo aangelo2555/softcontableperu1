@@ -123,6 +123,20 @@ class ExcelGenerator {
   crearHojaCompras(datos) {
     const { headers, data } = datos;
 
+    const RCE_COLUMN_HEADERS = [
+      'RUC Declarante', 'Razón Social Declarante', 'Período', 'CAR', 'Fecha Emisión', 'Fecha Vcto',
+      'Tipo Comprobante', 'Serie', 'Año DUA', 'Número', 'Número Final', 'Tipo Doc Proveedor',
+      'Nro Doc Proveedor', 'Razón Social Proveedor', 'BI Gravada DG', 'IGV DG', 'BI Gravada DGNG',
+      'IGV DGNG', 'BI Gravada DNG', 'IGV DNG', 'Valor No Gravado', 'ISC', 'ICBPER', 'Otros Tributos',
+      'Importe Total', 'Moneda', 'Tipo Cambio', 'Fecha Ref', 'Tipo Ref', 'Serie Ref', 'Numero Ref',
+      'Fecha Detracción', 'Nro Detracción', 'Retención', 'Clasificación Bienes', 'ID Proyecto',
+      'Error 1', 'Error 2', 'Error 3', 'Error 4', 'Estado'
+    ];
+
+    const headersToUse = (headers && headers.length > 0 && typeof headers[0] === 'string' && !headers[0].startsWith('Col_'))
+      ? headers
+      : RCE_COLUMN_HEADERS;
+
     // Crear array para la hoja
     const wsData = [];
 
@@ -137,7 +151,7 @@ class ExcelGenerator {
     wsData.push([]); // Fila vacía
 
     // Agregar headers
-    wsData.push(headers);
+    wsData.push(headersToUse);
 
     // Agregar datos
     data.forEach(row => {
@@ -148,7 +162,7 @@ class ExcelGenerator {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
     // Aplicar estilos básicos (ancho de columnas)
-    const colWidths = headers.map(() => ({ wch: 15 }));
+    const colWidths = headersToUse.map(() => ({ wch: 15 }));
     ws['!cols'] = colWidths;
 
     return ws;
@@ -159,6 +173,19 @@ class ExcelGenerator {
    */
   crearHojaVentas(datos) {
     const { headers, data } = datos;
+
+    const RVIE_COLUMN_HEADERS = [
+      'RUC Declarante', 'Razón Social Declarante', 'Período', 'CAR', 'Fecha Emisión', 'Fecha Vcto',
+      'Tipo Comprobante', 'Serie', 'Número', 'Número Final', 'Tipo Doc Cliente',
+      'Nro Doc Cliente', 'Razón Social Cliente', 'Exportación', 'BI Gravada', 'Descuento BI',
+      'IGV/IPM', 'Descuento IGV', 'Exonerado', 'Inafecto', 'ISC', 'BI IVAP', 'IVAP', 'ICBPER',
+      'Otros Tributos', 'Importe Total', 'Moneda', 'Tipo Cambio', 'Fecha Ref', 'Tipo Ref', 'Serie Ref',
+      'Numero Ref', 'ID Proyecto', 'Tipo Nota', 'Estado'
+    ];
+
+    const headersToUse = (headers && headers.length > 0 && typeof headers[0] === 'string' && !headers[0].startsWith('Col_'))
+      ? headers
+      : RVIE_COLUMN_HEADERS;
 
     // Crear array para la hoja
     const wsData = [];
@@ -174,7 +201,7 @@ class ExcelGenerator {
     wsData.push([]); // Fila vacía
 
     // Agregar headers
-    wsData.push(headers);
+    wsData.push(headersToUse);
 
     // Agregar datos
     data.forEach(row => {
@@ -185,7 +212,7 @@ class ExcelGenerator {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
     // Aplicar estilos básicos (ancho de columnas)
-    const colWidths = headers.map(() => ({ wch: 15 }));
+    const colWidths = headersToUse.map(() => ({ wch: 15 }));
     ws['!cols'] = colWidths;
 
     return ws;

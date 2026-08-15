@@ -116,13 +116,32 @@ class FileProcessor {
         trim: true
       });
 
-      logger.info('Archivo procesado', {
-        registros: records.length - 1 // -1 por el header
-      });
+      if (!records || records.length === 0) {
+        return { headers: [], data: [], totalRegistros: 0 };
+      }
 
-      // Separar header y datos
-      const headers = records[0];
-      const data = records.slice(1);
+      const firstRow = records[0];
+      const isHeaderRow = firstRow && typeof firstRow[0] === 'string' && (
+        firstRow[0].toUpperCase().includes('RUC') || 
+        firstRow[0].toUpperCase().includes('NUM') || 
+        firstRow[0].toUpperCase().includes('CAR') ||
+        (isNaN(Number(firstRow[0])) && !/^\d{11}$/.test(firstRow[0]))
+      );
+
+      let headers = [];
+      let data = [];
+
+      if (isHeaderRow && !/^\d{11}$/.test(String(firstRow[0]).trim())) {
+        headers = records[0];
+        data = records.slice(1);
+      } else {
+        headers = Array.from({ length: (firstRow || []).length }, (_, idx) => `Col_${idx + 1}`);
+        data = records;
+      }
+
+      logger.info('Archivo procesado', {
+        registros: data.length
+      });
 
       return {
         headers: headers,
