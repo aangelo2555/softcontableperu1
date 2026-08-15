@@ -229,11 +229,14 @@ function createLibroDiario52Service(db) {
     const lineas = [];
     let lineNum = 0;
 
-    let biCentimos = solesToCentimos(purchase.bi);
-    const igvCentimos = solesToCentimos(purchase.igv);
-    const noGravadaCentimos = solesToCentimos(purchase.noGravada);
-    const iscCentimos = solesToCentimos(purchase.isc);
-    let totalCentimos = solesToCentimos(purchase.total);
+    const isUSD = (purchase.moneda === 'USD' || purchase.moneda === 'US$');
+    const tcMultiplier = isUSD ? (parseFloat(purchase.tc) || parseFloat(purchase.tc_origen) || 1) : 1;
+
+    let biCentimos = solesToCentimos(purchase.bi * tcMultiplier);
+    const igvCentimos = solesToCentimos(purchase.igv * tcMultiplier);
+    const noGravadaCentimos = solesToCentimos(purchase.noGravada * tcMultiplier);
+    const iscCentimos = solesToCentimos(purchase.isc * tcMultiplier);
+    let totalCentimos = solesToCentimos(purchase.total * tcMultiplier);
 
     // Auto-cuadre si la compra tiene total > 0 pero bi, noGravada, igv e isc no suman el total o son 0
     if (totalCentimos > 0 && (biCentimos + noGravadaCentimos + igvCentimos + iscCentimos) !== totalCentimos) {
@@ -375,11 +378,14 @@ function createLibroDiario52Service(db) {
     const lineas = [];
     let lineNum = 0;
 
-    let totalCentimos = solesToCentimos(sale.total);
-    const igvCentimos = solesToCentimos(sale.igv);
-    let biCentimos = solesToCentimos(sale.bi);
-    const noGravadaCentimos = solesToCentimos(sale.noGravada);
-    const iscCentimos = solesToCentimos(sale.isc);
+    const isUSD = (sale.moneda === 'USD' || sale.moneda === 'US$');
+    const tcMultiplier = isUSD ? (parseFloat(sale.tc) || parseFloat(sale.tc_origen) || 1) : 1;
+
+    let totalCentimos = solesToCentimos(sale.total * tcMultiplier);
+    const igvCentimos = solesToCentimos(sale.igv * tcMultiplier);
+    let biCentimos = solesToCentimos(sale.bi * tcMultiplier);
+    const noGravadaCentimos = solesToCentimos(sale.noGravada * tcMultiplier);
+    const iscCentimos = solesToCentimos(sale.isc * tcMultiplier);
 
     // Auto-cuadre si la venta tiene total > 0 pero bi, noGravada, igv e isc no suman el total o son 0
     if (totalCentimos > 0 && (biCentimos + noGravadaCentimos + igvCentimos + iscCentimos) !== totalCentimos) {
@@ -677,8 +683,8 @@ function createLibroDiario52Service(db) {
     const honorariosRaw = await db.prepare(`SELECT * FROM honorarios WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`)
       .all(workspaceId, `${workspaceId}%`, userId);
 
-    const purchases = purchasesRaw.filter(p => fechaToPeriodo(p.fecha) === periodo);
-    const sales = salesRaw.filter(s => fechaToPeriodo(s.fecha) === periodo);
+    const purchases = purchasesRaw.filter(p => fechaToPeriodo(p.fecha) === periodo && (!p.estado_sire || p.estado_sire !== 'Propuesta'));
+    const sales = salesRaw.filter(s => fechaToPeriodo(s.fecha) === periodo && (!s.estado_sire || s.estado_sire !== 'Propuesta'));
     const honorarios = honorariosRaw.filter(h => fechaToPeriodo(h.fecha) === periodo);
 
     // Deduplicar asientos manuales por código (header.asiento) conservando la versión más reciente por ID
