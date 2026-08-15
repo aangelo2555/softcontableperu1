@@ -832,20 +832,21 @@ app.delete('/api/db/employees/:id', async (req, res) => {
 });
 
 // Delete Purchase by ID
-app.delete('/api/db/purchases/:id', async (req, res) => {
+app.delete('/api/db/purchases/:id', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const userRole = req.user?.role;
         if (userRole === 'estudiante') {
             return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
         }
         const { id } = req.params;
-        const { workspace_id } = req.query;
+        const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM purchases WHERE id = $1 AND user_id = $2', [id, userId]);
-        await db.run('DELETE FROM inventory_movements WHERE reference_id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM purchases WHERE id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `compra-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `compra-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
@@ -856,20 +857,21 @@ app.delete('/api/db/purchases/:id', async (req, res) => {
 });
 
 // Delete Sale by ID
-app.delete('/api/db/sales/:id', async (req, res) => {
+app.delete('/api/db/sales/:id', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const userRole = req.user?.role;
         if (userRole === 'estudiante') {
             return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
         }
         const { id } = req.params;
-        const { workspace_id } = req.query;
+        const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM sales WHERE id = $1 AND user_id = $2', [id, userId]);
-        await db.run('DELETE FROM inventory_movements WHERE reference_id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM sales WHERE id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `venta-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `venta-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
@@ -880,19 +882,20 @@ app.delete('/api/db/sales/:id', async (req, res) => {
 });
 
 // Delete Honorarios by ID
-app.delete('/api/db/honorarios/:id', async (req, res) => {
+app.delete('/api/db/honorarios/:id', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const userRole = req.user?.role;
         if (userRole === 'estudiante') {
             return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
         }
         const { id } = req.params;
-        const { workspace_id } = req.query;
+        const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM honorarios WHERE id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM honorarios WHERE id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `honor-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND asiento_id_origen = $3', [workspace_id, userId, id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `honor-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });
@@ -903,19 +906,20 @@ app.delete('/api/db/honorarios/:id', async (req, res) => {
 });
 
 // Delete Asiento by ID
-app.delete('/api/db/asientos/:id', async (req, res) => {
+app.delete('/api/db/asientos/:id', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
         const userRole = req.user?.role;
         if (userRole === 'estudiante') {
             return res.status(403).json({ error: '🎓 [Modo Estudiante]: En la práctica contable real, los asientos y registros no se eliminan. Se realizan extornos o correcciones.' });
         }
         const { id } = req.params;
-        const { workspace_id } = req.query;
+        const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM asientos WHERE id = $1 AND user_id = $2', [id, userId]);
+        await db.run('DELETE FROM asientos WHERE id = ? AND user_id = ?', [id, userId]);
+        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = $1 AND user_id = $2 AND id LIKE $3', [workspace_id, userId, `${id}-line-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = $1 AND user_id = $2 AND (asiento_id_origen = $3 OR asiento_id_origen LIKE $4)', [workspace_id, userId, id, `${id}%`]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `${id}-line-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
         }
         res.json({ success: true });

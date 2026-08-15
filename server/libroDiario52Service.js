@@ -742,17 +742,80 @@ function createLibroDiario52Service(db) {
     return { success: true };
   };
 
+  // ── Purgar Asientos Huérfanos del Período ──
+  const purgarAsientosHuerfanos = async (workspaceId, userId, periodo) => {
+    try {
+      const purchasesRaw = await db.prepare(`SELECT id, fecha FROM purchases WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).all(workspaceId, `${workspaceId}%`, userId);
+      const salesRaw = await db.prepare(`SELECT id, fecha FROM sales WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).all(workspaceId, `${workspaceId}%`, userId);
+      const honorariosRaw = await db.prepare(`SELECT id, fecha FROM honorarios WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).all(workspaceId, `${workspaceId}%`, userId);
+      const asientosRaw = await db.prepare(`SELECT id, header_json FROM asientos WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).all(workspaceId, `${workspaceId}%`, userId);
+
+      const purchases = purchasesRaw.filter(p => fechaToPeriodo(p.fecha) === periodo);
+      const sales = salesRaw.filter(s => fechaToPeriodo(s.fecha) === periodo);
+      const honorarios = honorariosRaw.filter(h => fechaToPeriodo(h.fecha) === periodo);
+
+      const purchaseIds = new Set(purchases.map(p => p.id));
+      const saleIds = new Set(sales.map(s => s.id));
+      const honorarioIds = new Set(honorarios.map(h => h.id));
+      
+      const asientoKeys = new Set();
+      for (const a of asientosRaw) {
+        asientoKeys.add(a.id);
+        if (a.header_json) {
+          try {
+            const h = typeof a.header_json === 'string' ? JSON.parse(a.header_json) : a.header_json;
+            if (h.asiento) asientoKeys.add(h.asiento);
+          } catch(e) {}
+        }
+      }
+
+      const current52 = await db.prepare(
+        `SELECT id, origen_modulo, asiento_id_origen FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=?`
+      ).all(workspaceId, `${workspaceId}%`, userId, periodo);
+
+      for (const row of current52) {
+        let isOrphan = false;
+        if (row.origen_modulo === 'COMPRAS') {
+          if (!row.asiento_id_origen || !purchaseIds.has(row.asiento_id_origen)) isOrphan = true;
+        } else if (row.origen_modulo === 'VENTAS') {
+          if (!row.asiento_id_origen || !saleIds.has(row.asiento_id_origen)) isOrphan = true;
+        } else if (row.origen_modulo === 'HONORARIOS') {
+          if (!row.asiento_id_origen || !honorarioIds.has(row.asiento_id_origen)) isOrphan = true;
+        } else if (row.origen_modulo === 'ASIENTOS' || row.origen_modulo === 'ASIENTO') {
+          const originKey = (row.asiento_id_origen || '').split('-line-')[0];
+          if (!row.asiento_id_origen || (!asientoKeys.has(row.asiento_id_origen) && !asientoKeys.has(originKey))) isOrphan = true;
+        }
+
+        if (isOrphan) {
+          await db.prepare(`DELETE FROM libro_diario_52 WHERE id=?`).run(row.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[LD52] Error purgando huérfanos:', e);
+    }
+  };
+
   // ── Obtener Asientos del Período ──
   const obtenerAsientosPeriodo = async (workspaceId, userId, periodo) => {
+    // Purgar automáticamente registros de compras/ventas/honorarios eliminados
+    await purgarAsientosHuerfanos(workspaceId, userId, periodo);
+
     let seats = await db.prepare(
       `SELECT * FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
     ).all(workspaceId, `${workspaceId}%`, userId, periodo);
 
     if (seats.length === 0) {
-      await generarMasivo(workspaceId, userId, periodo);
-      seats = await db.prepare(
-        `SELECT * FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
-      ).all(workspaceId, `${workspaceId}%`, userId, periodo);
+      const pCount = (await db.prepare(`SELECT count(*) as c FROM purchases WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const sCount = (await db.prepare(`SELECT count(*) as c FROM sales WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const aCount = (await db.prepare(`SELECT count(*) as c FROM asientos WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const hCount = (await db.prepare(`SELECT count(*) as c FROM honorarios WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+
+      if (pCount > 0 || sCount > 0 || aCount > 0 || hCount > 0) {
+        await generarMasivo(workspaceId, userId, periodo);
+        seats = await db.prepare(
+          `SELECT * FROM libro_diario_52 WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=? AND periodo=? ORDER BY cuo, correlativo_asiento`
+        ).all(workspaceId, `${workspaceId}%`, userId, periodo);
+      }
     }
     return seats;
   };
@@ -778,19 +841,28 @@ function createLibroDiario52Service(db) {
 
   // ── Obtener Formato Físico (Pivote Tabla 9 PCGE) ──
   const obtenerFormatoFisico = async (workspaceId, userId, periodo) => {
+    await purgarAsientosHuerfanos(workspaceId, userId, periodo);
+
     let lines = await db.prepare(`
       SELECT * FROM libro_diario_52
-      WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
+      WHERE (workspace_id = ? OR workspace_id LIKE ?) AND user_id = ? AND periodo = ? AND estado IN ('1','8')
       ORDER BY cuo, correlativo_asiento
-    `).all(workspaceId, userId, periodo);
+    `).all(workspaceId, `${workspaceId}%`, userId, periodo);
 
     if (lines.length === 0) {
-      await generarMasivo(workspaceId, userId, periodo);
-      lines = await db.prepare(`
-        SELECT * FROM libro_diario_52
-        WHERE workspace_id = ? AND user_id = ? AND periodo = ? AND estado IN ('1','8')
-        ORDER BY cuo, correlativo_asiento
-      `).all(workspaceId, userId, periodo);
+      const pCount = (await db.prepare(`SELECT count(*) as c FROM purchases WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const sCount = (await db.prepare(`SELECT count(*) as c FROM sales WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const aCount = (await db.prepare(`SELECT count(*) as c FROM asientos WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+      const hCount = (await db.prepare(`SELECT count(*) as c FROM honorarios WHERE (workspace_id=? OR workspace_id LIKE ?) AND user_id=?`).get(workspaceId, `${workspaceId}%`, userId))?.c || 0;
+
+      if (pCount > 0 || sCount > 0 || aCount > 0 || hCount > 0) {
+        await generarMasivo(workspaceId, userId, periodo);
+        lines = await db.prepare(`
+          SELECT * FROM libro_diario_52
+          WHERE (workspace_id = ? OR workspace_id LIKE ?) AND user_id = ? AND periodo = ? AND estado IN ('1','8')
+          ORDER BY cuo, correlativo_asiento
+        `).all(workspaceId, `${workspaceId}%`, userId, periodo);
+      }
     }
 
     const groups = {};
