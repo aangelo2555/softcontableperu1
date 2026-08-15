@@ -319,7 +319,7 @@ const db = {
         const offset = (page - 1) * limit;
         
         const wsInfo = await query(
-            'SELECT * FROM workspaces WHERE ruc = $1 AND user_id = $2',
+            'SELECT * FROM workspaces WHERE ruc = $1 AND (user_id = $2 OR user_id IS NULL OR $2 IS NULL) ORDER BY CASE WHEN user_id = $2 THEN 1 ELSE 2 END LIMIT 1',
             [ruc, userId]
         );
         

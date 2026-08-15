@@ -169,8 +169,13 @@ const SireView: React.FC = () => {
     };
     
     // Filtrar por periodo con la nueva lógica
-    const localInPeriod = allDocLocal.filter(d => isSamePeriod(d) && (d.estado_sire === 'Local' || d.estado_sire === 'Aceptado'));
-    const sunatInPeriod = allDocLocal.filter(d => isSamePeriod(d) && d.estado_sire === 'Propuesta');
+    const isPropuesta = (estado?: string) => {
+      const e = String(estado || '').trim().toLowerCase();
+      return e === 'propuesta' || e === 'sire' || e === 'sunat';
+    };
+
+    const localInPeriod = allDocLocal.filter(d => isSamePeriod(d) && !isPropuesta(d.estado_sire));
+    const sunatInPeriod = allDocLocal.filter(d => isSamePeriod(d) && isPropuesta(d.estado_sire));
 
     const result: any[] = [];
     const matchedLocalIds = new Set();
