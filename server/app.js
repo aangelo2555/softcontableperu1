@@ -841,13 +841,16 @@ app.delete('/api/db/purchases/:id', authMiddleware, inspectMiddleware, async (re
         const { id } = req.params;
         const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM purchases WHERE id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `compra-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
+            await db.run('DELETE FROM purchases WHERE id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ? AND user_id IS NOT NULL', [workspace_id, `compra-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?) AND user_id IS NOT NULL', [workspace_id, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        } else {
+            await db.run('DELETE FROM purchases WHERE id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         }
         res.json({ success: true });
     } catch (error) {
@@ -866,13 +869,16 @@ app.delete('/api/db/sales/:id', authMiddleware, inspectMiddleware, async (req, r
         const { id } = req.params;
         const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM sales WHERE id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `venta-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
+            await db.run('DELETE FROM sales WHERE id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ? AND user_id IS NOT NULL', [workspace_id, `venta-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?) AND user_id IS NOT NULL', [workspace_id, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        } else {
+            await db.run('DELETE FROM sales WHERE id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM inventory_movements WHERE reference_id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         }
         res.json({ success: true });
     } catch (error) {
@@ -891,12 +897,14 @@ app.delete('/api/db/honorarios/:id', authMiddleware, inspectMiddleware, async (r
         const { id } = req.params;
         const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM honorarios WHERE id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `honor-${id}-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
+            await db.run('DELETE FROM honorarios WHERE id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ? AND user_id IS NOT NULL', [workspace_id, `honor-${id}-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?) AND user_id IS NOT NULL', [workspace_id, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        } else {
+            await db.run('DELETE FROM honorarios WHERE id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         }
         res.json({ success: true });
     } catch (error) {
@@ -915,12 +923,14 @@ app.delete('/api/db/asientos/:id', authMiddleware, inspectMiddleware, async (req
         const { id } = req.params;
         const workspace_id = req.query.workspace_id || req.body?.workspace_id || req.headers['x-workspace-id'];
         const userId = req.targetUserId;
-        await db.run('DELETE FROM asientos WHERE id = ? AND user_id = ?', [id, userId]);
-        await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         if (workspace_id) {
-            await db.run('DELETE FROM journal WHERE workspace_id = ? AND user_id = ? AND id LIKE ?', [workspace_id, userId, `${id}-line-%`]);
-            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [workspace_id, userId, id, `${id}%`]);
+            await db.run('DELETE FROM asientos WHERE id = ? AND workspace_id = ? AND user_id IS NOT NULL', [id, workspace_id]);
+            await db.run('DELETE FROM journal WHERE workspace_id = ? AND id LIKE ? AND user_id IS NOT NULL', [workspace_id, `${id}-line-%`]);
+            await db.run('DELETE FROM libro_diario_52 WHERE workspace_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?) AND user_id IS NOT NULL', [workspace_id, id, `${id}%`]);
             cacheService.invalidatePattern(`workspace_data_${workspace_id}_.*`);
+        } else {
+            await db.run('DELETE FROM asientos WHERE id = ? AND user_id = ?', [id, userId]);
+            await db.run('DELETE FROM libro_diario_52 WHERE user_id = ? AND (asiento_id_origen = ? OR asiento_id_origen LIKE ?)', [userId, id, `${id}%`]);
         }
         res.json({ success: true });
     } catch (error) {
