@@ -1921,6 +1921,9 @@ app.post('/api/sire/ejecutar', async (req, res) => {
             hasClientSecret: !!req.body?.credentials?.client_secret
         });
         const result = await sireHandler.ejecutarSire({ ...req.body, userId: req.targetUserId });
+        if (req.body?.ruc) {
+            cacheService.invalidatePattern(`workspace_data_${req.body.ruc}_.*`);
+        }
         res.json(result);
     } catch (error) {
         console.error('[SIRE API ERROR]:', error.message);
@@ -1993,6 +1996,10 @@ app.delete('/api/sire/archivos/:nombre', async (req, res) => {
         
         if (db.deleteSireFile && ruc) {
             await db.deleteSireFile(nombre, ruc, targetUserId);
+        }
+
+        if (ruc) {
+            cacheService.invalidatePattern(`workspace_data_${ruc}_.*`);
         }
 
         const outputDir = sireDir;
@@ -2091,7 +2098,9 @@ app.post('/api/sire/cargar-desde-historial', async (req, res) => {
         const result = await sireHandlerInstance.cargarArchivoEnConciliacion(targetRuc, nombre, targetUserId);
         
         if (result.success) {
-            res.json({ success: true, count: result.count, message: `Se cargaron ${result.count} comprobantes en la propuesta de Conciliación` });
+            cacheService.invalidatePattern(`workspace_data_${targetRuc}_.*`);
+            cacheService.invalidatePattern(`workspace_data_.*`);
+            res.json({ success: true, count: result.count, proceso: result.proceso, periodo: result.periodo, message: `Se cargaron ${result.count} comprobantes en la propuesta de Conciliación` });
         } else {
             res.status(500).json({ success: false, error: result.error });
         }

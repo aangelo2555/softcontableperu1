@@ -133,6 +133,57 @@ class SireHandler {
     }
   }
 
+const cacheService = require('../server/cacheService');
+
+function normalizeExcelDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    const y = val.getUTCFullYear();
+    const m = String(val.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(val.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const str = String(val).trim();
+  if (!str) return '';
+  
+  // Format DD/MM/YYYY
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+  
+  // Format YYYY-MM-DD
+  if (str.includes('-')) {
+    const parts = str.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+
+  // Excel serial number (e.g. 45000+)
+  const num = Number(str);
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return str;
+}
+
   /**
    * Persiste los registros descargados del SIRE en la base de datos local
    */
@@ -157,10 +208,9 @@ class SireHandler {
         if (!row || !Array.isArray(row) || row.length < 5) return false;
         const rowStr = row.join(' ').toUpperCase();
         if (rowStr.includes('REGISTRO DE') || rowStr.includes('EMPRESA:') || rowStr.includes('PERÍODO:')) return false;
-        // Debe tener fecha o tipo de documento
-        const hasDate = row[4] && (String(row[4]).includes('/') || String(row[4]).includes('-'));
+        const dateVal = normalizeExcelDate(row[4]);
         const hasTipoDoc = row[6] && String(row[6]).trim().length > 0;
-        return hasDate || hasTipoDoc || Boolean(row[3]);
+        return Boolean(dateVal) || hasTipoDoc || Boolean(row[3]);
       });
       
       const isRVIE = proceso.includes('RVIE');
@@ -174,6 +224,8 @@ class SireHandler {
         const carVal = (row[3] || '').trim();
         const docKey = carVal || `${tipoDoc}_${serie}_${numero}_${docNum}` || `ROW_${index}`;
         const id = `${ruc}-${proceso}-${docKey}`;
+        const fecEmision = normalizeExcelDate(row[4]);
+        const fecVcto = normalizeExcelDate(row[5]);
 
         if (isRVIE) {
           // Ventas (RVIE)
@@ -181,8 +233,8 @@ class SireHandler {
             id,
             periodo_sire: normalizedPeriod,
             registro: 'SIRE',
-            fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
-            fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
+            fecha: fecEmision, // Fecha Emisión (col5_fecEmision)
+            fecVcto: fecVcto, // Fecha Vcto (col6_fecVence)
             tipo_doc: row[6] || '',
             serie: row[7] || '',
             numero: row[8] || '', // Documento Número (col9_numInicial)
@@ -206,8 +258,8 @@ class SireHandler {
             id,
             periodo_sire: normalizedPeriod,
             registro: 'SIRE',
-            fecha: row[4] || '', // Fecha Emisión (col5_fecEmision)
-            fecVcto: row[5] || '', // Fecha Vcto (col6_fecVence)
+            fecha: fecEmision, // Fecha Emisión (col5_fecEmision)
+            fecVcto: fecVcto, // Fecha Vcto (col6_fecVence)
             tipo_doc: row[6] || '',
             serie: row[7] || '',
             numero: row[9] || '', // Documento Número (col10_numInicial)
@@ -235,6 +287,14 @@ class SireHandler {
         await this.db.saveSirePurchases(ruc, mappedRecords, userId);
       } else {
         await this.db.saveSireSales(ruc, mappedRecords, userId);
+      }
+
+      // Invalidar caché del servidor para que el frontend obtenga los datos inmediatamente
+      try {
+        cacheService.invalidatePattern(`workspace_data_${ruc}_.*`);
+        cacheService.invalidatePattern(`workspace_data_.*`);
+      } catch (cErr) {
+        // Ignorar si cacheService no está disponible
       }
 
       logger.info(`Persistidos ${mappedRecords.length} registros del SIRE para el RUC ${ruc} (Periodo: ${normalizedPeriod})`);
@@ -417,10 +477,10 @@ WScript.Echo "Proceso SIRE completado"
         }
       } else {
         const XLSX = require('xlsx');
-        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, cellNF: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
 
         // Encontrar la fila donde inician los datos reales (después de encabezados y títulos)
         let headerIndex = -1;
