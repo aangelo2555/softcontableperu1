@@ -273,6 +273,8 @@ const LibroDiario52View: React.FC = () => {
   const handleGenerarMasivo = async () => {
     try {
       const result = await generarLd52Masivo(periodoActual);
+      await loadLd52Entries(periodoActual);
+      await loadLd52FisicoEntries(periodoActual);
       if (result.errores && result.errores.length > 0) {
         toast.error(`⚠️ Hubo errores al procesar: ${result.errores.join(', ')}`);
       }

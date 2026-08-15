@@ -1,4 +1,4 @@
-const CACHE_NAME = "softcontable-cache-v1";
+const CACHE_NAME = "softcontable-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
@@ -30,9 +30,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle local GET requests
+  // Never cache API calls or non-GET requests
   if (event.request.method !== "GET") return;
   if (!event.request.url.startsWith(self.location.origin)) return;
+  if (event.request.url.includes('/api/')) return;
 
   event.respondWith(
     fetch(event.request)
