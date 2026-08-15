@@ -2,7 +2,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./logger');
-const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
+const USE_POSTGRES = process.env.USE_POSTGRES === 'true' || !!process.env.DATABASE_URL;
 const db = USE_POSTGRES ? require('../server/databasePostgres') : require('../server/databaseServer');
 const SireOrchestrator = require('./sireOrchestrator');
 const SireFileGenerator = require('./sireFileGenerator');

@@ -906,7 +906,7 @@ const db = {
     },
 
     saveBalanceInicialBulk: async (ruc, userId, items) => {
-        return db.transaction(async (client) => {
+        return await module.exports.transaction(async (client) => {
             for (const item of items) {
                 await client.query(`
                     INSERT INTO balance_inicial (id, workspace_id, user_id, cta, descripcion, debe, haber)
@@ -918,7 +918,7 @@ const db = {
                         haber = EXCLUDED.haber
                 `, [item.id, ruc, userId, item.cta, item.desc || item.descripcion || '', item.debe || 0, item.haber || 0]);
             }
-        });
+        })();
     },
 
     deleteBalanceInicial: async (ruc, userId, id) => {
@@ -980,7 +980,7 @@ const db = {
     // --- SIRE Persistencia ---
     saveSirePurchases: async (ruc, records, userId) => {
         if (!records || records.length === 0) return;
-        return db.transaction(async (client) => {
+        return await module.exports.transaction(async (client) => {
             // Limpiar únicamente las propuestas del SIRE del PERÍODO ESPECÍFICO
             const targetPeriod = records[0]?.periodo_sire || '';
             if (targetPeriod) {
@@ -1028,12 +1028,12 @@ const db = {
                 `;
                 await client.query(sql, values);
             }
-        });
+        })();
     },
 
     saveSireSales: async (ruc, records, userId) => {
         if (!records || records.length === 0) return;
-        return db.transaction(async (client) => {
+        return await module.exports.transaction(async (client) => {
             // Limpiar únicamente las propuestas del SIRE del PERÍODO ESPECÍFICO
             const targetPeriod = records[0]?.periodo_sire || '';
             if (targetPeriod) {
@@ -1079,7 +1079,7 @@ const db = {
                 `;
                 await client.query(sql, values);
             }
-        });
+        })();
     },
 
     // --- Persistencia Cloud de Archivos SIRE (ZIP/XLSX/TXT) ---
