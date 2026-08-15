@@ -40,12 +40,40 @@ const MESES_NOMBRES = [
   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
 ];
 
-export const formatSirePeriod = (periodoRaw?: string, fileName?: string): string => {
-  let periodStr = (periodoRaw || '').trim();
-  if ((!periodStr || periodStr.length < 6) && fileName) {
-    const match = fileName.match(/(20\d{4})/);
-    if (match) periodStr = match[1];
+export const extractSirePeriod = (periodoRaw?: string, fileName?: string): string => {
+  // 1. Si ya viene un periodo válido de 6 dígitos YYYYMM (año 20XX y mes 01-12)
+  if (periodoRaw && /^(20\d{2})(0[1-9]|1[0-2])$/.test(periodoRaw.trim())) {
+    return periodoRaw.trim();
   }
+
+  // 2. Extraer desde el nombre del archivo
+  if (fileName) {
+    // Formato estándar SOFTCONTABLE: TIPO_RUC_YYYYMM_TIMESTAMP.ext (ej: RCE_20612314579_202604_1785954111387.xlsx)
+    const parts = fileName.split('_');
+    for (const part of parts) {
+      if (/^(20\d{2})(0[1-9]|1[0-2])$/.test(part)) {
+        return part;
+      }
+    }
+
+    // Formato con delimitadores _YYYYMM_ o _YYYYMM.
+    const match = fileName.match(/[_\-](20\d{2})(0[1-9]|1[0-2])[_\-\.]/);
+    if (match) {
+      return `${match[1]}${match[2]}`;
+    }
+
+    // Formato PLE/SIRE SUNAT: LE2061231457920260400...
+    const pleMatch = fileName.match(/LE\d{11}(20\d{2})(0[1-9]|1[0-2])/);
+    if (pleMatch) {
+      return `${pleMatch[1]}${pleMatch[2]}`;
+    }
+  }
+
+  return '';
+};
+
+export const formatSirePeriod = (periodoRaw?: string, fileName?: string): string => {
+  const periodStr = extractSirePeriod(periodoRaw, fileName);
   if (!periodStr || periodStr.length < 6) return 'PERÍODO GENERAL';
   
   const anio = periodStr.substring(0, 4);
@@ -475,8 +503,8 @@ const SireView: React.FC = () => {
   };
 
   const handleDeleteArchivo = (nombre: string) => {
-    const filePeriodMatch = nombre.match(/(20\d{4})/);
-    const periodDisplay = filePeriodMatch ? formatSirePeriod(filePeriodMatch[1], nombre) : '';
+    const filePeriodStr = extractSirePeriod(undefined, nombre);
+    const periodDisplay = formatSirePeriod(filePeriodStr, nombre);
 
     setModalConfig({
       isOpen: true,
@@ -1170,8 +1198,7 @@ const SireView: React.FC = () => {
                   }
                 }
                 const currentPeriodStr = `${periodoAnio}${String(periodoMes + 1).padStart(2, '0')}`;
-                const filePeriodMatch = file.nombre.match(/(20\d{4})/);
-                const filePeriodStr = file.periodo || (filePeriodMatch ? filePeriodMatch[1] : '');
+                const filePeriodStr = extractSirePeriod(file.periodo, file.nombre);
                 const isCurrentPeriodFile = filePeriodStr === currentPeriodStr;
                 const periodDisplay = formatSirePeriod(filePeriodStr, file.nombre);
                 const isCompras = file.nombre.toUpperCase().includes('RCE') || file.nombre.includes('080400') || file.proceso === 'Generar RCE';
