@@ -4,6 +4,7 @@ const fs = require('fs');
 const logger = require('./logger_web');
 const config = require('./config');
 const { buzonDir } = require('../server/storageConfig');
+const sessionManager = require('./sessionManager');
 
 class CpeHandler {
   constructor() {
