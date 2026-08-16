@@ -40,72 +40,70 @@ class CpeHandler {
     let resultados = [];
 
     try {
-      browser = await chromium.launch({
-        headless: config.PLAYWRIGHT?.headless ?? true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-        ]
-      });
-
-      const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        viewport: { width: 1366, height: 768 }
-      });
-
+      // 1. Obtención del Contexto Compartido
+      const context = await sessionManager.createOrUpdateContext(ruc);
       page = await context.newPage();
       page.setDefaultTimeout(45000);
 
-      // 1. Obtención del Token interceptando la redirección
-      logger.info('[CPE] Navegando a SUNAT login para obtener token CPE...');
-      await page.goto('https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc8573727/oauth2/loginMenuSol?resume=/as/N1qK4/resume/as/authorization.ping', { waitUntil: 'load' });
-
-      // Rellenar credenciales con manejo de navegación y scripts onload de SUNAT
-      await page.waitForSelector('#txtRuc', { state: 'visible' });
-      await page.waitForTimeout(1500); // Dar tiempo a que SUNAT termine de cargar sus scripts
+      // Verificamos si ya estamos autenticados intentando entrar al menú directo
+      logger.info('[CPE] Verificando sesión existente en SUNAT...');
+      await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load' });
       
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        await page.fill('#txtRuc', ruc.trim());
-        await page.fill('#txtUsuario', usuario.trim().toUpperCase());
-        await page.fill('#txtContrasena', clave.trim());
-        await page.waitForTimeout(500);
-        
-        const filledRuc = await page.inputValue('#txtRuc').catch(() => '');
-        const filledUser = await page.inputValue('#txtUsuario').catch(() => '');
-        if (filledRuc === ruc.trim() && filledUser === usuario.trim().toUpperCase()) {
-          break;
-        }
-        logger.info(`[CPE] Campos vacíos o limpiados por SUNAT. Reintento de llenado ${attempt}/3...`);
-      }
-      
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(() => {}),
-        page.click('#btnAceptar')
-      ]);
+      const isLogged = !page.url().includes('api-seguridad');
 
-      // --- MANEJO DE SESIÓN ACTIVA ---
-      try {
-        await page.waitForTimeout(3000);
-        const sessionHandled = await page.evaluate(() => {
-          const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button, a'));
-          const target = btns.find(b => {
-             const t = (b.value || b.innerText || '').toLowerCase();
-             return t.includes('continuar') || t.includes('cerrar sesi') || t.includes('aceptar');
-          });
-          if (target) { target.click(); return true; }
-          return false;
-        });
-        if (sessionHandled) {
-          logger.info('[CPE] Sesión activa manejada, esperando redirección...');
-          await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-        }
-      } catch (e) {}
+      if (!isLogged) {
+          // Si no está logueado, hacemos el login normal
+          logger.info('[CPE] Sesión no encontrada. Navegando a SUNAT login para obtener token CPE...');
+          await page.goto('https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc8573727/oauth2/loginMenuSol?resume=/as/N1qK4/resume/as/authorization.ping', { waitUntil: 'load' });
 
-      // Escapar de OAuth si se quedó atascado
-      if (page.url().includes('api-seguridad')) {
-          logger.info('[CPE] Forzando navegación al menú SOL...');
-          await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load', timeout: 60000 }).catch(() => {});
+          // Rellenar credenciales con manejo de navegación y scripts onload de SUNAT
+          await page.waitForSelector('#txtRuc', { state: 'visible' });
+          await page.waitForTimeout(1500); // Dar tiempo a que SUNAT termine de cargar sus scripts
+          
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            await page.fill('#txtRuc', ruc.trim());
+            await page.fill('#txtUsuario', usuario.trim().toUpperCase());
+            await page.fill('#txtContrasena', clave.trim());
+            await page.waitForTimeout(500);
+            
+            const filledRuc = await page.inputValue('#txtRuc').catch(() => '');
+            const filledUser = await page.inputValue('#txtUsuario').catch(() => '');
+            if (filledRuc === ruc.trim() && filledUser === usuario.trim().toUpperCase()) {
+              break;
+            }
+            logger.info(`[CPE] Campos vacíos o limpiados por SUNAT. Reintento de llenado ${attempt}/3...`);
+          }
+          
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(() => {}),
+            page.click('#btnAceptar')
+          ]);
+
+          // --- MANEJO DE SESIÓN ACTIVA ---
+          try {
+            await page.waitForTimeout(3000);
+            const sessionHandled = await page.evaluate(() => {
+              const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button, a'));
+              const target = btns.find(b => {
+                 const t = (b.value || b.innerText || '').toLowerCase();
+                 return t.includes('continuar') || t.includes('cerrar sesi') || t.includes('aceptar');
+              });
+              if (target) { target.click(); return true; }
+              return false;
+            });
+            if (sessionHandled) {
+              logger.info('[CPE] Sesión activa manejada, esperando redirección...');
+              await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+            }
+          } catch (e) {}
+
+          // Escapar de OAuth si se quedó atascado
+          if (page.url().includes('api-seguridad')) {
+              logger.info('[CPE] Forzando navegación al menú SOL...');
+              await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load', timeout: 60000 }).catch(() => {});
+          }
+      } else {
+          logger.info('[CPE] ¡Sesión previa detectada y reutilizada con éxito!');
       }
 
       // Hook interceptor robusto para cazar el token JWT de la red

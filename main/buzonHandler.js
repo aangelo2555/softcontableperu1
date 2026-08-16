@@ -7,6 +7,7 @@ const emailService = require('./emailService');
 const pdfMerger = require('./pdfMergerService');
 
 const { buzonDir } = require('../server/storageConfig');
+const sessionManager = require('./sessionManager');
 
 /**
  * Handler avanzado para el módulo Buzón Electrónico SUNAT v3.0
@@ -97,34 +98,9 @@ class BuzonHandler {
     try {
       logger.info('Iniciando consulta de buzón v3.0', { ruc, empresa });
 
-      if (this.activeSessions.size > 0) {
-        await this.cerrarTodasLasSesiones();
-      }
-
-      browser = await chromium.launch({
-        headless: config.PLAYWRIGHT.headless,
-        slowMo: 50,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-infobars',
-          '--window-size=1366,768'
-        ]
-      });
-
-      context = await browser.newContext({
-        acceptDownloads: true,
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        viewport: { width: 1366, height: 768 },
-        extraHTTPHeaders: {
-          'Accept-Language': 'es-PE,es;q=0.9,en;q=0.8',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Connection': 'keep-alive'
-        }
-      });
-      
+      context = await sessionManager.createOrUpdateContext(ruc);
       page = await context.newPage();
+      
       await page.addInitScript(() => {
         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
