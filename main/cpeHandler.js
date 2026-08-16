@@ -61,11 +61,23 @@ class CpeHandler {
       logger.info('[CPE] Navegando a SUNAT login para obtener token CPE...');
       await page.goto('https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc8573727/oauth2/loginMenuSol?resume=/as/N1qK4/resume/as/authorization.ping', { waitUntil: 'load' });
 
-      // Rellenar credenciales con manejo de navegación
+      // Rellenar credenciales con manejo de navegación y scripts onload de SUNAT
       await page.waitForSelector('#txtRuc', { state: 'visible' });
-      await page.fill('#txtRuc', ruc.trim());
-      await page.fill('#txtUsuario', usuario.trim().toUpperCase());
-      await page.fill('#txtContrasena', clave.trim());
+      await page.waitForTimeout(1500); // Dar tiempo a que SUNAT termine de cargar sus scripts
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await page.fill('#txtRuc', ruc.trim());
+        await page.fill('#txtUsuario', usuario.trim().toUpperCase());
+        await page.fill('#txtContrasena', clave.trim());
+        await page.waitForTimeout(500);
+        
+        const filledRuc = await page.inputValue('#txtRuc').catch(() => '');
+        const filledUser = await page.inputValue('#txtUsuario').catch(() => '');
+        if (filledRuc === ruc.trim() && filledUser === usuario.trim().toUpperCase()) {
+          break;
+        }
+        logger.info(`[CPE] Campos vacíos o limpiados por SUNAT. Reintento de llenado ${attempt}/3...`);
+      }
       
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(() => {}),
