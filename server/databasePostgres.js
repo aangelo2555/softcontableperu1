@@ -1428,6 +1428,9 @@ async function ensureSchemaConstraints() {
                     CREATE INDEX IF NOT EXISTS idx_purchases_workspace ON purchases(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id);
                     CREATE INDEX IF NOT EXISTS idx_purchases_fecha ON purchases(fecha);
+                    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS xml_path TEXT;
+                    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS cdr_path TEXT;
+                    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pdf_path TEXT;
                 `
             },
             {

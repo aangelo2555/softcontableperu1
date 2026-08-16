@@ -64,6 +64,9 @@ db.exec(`
         total REAL,
         glosa TEXT,
         user_id TEXT,
+        xml_path TEXT,
+        cdr_path TEXT,
+        pdf_path TEXT,
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
 

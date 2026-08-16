@@ -313,6 +313,12 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // --- CPE API ---
+    cpeDescargarLote: async (args: { ruc: string; facturas: any[] }) => {
+        const res = await api.post('/api/cpe/descargar-xml', args);
+        return res.data;
+    },
+
     // --- SIRE API ---
     ejecutarSire: async (datos: any) => {
         const res = await api.post('/api/sire/ejecutar', datos);

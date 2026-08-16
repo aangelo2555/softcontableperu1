@@ -99,6 +99,7 @@ const SireView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [archivos, setArchivos] = useState<{ nombre: string; fecha: string; size?: number; periodo?: string; proceso?: string }[]>([]);
   const [isLoadingArchivos, setIsLoadingArchivos] = useState(false);
+  const [isDownloadingCPE, setIsDownloadingCPE] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // 🔧 FIX: Key para forzar re-render
@@ -397,6 +398,55 @@ const SireView: React.FC = () => {
     }
 
     await proceedWithEjecutar();
+  };
+
+  const handleDescargaMasivaCPE = async () => {
+    if (selectedIds.size === 0) return;
+    if (!currentCompany?.sol_user || !currentCompany?.sol_pass) {
+        toast.error('Faltan credenciales SOL en Configuración para descargar CPE.');
+        return;
+    }
+
+    const docsToDownload = comparedData
+        .filter(item => selectedIds.has(item.id))
+        .map(item => {
+            const doc = item.sunat || item.local;
+            return {
+                id: item.id,
+                rucEmisor: doc.doc_num || currentCompany.ruc,
+                tipoDoc: doc.tipo_doc,
+                serie: doc.serie,
+                numero: doc.numero,
+                fechaEmision: doc.fecha,
+                total: doc.total
+            };
+        });
+
+    setIsDownloadingCPE(true);
+    const loadingToast = toast.loading(`Descargando XML/CDR de ${docsToDownload.length} facturas...`);
+
+    try {
+        // En un entorno Electron, se podría usar ipcRenderer. 
+        // Aquí usaremos la API Bridge universal.
+        const { api } = await import('../services/apiBridge');
+        const result = await api.post('/api/cpe/descargar-xml', {
+            ruc: currentCompany.ruc,
+            facturas: docsToDownload
+        }).then((res: any) => res.data);
+
+        if (result.success) {
+            const descargasOk = result.resultados.filter((r: any) => r.xmlPath || r.cdrPath).length;
+            toast.success(`✅ Se descargaron ${descargasOk} XML/CDR correctamente.`, { id: loadingToast });
+            await syncCurrentWorkspace(); // Recargar base de datos local
+            setRefreshKey(prev => prev + 1);
+        } else {
+            toast.error(`Error de Descarga: ${result.error}`, { id: loadingToast });
+        }
+    } catch (error: any) {
+        toast.error(`Error Crítico: ${error.message}`, { id: loadingToast });
+    } finally {
+        setIsDownloadingCPE(false);
+    }
   };
 
   const handleGenerarArchivoReemplazo = async () => {
@@ -890,6 +940,15 @@ const SireView: React.FC = () => {
               Descargar
             </button>
             <button
+              onClick={handleDescargaMasivaCPE}
+              disabled={isDownloadingCPE || selectedIds.size === 0}
+              className="h-8 px-4 bg-purple-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50 flex items-center gap-2"
+              title="Descargar XML/CDR del portal SUNAT para seleccionados"
+            >
+              {isDownloadingCPE ? <Loader2 size={12} className="animate-spin" /> : <CloudDownload size={14} />}
+              Bajar XML/CDR {selectedIds.size > 0 && `(${selectedIds.size})`}
+            </button>
+            <button
               onClick={handleCentralizeSelected}
               className="h-8 px-4 bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2"
             >
@@ -1092,6 +1151,17 @@ const SireView: React.FC = () => {
                                 title="Ir a registro contable local"
                               >
                                 <ExternalLink size={14} />
+                              </button>
+                            )}
+                            {(item.local?.xml_path || item.local?.pdf_path) && (
+                              <button 
+                                onClick={() => {
+                                  toast.success(`XML guardado en: ${item.local.xml_path || item.local.pdf_path}`);
+                                }}
+                                className="p-1.5 hover:bg-purple-500/20 text-purple-500 rounded-lg transition-all"
+                                title="Ver XML/PDF descargado"
+                              >
+                                <CloudDownload size={14} />
                               </button>
                             )}
                             <button 

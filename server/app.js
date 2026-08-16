@@ -38,6 +38,7 @@ const createKardex121Service = require('./kardex121Service');
 const kardex121Service = createKardex121Service(db.rawDb);
 const sbsService = require('./sbsService');
 const buzonHandler = require('../main/buzonHandler');
+const cpeHandler = require('../main/cpeHandler');
 const sireHandler = require('../modulo/sireHandler');
 const ublService = require('./ublService');
 const autoSyncService = require('./autoSyncService');
@@ -1874,6 +1875,58 @@ app.post('/api/buzon/cerrar-todas', async (req, res) => {
         const result = await buzonHandler.cerrarTodasLasSesiones();
         res.json(result || { success: true });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// RUTAS DE INTEGRACIÓN CPE (SUNAT)
+// ==========================================
+app.post('/api/cpe/descargar-xml', async (req, res) => {
+    try {
+        const { ruc, facturas } = req.body;
+        if (!ruc || !facturas || facturas.length === 0) {
+            return res.status(400).json({ success: false, error: 'RUC y facturas requeridos.' });
+        }
+        
+        // Obtener credenciales SOL de la base de datos
+        const ws = await db.getWorkspaceById(ruc);
+        if (!ws || !ws.sol_user || !ws.sol_pass) {
+            return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
+        }
+        
+        const resultados = await cpeHandler.descargarLoteCPE({
+            ruc,
+            usuario: ws.sol_user,
+            clave: ws.sol_pass,
+            facturas
+        });
+        
+        // Actualizar la base de datos con las rutas descargadas
+        for (const r of resultados) {
+            if (r.xmlPath || r.cdrPath || r.pdfPath) {
+                const query = `
+                    UPDATE purchases 
+                    SET xml_path = COALESCE($1, xml_path), 
+                        cdr_path = COALESCE($2, cdr_path), 
+                        pdf_path = COALESCE($3, pdf_path)
+                    WHERE id = $4 AND workspace_id = $5
+                `;
+                // Soporte SQLite/PostgreSQL
+                const queryPg = query.replace(/\$1/g, '?').replace(/\$2/g, '?').replace(/\$3/g, '?').replace(/\$4/g, '?').replace(/\$5/g, '?');
+                
+                try {
+                    await db.run(query, [r.xmlPath || null, r.cdrPath || null, r.pdfPath || null, r.id, ruc]);
+                } catch(e) {
+                   // Fallback para sintaxis si SQLite
+                   await db.run(queryPg, [r.xmlPath || null, r.cdrPath || null, r.pdfPath || null, r.id, ruc]);
+                }
+            }
+        }
+        
+        res.json({ success: true, resultados });
+    } catch (error) {
+        console.error('[CPE API ERROR]:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
