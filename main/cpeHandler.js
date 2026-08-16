@@ -68,20 +68,23 @@ class CpeHandler {
       await page.fill('#txtContrasena', clave.trim());
       await page.click('#btnAceptar');
 
-      // Hook interceptor para cazar la URL que contenga ?token=
-      page.on('framenavigated', async (frame) => {
-          const url = frame.url();
-          if (url.includes('nuevaconsulta.html?token=')) {
+      // Hook interceptor robusto para cazar el token JWT de la red
+      page.on('request', async (request) => {
+          const url = request.url();
+          const authHeader = request.headers()['authorization'];
+          
+          if (authHeader && authHeader.startsWith('Bearer ') && !tokenJWT) {
+              tokenJWT = authHeader.substring(7);
+              logger.info('[CPE] ¡Token JWT interceptado de los Headers HTTP (API Request)!');
+          } else if (url.includes('token=') && !tokenJWT) {
               try {
                   const urlObj = new URL(url);
                   const token = urlObj.searchParams.get('token');
-                  if (token) {
+                  if (token && token.length > 50) {
                       tokenJWT = token;
-                      logger.info('[CPE] ¡Token JWT interceptado exitosamente del iframe!');
+                      logger.info('[CPE] ¡Token JWT interceptado exitosamente de la URL!');
                   }
-              } catch (e) {
-                  logger.error('[CPE] Error extrayendo token de URL:', e);
-              }
+              } catch (e) {}
           }
       });
 
@@ -154,22 +157,27 @@ class CpeHandler {
             const { rucEmisor, tipoDoc, serie, numero } = factura;
             logger.info(`[CPE] DOM Fallback consultando comprobante: ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
             try {
-              // 1. Click en recibido
-              try {
-                  await page.click('#recibido', { timeout: 3000 });
-              } catch (e) {
-                  // Fallback al texto visible si el ID no existe
-                  await page.locator('text="Recibido"').first().click({ timeout: 5000 });
+              // 1. Encontrar el contexto del iframe
+              let frame = page.frame({ name: 'iframeApplication' });
+              if (!frame) {
+                  frame = page.frames().find(f => f.url().includes('consultacpe') || f.url().includes('MenuInternet'));
               }
-              // 2. Rellenar datos
-              await page.fill('[formcontrolname="rucEmisor"]', rucEmisor);
-              // Wait for dropdown to be ready if needed, or fill manually
-              // assuming tipoDoc "01" is default or handled
-              await page.fill('[formcontrolname="serieComprobante"]', serie);
-              await page.fill('[formcontrolname="numeroComprobante"]', numero);
+              const targetContext = frame || page;
               
-              // 3. Click search
-              await page.click('button:has-text("Buscar")');
+              // 2. Click en recibido dentro del iframe
+              try {
+                  await targetContext.click('#recibido', { timeout: 3000 });
+              } catch (e) {
+                  // Fallback al texto visible
+                  await targetContext.locator('text="Recibido"').first().click({ timeout: 5000 });
+              }
+              // 3. Rellenar datos
+              await targetContext.fill('[formcontrolname="rucEmisor"]', rucEmisor);
+              await targetContext.fill('[formcontrolname="serieComprobante"]', serie);
+              await targetContext.fill('[formcontrolname="numeroComprobante"]', numero);
+              
+              // 4. Click search
+              await targetContext.click('button:has-text("Buscar")');
               await page.waitForTimeout(3000); // wait for results
               
               // This is a naive implementation since we don't have the full response handling logic here yet
