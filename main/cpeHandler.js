@@ -110,7 +110,19 @@ class CpeHandler {
                   const token = urlObj.searchParams.get('token');
                   if (token && token.length > 50) {
                       tokenJWT = token;
-                      logger.info('[CPE] ¡Token JWT interceptado exitosamente de la URL!');
+                      logger.info('[CPE] ¡Token JWT interceptado exitosamente de la URL (GET)!');
+                  }
+              } catch (e) {}
+          } else if (request.method() === 'POST' && !tokenJWT) {
+              try {
+                  const postData = request.postData();
+                  if (postData && postData.includes('token=')) {
+                      const params = new URLSearchParams(postData);
+                      const token = params.get('token');
+                      if (token && token.length > 50) {
+                          tokenJWT = token;
+                          logger.info('[CPE] ¡Token JWT interceptado exitosamente del Body (POST)!');
+                      }
                   }
               } catch (e) {}
           }
@@ -123,13 +135,22 @@ class CpeHandler {
           
           logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE...');
           await page.evaluate(() => {
-              // Bala de plata: Forzar el iframe a cargar la acción que genera el token
-              const iframe = document.getElementById('iframeApplication');
-              if (iframe) {
-                  iframe.src = 'MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
-              } else {
-                  console.error('[CPE] FATAL: iframeApplication no encontrado en el DOM de ' + window.location.href);
-              }
+              // Simular el clic usando jQuery (como lo hace el usuario de forma nativa)
+              try {
+                  if (typeof $ !== 'undefined') {
+                      $('#nivel4_11_38_1_1_1').trigger('click');
+                  } else {
+                      document.getElementById('nivel4_11_38_1_1_1').click();
+                  }
+              } catch(e) {}
+              
+              // Respaldo por inyección directa
+              setTimeout(() => {
+                  const iframe = document.getElementById('iframeApplication');
+                  if (iframe && (!iframe.src || iframe.src.includes('about:blank') || iframe.src.includes('pestana=*'))) {
+                      iframe.src = 'MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
+                  }
+              }, 3000);
           });
       } catch (e) {
           logger.warn(`[CPE] Error en inyección de navegación: ${e.message}`);
@@ -142,6 +163,20 @@ class CpeHandler {
           
           const frame = page.frame({ name: 'iframeApplication' });
           if (frame) {
+              // Intento de extracción por URL del frame
+              try {
+                  const frameUrl = frame.url();
+                  if (frameUrl.includes('token=')) {
+                      const token = new URL(frameUrl).searchParams.get('token');
+                      if (token && token.length > 50) {
+                          tokenJWT = token;
+                          logger.info('[CPE] ¡Token extraído de la URL del iframe!');
+                          break;
+                      }
+                  }
+              } catch(e) {}
+
+              // Intento de extracción por sessionStorage
               try {
                   const token = await frame.evaluate(() => {
                       return sessionStorage.getItem('token') || localStorage.getItem('token');
