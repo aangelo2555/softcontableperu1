@@ -68,20 +68,16 @@ class CpeHandler {
       await page.fill('#txtContrasena', clave.trim());
       await page.click('#btnAceptar');
 
-      // Esperamos que la autenticación nos redirija a la interfaz de Consulta CPE donde en la URL viaja el token
-      // O bien, esperamos directamente que cargue nuevaconsulta.html
-      let tokenObtenido = false;
-      
       // Hook interceptor para cazar la URL que contenga ?token=
       page.on('framenavigated', async (frame) => {
           const url = frame.url();
           if (url.includes('nuevaconsulta.html?token=')) {
               try {
                   const urlObj = new URL(url);
-                  tokenJWT = urlObj.searchParams.get('token');
-                  if (tokenJWT) {
-                      logger.info('[CPE] ¡Token JWT interceptado exitosamente de la URL!');
-                      tokenObtenido = true;
+                  const token = urlObj.searchParams.get('token');
+                  if (token) {
+                      tokenJWT = token;
+                      logger.info('[CPE] ¡Token JWT interceptado exitosamente del iframe!');
                   }
               } catch (e) {
                   logger.error('[CPE] Error extrayendo token de URL:', e);
@@ -89,35 +85,49 @@ class CpeHandler {
           }
       });
 
-      // Navegar forzadamente al módulo si no redirigió solo
-      if (!tokenObtenido) {
+      // 1. Esperar a que cargue el menú de SUNAT (Clave SOL)
+      try {
+          logger.info('[CPE] Esperando carga del portal SOL...');
+          await page.waitForSelector('#nivel4_11_38_1_1_1', { state: 'attached', timeout: 20000 });
+          logger.info('[CPE] Clickeando menú "Nueva Consulta de comprobantes de pago"...');
+          
+          await page.evaluate(() => {
+              const btn = document.querySelector('#nivel4_11_38_1_1_1');
+              if (btn) {
+                  const span = btn.querySelector('.spanNivelDescripcion');
+                  if (span) span.click();
+                  else btn.click();
+              }
+          });
+      } catch (e) {
+          logger.warn(`[CPE] No se encontró el menú en el portal: ${e.message}`);
+      }
+
+      // 2. Esperar pacientemente a que el iframe cargue y el interceptor capture el token
+      logger.info('[CPE] Esperando intercepción de token...');
+      for (let i = 0; i < 15; i++) {
+          if (tokenJWT) break;
+          await page.waitForTimeout(1000);
+      }
+
+      // 3. Fallback: Navegar forzadamente si el iframe no se abrió / no se interceptó
+      if (!tokenJWT) {
          try {
-             // Esperar a que el login asigne cookies en el portal principal
-             await page.waitForTimeout(8000);
-             logger.info('[CPE] Redirigiendo manualmente a ConsultaCpe...');
+             logger.info('[CPE] Token no interceptado. Navegando manualmente a ConsultaCpe...');
              await page.goto('https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/loader/nuevaconsulta.html', { waitUntil: 'domcontentloaded' });
              
              // Extraer token de session storage si no está en URL
              await page.waitForTimeout(5000); // Dar tiempo a Angular
-             if (!tokenJWT) {
-                 tokenJWT = await page.evaluate(() => {
-                     return sessionStorage.getItem('token') || localStorage.getItem('token');
-                 });
+             tokenJWT = await page.evaluate(() => {
+                 return sessionStorage.getItem('token') || localStorage.getItem('token') || window.token;
+             });
+             
+             if (!tokenJWT && page.url().includes('token=')) {
+                 tokenJWT = new URL(page.url()).searchParams.get('token');
              }
          } catch(e) {
-             logger.warn('[CPE] Error en redirección a ConsultaCpe: ' + e.message);
+             logger.warn('[CPE] Error en fallback de redirección: ' + e.message);
          }
-      }
-
-      // 1.5 Si falló la extracción rápida, buscar el token en el DOM / localStorage
-      if (!tokenJWT) {
-          const currentUrl = page.url();
-          if (currentUrl.includes('token=')) {
-              tokenJWT = new URL(currentUrl).searchParams.get('token');
-          } else {
-             await page.waitForTimeout(3000);
-             tokenJWT = await page.evaluate(() => sessionStorage.getItem('token') || localStorage.getItem('token') || window.token);
-          }
       }
 
       if (!tokenJWT) {
