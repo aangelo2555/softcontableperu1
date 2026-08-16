@@ -272,6 +272,7 @@ const App: React.FC = () => {
       if (diff > 20 * 60 * 1000) {
         localStorage.removeItem('softcontable_token');
         localStorage.removeItem('softcontable_last_activity');
+        localStorage.removeItem('pld-ui-preferences');
         return false;
       }
     }
@@ -492,6 +493,7 @@ const App: React.FC = () => {
         if (diff > 20 * 60 * 1000) {
           localStorage.removeItem('softcontable_token');
           localStorage.removeItem('softcontable_last_activity');
+          localStorage.removeItem('pld-ui-preferences');
           toast.error('Sesión cerrada por inactividad de 20 minutos.');
           setTimeout(() => {
             window.location.reload();
@@ -1258,6 +1260,7 @@ const App: React.FC = () => {
               <button
                 onClick={() => {
                   localStorage.removeItem('softcontable_token');
+                  localStorage.removeItem('pld-ui-preferences');
                   window.location.reload();
                 }}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
