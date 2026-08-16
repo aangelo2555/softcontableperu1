@@ -1884,21 +1884,28 @@ app.post('/api/buzon/cerrar-todas', async (req, res) => {
 // ==========================================
 app.post('/api/cpe/descargar-xml', async (req, res) => {
     try {
-        const { ruc, facturas } = req.body;
+        const { ruc, usuario_sol, clave_sol, facturas } = req.body;
         if (!ruc || !facturas || facturas.length === 0) {
             return res.status(400).json({ success: false, error: 'RUC y facturas requeridos.' });
         }
         
-        // Obtener credenciales SOL de la base de datos
-        const ws = await db.getWorkspaceById(ruc);
-        if (!ws || !ws.sol_user || !ws.sol_pass) {
-            return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
+        let usuario = usuario_sol;
+        let clave = clave_sol;
+
+        // Obtener credenciales SOL de la base de datos como fallback
+        if (!usuario || !clave) {
+            const ws = await db.getWorkspaceById(ruc);
+            if (!ws || !ws.sol_user || !ws.sol_pass) {
+                return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
+            }
+            usuario = ws.sol_user;
+            clave = ws.sol_pass;
         }
         
         const resultados = await cpeHandler.descargarLoteCPE({
             ruc,
-            usuario: ws.sol_user,
-            clave: ws.sol_pass,
+            usuario: usuario,
+            clave: clave,
             facturas
         });
         

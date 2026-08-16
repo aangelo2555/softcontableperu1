@@ -431,6 +431,8 @@ const SireView: React.FC = () => {
         const { api } = await import('../services/apiBridge');
         const result = await api.post('/api/cpe/descargar-xml', {
             ruc: currentCompany.ruc,
+            usuario_sol: currentCompany.sol_user,
+            clave_sol: currentCompany.sol_pass,
             facturas: docsToDownload
         }).then((res: any) => res.data);
 
