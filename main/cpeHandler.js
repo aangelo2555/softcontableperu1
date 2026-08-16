@@ -88,19 +88,33 @@ class CpeHandler {
       // 1. Esperar a que cargue el menú de SUNAT (Clave SOL)
       try {
           logger.info('[CPE] Esperando carga del portal SOL...');
-          await page.waitForSelector('#nivel4_11_38_1_1_1', { state: 'attached', timeout: 20000 });
-          logger.info('[CPE] Clickeando menú "Nueva Consulta de comprobantes de pago"...');
+          await page.waitForTimeout(8000); // Dar 8 segundos para que cargue el layout principal de SUNAT
           
+          logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE...');
           await page.evaluate(() => {
+              // 1. Intentar hacer click en el ID si existe
               const btn = document.querySelector('#nivel4_11_38_1_1_1');
               if (btn) {
                   const span = btn.querySelector('.spanNivelDescripcion');
-                  if (span) span.click();
-                  else btn.click();
+                  if (span) { span.click(); return; }
+                  btn.click(); return;
+              }
+              
+              // 2. Intentar buscar por texto
+              const spans = Array.from(document.querySelectorAll('span'));
+              const target = spans.find(s => s.textContent && s.textContent.includes('Nueva Consulta de comprobantes'));
+              if (target) {
+                  target.click(); return;
+              }
+              
+              // 3. Bala de plata: Forzar el iframe a cargar la acción que genera el token
+              const iframe = document.getElementById('iframeApplication');
+              if (iframe) {
+                  iframe.src = 'MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
               }
           });
       } catch (e) {
-          logger.warn(`[CPE] No se encontró el menú en el portal: ${e.message}`);
+          logger.warn(`[CPE] Error en inyección de navegación: ${e.message}`);
       }
 
       // 2. Esperar pacientemente a que el iframe cargue y el interceptor capture el token
