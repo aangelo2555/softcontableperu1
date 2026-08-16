@@ -92,10 +92,10 @@ class CpeHandler {
       // Navegar forzadamente al módulo si no redirigió solo
       if (!tokenObtenido) {
          try {
-             await page.waitForSelector('iframe[name="iframeApplication"]', { timeout: 15000 });
-             // Hemos entrado a Clave SOL antigua
+             // Esperar a que el login asigne cookies en el portal principal
+             await page.waitForTimeout(8000);
              logger.info('[CPE] Redirigiendo manualmente a ConsultaCpe...');
-             await page.goto('https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/loader/nuevaconsulta.html');
+             await page.goto('https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/loader/nuevaconsulta.html', { waitUntil: 'domcontentloaded' });
              
              // Extraer token de session storage si no está en URL
              await page.waitForTimeout(5000); // Dar tiempo a Angular
@@ -105,7 +105,7 @@ class CpeHandler {
                  });
              }
          } catch(e) {
-             logger.warn('[CPE] No se encontró el iframe, asumiendo login directo SPA');
+             logger.warn('[CPE] Error en redirección a ConsultaCpe: ' + e.message);
          }
       }
 
@@ -131,7 +131,12 @@ class CpeHandler {
             logger.info(`[CPE] DOM Fallback consultando comprobante: ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
             try {
               // 1. Click en recibido
-              await page.click('#recibido');
+              try {
+                  await page.click('#recibido', { timeout: 3000 });
+              } catch (e) {
+                  // Fallback al texto visible si el ID no existe
+                  await page.locator('text="Recibido"').first().click({ timeout: 5000 });
+              }
               // 2. Rellenar datos
               await page.fill('[formcontrolname="rucEmisor"]', rucEmisor);
               // Wait for dropdown to be ready if needed, or fill manually
