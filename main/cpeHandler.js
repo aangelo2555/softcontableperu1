@@ -61,12 +61,40 @@ class CpeHandler {
       logger.info('[CPE] Navegando a SUNAT login para obtener token CPE...');
       await page.goto('https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc8573727/oauth2/loginMenuSol?resume=/as/N1qK4/resume/as/authorization.ping', { waitUntil: 'load' });
 
-      // Rellenar credenciales (esperar y reintentar si es necesario)
+      // Rellenar credenciales con manejo de navegación
       await page.waitForSelector('#txtRuc', { state: 'visible' });
       await page.fill('#txtRuc', ruc.trim());
       await page.fill('#txtUsuario', usuario.trim().toUpperCase());
       await page.fill('#txtContrasena', clave.trim());
-      await page.click('#btnAceptar');
+      
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(() => {}),
+        page.click('#btnAceptar')
+      ]);
+
+      // --- MANEJO DE SESIÓN ACTIVA ---
+      try {
+        await page.waitForTimeout(3000);
+        const sessionHandled = await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button, a'));
+          const target = btns.find(b => {
+             const t = (b.value || b.innerText || '').toLowerCase();
+             return t.includes('continuar') || t.includes('cerrar sesi') || t.includes('aceptar');
+          });
+          if (target) { target.click(); return true; }
+          return false;
+        });
+        if (sessionHandled) {
+          logger.info('[CPE] Sesión activa manejada, esperando redirección...');
+          await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+        }
+      } catch (e) {}
+
+      // Escapar de OAuth si se quedó atascado
+      if (page.url().includes('api-seguridad')) {
+          logger.info('[CPE] Forzando navegación al menú SOL...');
+          await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load', timeout: 60000 }).catch(() => {});
+      }
 
       // Hook interceptor robusto para cazar el token JWT de la red
       page.on('request', async (request) => {
@@ -90,15 +118,17 @@ class CpeHandler {
 
       // 1. Esperar a que cargue el menú de SUNAT (Clave SOL)
       try {
-          logger.info('[CPE] Esperando carga del portal SOL...');
-          await page.waitForTimeout(8000); // Dar 8 segundos para que cargue el layout principal de SUNAT
+          logger.info('[CPE] Esperando carga del portal SOL y buscando iframe...');
+          await page.waitForTimeout(5000); 
           
           logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE...');
           await page.evaluate(() => {
-              // Bala de plata: Forzar el iframe a cargar la acción que genera el token sin depender de clics en el menú
+              // Bala de plata: Forzar el iframe a cargar la acción que genera el token
               const iframe = document.getElementById('iframeApplication');
               if (iframe) {
                   iframe.src = 'MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
+              } else {
+                  console.error('[CPE] FATAL: iframeApplication no encontrado en el DOM de ' + window.location.href);
               }
           });
       } catch (e) {
@@ -129,7 +159,8 @@ class CpeHandler {
       }
 
       if (!tokenJWT) {
-          await this.capturarDebug(page, 'cpe_token_fail.png');
+          // Capturas desactivadas a pedido del usuario
+          // await this.capturarDebug(page, 'cpe_token_fail.png');
           
           // ESTRATEGIA DE RESPALDO (DOM FALLBACK)
           logger.warn('[CPE] Token no encontrado, intentando usar DOM Fallback (UI navigation)');
