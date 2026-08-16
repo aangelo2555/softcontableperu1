@@ -280,6 +280,8 @@ const App: React.FC = () => {
     return true;
   });
 
+  const [isGlobalPremium, setIsGlobalPremium] = useState(false);
+
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
@@ -369,6 +371,26 @@ const App: React.FC = () => {
   const userInitial = React.useMemo(() => {
     return userPayload?.name ? userPayload.name.trim().charAt(0).toUpperCase() : 'U';
   }, [userPayload]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const checkGlobalPremium = async () => {
+      try {
+        const token = localStorage.getItem('softcontable_token');
+        if (!token) return;
+        const res = await fetch('/api/premium/subscription/status', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const userEmail = (userPayload?.email || '').toLowerCase();
+        const hasAccess = data.hasAccess || data.premium_enabled || data.role === 'admin' || userEmail === 'aangelo2555@gmail.com';
+        if (hasAccess) setIsGlobalPremium(true);
+      } catch (e) {
+        console.error('Error checking global premium status', e);
+      }
+    };
+    checkGlobalPremium();
+  }, [isLoggedIn, userPayload]);
 
   const renderView = () => {
     switch (activeTab) {
@@ -1074,7 +1096,7 @@ const App: React.FC = () => {
                 SoftPremium <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-1 font-mono">IA</span>
               </span>
               
-              {!currentCompany?.premium_enabled && (
+              {(!currentCompany?.premium_enabled && !isGlobalPremium && !isAdmin) && (
                 <span className="flex items-center text-[9px] bg-indigo-600/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ml-1">
                   ¿Activar IA?
                 </span>
