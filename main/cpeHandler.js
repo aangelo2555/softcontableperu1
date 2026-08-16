@@ -120,31 +120,27 @@ class CpeHandler {
           logger.warn(`[CPE] Error en inyección de navegación: ${e.message}`);
       }
 
-      // 2. Esperar pacientemente a que el iframe cargue y el interceptor capture el token
-      logger.info('[CPE] Esperando intercepción de token...');
-      for (let i = 0; i < 15; i++) {
+      // 2. Esperar pacientemente a que el iframe cargue y extraer el token de su sessionStorage
+      logger.info('[CPE] Esperando extracción de token en el iframe...');
+      for (let i = 0; i < 20; i++) {
           if (tokenJWT) break;
+          
+          const frame = page.frame({ name: 'iframeApplication' });
+          if (frame) {
+              try {
+                  const token = await frame.evaluate(() => {
+                      return sessionStorage.getItem('token') || localStorage.getItem('token');
+                  });
+                  if (token && token.length > 50) {
+                      tokenJWT = token;
+                      logger.info('[CPE] ¡Token JWT extraído directamente del sessionStorage del iframe!');
+                      break;
+                  }
+              } catch(e) {
+                  // Ignorar errores de cross-origin si el frame aún no está listo
+              }
+          }
           await page.waitForTimeout(1000);
-      }
-
-      // 3. Fallback: Navegar forzadamente si el iframe no se abrió / no se interceptó
-      if (!tokenJWT) {
-         try {
-             logger.info('[CPE] Token no interceptado. Navegando manualmente a ConsultaCpe...');
-             await page.goto('https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/loader/nuevaconsulta.html', { waitUntil: 'domcontentloaded' });
-             
-             // Extraer token de session storage si no está en URL
-             await page.waitForTimeout(5000); // Dar tiempo a Angular
-             tokenJWT = await page.evaluate(() => {
-                 return sessionStorage.getItem('token') || localStorage.getItem('token') || window.token;
-             });
-             
-             if (!tokenJWT && page.url().includes('token=')) {
-                 tokenJWT = new URL(page.url()).searchParams.get('token');
-             }
-         } catch(e) {
-             logger.warn('[CPE] Error en fallback de redirección: ' + e.message);
-         }
       }
 
       if (!tokenJWT) {
