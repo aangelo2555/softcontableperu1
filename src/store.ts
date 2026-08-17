@@ -423,9 +423,7 @@ export interface AppState extends WorkspaceState {
   updateCompany: (data: Partial<CompanyData>) => Promise<void>;
   
   // --- App Settings ---
-  activeTab: string;
   setActiveTab: (tab: string) => void;
-  showCompanyConfig: boolean;
   setShowCompanyConfig: (show: boolean) => void;
   toggleTheme: () => void;
   
