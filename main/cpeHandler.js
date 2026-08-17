@@ -146,37 +146,51 @@ class CpeHandler {
           
           logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE mediante Enlace Directo...');
           
-          logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE simulando click en el menú...');
+          logger.info('[CPE] Ejecutando navegación: Paso 1 - Click en el menú para cargar la pasarela...');
           
-          await page.evaluate(() => {
-              // 1. Buscar el enlace por ID o por su atributo onclick/href
-              const enlaces = document.querySelectorAll('a');
-              for (const a of enlaces) {
-                  const href = a.href || '';
-                  const onclick = a.getAttribute('onclick') || '';
-                  if (href.includes('11.38.1.1.1') || onclick.includes('11.38.1.1.1') || a.id === 'nivel4_11_38_1_1_1') {
-                      a.click();
-                      return;
-                  }
-              }
-              
-              // 2. Fallback: tratar de invocar las funciones globales de ruteo de SUNAT si el <a> no se encuentra
-              try {
-                  if (typeof sendServlet === 'function') {
-                      sendServlet('11.38.1.1.1');
-                  } else if (typeof cargarOpcion === 'function') {
-                      cargarOpcion('11.38.1.1.1');
-                  } else if (typeof irOpcion === 'function') {
-                      irOpcion('11.38.1.1.1');
-                  } else if (typeof window.$ !== 'undefined') {
-                      // Si usan jQuery
+          try {
+              // Hacer click forzado en el elemento del menú que contiene el texto exacto (case-insensitive)
+              await page.locator('text=/Nueva Consulta de comprobantes de pago/i').first().click({ force: true, timeout: 5000 });
+          } catch (err) {
+              logger.warn(`[CPE] No se encontró el texto en el menú, intentando fallback por ID: ${err.message}`);
+              await page.evaluate(() => {
+                  if (typeof window.$ !== 'undefined') {
                       $('#nivel4_11_38_1_1_1').trigger('click');
                   }
-              } catch (err) {}
+              });
+          }
+          
+          // Esperar a que la pasarela interna de SUNAT se inicialice
+          logger.info('[CPE] Esperando inicialización de la pasarela...');
+          await page.waitForTimeout(5000);
+          
+          logger.info('[CPE] Ejecutando navegación: Paso 2 - Inyectando deep link en el iframe...');
+          const sParam = await page.evaluate(() => {
+              const urlMatch = window.location.href.match(/[?&]s=([^&]+)/);
+              if (urlMatch) return urlMatch[1];
+              
+              const sInput = document.querySelector('input[name="s"]');
+              if (sInput && sInput.value) return sInput.value;
+              
+              for (const iframe of document.querySelectorAll('iframe')) {
+                  const m = (iframe.src || '').match(/[?&]s=([^&]+)/);
+                  if (m) return m[1];
+              }
+              return 'ww1';
           });
           
-          // Dar tiempo generoso para que el iframe procese la petición y cargue el Angular en e-factura
-          await page.waitForTimeout(5000);
+          const deepLink = `MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
+          await page.evaluate((url) => {
+              const iframe = document.getElementById('iframeApplication');
+              if (iframe) {
+                  iframe.src = url;
+              } else {
+                  window.location.href = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/${url}`;
+              }
+          }, deepLink);
+          
+          // Dar tiempo a que la página del deep link cargue
+          await page.waitForTimeout(4000);
           
       } catch (e) {
           logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
