@@ -5,7 +5,7 @@ const logger = require('./logger_web');
 const { buzonDir } = require('../server/storageConfig');
 
 /**
- * CPE Handler 100% Fiel a consultas/cpeScrapingHandler.js (con timeout de 20s por comprobante)
+ * CPE Handler 100% Fiel a consultas/cpeScrapingHandler.js
  */
 class CpeHandler {
   constructor() {
@@ -25,21 +25,20 @@ class CpeHandler {
    * Helper para obtener o crear la sesión activa dedicada de Playwright para CPE
    */
   async _obtenerOSesionActiva(ruc, usuario, clave) {
-    // 1. Reutilizar sesión activa si existe
+    // 1. Reutilizar sesión activa solo si el formulario está verdaderamente cargado
     if (this.activeSessions.has(ruc)) {
       const session = this.activeSessions.get(ruc);
       if (session && session.page && !session.page.isClosed()) {
         try {
-          const url = session.page.url();
-          if (url.includes('nuevaconsulta') || url.includes('consultacpe')) {
-            logger.info(`[CPE SCRAPING] Reutilizando sesión abierta y lista de Chromium para RUC ${ruc}`);
+          const hasForm = await session.page.$('input[name="rucEmisor"], input[formcontrolname="rucEmisor"]').catch(() => null);
+          if (hasForm) {
+            logger.info(`[CPE SCRAPING] Reutilizando sesión activa y confirmada en formulario para RUC ${ruc}`);
             return session;
           }
-        } catch (e) {
-          logger.warn(`[CPE SCRAPING] Sesión previa no respondió, recreando: ${e.message}`);
-          try { await session.browser.close(); } catch (err) {}
-          this.activeSessions.delete(ruc);
-        }
+        } catch (e) {}
+        
+        try { await session.browser.close(); } catch (err) {}
+        this.activeSessions.delete(ruc);
       }
     }
 
@@ -67,7 +66,7 @@ class CpeHandler {
 
     const page = await context.newPage();
 
-    // Anti-detección
+    // Anti-detección estándar de consultas
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
@@ -76,7 +75,7 @@ class CpeHandler {
     page.setDefaultTimeout(30000);
     page.setDefaultNavigationTimeout(60000);
 
-    // ========== PASO 1: LOGIN EN SUNAT SOL (Fiel a cpeScrapingHandler.js) ==========
+    // ========== PASO 1: LOGIN EN SUNAT SOL ==========
     const loginUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm';
     logger.info(`[CPE SCRAPING] PASO 1: Navegando al login SUNAT ${loginUrl}`);
 
@@ -98,6 +97,25 @@ class CpeHandler {
 
     await page.waitForTimeout(3000);
 
+    // Verificar si las credenciales fueron rechazadas por SUNAT
+    const authError = await page.evaluate(() => {
+      const body = document.body ? document.body.innerText : '';
+      if (body.includes('El RUC o usuario o clave no coinciden') || 
+          body.includes('Usuario o clave incorrecta') ||
+          body.includes('credenciales ingresadas son incorrectas') ||
+          body.includes('no se encuentra registrado') ||
+          body.includes('Usuario no habilitado')) {
+        return 'Credenciales SOL incorrectas en SUNAT. Verifique RUC, Usuario y Clave SOL.';
+      }
+      return null;
+    });
+
+    if (authError) {
+      logger.error(`[CPE SCRAPING] Fallo de autenticación: ${authError}`);
+      await browser.close().catch(() => {});
+      throw new Error(authError);
+    }
+
     let currentUrl = page.url();
     if (currentUrl.includes('api-seguridad')) {
       logger.info('[CPE SCRAPING] Detectada página OAuth, navegando al menú principal...');
@@ -118,7 +136,6 @@ class CpeHandler {
     logger.info(`[CPE SCRAPING] PASO 3: Navegando al portal CPE: ${cpeUrl}`);
     await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     
-    // Esperar a que el formulario Angular renderice
     logger.info('[CPE SCRAPING] Esperando inicialización del formulario Angular...');
     await page.waitForSelector('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', { timeout: 25000 }).catch(() => {});
     await page.waitForTimeout(2000);
@@ -143,11 +160,11 @@ class CpeHandler {
     try {
       session = await this._obtenerOSesionActiva(ruc, usuario, clave);
     } catch (errSession) {
-      logger.error(`[CPE SCRAPING] Error al iniciar sesión en SUNAT: ${errSession.message}`);
+      logger.error(`[CPE SCRAPING] Error de sesión en SUNAT: ${errSession.message}`);
       return facturas.map(f => ({
         id: f.id,
-        estado: 'PENDIENTE_REINTENTO',
-        mensaje: `Error conectando con SUNAT (${errSession.message}). Guardado como pendiente para reintentar.`
+        estado: 'ERROR_CREDENCIALES',
+        mensaje: errSession.message
       }));
     }
 
@@ -167,7 +184,7 @@ class CpeHandler {
           if (closeBtn) await closeBtn.click().catch(() => {});
         } catch (e) {}
 
-        // Seleccionar "Recibido" o "Emitido" (timeout 8s)
+        // Seleccionar "Recibido" o "Emitido"
         if (filtro === 'recibido') {
           try {
             await page.click('label[for="recibido"]', { timeout: 8000 });
@@ -182,14 +199,14 @@ class CpeHandler {
           }
         }
 
-        // Rellenar RUC Emisor (timeout 10s)
+        // Rellenar RUC Emisor
         try {
           await page.fill('input[name="rucEmisor"]', rucEmisor, { timeout: 10000 });
         } catch (e) {
           await page.fill('input[formcontrolname="rucEmisor"]', rucEmisor, { timeout: 10000 });
         }
 
-        // Tipo Comprobante (p-dropdown) (timeout 8s)
+        // Tipo Comprobante (p-dropdown)
         try {
           const tipoLabels = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de crédito', '08': 'Nota de débito', 'R1': 'Recibo por Honorarios' };
           const tipoLabel = tipoLabels[tipoDoc] || 'Factura';
@@ -200,21 +217,21 @@ class CpeHandler {
           logger.warn(`[CPE SCRAPING] Advertencia al seleccionar tipo comprobante: ${e.message}`);
         }
 
-        // Serie (timeout 8s)
+        // Serie
         try {
           await page.fill('input[name="serieComprobante"]', serie, { timeout: 8000 });
         } catch (e) {
           await page.fill('input[formcontrolname="serieComprobante"]', serie, { timeout: 8000 });
         }
 
-        // Número (timeout 8s)
+        // Número
         try {
           await page.fill('input[name="numeroComprobante"]', String(numero), { timeout: 8000 });
         } catch (e) {
           await page.fill('input[formcontrolname="numeroComprobante"]', String(numero), { timeout: 8000 });
         }
 
-        // Click en "Consultar" (timeout 8s)
+        // Click en "Consultar"
         logger.info('[CPE SCRAPING] Haciendo click en Consultar...');
         try {
           await page.click('button.boton-primary:has-text("Consultar")', { timeout: 8000 });
