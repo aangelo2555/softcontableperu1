@@ -24,7 +24,10 @@ import {
   DollarSign,
   Camera,
   Download,
-  FileCode
+  FileCode,
+  Eye,
+  Printer,
+  X
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -37,6 +40,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'individual' | 'masiva'>('individual');
+  const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     rucEmisor: '',
     tipoDoc: '01',
@@ -689,24 +693,20 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                               </td>
 
                               <td className="px-4 py-3.5 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  {(res.capturaBase64 || res.capturaPath) && (
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  {/* Botón Principal: Ver PDF / Comprobante en Frontend */}
+                                  {(res.pdfBase64 || res.capturaBase64 || res.xmlPath || res.estado === 'ACEPTADO') && (
                                     <button
-                                      onClick={() => {
-                                        if (res.capturaBase64) {
-                                          descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
-                                        } else if (res.capturaPath) {
-                                          handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
-                                        }
-                                      }}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Descargar captura de pantalla del comprobante SUNAT"
+                                      onClick={() => setSelectedDocForPreview(res)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
+                                      title="Visualizar PDF / Comprobante en pantalla"
                                     >
-                                      <Camera size={11} />
-                                      <span>Captura</span>
+                                      <Eye size={12} />
+                                      <span>Ver PDF</span>
                                     </button>
                                   )}
 
+                                  {/* Botón Descargar XML */}
                                   {(res.xmlBase64 || res.xmlPath) && (
                                     <button
                                       onClick={() => {
@@ -717,13 +717,14 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                         }
                                       }}
                                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Descargar XML firmado de SUNAT"
+                                      title="Descargar archivo XML firmado de SUNAT"
                                     >
                                       <Download size={11} />
                                       <span>XML</span>
                                     </button>
                                   )}
 
+                                  {/* Botón Descargar CDR */}
                                   {(res.cdrBase64 || res.cdrPath) && (
                                     <button
                                       onClick={() => {
@@ -738,6 +739,24 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     >
                                       <Download size={11} />
                                       <span>CDR</span>
+                                    </button>
+                                  )}
+
+                                  {/* Botón Descargar Captura */}
+                                  {(res.capturaBase64 || res.capturaPath) && (
+                                    <button
+                                      onClick={() => {
+                                        if (res.capturaBase64) {
+                                          descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
+                                        } else if (res.capturaPath) {
+                                          handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text shadow-xs transition-all cursor-pointer"
+                                      title="Descargar captura PNG del resultado"
+                                    >
+                                      <Camera size={11} />
+                                      <span>PNG</span>
                                     </button>
                                   )}
                                 </div>
@@ -756,6 +775,143 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
         </div>
       </div>
+
+      {/* ═══ Modal Visor Oficial de PDF / Comprobante SUNAT ═══ */}
+      {selectedDocForPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+          <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in">
+            {/* Header del Modal */}
+            <div className="px-6 py-4 border-b border-app-border bg-app-bg/80 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                  <FileText size={20} />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-black text-app-text uppercase tracking-wider">
+                      {selectedDocForPreview.tipoDoc === '01' ? 'Factura Electrónica' : selectedDocForPreview.tipoDoc === '03' ? 'Boleta de Venta' : 'Comprobante de Pago'} {selectedDocForPreview.serie}-{selectedDocForPreview.numero}
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      {selectedDocForPreview.estado || 'ACEPTADO'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-app-muted font-medium">
+                    {selectedDocForPreview.razonSocial || selectedDocForPreview.rucEmisor || 'SUNAT CPE'} • RUC: {selectedDocForPreview.rucEmisor || formData.rucEmisor}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botones de Acción Superior */}
+              <div className="flex items-center gap-2">
+                {selectedDocForPreview.pdfBase64 && (
+                  <button
+                    onClick={() => descargarBase64(selectedDocForPreview.pdfBase64, selectedDocForPreview.pdfFileName || `${selectedDocForPreview.serie}-${selectedDocForPreview.numero}.pdf`, 'application/pdf')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
+                  >
+                    <Download size={14} />
+                    <span>Descargar PDF</span>
+                  </button>
+                )}
+
+                {(selectedDocForPreview.xmlBase64 || selectedDocForPreview.xmlPath) && (
+                  <button
+                    onClick={() => {
+                      if (selectedDocForPreview.xmlBase64) {
+                        descargarBase64(selectedDocForPreview.xmlBase64, selectedDocForPreview.xmlFileName || `${selectedDocForPreview.serie}-${selectedDocForPreview.numero}.xml`, 'application/xml');
+                      } else if (selectedDocForPreview.xmlPath) {
+                        handleDescargarArchivoPorRuta(selectedDocForPreview.xmlPath, selectedDocForPreview.xmlFileName || `${selectedDocForPreview.serie}-${selectedDocForPreview.numero}.xml`);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer"
+                  >
+                    <Download size={14} />
+                    <span>Descargar XML</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setSelectedDocForPreview(null)}
+                  className="p-2 rounded-xl bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text transition-all cursor-pointer"
+                  title="Cerrar visor"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cuerpo del Modal: Visualizador PDF / Comprobante */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-app-bg/40 flex flex-col gap-4">
+              {/* Tarjeta de Resumen de Datos Extraídos */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-app-surface p-4 rounded-xl border border-app-border shadow-xs">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-app-muted block">Emisor / Razón Social</span>
+                  <span className="text-xs font-bold text-app-text truncate block mt-0.5">
+                    {selectedDocForPreview.razonSocial || 'Registrado en SUNAT'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-app-muted block">RUC Emisor</span>
+                  <span className="text-xs font-mono font-bold text-app-text block mt-0.5">
+                    {selectedDocForPreview.rucEmisor || formData.rucEmisor}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-app-muted block">Fecha de Emisión</span>
+                  <span className="text-xs font-bold text-app-text block mt-0.5">
+                    {selectedDocForPreview.fechaEmision || formData.fechaEmision || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-app-muted block">Importe Total</span>
+                  <span className="text-xs font-mono font-bold text-emerald-500 block mt-0.5">
+                    {selectedDocForPreview.importeTotal ? `S/ ${selectedDocForPreview.importeTotal}` : formData.total ? `S/ ${formData.total}` : 'Consultado'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visor PDF / Imagen de Comprobante */}
+              <div className="flex-1 min-h-[480px] bg-app-surface rounded-xl border border-app-border overflow-hidden flex items-center justify-center relative shadow-inner">
+                {selectedDocForPreview.pdfBase64 ? (
+                  <iframe
+                    src={`data:application/pdf;base64,${selectedDocForPreview.pdfBase64}#toolbar=1&navpanes=0`}
+                    className="w-full h-[540px] rounded-xl border-0"
+                    title="Visor PDF SUNAT"
+                  />
+                ) : selectedDocForPreview.capturaBase64 ? (
+                  <div className="flex flex-col items-center justify-center p-4 w-full overflow-auto">
+                    <img
+                      src={`data:image/png;base64,${selectedDocForPreview.capturaBase64}`}
+                      alt="Comprobante SUNAT"
+                      className="max-h-[500px] object-contain rounded-lg shadow-lg border border-app-border"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 text-center text-app-muted">
+                    <FileSearch size={42} className="opacity-40 mb-2" />
+                    <p className="text-sm font-bold text-app-text">Comprobante validado correctamente en SUNAT</p>
+                    <p className="text-xs text-app-muted mt-1">
+                      El comprobante figura como {selectedDocForPreview.estado || 'ACEPTADO'} en los registros de SUNAT.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer del Modal */}
+            <div className="px-6 py-3 border-t border-app-border bg-app-surface flex items-center justify-between">
+              <span className="text-[10px] font-bold text-app-muted">
+                Documento Oficial validado via Portal SUNAT SOL
+              </span>
+              <button
+                onClick={() => setSelectedDocForPreview(null)}
+                className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

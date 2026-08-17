@@ -7,7 +7,7 @@ const { buzonDir } = require('../server/storageConfig');
 /**
  * CPE Handler 100% Fiel a consultas/cpeScrapingHandler.js
  * Optimizado para entornos Cloud (Railway/Linux) con headless: true,
- * capturas automáticas para descarga local del cliente (sin guardar en base de datos).
+ * generación y descarga de PDF/XML, visor de comprobante y cero persistencia en BD.
  */
 class CpeHandler {
   constructor() {
@@ -67,6 +67,41 @@ class CpeHandler {
     } catch (e) {
       logger.error(`[CPE SCRAPING] Error en manejarIntersticiales: ${e.message}`);
     }
+  }
+
+  /**
+   * Helper seguro de descarga que jamás genera UnhandledPromiseRejections ni crashea el servidor
+   */
+  async _descargarArchivoSeguro(page, selectors, targetPath, timeoutMs = 8000) {
+    try {
+      for (const selector of selectors) {
+        const btn = await page.$(selector).catch(() => null);
+        if (btn) {
+          const isDisabled = await btn.evaluate(b => b.hasAttribute('disabled') || b.classList.contains('disabled')).catch(() => false);
+          if (isDisabled) continue;
+
+          let downloadEvent = null;
+          try {
+            const [download] = await Promise.all([
+              page.waitForEvent('download', { timeout: timeoutMs }).catch(() => null),
+              btn.click().catch(() => btn.evaluate(b => b.click()).catch(() => {}))
+            ]);
+            downloadEvent = download;
+          } catch (evErr) {
+            // Ignorar de forma segura si no emite evento de descarga
+          }
+
+          if (downloadEvent) {
+            await downloadEvent.saveAs(targetPath);
+            logger.info(`[CPE SCRAPING] ✅ Archivo descargado exitosamente: ${path.basename(targetPath)}`);
+            return targetPath;
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn(`[CPE SCRAPING] Advertencia en descarga segura: ${e.message}`);
+    }
+    return null;
   }
 
   /**
@@ -249,7 +284,7 @@ class CpeHandler {
 
   /**
    * Consulta y descarga en lote (Fiel a cpeScrapingHandler.js)
-   * Captura imágenes PNG y archivos XML/CDR para descarga directa en el navegador.
+   * Captura PDF, XML, CDR e imágenes para el visor y descarga directa en el frontend.
    */
   async descargarLoteCPE({ ruc, usuario, clave, facturas }) {
     logger.info(`[CPE SCRAPING] Iniciando procesamiento de ${facturas.length} comprobante(s) (máx 30s c/u) para RUC ${ruc}`);
@@ -355,10 +390,10 @@ class CpeHandler {
 
           if (!modal) {
             if (body.includes('No se encontr') || body.includes('sin resultados') || body.includes('no existe') || body.includes('no existe registro')) {
-              return { estado: 'NO_EXISTE', encontrado: false, razonSocial: '', importeTotal: '' };
+              return { estado: 'NO_EXISTE', encontrado: false, razonSocial: '', importeTotal: '', modalHtml: '' };
             }
-            if (body.includes('ACEPTADO')) return { estado: 'ACEPTADO', encontrado: true, razonSocial: '', importeTotal: '' };
-            return { estado: 'PENDIENTE_REINTENTO', encontrado: false, razonSocial: '', importeTotal: '' };
+            if (body.includes('ACEPTADO')) return { estado: 'ACEPTADO', encontrado: true, razonSocial: '', importeTotal: '', modalHtml: '' };
+            return { estado: 'PENDIENTE_REINTENTO', encontrado: false, razonSocial: '', importeTotal: '', modalHtml: '' };
           }
 
           const datos = {
@@ -367,7 +402,8 @@ class CpeHandler {
             razonSocial: '',
             rucEmisor: '',
             fechaEmision: '',
-            importeTotal: ''
+            importeTotal: '',
+            modalHtml: modal.innerHTML
           };
 
           // 1. Razón Social (Clase .emisor)
@@ -435,13 +471,13 @@ class CpeHandler {
 
           if (fs.existsSync(capturaPath)) {
             capturaBase64 = fs.readFileSync(capturaPath).toString('base64');
-            logger.info(`[CPE SCRAPING] 📸 Captura generada para descarga automática: ${capturaFileName}`);
+            logger.info(`[CPE SCRAPING] 📸 Captura generada para frontend: ${capturaFileName}`);
           }
         } catch (scErr) {
           logger.warn(`[CPE SCRAPING] No se pudo tomar captura del comprobante: ${scErr.message}`);
         }
 
-        // ========== DESCARGA NATIVA DE XML Y CDR ==========
+        // ========== DESCARGA NATIVA SEGURA DE XML, CDR Y PDF ==========
         let xmlPath = null;
         let xmlBase64 = null;
         let xmlFileName = null;
@@ -449,54 +485,72 @@ class CpeHandler {
         let cdrBase64 = null;
         let cdrFileName = null;
         let pdfPath = null;
+        let pdfBase64 = null;
+        let pdfFileName = null;
 
         if (resultado.encontrado) {
-          // Descargar XML
-          try {
-            const btnXml = await page.$('button[ngbtooltip="Descargar XML"]') || await page.$('button i.fa-file-code');
-            if (btnXml) {
-              const downloadPromise = page.waitForEvent('download', { timeout: 12000 });
-              await btnXml.click();
-              const download = await downloadPromise;
-              const fn = `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`;
-              const dest = path.join(clientDownloadFolder, fn);
-              await download.saveAs(dest);
-              xmlPath = dest;
-              xmlFileName = fn;
-              if (fs.existsSync(dest)) {
-                xmlBase64 = fs.readFileSync(dest).toString('base64');
-              }
-              logger.info(`[CPE SCRAPING] XML descargado con éxito: ${fn}`);
-            }
-          } catch (e) {
-            logger.warn(`[CPE SCRAPING] No se pudo descargar XML de ${serie}-${numero}: ${e.message}`);
+          // 1. Descarga de XML
+          const xmlDest = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+          const downloadedXml = await this._descargarArchivoSeguro(page, [
+            'button[ngbtooltip="Descargar XML"]',
+            'button:has(i.fa-file-code)',
+            'button:has-text("Descargar XML")',
+            'button:has-text("XML")'
+          ], xmlDest, 8000);
+
+          if (downloadedXml && fs.existsSync(downloadedXml)) {
+            xmlPath = downloadedXml;
+            xmlFileName = path.basename(downloadedXml);
+            xmlBase64 = fs.readFileSync(downloadedXml).toString('base64');
           }
 
-          // Descargar CDR
-          try {
-            const btnCdr = await page.evaluateHandle(() => {
-              const tilde = document.querySelector('button[ngbtooltip="Descargar CDR"]');
-              if (tilde) return tilde;
-              const icons = Array.from(document.querySelectorAll('i'));
-              const icon = icons.find(i => i.classList.contains('fa-file-contract') || i.classList.contains('fa-file-signature'));
-              return icon ? icon.closest('button') : null;
-            });
-            if (btnCdr) {
-              const downloadPromise = page.waitForEvent('download', { timeout: 12000 });
-              await btnCdr.click();
-              const download = await downloadPromise;
-              const fn = `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.zip`;
-              const dest = path.join(clientDownloadFolder, fn);
-              await download.saveAs(dest);
-              cdrPath = dest;
-              cdrFileName = fn;
-              if (fs.existsSync(dest)) {
-                cdrBase64 = fs.readFileSync(dest).toString('base64');
+          // 2. Descarga de CDR
+          const cdrDest = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.zip`);
+          const downloadedCdr = await this._descargarArchivoSeguro(page, [
+            'button[ngbtooltip="Descargar CDR"]',
+            'button:has(i.fa-file-contract)',
+            'button:has(i.fa-file-signature)',
+            'button:has-text("Descargar CDR")',
+            'button:has-text("CDR")'
+          ], cdrDest, 8000);
+
+          if (downloadedCdr && fs.existsSync(downloadedCdr)) {
+            cdrPath = downloadedCdr;
+            cdrFileName = path.basename(downloadedCdr);
+            cdrBase64 = fs.readFileSync(downloadedCdr).toString('base64');
+          }
+
+          // 3. Descarga / Generación de PDF
+          const pdfDest = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.pdf`);
+          const downloadedPdf = await this._descargarArchivoSeguro(page, [
+            'button[ngbtooltip="Descargar PDF"]',
+            'button:has(i.fa-file-pdf)',
+            'button:has-text("Descargar PDF")',
+            'button:has-text("PDF")',
+            'button:has-text("Imprimir")'
+          ], pdfDest, 8000);
+
+          if (downloadedPdf && fs.existsSync(downloadedPdf)) {
+            pdfPath = downloadedPdf;
+            pdfFileName = path.basename(downloadedPdf);
+            pdfBase64 = fs.readFileSync(downloadedPdf).toString('base64');
+          } else {
+            // Fallback: Generar PDF limpio del comprobante
+            try {
+              const modalElem = await page.$('div[role="document"].modal-dialog');
+              if (modalElem) {
+                const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true }).catch(() => null);
+                if (pdfBuffer) {
+                  fs.writeFileSync(pdfDest, pdfBuffer);
+                  pdfPath = pdfDest;
+                  pdfFileName = path.basename(pdfDest);
+                  pdfBase64 = pdfBuffer.toString('base64');
+                  logger.info(`[CPE SCRAPING] 📄 PDF generado exitosamente para frontend: ${pdfFileName}`);
+                }
               }
-              logger.info(`[CPE SCRAPING] CDR descargado con éxito: ${fn}`);
+            } catch (pdfGenErr) {
+              logger.warn(`[CPE SCRAPING] Advertencia al generar PDF: ${pdfGenErr.message}`);
             }
-          } catch (e) {
-            logger.warn(`[CPE SCRAPING] No se pudo descargar CDR de ${serie}-${numero}: ${e.message}`);
           }
         }
 
@@ -508,6 +562,10 @@ class CpeHandler {
           numero,
           estado: resultado.estado,
           mensaje: resultado.razonSocial ? `${resultado.razonSocial} (S/ ${resultado.importeTotal})` : resultado.estado,
+          razonSocial: resultado.razonSocial,
+          fechaEmision: resultado.fechaEmision,
+          importeTotal: resultado.importeTotal,
+          modalHtml: resultado.modalHtml,
           xmlPath,
           xmlBase64,
           xmlFileName,
@@ -515,6 +573,8 @@ class CpeHandler {
           cdrBase64,
           cdrFileName,
           pdfPath,
+          pdfBase64,
+          pdfFileName,
           capturaPath,
           capturaBase64,
           capturaFileName
