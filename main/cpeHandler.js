@@ -148,17 +148,17 @@ class CpeHandler {
           
           // Navegación directa recomendada por el usuario, preservando la sesión (parámetro s)
           const sParam = await page.evaluate(() => {
-              const urlMatch = window.location.href.match(/s=([^&]+)/);
+              const urlMatch = window.location.href.match(/[?&]s=([^&]+)/);
               if (urlMatch) return urlMatch[1];
               
               const sInput = document.querySelector('input[name="s"]');
               if (sInput && sInput.value) return sInput.value;
               
               for (const iframe of document.querySelectorAll('iframe')) {
-                  const m = (iframe.src || '').match(/s=([^&]+)/);
+                  const m = (iframe.src || '').match(/[?&]s=([^&]+)/);
                   if (m) return m[1];
               }
-              return 'ww1';
+              return 'ww1'; // Default fallback
           });
           
           const deepLink = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
