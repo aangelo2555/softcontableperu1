@@ -8,7 +8,8 @@ import {
   descargarXmlSeguro,
   base64ToUtf8,
   generarCdrXmlOficial,
-  parseCpeXml
+  parseCpeXml,
+  type CpeItem
 } from '../utils/cpeXmlParser';
 import {
   FileSearch,
@@ -22,6 +23,8 @@ import {
   Trash2,
   Layers,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   ArrowRight,
   ExternalLink,
@@ -34,7 +37,8 @@ import {
   FileCode,
   Eye,
   Printer,
-  X
+  X,
+  PackageCheck
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -48,6 +52,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'individual' | 'masiva'>('individual');
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     rucEmisor: '',
     tipoDoc: '01',
@@ -59,6 +64,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [masivaText, setMasivaText] = useState('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [showRecentSelector, setShowRecentSelector] = useState(true);
+
+  const toggleExpandRow = (rowId: string) => {
+    setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
+  };
 
   // Helper para descarga automática de archivos en el navegador con soporte UTF-8
   const descargarBase64 = (base64: string, fileName: string, mimeType: string = 'image/png') => {
@@ -600,10 +609,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               </div>
             </div>
 
-            {/* Panel Derecho: Tabla de Resultados Full-Size */}
+            {/* Panel Derecho: Tabla de Resultados Full-Size con Concepto de Factura */}
             <div className="col-span-1 lg:col-span-8 flex flex-col">
               <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col">
-                <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/40 flex justify-between items-center">
+                <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-blue-500" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
@@ -629,92 +638,166 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                       </p>
                     </div>
                   ) : (
-                    <table className="w-full text-left border-collapse min-w-[700px]">
+                    <table className="w-full text-left border-collapse min-w-[880px]">
                       <thead className="sticky top-0 z-10 bg-app-surface border-b border-app-border shadow-xs">
-                        <tr className="text-[8px] font-black uppercase tracking-widest text-app-muted">
-                          <th className="px-5 py-3">Identificador / Factura</th>
-                          <th className="px-4 py-3">Estado SUNAT</th>
-                          <th className="px-4 py-3">Archivos Disponibles</th>
-                          <th className="px-4 py-3 text-right">Descargar</th>
+                        <tr className="text-[9px] font-black uppercase tracking-widest text-app-muted">
+                          <th className="px-4 py-3 w-[25%]">Comprobante / Emisor</th>
+                          <th className="px-3 py-3 w-[15%]">Estado & Monto</th>
+                          <th className="px-4 py-3 w-[40%]">Concepto de Factura</th>
+                          <th className="px-4 py-3 w-[20%] text-right">Descargas</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
                         {resultados.map((res: any, idx: number) => {
                           const isAceptado = res.estado === 'ACEPTADO';
                           const isAnulado = res.estado?.includes('ANULADO');
-                          const isError = !isAceptado && !isAnulado;
+                          const rowId = String(res.id || `row-${idx}`);
+                          const isExpanded = !!expandedRows[rowId];
+
+                          // Obtener ítems parseados del XML
+                          let items: CpeItem[] | null = null;
+                          if (res.items && Array.isArray(res.items) && res.items.length > 0) {
+                            items = res.items;
+                          } else {
+                            const rawXml = res.xmlContent || (res.xmlBase64 ? base64ToUtf8(res.xmlBase64) : '');
+                            if (rawXml) {
+                              try {
+                                const parsed = parseCpeXml(rawXml);
+                                if (parsed.items && parsed.items.length > 0) {
+                                  items = parsed.items;
+                                }
+                              } catch (e) {}
+                            }
+                          }
 
                           return (
-                            <tr key={idx} className="hover:bg-app-hover/50 transition-colors">
-                              <td className="px-5 py-3.5">
-                                <div className="flex flex-col">
-                                  <span className="font-mono font-bold text-app-text text-[11px]">
-                                    {res.id || `Comprobante #${idx + 1}`}
+                            <tr key={idx} className="hover:bg-app-hover/40 transition-colors">
+                              {/* 1. Comprobante / Emisor */}
+                              <td className="px-4 py-3.5 align-top">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-black text-[11px]">
+                                      {res.serie && res.numero ? `${res.serie}-${res.numero}` : res.id || `CPE #${idx + 1}`}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-app-muted uppercase">
+                                      {res.tipoDoc === '03' ? 'Boleta' : 'Factura'}
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-app-text text-[11px] leading-tight line-clamp-2">
+                                    {res.razonSocial || res.emisor?.razonSocial || 'Proveedor'}
                                   </span>
-                                  {res.mensaje && (
-                                    <span className="text-[9px] text-app-muted mt-0.5 truncate max-w-xs">
-                                      {res.mensaje}
-                                    </span>
-                                  )}
+                                  <span className="text-[9px] font-mono text-app-muted">
+                                    RUC: {res.rucEmisor || activeCompany?.ruc || 'N/A'} {res.fechaEmision ? `• ${res.fechaEmision}` : ''}
+                                  </span>
                                 </div>
                               </td>
 
-                              <td className="px-4 py-3.5">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                                    isAceptado
-                                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                      : isAnulado
-                                      ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                  }`}
-                                >
-                                  {isAceptado && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                                  {res.estado || 'DESCONOCIDO'}
-                                </span>
-                              </td>
-
-                              <td className="px-4 py-3.5">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  {res.capturaBase64 || res.capturaPath ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                      <Camera size={11} /> Captura PNG
+                              {/* 2. Estado & Monto Total */}
+                              <td className="px-3 py-3.5 align-top">
+                                <div className="flex flex-col gap-1.5">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border w-fit ${
+                                      isAceptado
+                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                        : isAnulado
+                                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    }`}
+                                  >
+                                    {isAceptado && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                                    {res.estado || 'ACEPTADO'}
+                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="text-[9px] text-app-muted font-bold uppercase">Total</span>
+                                    <span className="text-xs font-black font-mono text-app-text">
+                                      S/ {Number(String(res.importeTotal || '0').replace(/[^0-9.]/g, '') || 0).toFixed(2)}
                                     </span>
-                                  ) : null}
-
-                                  {res.xmlBase64 || res.xmlPath ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                                      <FileCode size={11} /> XML
-                                    </span>
-                                  ) : null}
-
-                                  {(res.cdrBase64 || res.cdrPath || res.xmlBase64 || res.xmlContent) ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                                      <FileCheck size={11} /> CDR XML
-                                    </span>
-                                  ) : null}
-
-                                  {!res.capturaBase64 && !res.capturaPath && !res.xmlBase64 && !res.xmlPath && (
-                                    <span className="text-[9px] text-app-muted font-bold opacity-40">Sin archivos</span>
-                                  )}
+                                  </div>
                                 </div>
                               </td>
 
-                              <td className="px-4 py-3.5 text-right">
-                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                  {/* Botón Principal: Ver PDF / Comprobante en Frontend */}
-                                  {(res.pdfBase64 || res.capturaBase64 || res.xmlPath || res.xmlBase64 || res.cdrBase64 || res.estado === 'ACEPTADO') && (
-                                    <button
-                                      onClick={() => setSelectedDocForPreview(res)}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Visualizar PDF / Comprobante en pantalla"
-                                    >
-                                      <Eye size={12} />
-                                      <span>Ver PDF</span>
-                                    </button>
-                                  )}
+                              {/* 3. CONCEPTO DE FACTURA (Ítems / Cantidades / Precios) */}
+                              <td className="px-4 py-3.5 align-top">
+                                {items && items.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] font-black uppercase tracking-wider text-app-text flex items-center gap-1">
+                                        <PackageCheck size={13} className="text-emerald-500" />
+                                        {items.length} {items.length === 1 ? 'Ítem Detallado' : 'Ítems Detallados'}
+                                      </span>
+                                      {items.length > 2 && (
+                                        <button
+                                          onClick={() => toggleExpandRow(rowId)}
+                                          className="text-[9px] font-black uppercase text-blue-500 hover:text-blue-400 cursor-pointer flex items-center gap-0.5"
+                                        >
+                                          {isExpanded ? (
+                                            <>
+                                              <ChevronUp size={11} /> Ocultar
+                                            </>
+                                          ) : (
+                                            <>
+                                              <ChevronDown size={11} /> Ver todos ({items.length})
+                                            </>
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
 
-                                  {/* Botón Descargar XML */}
+                                    {/* Lista de Conceptos / Productos */}
+                                    <div className="space-y-1">
+                                      {(isExpanded ? items : items.slice(0, 2)).map((it, itIdx) => (
+                                        <div
+                                          key={itIdx}
+                                          className="p-1.5 rounded-lg bg-app-bg/80 border border-app-border/70 text-[10px] flex flex-col gap-0.5 hover:border-app-border transition-colors"
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <span className="font-bold text-app-text leading-tight flex-1">
+                                              {it.descripcion}
+                                            </span>
+                                            <span className="font-mono font-bold text-app-text shrink-0">
+                                              S/ {Number(it.subtotal || (it.cantidad * it.valorUnitario)).toFixed(2)}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2 text-[9px] text-app-muted flex-wrap">
+                                            <span className="px-1 py-0.2 rounded bg-app-surface border border-app-border font-mono font-medium">
+                                              {it.cantidad} {it.unidadMedida}
+                                            </span>
+                                            {it.codigo && it.codigo !== '-' && (
+                                              <span className="font-mono">Cód: {it.codigo}</span>
+                                            )}
+                                            <span>V. Unit: S/ {Number(it.valorUnitario).toFixed(4)}</span>
+                                            {it.icbper > 0 && <span>ICBPER: S/ {Number(it.icbper).toFixed(2)}</span>}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-app-muted flex flex-col gap-0.5">
+                                    <span className="font-medium text-app-text">
+                                      {res.razonSocial || 'Comprobante verificado en SUNAT'}
+                                    </span>
+                                    <span className="text-[9px] text-app-muted">
+                                      {res.mensaje || 'Información de factura sincronizada con éxito'}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* 4. Descargas y Acciones */}
+                              <td className="px-4 py-3.5 align-top text-right">
+                                <div className="flex items-center justify-end gap-1 flex-nowrap">
+                                  {/* Botón Ver PDF */}
+                                  <button
+                                    onClick={() => setSelectedDocForPreview(res)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                    title="Visualizar PDF Oficial en pantalla"
+                                  >
+                                    <Eye size={12} />
+                                    <span>Ver PDF</span>
+                                  </button>
+
+                                  {/* Botón XML */}
                                   {(res.xmlBase64 || res.xmlContent || res.xmlPath) && (
                                     <button
                                       onClick={() => {
@@ -726,7 +809,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                           handleDescargarArchivoPorRuta(res.xmlPath, res.xmlFileName || `${res.id}.xml`);
                                         }
                                       }}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
                                       title="Descargar archivo XML oficial"
                                     >
                                       <Download size={11} />
@@ -734,7 +817,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     </button>
                                   )}
 
-                                  {/* Botón Descargar CDR */}
+                                  {/* Botón CDR */}
                                   {(res.cdrBase64 || res.cdrContent || res.cdrPath || res.xmlBase64 || res.xmlContent) && (
                                     <button
                                       onClick={() => {
@@ -749,22 +832,22 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                             const rawXml = res.xmlContent || base64ToUtf8(res.xmlBase64);
                                             const parsed = parseCpeXml(rawXml);
                                             const genCdr = generarCdrXmlOficial(parsed);
-                                            descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany.ruc}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
+                                            descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany?.ruc || '20000000001'}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
                                             toast.success('Constancia CDR generada y descargada.');
                                           } catch (e) {
                                             toast.error('No se pudo generar el CDR.');
                                           }
                                         }
                                       }}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Descargar Constancia de Recepción CDR"
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                      title="Descargar Constancia de Recepción CDR (XML)"
                                     >
                                       <Download size={11} />
                                       <span>CDR</span>
                                     </button>
                                   )}
 
-                                  {/* Botón Descargar Captura */}
+                                  {/* Botón Captura PNG */}
                                   {(res.capturaBase64 || res.capturaPath) && (
                                     <button
                                       onClick={() => {
@@ -774,8 +857,8 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                           handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
                                         }
                                       }}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text shadow-xs transition-all cursor-pointer"
-                                      title="Descargar captura PNG del resultado"
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                      title="Descargar captura PNG"
                                     >
                                       <Camera size={11} />
                                       <span>PNG</span>
