@@ -144,27 +144,13 @@ class CpeHandler {
           logger.info('[CPE] Esperando carga del portal SOL y buscando iframe...');
           await page.waitForTimeout(5000); 
           
-          logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE...');
-          await page.evaluate(() => {
-              // Simular el clic usando jQuery (como lo hace el usuario de forma nativa)
-              try {
-                  if (typeof $ !== 'undefined') {
-                      $('#nivel4_11_38_1_1_1').trigger('click');
-                  } else {
-                      document.getElementById('nivel4_11_38_1_1_1').click();
-                  }
-              } catch(e) {}
-              
-              // Respaldo por inyección directa
-              setTimeout(() => {
-                  const iframe = document.getElementById('iframeApplication');
-                  if (iframe && (!iframe.src || iframe.src.includes('about:blank') || iframe.src.includes('pestana=*'))) {
-                      iframe.src = 'MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
-                  }
-              }, 3000);
-          });
+          logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE mediante Enlace Directo...');
+          
+          // Navegación directa recomendada por el usuario
+          await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1', { waitUntil: 'domcontentloaded' });
+          
       } catch (e) {
-          logger.warn(`[CPE] Error en inyección de navegación: ${e.message}`);
+          logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
       }
 
       // 2. Esperar pacientemente a que el iframe cargue y extraer el token de su sessionStorage
