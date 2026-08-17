@@ -1947,6 +1947,43 @@ app.post('/api/cpe/descargar-xml', async (req, res) => {
     }
 });
 
+app.post('/api/cpe/descargar-archivo', async (req, res) => {
+    try {
+        const { ruta } = req.body;
+        if (!ruta) {
+            return res.status(400).json({ success: false, error: 'Ruta requerida.' });
+        }
+        
+        const fs = require('fs');
+        const safePath = path.resolve(ruta);
+        const downloadBase = path.resolve(buzonDir);
+        if (!safePath.startsWith(downloadBase)) {
+            return res.status(403).json({ success: false, error: 'Acceso no autorizado.' });
+        }
+
+        if (!fs.existsSync(safePath)) {
+            return res.status(404).json({ success: false, error: 'El archivo ya no existe en el servidor.' });
+        }
+
+        const ext = path.extname(safePath).toLowerCase();
+        let mime = 'application/octet-stream';
+        if (ext === '.png') mime = 'image/png';
+        else if (ext === '.xml') mime = 'application/xml';
+        else if (ext === '.zip') mime = 'application/zip';
+        else if (ext === '.pdf') mime = 'application/pdf';
+
+        const fileBuffer = fs.readFileSync(safePath);
+        res.json({
+            success: true,
+            fileBase64: fileBuffer.toString('base64'),
+            fileName: path.basename(safePath),
+            fileType: mime
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/buzon/descargar-archivo-constancia', async (req, res) => {
     try {
         const { ruta } = req.body;

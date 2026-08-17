@@ -318,6 +318,10 @@ export const webApiBridge = {
         const res = await api.post('/api/cpe/descargar-xml', args);
         return res.data;
     },
+    cpeDescargarArchivo: async (args: { ruta: string }) => {
+        const res = await api.post('/api/cpe/descargar-archivo', args);
+        return res.data;
+    },
 
     // --- SIRE API ---
     ejecutarSire: async (datos: any) => {

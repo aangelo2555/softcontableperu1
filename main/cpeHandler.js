@@ -7,7 +7,7 @@ const { buzonDir } = require('../server/storageConfig');
 /**
  * CPE Handler 100% Fiel a consultas/cpeScrapingHandler.js
  * Optimizado para entornos Cloud (Railway/Linux) con headless: true,
- * manejo de intersticiales y trazabilidad detallada paso a paso.
+ * capturas automáticas para descarga local del cliente (sin guardar en base de datos).
  */
 class CpeHandler {
   constructor() {
@@ -249,6 +249,7 @@ class CpeHandler {
 
   /**
    * Consulta y descarga en lote (Fiel a cpeScrapingHandler.js)
+   * Captura imágenes PNG y archivos XML/CDR para descarga directa en el navegador.
    */
   async descargarLoteCPE({ ruc, usuario, clave, facturas }) {
     logger.info(`[CPE SCRAPING] Iniciando procesamiento de ${facturas.length} comprobante(s) (máx 30s c/u) para RUC ${ruc}`);
@@ -418,9 +419,35 @@ class CpeHandler {
 
         logger.info(`[CPE SCRAPING] Resultado para ${serie}-${numero}: ${resultado.estado} (${resultado.razonSocial || 'Sin Razón Social'})`);
 
+        // ========== CAPTURA DE PANTALLA DEL COMPROBANTE ==========
+        let capturaPath = null;
+        let capturaBase64 = null;
+        const capturaFileName = `CAPTURA-${rucEmisor}-${tipoDoc}-${serie}-${numero}.png`;
+
+        try {
+          capturaPath = path.join(clientDownloadFolder, capturaFileName);
+          const modalElem = await page.$('div[role="document"].modal-dialog');
+          if (modalElem) {
+            await modalElem.screenshot({ path: capturaPath });
+          } else {
+            await page.screenshot({ path: capturaPath, fullPage: false });
+          }
+
+          if (fs.existsSync(capturaPath)) {
+            capturaBase64 = fs.readFileSync(capturaPath).toString('base64');
+            logger.info(`[CPE SCRAPING] 📸 Captura generada para descarga automática: ${capturaFileName}`);
+          }
+        } catch (scErr) {
+          logger.warn(`[CPE SCRAPING] No se pudo tomar captura del comprobante: ${scErr.message}`);
+        }
+
         // ========== DESCARGA NATIVA DE XML Y CDR ==========
         let xmlPath = null;
+        let xmlBase64 = null;
+        let xmlFileName = null;
         let cdrPath = null;
+        let cdrBase64 = null;
+        let cdrFileName = null;
         let pdfPath = null;
 
         if (resultado.encontrado) {
@@ -435,6 +462,10 @@ class CpeHandler {
               const dest = path.join(clientDownloadFolder, fn);
               await download.saveAs(dest);
               xmlPath = dest;
+              xmlFileName = fn;
+              if (fs.existsSync(dest)) {
+                xmlBase64 = fs.readFileSync(dest).toString('base64');
+              }
               logger.info(`[CPE SCRAPING] XML descargado con éxito: ${fn}`);
             }
           } catch (e) {
@@ -458,6 +489,10 @@ class CpeHandler {
               const dest = path.join(clientDownloadFolder, fn);
               await download.saveAs(dest);
               cdrPath = dest;
+              cdrFileName = fn;
+              if (fs.existsSync(dest)) {
+                cdrBase64 = fs.readFileSync(dest).toString('base64');
+              }
               logger.info(`[CPE SCRAPING] CDR descargado con éxito: ${fn}`);
             }
           } catch (e) {
@@ -467,11 +502,22 @@ class CpeHandler {
 
         resultados.push({
           id: factura.id,
+          rucEmisor,
+          tipoDoc,
+          serie,
+          numero,
           estado: resultado.estado,
           mensaje: resultado.razonSocial ? `${resultado.razonSocial} (S/ ${resultado.importeTotal})` : resultado.estado,
           xmlPath,
+          xmlBase64,
+          xmlFileName,
           cdrPath,
-          pdfPath
+          cdrBase64,
+          cdrFileName,
+          pdfPath,
+          capturaPath,
+          capturaBase64,
+          capturaFileName
         });
 
       } catch (itemErr) {
@@ -479,6 +525,10 @@ class CpeHandler {
         await this.capturarDebug(page, `cpe_item_error_${serie}_${numero}.png`);
         resultados.push({
           id: factura.id,
+          rucEmisor,
+          tipoDoc,
+          serie,
+          numero,
           estado: 'PENDIENTE_REINTENTO',
           mensaje: 'SUNAT no respondió en 30s. Comprobante guardado como pendiente para reintentar.'
         });

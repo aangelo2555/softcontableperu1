@@ -21,7 +21,10 @@ import {
   ShieldCheck,
   Building2,
   Calendar,
-  DollarSign
+  DollarSign,
+  Camera,
+  Download,
+  FileCode
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -45,6 +48,43 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [masivaText, setMasivaText] = useState('');
   const [resultados, setResultados] = useState<any[]>([]);
   const [showRecentSelector, setShowRecentSelector] = useState(true);
+
+  // Helper para descarga automática de archivos en el navegador
+  const descargarBase64 = (base64: string, fileName: string, mimeType: string = 'image/png') => {
+    try {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    } catch (e) {
+      console.error('Error al descargar archivo localmente:', e);
+    }
+  };
+
+  const handleDescargarArchivoPorRuta = async (ruta: string, defaultName: string) => {
+    try {
+      toast.loading('Descargando archivo...', { id: 'down-file' });
+      const res = await webApiBridge.cpeDescargarArchivo({ ruta });
+      if (res.success && res.fileBase64) {
+        descargarBase64(res.fileBase64, res.fileName || defaultName, res.fileType || 'application/octet-stream');
+        toast.success(`Archivo ${res.fileName || defaultName} descargado.`, { id: 'down-file' });
+      } else {
+        toast.error('No se pudo descargar el archivo.', { id: 'down-file' });
+      }
+    } catch (err: any) {
+      toast.error('Error al descargar archivo: ' + err.message, { id: 'down-file' });
+    }
+  };
 
   // Escuchar target proveniente de otros módulos (ej. SIRE)
   useEffect(() => {
@@ -100,8 +140,28 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       const resList = Array.isArray(response) ? response : (response?.resultados || []);
       setResultados(prev => [...resList, ...prev]);
       
+      // Descarga automática en el navegador de capturas PNG, XML y CDR
+      let descargasContadas = 0;
+      resList.forEach((r: any) => {
+        if (r.capturaBase64) {
+          descargarBase64(r.capturaBase64, r.capturaFileName || `CAPTURA-${r.id}.png`, 'image/png');
+          descargasContadas++;
+        }
+        if (r.xmlBase64) {
+          descargarBase64(r.xmlBase64, r.xmlFileName || `${r.id}.xml`, 'application/xml');
+          descargasContadas++;
+        }
+        if (r.cdrBase64) {
+          descargarBase64(r.cdrBase64, r.cdrFileName || `R-${r.id}.zip`, 'application/zip');
+          descargasContadas++;
+        }
+      });
+
       const aceptados = resList.filter((r: any) => r.estado === 'ACEPTADO').length;
-      toast.success(`Consulta completada. ${resList.length} procesados (${aceptados} Aceptados).`, { id: loadingToast, duration: 4000 });
+      toast.success(
+        `Consulta completada (${aceptados} Aceptados). ${descargasContadas > 0 ? `Se descargaron ${descargasContadas} archivo(s) a tu equipo.` : ''}`,
+        { id: loadingToast, duration: 4500 }
+      );
       await syncCurrentWorkspace();
     } catch (error: any) {
       console.error(error);
@@ -557,13 +617,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                       </p>
                     </div>
                   ) : (
-                    <table className="w-full text-left border-collapse min-w-[650px]">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
                       <thead className="sticky top-0 z-10 bg-app-surface border-b border-app-border shadow-xs">
                         <tr className="text-[8px] font-black uppercase tracking-widest text-app-muted">
                           <th className="px-5 py-3">Identificador / Factura</th>
                           <th className="px-4 py-3">Estado SUNAT</th>
-                          <th className="px-4 py-3">Archivos Descargados</th>
-                          <th className="px-4 py-3 text-right">Detalles</th>
+                          <th className="px-4 py-3">Archivos Disponibles</th>
+                          <th className="px-4 py-3 text-right">Descargar</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
@@ -603,37 +663,84 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                               </td>
 
                               <td className="px-4 py-3.5">
-                                <div className="flex items-center gap-2">
-                                  {res.xmlPath ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                                      <FileCheck size={11} /> XML Guardado
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {res.capturaBase64 || res.capturaPath ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                      <Camera size={11} /> Captura PNG
                                     </span>
-                                  ) : (
-                                    <span className="text-[9px] text-app-muted font-bold opacity-40">Sin XML</span>
-                                  )}
+                                  ) : null}
 
-                                  {res.cdrPath ? (
+                                  {res.xmlBase64 || res.xmlPath ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                      <FileCode size={11} /> XML
+                                    </span>
+                                  ) : null}
+
+                                  {res.cdrBase64 || res.cdrPath ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">
                                       <FileCheck size={11} /> CDR ZIP
                                     </span>
                                   ) : null}
 
-                                  {res.pdfPath ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                      <FileText size={11} /> PDF
-                                    </span>
-                                  ) : null}
+                                  {!res.capturaBase64 && !res.capturaPath && !res.xmlBase64 && !res.xmlPath && (
+                                    <span className="text-[9px] text-app-muted font-bold opacity-40">Sin archivos</span>
+                                  )}
                                 </div>
                               </td>
 
-                              <td className="px-4 py-3.5 text-right font-mono text-[10px] text-app-muted">
-                                {res.xmlPath ? (
-                                  <span className="truncate max-w-[150px] inline-block" title={res.xmlPath}>
-                                    {res.xmlPath.split(/[\\/]/).pop()}
-                                  </span>
-                                ) : (
-                                  '—'
-                                )}
+                              <td className="px-4 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {(res.capturaBase64 || res.capturaPath) && (
+                                    <button
+                                      onClick={() => {
+                                        if (res.capturaBase64) {
+                                          descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
+                                        } else if (res.capturaPath) {
+                                          handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
+                                      title="Descargar captura de pantalla del comprobante SUNAT"
+                                    >
+                                      <Camera size={11} />
+                                      <span>Captura</span>
+                                    </button>
+                                  )}
+
+                                  {(res.xmlBase64 || res.xmlPath) && (
+                                    <button
+                                      onClick={() => {
+                                        if (res.xmlBase64) {
+                                          descargarBase64(res.xmlBase64, res.xmlFileName || `${res.id}.xml`, 'application/xml');
+                                        } else if (res.xmlPath) {
+                                          handleDescargarArchivoPorRuta(res.xmlPath, res.xmlFileName || `${res.id}.xml`);
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+                                      title="Descargar XML firmado de SUNAT"
+                                    >
+                                      <Download size={11} />
+                                      <span>XML</span>
+                                    </button>
+                                  )}
+
+                                  {(res.cdrBase64 || res.cdrPath) && (
+                                    <button
+                                      onClick={() => {
+                                        if (res.cdrBase64) {
+                                          descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.zip`, 'application/zip');
+                                        } else if (res.cdrPath) {
+                                          handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.zip`);
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer"
+                                      title="Descargar Constancia de Recepción CDR (ZIP)"
+                                    >
+                                      <Download size={11} />
+                                      <span>CDR</span>
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
