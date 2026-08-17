@@ -146,8 +146,24 @@ class CpeHandler {
           
           logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE mediante Enlace Directo...');
           
-          // Navegación directa recomendada por el usuario
-          await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1', { waitUntil: 'domcontentloaded' });
+          // Navegación directa recomendada por el usuario, preservando la sesión (parámetro s)
+          const sParam = await page.evaluate(() => {
+              const urlMatch = window.location.href.match(/s=([^&]+)/);
+              if (urlMatch) return urlMatch[1];
+              
+              const sInput = document.querySelector('input[name="s"]');
+              if (sInput && sInput.value) return sInput.value;
+              
+              for (const iframe of document.querySelectorAll('iframe')) {
+                  const m = (iframe.src || '').match(/s=([^&]+)/);
+                  if (m) return m[1];
+              }
+              return 'ww1';
+          });
+          
+          const deepLink = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
+          logger.info(`[CPE] Navegando a deep link con parámetro de sesión preservado: ${deepLink}`);
+          await page.goto(deepLink, { waitUntil: 'domcontentloaded' });
           
       } catch (e) {
           logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
@@ -225,18 +241,18 @@ class CpeHandler {
               
               // 2. Click en "Recibido" (hacer click en el LABEL, ya que el input puede estar oculto por Bootstrap)
               try {
-                  await targetContext.click('label[for="recibido"]', { timeout: 3000, force: true });
+                  await targetContext.click('label[for="recibido"]', { timeout: 10000, force: true });
               } catch (e) {
-                  await targetContext.click('#recibido', { timeout: 3000, force: true });
+                  await targetContext.click('#recibido', { timeout: 10000, force: true });
               }
               
               // 3. Seleccionar tipo de comprobante (Dropdown de PrimeNG)
               try {
                   // Abrir dropdown
-                  await targetContext.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 3000 });
+                  await targetContext.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 5000 });
                   // Si es factura (01), buscar en la lista
                   if (tipoDoc === '01') {
-                      await targetContext.locator('li').locator('text="Factura"').first().click({ timeout: 3000 });
+                      await targetContext.locator('li').locator('text="Factura"').first().click({ timeout: 5000 });
                   }
               } catch (e) {
                   logger.warn(`[CPE] No se pudo seleccionar tipo de comprobante en UI: ${e.message}`);
@@ -251,7 +267,7 @@ class CpeHandler {
               await targetContext.click('button:has-text("Consultar")', { force: true });
               
               // Esperar a que la red intercepte el token
-              await page.waitForTimeout(3000);
+              await page.waitForTimeout(5000);
               
             } catch (fallbackErr) {
               logger.error(`[CPE] Error en DOM Fallback: ${fallbackErr.message}`);
