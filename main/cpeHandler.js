@@ -6,6 +6,7 @@ const { buzonDir } = require('../server/storageConfig');
 
 /**
  * CPE Handler 100% Fiel a consultas/cpeScrapingHandler.js
+ * Adaptado con tolerancia de tiempos para SUNAT Cloud
  */
 class CpeHandler {
   constructor() {
@@ -25,12 +26,12 @@ class CpeHandler {
    * Helper para obtener o crear la sesión activa dedicada de Playwright para CPE
    */
   async _obtenerOSesionActiva(ruc, usuario, clave) {
-    // 1. Reutilizar sesión activa solo si el formulario está verdaderamente cargado
+    // 1. Reutilizar sesión activa si el formulario ya está visible en el navegador
     if (this.activeSessions.has(ruc)) {
       const session = this.activeSessions.get(ruc);
       if (session && session.page && !session.page.isClosed()) {
         try {
-          const hasForm = await session.page.$('input[name="rucEmisor"], input[formcontrolname="rucEmisor"]').catch(() => null);
+          const hasForm = await session.page.$('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], label[for="recibido"]').catch(() => null);
           if (hasForm) {
             logger.info(`[CPE SCRAPING] Reutilizando sesión activa y confirmada en formulario para RUC ${ruc}`);
             return session;
@@ -72,15 +73,15 @@ class CpeHandler {
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
-    page.setDefaultTimeout(30000);
-    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(35000);
+    page.setDefaultNavigationTimeout(90000);
 
-    // ========== PASO 1: LOGIN EN SUNAT SOL ==========
+    // ========== PASO 1: LOGIN EN SUNAT SOL (Fiel a cpeScrapingHandler.js) ==========
     const loginUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm';
     logger.info(`[CPE SCRAPING] PASO 1: Navegando al login SUNAT ${loginUrl}`);
 
-    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForSelector('#txtRuc', { timeout: 30000 });
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.waitForSelector('#txtRuc', { timeout: 35000 });
 
     logger.info(`[CPE SCRAPING] Rellenando credenciales SOL: ${ruc} - ${usuario}`);
     await page.fill('#txtRuc', ruc.trim());
@@ -91,7 +92,7 @@ class CpeHandler {
     await page.waitForTimeout(300);
 
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {}),
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 90000 }).catch(() => {}),
       page.click('#btnAceptar')
     ]);
 
@@ -119,7 +120,7 @@ class CpeHandler {
     let currentUrl = page.url();
     if (currentUrl.includes('api-seguridad')) {
       logger.info('[CPE SCRAPING] Detectada página OAuth, navegando al menú principal...');
-      await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await page.waitForTimeout(3000);
     }
 
@@ -128,17 +129,18 @@ class CpeHandler {
     // ========== PASO 2: NAVEGACIÓN DIRECTA A LA INTERFAZ ==========
     const consultaUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
     logger.info(`[CPE SCRAPING] PASO 2: Navegando directamente a la interfaz de consulta...`);
-    await page.goto(consultaUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(consultaUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForTimeout(3000);
 
     // ========== PASO 3: NAVEGAR AL PORTAL CPE ==========
     const cpeUrl = 'https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/nuevaconsulta/1.0.0/';
     logger.info(`[CPE SCRAPING] PASO 3: Navegando al portal CPE: ${cpeUrl}`);
-    await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
     
-    logger.info('[CPE SCRAPING] Esperando inicialización del formulario Angular...');
-    await page.waitForSelector('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', { timeout: 25000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+    // Esperar a que el formulario Angular renderice
+    logger.info('[CPE SCRAPING] Esperando renderizado de formulario Angular en SUNAT...');
+    await page.waitForSelector('label[for="recibido"], #recibido, input[name="rucEmisor"], input[formcontrolname="rucEmisor"]', { timeout: 35000 }).catch(() => {});
+    await page.waitForTimeout(3000);
 
     const session = { browser, context, page };
     this.activeSessions.set(ruc, session);
@@ -146,10 +148,10 @@ class CpeHandler {
   }
 
   /**
-   * Consulta y descarga en lote (Fiel a cpeScrapingHandler.js con timeout de 20s)
+   * Consulta y descarga en lote (Fiel a cpeScrapingHandler.js)
    */
   async descargarLoteCPE({ ruc, usuario, clave, facturas }) {
-    logger.info(`[CPE SCRAPING] Iniciando procesamiento de ${facturas.length} comprobante(s) (máx 20s c/u) para RUC ${ruc}`);
+    logger.info(`[CPE SCRAPING] Iniciando procesamiento de ${facturas.length} comprobante(s) (máx 30s c/u) para RUC ${ruc}`);
     
     const clientDownloadFolder = path.join(this.downloadPath, ruc);
     if (!fs.existsSync(clientDownloadFolder)) {
@@ -171,7 +173,7 @@ class CpeHandler {
     const { page } = session;
     const resultados = [];
 
-    // ========== PASO 4: PROCESAR CADA COMPROBANTE (Timeout de 20s por comprobante) ==========
+    // ========== PASO 4: PROCESAR CADA COMPROBANTE ==========
     for (let i = 0; i < facturas.length; i++) {
       const factura = facturas[i];
       const { rucEmisor, tipoDoc = '01', serie, numero, filtro = 'recibido' } = factura;
@@ -181,62 +183,65 @@ class CpeHandler {
         // Cerrar modal previo si quedó abierto
         try {
           const closeBtn = await page.$('button.close, button[data-dismiss="modal"], .modal-header button');
-          if (closeBtn) await closeBtn.click().catch(() => {});
+          if (closeBtn) {
+            await closeBtn.click().catch(() => {});
+            await page.waitForTimeout(500);
+          }
         } catch (e) {}
 
-        // Seleccionar "Recibido" o "Emitido"
+        // Seleccionar "Recibido" o "Emitido" (timeout 12s)
         if (filtro === 'recibido') {
           try {
-            await page.click('label[for="recibido"]', { timeout: 8000 });
+            await page.click('label[for="recibido"]', { timeout: 12000 });
           } catch (e) {
-            await page.click('#recibido', { timeout: 8000 }).catch(() => {});
+            await page.click('#recibido', { timeout: 12000 }).catch(() => {});
           }
         } else {
           try {
-            await page.click('label[for="emitido"]', { timeout: 8000 });
+            await page.click('label[for="emitido"]', { timeout: 12000 });
           } catch (e) {
-            await page.click('#emitido', { timeout: 8000 }).catch(() => {});
+            await page.click('#emitido', { timeout: 12000 }).catch(() => {});
           }
         }
 
-        // Rellenar RUC Emisor
+        // Rellenar RUC Emisor (timeout 15s)
         try {
-          await page.fill('input[name="rucEmisor"]', rucEmisor, { timeout: 10000 });
+          await page.fill('input[name="rucEmisor"]', rucEmisor, { timeout: 15000 });
         } catch (e) {
-          await page.fill('input[formcontrolname="rucEmisor"]', rucEmisor, { timeout: 10000 });
+          await page.fill('input[formcontrolname="rucEmisor"]', rucEmisor, { timeout: 15000 });
         }
 
-        // Tipo Comprobante (p-dropdown)
+        // Tipo Comprobante (p-dropdown) (timeout 12s)
         try {
           const tipoLabels = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de crédito', '08': 'Nota de débito', 'R1': 'Recibo por Honorarios' };
           const tipoLabel = tipoLabels[tipoDoc] || 'Factura';
 
-          await page.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 8000 });
-          await page.click(`li[aria-label="${tipoLabel}"]`, { timeout: 4000 }).catch(() => page.click(`text=${tipoLabel}`));
+          await page.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 12000 });
+          await page.click(`li[aria-label="${tipoLabel}"]`, { timeout: 6000 }).catch(() => page.click(`text=${tipoLabel}`));
         } catch (e) {
           logger.warn(`[CPE SCRAPING] Advertencia al seleccionar tipo comprobante: ${e.message}`);
         }
 
-        // Serie
+        // Serie (timeout 12s)
         try {
-          await page.fill('input[name="serieComprobante"]', serie, { timeout: 8000 });
+          await page.fill('input[name="serieComprobante"]', serie, { timeout: 12000 });
         } catch (e) {
-          await page.fill('input[formcontrolname="serieComprobante"]', serie, { timeout: 8000 });
+          await page.fill('input[formcontrolname="serieComprobante"]', serie, { timeout: 12000 });
         }
 
-        // Número
+        // Número (timeout 12s)
         try {
-          await page.fill('input[name="numeroComprobante"]', String(numero), { timeout: 8000 });
+          await page.fill('input[name="numeroComprobante"]', String(numero), { timeout: 12000 });
         } catch (e) {
-          await page.fill('input[formcontrolname="numeroComprobante"]', String(numero), { timeout: 8000 });
+          await page.fill('input[formcontrolname="numeroComprobante"]', String(numero), { timeout: 12000 });
         }
 
-        // Click en "Consultar"
+        // Click en "Consultar" (timeout 12s)
         logger.info('[CPE SCRAPING] Haciendo click en Consultar...');
         try {
-          await page.click('button.boton-primary:has-text("Consultar")', { timeout: 8000 });
+          await page.click('button.boton-primary:has-text("Consultar")', { timeout: 12000 });
         } catch (e) {
-          await page.click('button[type="submit"]:has-text("Consultar")', { timeout: 8000 });
+          await page.click('button[type="submit"]:has-text("Consultar")', { timeout: 12000 });
         }
 
         // Esperar respuesta de SUNAT (4 segundos)
@@ -323,7 +328,7 @@ class CpeHandler {
           try {
             const btnXml = await page.$('button[ngbtooltip="Descargar XML"]') || await page.$('button i.fa-file-code');
             if (btnXml) {
-              const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
+              const downloadPromise = page.waitForEvent('download', { timeout: 12000 });
               await btnXml.click();
               const download = await downloadPromise;
               const fn = `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`;
@@ -344,7 +349,7 @@ class CpeHandler {
               return icon ? icon.closest('button') : null;
             });
             if (btnCdr) {
-              const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
+              const downloadPromise = page.waitForEvent('download', { timeout: 12000 });
               await btnCdr.click();
               const download = await downloadPromise;
               const fn = `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.zip`;
@@ -366,11 +371,11 @@ class CpeHandler {
         });
 
       } catch (itemErr) {
-        logger.warn(`[CPE SCRAPING] ⏱️ Timeout/Fallo en factura ${serie}-${numero} (<20s). Pasando a la siguiente: ${itemErr.message}`);
+        logger.warn(`[CPE SCRAPING] ⏱️ Timeout/Fallo en factura ${serie}-${numero} (<30s). Pasando a la siguiente: ${itemErr.message}`);
         resultados.push({
           id: factura.id,
           estado: 'PENDIENTE_REINTENTO',
-          mensaje: 'SUNAT no respondió en 20s. Comprobante guardado como pendiente para reintentar.'
+          mensaje: 'SUNAT no respondió en 30s. Comprobante guardado como pendiente para reintentar.'
         });
       }
     }
