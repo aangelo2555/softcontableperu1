@@ -102,7 +102,7 @@ class CPEScrapingHandler {
             const cliente = credResult.data;
 
             browser = await chromium.launch({
-                headless: false, // Visible para depuración visual
+                headless: true, // Headless para entornos Linux/Cloud y Electron
                 // slowMo: 0, // Eliminado para mayor velocidad
                 args: [
                     '--no-sandbox',
@@ -669,7 +669,7 @@ class CPEScrapingHandler {
 
                     // Lanzar navegador
                     browser = await chromium.launch({
-                        headless: false, // Visible para depuración visual
+                        headless: true, // Headless para entornos Linux/Cloud y Electron
                         slowMo: 50,
                         args: [
                             '--no-sandbox',
