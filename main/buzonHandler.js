@@ -484,8 +484,18 @@ class BuzonHandler {
    */
   async obtenerDetalleMensajeAPI(page, codigoMensaje) {
     try {
-      const currentOrigin = await page.evaluate(() => window.location.origin);
-      const baseUrl = currentOrigin.includes('sunat.gob.pe') ? currentOrigin : 'https://ww1.sunat.gob.pe';
+      const baseUrl = await page.evaluate(() => {
+          const iframe = document.querySelector('iframe[name="iframeApplication"]') || document.querySelector('iframe');
+          if (iframe && iframe.src) {
+              try {
+                  const urlObj = new URL(iframe.src);
+                  if (urlObj.origin.includes('sunat.gob.pe')) {
+                      return urlObj.origin;
+                  }
+              } catch(e) {}
+          }
+          return 'https://ww1.sunat.gob.pe';
+      });
       const timestamp = Date.now();
       
       let apiUrl = `${baseUrl}/ol-ti-itvisornoti/visor/obtenerDetalleNotiMen?codigoMensaje=${codigoMensaje}&tipoMsj=2&_=${timestamp}`;
