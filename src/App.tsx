@@ -28,6 +28,7 @@ import BuzonView from './components/BuzonModule';
 import MovimientosView from './components/MovimientosDashboard';
 import CajaView from './components/CajaDashboard';
 import SireView from './components/SireView';
+import ConsultasView from './components/ConsultasView';
 import ProductosView from './components/ProductosView';
 import KardexView from './components/KardexView';
 import LibroCajaBancosView from './components/LibroCajaBancosView';
@@ -154,6 +155,7 @@ const SIDEBAR_GROUPS: TabGroup[] = [
       { id: 'KARDEX', label: 'Kárdex Valorizado', icon: BookOpen },
       { id: 'ACTIVOS', label: 'Activos Fijos', icon: HardDrive },
       { id: 'PLANILLA', label: 'Planillas', icon: Users },
+      { id: 'CONSULTAS', label: 'Consultas CPE', icon: FileSearch },
     ],
   },
   {
@@ -238,6 +240,7 @@ const TAB_LABELS: Record<string, string> = {};
 SIDEBAR_GROUPS.forEach(g => g.items.forEach(i => { TAB_LABELS[i.id] = i.label; }));
 STUDENT_SIDEBAR_GROUPS.forEach(g => g.items.forEach(i => { TAB_LABELS[i.id] = i.label; }));
 TAB_LABELS['BUZON'] = 'Buzón Electrónico';
+TAB_LABELS['CONSULTAS'] = 'Consultas CPE';
 TAB_LABELS['AI_KNOWLEDGE'] = 'Base IA (RAG)';
 
 function findGroupForTab(tabId: string): string | null {
@@ -251,13 +254,13 @@ function findGroupForTab(tabId: string): string | null {
 // ─── App Component ───
 
 const App: React.FC = () => {
-  const { 
-    activeTab, 
-    setActiveTab, 
-    theme, 
-    toggleTheme, 
-    buzonMensajes, 
-    setShowCompanyConfig, 
+  const {
+    activeTab,
+    setActiveTab,
+    theme,
+    toggleTheme,
+    buzonMensajes,
+    setShowCompanyConfig,
     currentCompany,
     isInspectingUser,
     stopInspectingWorkspace,
@@ -414,6 +417,7 @@ const App: React.FC = () => {
       case 'MOVIMIENTOS': return <MovimientosView />;
       case 'CAJA': return <CajaView />;
       case 'BUZON': return <BuzonView />;
+      case 'CONSULTAS': return <ConsultasView currentWorkspace={currentCompany} />;
       case 'SIRE': return <SireView />;
       case 'PRODUCTOS': return <ProductosView />;
       case 'KARDEX': return <KardexView />;
@@ -522,7 +526,7 @@ const App: React.FC = () => {
       try {
         // Wait a small bit to ensure electronAPI is injected
         await new Promise(r => setTimeout(r, 500));
-        
+
         await runMigration();
         await useStore.getState().initApp();
       } catch (error) {
@@ -551,14 +555,14 @@ const App: React.FC = () => {
   // Carga mensajes persistidos en localStorage al iniciar.
   // Solo ejecuta sync real cuando NO hay datos persistidos o al cambiar de empresa.
   const previousRucRef = useRef<string | null>(null);
-  
+
   useEffect(() => {
     if (!isLoggedIn) return;
     const ruc = currentCompany.ruc;
     if (!ruc) return;
 
-    const isExplicitChange = previousRucRef.current !== null && 
-                             previousRucRef.current !== ruc;
+    const isExplicitChange = previousRucRef.current !== null &&
+      previousRucRef.current !== ruc;
     previousRucRef.current = ruc;
 
     // 1. Cargar buzón persistido desde localStorage para esta empresa
@@ -597,7 +601,7 @@ const App: React.FC = () => {
             empresa: currentCompany.name,
             email: ''
           });
-          
+
           if (result.success) {
             useStore.getState().setBuzonMensajes(result.mensajes, ruc);
             console.log(`[AUTO SYNC GLOBAL] ✅ Buzón sincronizado y persistido: ${result.mensajes.length} mensajes`);
@@ -682,7 +686,7 @@ const App: React.FC = () => {
   const groupHasActiveTab = (group: TabGroup) => group.items.some(item => item.id === activeTab);
 
   const allTabs = filteredGroups.flatMap(g => g.items);
-  const searchResults = searchQuery 
+  const searchResults = searchQuery
     ? allTabs.filter(t => t.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : (isSearchFocused ? allTabs : []);
 
@@ -703,7 +707,7 @@ const App: React.FC = () => {
   if (isInitializing) {
     return (
       <div className={`fixed inset-0 h-screen w-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/70 flex flex-col items-center justify-center p-6 text-center transition-all duration-700 select-none overflow-hidden ${logoLoaded ? 'opacity-100' : 'opacity-0'}`}>
-        
+
         {/* Ambient Pearl Sheen & Window Reflection Glows */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-blue-200/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none animate-pulse" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-tl from-indigo-200/35 via-purple-100/25 to-transparent rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
@@ -711,16 +715,16 @@ const App: React.FC = () => {
 
         {/* Central Reluciente Pearl Glass Card */}
         <div className="relative z-10 w-full max-w-sm bg-white/80 backdrop-blur-2xl border border-white/90 rounded-3xl p-8 sm:p-10 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.08),0_0_0_1px_rgba(255,255,255,0.9)_inset] flex flex-col items-center animate-fade-in">
-          
+
           {/* Logo Emblem Container with Crystal Glow */}
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-blue-500/20 rounded-3xl blur-xl animate-pulse" />
             <div className="relative p-4 bg-gradient-to-b from-white to-slate-50 border border-white shadow-[0_8px_25px_rgba(37,99,235,0.12)] rounded-2xl flex items-center justify-center">
-              <img 
-                src="/assets/logo.png" 
-                alt="SoftContable Logo" 
+              <img
+                src="/assets/logo.png"
+                alt="SoftContable Logo"
                 onLoad={() => setLogoLoaded(true)}
-                className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-sm transition-transform duration-500 hover:scale-105" 
+                className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-sm transition-transform duration-500 hover:scale-105"
               />
             </div>
           </div>
@@ -759,22 +763,22 @@ const App: React.FC = () => {
 
 
 
-      {/* ═══ MOBILE BACKDROP ═══ */}
-      {isMobileSidebarOpen && (
-        <div 
-          onClick={() => setIsMobileSidebarOpen(false)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-300 animate-fade-in"
-        />
-      )}
+        {/* ═══ MOBILE BACKDROP ═══ */}
+        {isMobileSidebarOpen && (
+          <div
+            onClick={() => setIsMobileSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-300 animate-fade-in"
+          />
+        )}
 
-      {/* ═══ SIDEBAR ═══ */}
-      <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
-        {/* Brand Header */}
-        <div className="h-16 flex items-center px-5 bg-app-surface shrink-0 border-b border-app-border overflow-hidden" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
+        {/* ═══ SIDEBAR ═══ */}
+        <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
+          {/* Brand Header */}
+          <div className="h-16 flex items-center px-5 bg-app-surface shrink-0 border-b border-app-border overflow-hidden" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
             <div className="flex items-center gap-3 w-full">
-              <img 
-                src="assets/logo.png" 
-                alt="Logo" 
+              <img
+                src="assets/logo.png"
+                alt="Logo"
                 className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10' : 'w-8 h-8'} object-contain shrink-0`}
               />
               {!isSidebarCollapsed && (
@@ -783,502 +787,494 @@ const App: React.FC = () => {
                 </span>
               )}
             </div>
-        </div>
+          </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 custom-scrollbar flex flex-col gap-1 w-full px-2 bg-app-surface">
-          {computedSidebarGroups.map((group) => {
-            const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
-            const isActiveGroup = groupHasActiveTab(group);
-            const isSingleItem = group.items.length === 1;
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 custom-scrollbar flex flex-col gap-1 w-full px-2 bg-app-surface">
+            {computedSidebarGroups.map((group) => {
+              const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
+              const isActiveGroup = groupHasActiveTab(group);
+              const isSingleItem = group.items.length === 1;
 
-            if (isSingleItem) {
-              const tab = group.items[0];
-              const isActive = activeTab === tab.id;
+              if (isSingleItem) {
+                const tab = group.items[0];
+                const isActive = activeTab === tab.id;
+                return (
+                  <div key={group.groupLabel} className="mb-1">
+                    <button
+                      onClick={() => setActiveTab(tab.id)}
+                      title={isSidebarCollapsed ? tab.label : ''}
+                      className={`flex items-center w-full rounded-lg transition-all text-[12px] font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
+                        } ${isActive
+                          ? isStudentMode()
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
+                            : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                          : isStudentMode()
+                            ? 'text-app-muted hover:bg-app-hover hover:text-indigo-500'
+                            : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-app-muted'} />
+                        {!isSidebarCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
+                      </div>
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <div key={group.groupLabel} className="mb-1">
                   <button
-                    onClick={() => setActiveTab(tab.id)}
-                    title={isSidebarCollapsed ? tab.label : ''}
-                    className={`flex items-center w-full rounded-lg transition-all text-[12px] font-bold tracking-wide uppercase ${
-                      isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
-                    } ${
-                      isActive
+                    onClick={() => toggleGroup(group.groupLabel)}
+                    title={isSidebarCollapsed ? group.groupLabel : ''}
+                    className={`flex items-center w-full rounded-lg transition-all text-[12px] font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
+                      } ${isActiveGroup && !isExpanded
                         ? isStudentMode()
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
-                          : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                          ? 'text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
+                          : 'text-blue-600 bg-blue-50/50'
                         : isStudentMode()
-                          ? 'text-app-muted hover:bg-app-hover hover:text-indigo-500'
+                          ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
                           : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
-                      <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-app-muted'} />
-                      {!isSidebarCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
+                      <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
+                      {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
                     </div>
+                    {!isSidebarCollapsed && (
+                      <ChevronDown size={14} className={`text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                    )}
                   </button>
+
+                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'
+                    }`}>
+                    <div className="flex flex-col gap-1 border-l-2 border-app-border ml-[22px] pl-3">
+                      {group.items.map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${isActive
+                                ? isStudentMode()
+                                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
+                                  : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                                : isStudentMode()
+                                  ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
+                                  : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
+                              }`}
+                          >
+                            <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
+                            <span className="whitespace-nowrap">{tab.label === 'Honorarios' ? '+ HONORARIOS' : tab.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               );
-            }
+            })}
+          </nav>
 
-            return (
-              <div key={group.groupLabel} className="mb-1">
-                <button
-                  onClick={() => toggleGroup(group.groupLabel)}
-                  title={isSidebarCollapsed ? group.groupLabel : ''}
-                  className={`flex items-center w-full rounded-lg transition-all text-[12px] font-bold tracking-wide uppercase ${
-                    isSidebarCollapsed ? 'px-0 py-3 justify-center' : 'px-4 py-3 justify-between'
-                  } ${
-                    isActiveGroup && !isExpanded
-                      ? isStudentMode()
-                        ? 'text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
-                        : 'text-blue-600 bg-blue-50/50'
-                      : isStudentMode()
-                        ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
-                        : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
-                    {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
-                  </div>
-                  {!isSidebarCollapsed && (
-                    <ChevronDown size={14} className={`text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
-                  )}
-                </button>
-
-                <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
-                  isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'
-                }`}>
-                  <div className="flex flex-col gap-1 border-l-2 border-app-border ml-[22px] pl-3">
-                    {group.items.map((tab) => {
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveTab(tab.id)}
-                          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${
-                            isActive
-                              ? isStudentMode()
-                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
-                                : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                              : isStudentMode()
-                                ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
-                                : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
-                          }`}
-                        >
-                          <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
-                          <span className="whitespace-nowrap">{tab.label === 'Honorarios' ? '+ HONORARIOS' : tab.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+          {/* Compact Bottom Sidebar (Expanded) */}
+          <div className={`p-2.5 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+            <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
+              {/* User Avatar + Info */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
+                  {userInitial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
+                  <p className={`text-[8px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
                 </div>
               </div>
-            );
-          })}
-        </nav>
 
-        {/* Compact Bottom Sidebar (Expanded) */}
-        <div className={`p-2.5 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
-          <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
-            {/* User Avatar + Info */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
-                {userInitial}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-                <p className={`text-[8px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
+              {/* Quick Actions: Password, Theme & Logout */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setShowChangePasswordModal(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+                  title="Cambiar Contraseña"
+                >
+                  <KeyRound size={13} />
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
+                  title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+                >
+                  {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+                </button>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
+                  title="Cerrar Sesión"
+                >
+                  <LogOut size={13} />
+                </button>
               </div>
             </div>
 
-            {/* Quick Actions: Password, Theme & Logout */}
-            <div className="flex items-center gap-1 shrink-0">
+            {/* PWA Install Button */}
+            {deferredPrompt && (
               <button
-                onClick={() => setShowChangePasswordModal(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
-                title="Cambiar Contraseña"
+                onClick={handleInstallApp}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
               >
-                <KeyRound size={13} />
+                <CloudDownload size={12} className="animate-bounce" />
+                <span>Instalar Aplicación</span>
               </button>
-              <button
-                onClick={toggleTheme}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
-                title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-              >
-                {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-              </button>
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
-                title="Cerrar Sesión"
-              >
-                <LogOut size={13} />
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* PWA Install Button */}
-          {deferredPrompt && (
-            <button
-              onClick={handleInstallApp}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
-            >
-              <CloudDownload size={12} className="animate-bounce" />
-              <span>Instalar Aplicación</span>
-            </button>
-          )}
-        </div>
-
-        {/* Compact Bottom Sidebar (Collapsed Desktop) */}
-        <div className={`p-2 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
-          <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
-            {userInitial}
-          </div>
-          <button
-            onClick={() => setShowChangePasswordModal(true)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
-            title="Cambiar Contraseña"
-          >
-            <KeyRound size={13} />
-          </button>
-          <button
-            onClick={toggleTheme}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted transition-colors cursor-pointer"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          >
-            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-          </button>
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-7 h-7 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
-            title="Cerrar Sesión"
-          >
-            <LogOut size={13} />
-          </button>
-          {deferredPrompt && (
-            <button
-              onClick={handleInstallApp}
-              className="w-7 h-7 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all border border-blue-500/20 cursor-pointer shadow-sm active:scale-95"
-              title="Instalar Aplicación"
-            >
-              <CloudDownload size={13} className="animate-bounce" />
-            </button>
-          )}
-        </div>
-      </aside>
-
-      {/* ═══ MAIN CONTENT ═══ */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {isInspectingUser && (
-          <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-white flex items-center justify-between text-xs font-black uppercase tracking-wider shadow-md shrink-0 z-50">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={14} className="animate-bounce shrink-0 text-amber-200" />
-              <span>Modo Inspector Activo: Estás visualizando los datos de la empresa <strong className="underline">{currentCompany?.name} (RUC: {currentCompany?.ruc})</strong>.</span>
+          {/* Compact Bottom Sidebar (Collapsed Desktop) */}
+          <div className={`p-2 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
+              {userInitial}
             </div>
             <button
-              onClick={stopInspectingWorkspace}
-              className="px-3 py-1 bg-white hover:bg-slate-100 text-orange-600 font-extrabold text-[10px] rounded-lg shadow-sm uppercase tracking-widest transition-all cursor-pointer shrink-0"
+              onClick={() => setShowChangePasswordModal(true)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+              title="Cambiar Contraseña"
             >
-              Salir de Inspección
+              <KeyRound size={13} />
             </button>
+            <button
+              onClick={toggleTheme}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted transition-colors cursor-pointer"
+              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-7 h-7 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
+              title="Cerrar Sesión"
+            >
+              <LogOut size={13} />
+            </button>
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallApp}
+                className="w-7 h-7 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all border border-blue-500/20 cursor-pointer shadow-sm active:scale-95"
+                title="Instalar Aplicación"
+              >
+                <CloudDownload size={13} className="animate-bounce" />
+              </button>
+            )}
+          </div>
+        </aside>
+
+        {/* ═══ MAIN CONTENT ═══ */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {isInspectingUser && (
+            <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-white flex items-center justify-between text-xs font-black uppercase tracking-wider shadow-md shrink-0 z-50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={14} className="animate-bounce shrink-0 text-amber-200" />
+                <span>Modo Inspector Activo: Estás visualizando los datos de la empresa <strong className="underline">{currentCompany?.name} (RUC: {currentCompany?.ruc})</strong>.</span>
+              </div>
+              <button
+                onClick={stopInspectingWorkspace}
+                className="px-3 py-1 bg-white hover:bg-slate-100 text-orange-600 font-extrabold text-[10px] rounded-lg shadow-sm uppercase tracking-widest transition-all cursor-pointer shrink-0"
+              >
+                Salir de Inspección
+              </button>
+            </div>
+          )}
+
+          {/* Top Header */}
+          <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
+
+            {/* Left: Hamburger + Search Bar */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                onClick={() => {
+                  if (window.innerWidth <= 768) {
+                    setIsMobileSidebarOpen(!isMobileSidebarOpen);
+                  } else {
+                    setIsSidebarCollapsed(!isSidebarCollapsed);
+                  }
+                }}
+                className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all"
+                title="Alternar panel lateral"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
+
+              <div ref={searchRef} className="relative w-[120px] sm:w-[280px] lg:w-[360px] group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110">
+                  <Search size={18} className="text-app-muted/60" strokeWidth={2.5} />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-2.5 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
+                  style={{ paddingLeft: '3.25rem' }}
+                  placeholder="Buscar..."
+                />
+
+                {/* Search Results Dropdown */}
+                {isSearchFocused && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl max-h-64 overflow-y-auto z-50 animate-fade-in py-1 glass-dropdown custom-scrollbar">
+                    <div className="px-3 py-2 text-[10px] font-black uppercase text-app-muted tracking-widest border-b border-app-border mb-1">
+                      Módulos Encontrados
+                    </div>
+                    {searchResults.slice(0, searchQuery.trim() ? 10 : 5).map((res) => (
+                      <button
+                        key={res.id}
+                        onClick={() => { setActiveTab(res.id); setSearchQuery(''); setIsSearchFocused(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-app-hover transition-colors text-left"
+                      >
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-600/10 rounded-lg">
+                          <res.icon size={16} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <span className="block text-xs font-bold text-app-text uppercase tracking-wide">{res.label}</span>
+                          <span className="block text-[10px] font-medium text-app-muted uppercase">{findGroupForTab(res.id)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isSearchFocused && searchQuery && searchResults.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl overflow-hidden z-50 p-4 text-center glass-dropdown">
+                    <p className="text-xs font-bold text-app-muted">No se encontraron opciones para "{searchQuery}"</p>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleOpenCompanyConfig}
+                className="group h-9 flex items-center justify-start gap-2 px-0 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-[36px] hover:w-[240px] hover:px-3 relative"
+                title="Configuración de la Empresa"
+              >
+                <div className="w-[34px] shrink-0 flex items-center justify-center absolute left-0">
+                  <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-[34px]">Configuración de la Empresa</span>
+              </button>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
+              {/* Sync Status Badge (H-01) */}
+              {syncStatus !== 'idle' && (
+                <div className="flex items-center text-[10px] font-black uppercase tracking-wider transition-all duration-300">
+                  {syncStatus === 'saving' && (
+                    <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg animate-pulse">
+                      <Loader2 size={12} className="animate-spin" /> Guardando...
+                    </span>
+                  )}
+                  {syncStatus === 'saved' && (
+                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                      <CheckCircle2 size={12} /> Guardado
+                    </span>
+                  )}
+                  {syncStatus === 'error' && (
+                    <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg">
+                      <AlertCircle size={12} /> Error al guardar
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* Botón Responsivo SoftPremium (IA) en Header */}
+              <button
+                onClick={() => {
+                  setActiveTab('SOFTPREMIUM');
+                  if (window.history && window.history.pushState) {
+                    window.history.pushState({}, '', '/premium');
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-blue-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shadow-sm cursor-pointer group"
+                title="Abrir Portal SoftPremium IA a Pantalla Completa"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
+                <span className="font-black uppercase tracking-wider hidden sm:inline font-sans">
+                  SoftPremium <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-1 font-mono">IA</span>
+                </span>
+
+                {(!currentCompany?.premium_enabled && !isGlobalPremium && !isAdmin) && (
+                  <span className="flex items-center text-[9px] bg-indigo-600/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ml-1">
+                    ¿Activar IA?
+                  </span>
+                )}
+              </button>
+
+              {!isStudentMode() && (
+                <>
+                  {/* Notifications */}
+                  <button
+                    onClick={() => setActiveTab('BUZON')}
+                    className="relative p-2 text-app-muted hover:text-blue-600 transition-colors"
+                    title="Buzón Electrónico"
+                  >
+                    <Bell size={20} strokeWidth={1.5} />
+                    {unreadBuzon > 0 && (
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
+                    )}
+                  </button>
+
+                  {/* SIRE Button */}
+                  <button
+                    onClick={() => setActiveTab('SIRE')}
+                    className={`p-2 transition-colors ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
+                    title="Módulo SIRE (Descargas API)"
+                  >
+                    <CloudDownload size={20} strokeWidth={1.5} />
+                  </button>
+
+                  {/* Backup Button */}
+                  {isAdmin && (
+                    <button
+                      onClick={handleBackup}
+                      disabled={isBackingUp}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${isBackingUp
+                          ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed'
+                          : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'
+                        }`}
+                      title="Crear copia de seguridad"
+                    >
+                      {isBackingUp ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
+                      <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
+                        {isBackingUp ? 'Procesando...' : 'Backup'}
+                      </span>
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* Massive Excel Download */}
+              <button
+                onClick={handleMassiveExport}
+                disabled={isExportingMassive}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${isExportingMassive
+                    ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed'
+                    : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20'
+                  }`}
+                title="Descargar libro contable completo en Excel"
+              >
+                {isExportingMassive ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />}
+                <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
+                  {isExportingMassive ? 'Generando...' : 'Excel Masivo'}
+                </span>
+              </button>
+            </div>
+          </header>
+
+          {/* View Content */}
+          <main className="flex-1 overflow-hidden relative bg-app-bg">
+            <div key={activeTab} className="absolute inset-0 animate-fade-in">
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex flex-col items-center gap-3 text-app-muted">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" strokeWidth={2.5} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Cargando...</span>
+                  </div>
+                </div>
+              }>
+                {renderView()}
+              </Suspense>
+            </div>
+
+          </main>
+
+          {/* Faint Footer */}
+          <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 print:hidden">
+            <span className="text-[9px] font-black uppercase tracking-widest text-app-muted/85">
+              © 2026 Angelo Thomas Serna Simeon • SOFTCONTABLE SaaS
+            </span>
+            <span className="hidden sm:inline text-[9px] text-app-muted/40">|</span>
+            <span className="flex items-center gap-2">
+              <button onClick={() => setShowLegalPage('terms')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Términos</button>
+              <span className="text-[9px] text-app-muted/30">•</span>
+              <button onClick={() => setShowLegalPage('privacy')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Privacidad</button>
+              <span className="text-[9px] text-app-muted/30">•</span>
+              <button onClick={() => setShowLegalPage('security')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Seguridad</button>
+              <span className="text-[9px] text-app-muted/30">•</span>
+              <button onClick={() => setShowLegalPage('legal')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Legal</button>
+            </span>
+          </div>
+        </div>
+        <div className="print:hidden">
+          <SuggestionBox />
+        </div>
+
+        {/* ═══ Modal Legal ═══ */}
+        {showLegalPage && (
+          <LegalPages initialSection={showLegalPage} onClose={() => setShowLegalPage(null)} />
+        )}
+
+        {/* ═══ Banner de Consentimiento de Cookies ═══ */}
+        <CookieBanner onOpenLegalCookies={() => setShowLegalPage('cookies')} />
+
+        {/* Banner flotante para iOS */}
+        {showIosTip && (
+          <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-[9999] bg-app-surface/90 dark:bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl p-4 shadow-2xl animate-fade-in flex flex-col gap-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💡</span>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-app-text">Instalar SoftContable</h3>
+              </div>
+              <button
+                onClick={handleDismissIosTip}
+                className="text-app-muted hover:text-app-text p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <p className="text-[11px] text-app-muted leading-relaxed font-medium">
+              Para instalar esta aplicación en tu iPhone/iPad: presiona el botón de <strong>Compartir</strong> en la barra de Safari y luego selecciona <strong>"Agregar a la pantalla de inicio"</strong>.
+            </p>
+          </div>
+        )}
+        {/* Modal de Confirmación de Cierre de Sesión */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-sm bg-app-surface/95 border border-app-border rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-scale-up">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-500/10 text-red-500 rounded-2xl shrink-0">
+                  <LogOut size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-app-text">Cerrar Sesión</h3>
+                  <p className="text-[11px] font-bold text-app-muted uppercase tracking-wide mt-0.5">¿Estás seguro de que deseas salir?</p>
+                </div>
+              </div>
+              <p className="text-xs text-app-muted leading-relaxed font-medium">
+                Se cerrará tu sesión activa de SoftContable y tendrás que volver a ingresar tus credenciales para acceder a tus empresas.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 py-3 px-4 bg-app-bg hover:bg-app-hover border border-app-border text-app-text font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('softcontable_token');
+                    localStorage.removeItem('pld-ui-preferences');
+                    window.location.reload();
+                  }}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
-          
-          {/* Left: Hamburger + Search Bar */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            <button
-              onClick={() => {
-                if (window.innerWidth <= 768) {
-                  setIsMobileSidebarOpen(!isMobileSidebarOpen);
-                } else {
-                  setIsSidebarCollapsed(!isSidebarCollapsed);
-                }
-              }}
-              className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all"
-              title="Alternar panel lateral"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-
-            <div ref={searchRef} className="relative w-[120px] sm:w-[280px] lg:w-[360px] group">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110">
-                <Search size={18} className="text-app-muted/60" strokeWidth={2.5} />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onFocus={() => setIsSearchFocused(true)}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-2.5 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
-                style={{ paddingLeft: '3.25rem' }}
-                placeholder="Buscar..."
-              />
-
-              {/* Search Results Dropdown */}
-              {isSearchFocused && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl max-h-64 overflow-y-auto z-50 animate-fade-in py-1 glass-dropdown custom-scrollbar">
-                  <div className="px-3 py-2 text-[10px] font-black uppercase text-app-muted tracking-widest border-b border-app-border mb-1">
-                    Módulos Encontrados
-                  </div>
-                  {searchResults.slice(0, searchQuery.trim() ? 10 : 5).map((res) => (
-                    <button
-                      key={res.id}
-                      onClick={() => { setActiveTab(res.id); setSearchQuery(''); setIsSearchFocused(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-app-hover transition-colors text-left"
-                    >
-                      <div className="p-1.5 bg-blue-50 dark:bg-blue-600/10 rounded-lg">
-                        <res.icon size={16} className="text-blue-600" />
-                      </div>
-                      <div>
-                        <span className="block text-xs font-bold text-app-text uppercase tracking-wide">{res.label}</span>
-                        <span className="block text-[10px] font-medium text-app-muted uppercase">{findGroupForTab(res.id)}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {isSearchFocused && searchQuery && searchResults.length === 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-app-surface border border-app-border rounded-xl shadow-xl overflow-hidden z-50 p-4 text-center glass-dropdown">
-                  <p className="text-xs font-bold text-app-muted">No se encontraron opciones para "{searchQuery}"</p>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleOpenCompanyConfig}
-              className="group h-9 flex items-center justify-start gap-2 px-0 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-[36px] hover:w-[240px] hover:px-3 relative"
-              title="Configuración de la Empresa"
-            >
-              <div className="w-[34px] shrink-0 flex items-center justify-center absolute left-0">
-                <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-[34px]">Configuración de la Empresa</span>
-            </button>
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
-            {/* Sync Status Badge (H-01) */}
-            {syncStatus !== 'idle' && (
-              <div className="flex items-center text-[10px] font-black uppercase tracking-wider transition-all duration-300">
-                {syncStatus === 'saving' && (
-                  <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg animate-pulse">
-                    <Loader2 size={12} className="animate-spin" /> Guardando...
-                  </span>
-                )}
-                {syncStatus === 'saved' && (
-                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                    <CheckCircle2 size={12} /> Guardado
-                  </span>
-                )}
-                {syncStatus === 'error' && (
-                  <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg">
-                    <AlertCircle size={12} /> Error al guardar
-                  </span>
-                )}
-              </div>
-            )}
-            {/* Botón Responsivo SoftPremium (IA) en Header */}
-            <button
-              onClick={() => {
-                setActiveTab('SOFTPREMIUM');
-                if (window.history && window.history.pushState) {
-                  window.history.pushState({}, '', '/premium');
-                }
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-blue-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shadow-sm cursor-pointer group"
-              title="Abrir Portal SoftPremium IA a Pantalla Completa"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
-              <span className="font-black uppercase tracking-wider hidden sm:inline font-sans">
-                SoftPremium <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-1 font-mono">IA</span>
-              </span>
-              
-              {(!currentCompany?.premium_enabled && !isGlobalPremium && !isAdmin) && (
-                <span className="flex items-center text-[9px] bg-indigo-600/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ml-1">
-                  ¿Activar IA?
-                </span>
-              )}
-            </button>
-
-            {!isStudentMode() && (
-              <>
-                {/* Notifications */}
-                <button
-                  onClick={() => setActiveTab('BUZON')}
-                  className="relative p-2 text-app-muted hover:text-blue-600 transition-colors"
-                  title="Buzón Electrónico"
-                >
-                  <Bell size={20} strokeWidth={1.5} />
-                  {unreadBuzon > 0 && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
-                  )}
-                </button>
-
-                {/* SIRE Button */}
-                <button
-                  onClick={() => setActiveTab('SIRE')}
-                  className={`p-2 transition-colors ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
-                  title="Módulo SIRE (Descargas API)"
-                >
-                  <CloudDownload size={20} strokeWidth={1.5} />
-                </button>
-
-                {/* Backup Button */}
-                {isAdmin && (
-                  <button
-                    onClick={handleBackup}
-                    disabled={isBackingUp}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${
-                      isBackingUp 
-                        ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed' 
-                        : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'
-                    }`}
-                    title="Crear copia de seguridad"
-                  >
-                    {isBackingUp ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
-                    <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
-                      {isBackingUp ? 'Procesando...' : 'Backup'}
-                    </span>
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* Massive Excel Download */}
-            <button
-              onClick={handleMassiveExport}
-              disabled={isExportingMassive}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${
-                isExportingMassive
-                  ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed'
-                  : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20'
-              }`}
-              title="Descargar libro contable completo en Excel"
-            >
-              {isExportingMassive ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />}
-              <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
-                {isExportingMassive ? 'Generando...' : 'Excel Masivo'}
-              </span>
-            </button>
-          </div>
-        </header>
-
-        {/* View Content */}
-        <main className="flex-1 overflow-hidden relative bg-app-bg">
-          <div key={activeTab} className="absolute inset-0 animate-fade-in">
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
-                <div className="flex flex-col items-center gap-3 text-app-muted">
-                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" strokeWidth={2.5} />
-                  <span className="text-xs font-bold uppercase tracking-widest">Cargando...</span>
-                </div>
-              </div>
-            }>
-              {renderView()}
-            </Suspense>
-          </div>
-          
-        </main>
-
-        {/* Faint Footer */}
-        <div className="py-2 bg-app-bg text-center shrink-0 border-t border-app-border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 print:hidden">
-          <span className="text-[9px] font-black uppercase tracking-widest text-app-muted/85">
-            © 2026 Angelo Thomas Serna Simeon • SOFTCONTABLE SaaS
-          </span>
-          <span className="hidden sm:inline text-[9px] text-app-muted/40">|</span>
-          <span className="flex items-center gap-2">
-            <button onClick={() => setShowLegalPage('terms')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Términos</button>
-            <span className="text-[9px] text-app-muted/30">•</span>
-            <button onClick={() => setShowLegalPage('privacy')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Privacidad</button>
-            <span className="text-[9px] text-app-muted/30">•</span>
-            <button onClick={() => setShowLegalPage('security')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Seguridad</button>
-            <span className="text-[9px] text-app-muted/30">•</span>
-            <button onClick={() => setShowLegalPage('legal')} className="text-[9px] font-bold uppercase tracking-wider text-app-muted/70 hover:text-blue-500 transition-colors cursor-pointer">Legal</button>
-          </span>
-        </div>
+        {/* ═══ Modal Cambio de Contraseña ═══ */}
+        {showChangePasswordModal && (
+          <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
+        )}
       </div>
-      <div className="print:hidden">
-        <SuggestionBox />
-      </div>
-
-      {/* ═══ Modal Legal ═══ */}
-      {showLegalPage && (
-        <LegalPages initialSection={showLegalPage} onClose={() => setShowLegalPage(null)} />
-      )}
-
-      {/* ═══ Banner de Consentimiento de Cookies ═══ */}
-      <CookieBanner onOpenLegalCookies={() => setShowLegalPage('cookies')} />
-
-      {/* Banner flotante para iOS */}
-      {showIosTip && (
-        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-[9999] bg-app-surface/90 dark:bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl p-4 shadow-2xl animate-fade-in flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">💡</span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-app-text">Instalar SoftContable</h3>
-            </div>
-            <button
-              onClick={handleDismissIosTip}
-              className="text-app-muted hover:text-app-text p-1 rounded-lg transition-colors cursor-pointer"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
-          <p className="text-[11px] text-app-muted leading-relaxed font-medium">
-            Para instalar esta aplicación en tu iPhone/iPad: presiona el botón de <strong>Compartir</strong> en la barra de Safari y luego selecciona <strong>"Agregar a la pantalla de inicio"</strong>.
-          </p>
-        </div>
-      )}
-      {/* Modal de Confirmación de Cierre de Sesión */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm bg-app-surface/95 border border-app-border rounded-3xl p-6 shadow-2xl flex flex-col gap-4 animate-scale-up">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-500/10 text-red-500 rounded-2xl shrink-0">
-                <LogOut size={22} className="animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-app-text">Cerrar Sesión</h3>
-                <p className="text-[11px] font-bold text-app-muted uppercase tracking-wide mt-0.5">¿Estás seguro de que deseas salir?</p>
-              </div>
-            </div>
-            <p className="text-xs text-app-muted leading-relaxed font-medium">
-              Se cerrará tu sesión activa de SoftContable y tendrás que volver a ingresar tus credenciales para acceder a tus empresas.
-            </p>
-            <div className="flex gap-3 mt-2">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-3 px-4 bg-app-bg hover:bg-app-hover border border-app-border text-app-text font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('softcontable_token');
-                  localStorage.removeItem('pld-ui-preferences');
-                  window.location.reload();
-                }}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Modal Cambio de Contraseña ═══ */}
-      {showChangePasswordModal && (
-        <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
-      )}
     </div>
-  </div>
-);
+  );
 };
 
 export default App;

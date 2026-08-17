@@ -1891,21 +1891,34 @@ app.post('/api/cpe/descargar-xml', async (req, res) => {
         
         let usuario = usuario_sol;
         let clave = clave_sol;
+        let client_id = null;
+        let client_secret = null;
 
-        // Obtener credenciales SOL de la base de datos como fallback
-        if (!usuario || !clave) {
-            const ws = await db.getWorkspaceById(ruc);
-            if (!ws || !ws.sol_user || !ws.sol_pass) {
-                return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
+        // Obtener credenciales de la base de datos
+        const ws = await db.getWorkspaceById(ruc);
+        if (ws) {
+            if (!usuario || !clave) {
+                usuario = ws.sol_user;
+                clave = ws.sol_pass;
             }
-            usuario = ws.sol_user;
-            clave = ws.sol_pass;
+            client_id = ws.sunatClientId;
+            client_secret = ws.sunatClientSecret;
+        }
+
+        if (!usuario || !clave) {
+            return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
+        }
+        
+        if (!client_id || !client_secret) {
+            return res.status(400).json({ success: false, error: 'Credenciales API (Client ID/Secret) no configuradas en la empresa.' });
         }
         
         const resultados = await cpeHandler.descargarLoteCPE({
             ruc,
             usuario: usuario,
             clave: clave,
+            client_id,
+            client_secret,
             facturas
         });
         
