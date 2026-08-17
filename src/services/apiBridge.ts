@@ -314,7 +314,7 @@ export const webApiBridge = {
     },
 
     // --- CPE API ---
-    cpeDescargarLote: async (args: { ruc: string; facturas: any[] }) => {
+    cpeDescargarLote: async (args: { ruc: string; usuario_sol?: string; clave_sol?: string; client_id?: string; client_secret?: string; facturas: any[] }) => {
         const res = await api.post('/api/cpe/descargar-xml', args);
         return res.data;
     },

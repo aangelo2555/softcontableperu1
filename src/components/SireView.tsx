@@ -24,7 +24,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { useStore } from '../store';
-import { api } from '../services/apiBridge';
+import { api, webApiBridge } from '../services/apiBridge';
 import type { PurchaseEntry, SaleEntry } from '../store';
 import { toast } from 'react-hot-toast';
 import { parseSireTxt } from '../engine/sireParser';
@@ -90,7 +90,7 @@ const SIRE_YEARS: SelectOption[] = Array.from({ length: 6 }, (_, i) => {
 });
 
 const SireView: React.FC = () => {
-  const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, deletePurchases, deleteSales, setActiveTab } = useStore();
+  const { currentCompany, purchases, sales, syncCurrentWorkspace, deletePurchase, deleteSale, deletePurchases, deleteSales, setActiveTab, consultarCpeFromSire } = useStore();
   const [proceso, setProceso] = useState<'Generar RCE' | 'Generar RVIE'>('Generar RCE');
   const [periodoMes, setPeriodoMes] = useState(new Date().getMonth());
   const [periodoAnio, setPeriodoAnio] = useState(new Date().getFullYear());
@@ -100,6 +100,7 @@ const SireView: React.FC = () => {
   const [archivos, setArchivos] = useState<{ nombre: string; fecha: string; size?: number; periodo?: string; proceso?: string }[]>([]);
   const [isLoadingArchivos, setIsLoadingArchivos] = useState(false);
   const [isDownloadingCPE, setIsDownloadingCPE] = useState(false);
+  const [consultandoItemId, setConsultandoItemId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // 🔧 FIX: Key para forzar re-render
@@ -400,12 +401,54 @@ const SireView: React.FC = () => {
     await proceedWithEjecutar();
   };
 
+  const handleConsultarSingleCPE = async (item: any) => {
+    const doc = item.sunat || item.local;
+    if (!doc) return;
+    
+    setConsultandoItemId(item.id);
+    const loadingToast = toast.loading(`Consultando ${doc.tipo_doc} ${doc.serie}-${doc.numero} en SUNAT API...`);
+    
+    try {
+      const factura = {
+        id: item.id,
+        rucEmisor: doc.doc_num || currentCompany.ruc,
+        tipoDoc: doc.tipo_doc,
+        serie: doc.serie,
+        numero: doc.numero,
+        fechaEmision: doc.fecha,
+        total: doc.total
+      };
+
+      const result = await webApiBridge.cpeDescargarLote({
+        ruc: currentCompany.ruc,
+        usuario_sol: currentCompany.sol_user,
+        clave_sol: currentCompany.sol_pass,
+        client_id: currentCompany.sunatClientId,
+        client_secret: currentCompany.sunatClientSecret,
+        facturas: [factura]
+      });
+
+      const resItem = Array.isArray(result) ? result[0] : (result?.resultados?.[0] || result);
+      if (resItem?.estado) {
+        if (resItem.estado === 'ACEPTADO') {
+          toast.success(`✅ ${doc.serie}-${doc.numero}: ${resItem.estado}${resItem.xmlPath ? ' (XML/CDR descargados)' : ''}`, { id: loadingToast, duration: 5000 });
+        } else {
+          toast(`ℹ️ ${doc.serie}-${doc.numero}: ${resItem.estado}`, { id: loadingToast, icon: '📋' });
+        }
+        await syncCurrentWorkspace();
+        setRefreshKey(prev => prev + 1);
+      } else {
+        toast.error(`Respuesta de SUNAT: ${resItem?.error || 'Sin respuesta'}`, { id: loadingToast });
+      }
+    } catch (e: any) {
+      toast.error(`Error al consultar CPE: ${e.message}`, { id: loadingToast });
+    } finally {
+      setConsultandoItemId(null);
+    }
+  };
+
   const handleDescargaMasivaCPE = async () => {
     if (selectedIds.size === 0) return;
-    if (!currentCompany?.sol_user || !currentCompany?.sol_pass) {
-        toast.error('Faltan credenciales SOL en Configuración para descargar CPE.');
-        return;
-    }
 
     const docsToDownload = comparedData
         .filter(item => selectedIds.has(item.id))
@@ -426,24 +469,20 @@ const SireView: React.FC = () => {
     const loadingToast = toast.loading(`Descargando XML/CDR de ${docsToDownload.length} facturas...`);
 
     try {
-        // En un entorno Electron, se podría usar ipcRenderer. 
-        // Aquí usaremos la API Bridge universal.
-        const { api } = await import('../services/apiBridge');
-        const result = await api.post('/api/cpe/descargar-xml', {
+        const result = await webApiBridge.cpeDescargarLote({
             ruc: currentCompany.ruc,
             usuario_sol: currentCompany.sol_user,
             clave_sol: currentCompany.sol_pass,
+            client_id: currentCompany.sunatClientId,
+            client_secret: currentCompany.sunatClientSecret,
             facturas: docsToDownload
-        }).then((res: any) => res.data);
+        });
 
-        if (result.success) {
-            const descargasOk = result.resultados.filter((r: any) => r.xmlPath || r.cdrPath).length;
-            toast.success(`✅ Se descargaron ${descargasOk} XML/CDR correctamente.`, { id: loadingToast });
-            await syncCurrentWorkspace(); // Recargar base de datos local
-            setRefreshKey(prev => prev + 1);
-        } else {
-            toast.error(`Error de Descarga: ${result.error}`, { id: loadingToast });
-        }
+        const resultadosList = Array.isArray(result) ? result : (result?.resultados || []);
+        const descargasOk = resultadosList.filter((r: any) => r.xmlPath || r.cdrPath || r.estado === 'ACEPTADO').length;
+        toast.success(`✅ Se procesaron ${resultadosList.length} comprobantes (${descargasOk} válidos/descargados).`, { id: loadingToast });
+        await syncCurrentWorkspace();
+        setRefreshKey(prev => prev + 1);
     } catch (error: any) {
         toast.error(`Error Crítico: ${error.message}`, { id: loadingToast });
     } finally {
@@ -1128,6 +1167,21 @@ const SireView: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right pr-8">
                           <div className="flex justify-end gap-1">
+                            <button 
+                              onClick={() => handleConsultarSingleCPE(item)}
+                              disabled={consultandoItemId === item.id}
+                              className="p-1.5 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-all" 
+                              title="Consultar validez y descargar XML/CDR en SUNAT API (1-Click)"
+                            >
+                              {consultandoItemId === item.id ? <Loader2 size={14} className="animate-spin text-blue-500" /> : <FileCheck size={14} />}
+                            </button>
+                            <button 
+                              onClick={() => consultarCpeFromSire(doc)}
+                              className="p-1.5 hover:bg-indigo-500/20 text-indigo-500 rounded-lg transition-all" 
+                              title="Abrir comprobante en Módulo Consultas CPE"
+                            >
+                              <Search size={14} />
+                            </button>
                             {item.status === 'ONLY_SUNAT' && (
                               <button 
                                 onClick={() => handleImportToLocal(item.sunat)}

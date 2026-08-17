@@ -1889,20 +1889,20 @@ app.post('/api/cpe/descargar-xml', async (req, res) => {
             return res.status(400).json({ success: false, error: 'RUC y facturas requeridos.' });
         }
         
-        let usuario = usuario_sol;
-        let clave = clave_sol;
-        let client_id = null;
-        let client_secret = null;
+        let usuario = usuario_sol || req.body.usuario || req.body.sol_user;
+        let clave = clave_sol || req.body.clave || req.body.sol_pass;
+        let client_id = req.body.client_id || req.body.sunatClientId || req.body.clientId;
+        let client_secret = req.body.client_secret || req.body.sunatClientSecret || req.body.clientSecret;
 
-        // Obtener credenciales de la base de datos
-        const ws = await db.getWorkspaceById(ruc);
-        if (ws) {
-            if (!usuario || !clave) {
-                usuario = ws.sol_user;
-                clave = ws.sol_pass;
+        // Obtener credenciales de la base de datos si alguna falta
+        if (!usuario || !clave || !client_id || !client_secret) {
+            const ws = await db.getWorkspaceById(ruc);
+            if (ws) {
+                if (!usuario) usuario = ws.sol_user || ws.sol_usuario;
+                if (!clave) clave = ws.sol_pass || ws.sol_clave;
+                if (!client_id) client_id = ws.sunatClientId || ws.sunatclientid || ws.client_id;
+                if (!client_secret) client_secret = ws.sunatClientSecret || ws.sunatclientsecret || ws.client_secret;
             }
-            client_id = ws.sunatClientId;
-            client_secret = ws.sunatClientSecret;
         }
 
         if (!usuario || !clave) {

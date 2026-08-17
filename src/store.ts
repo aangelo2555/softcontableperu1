@@ -423,9 +423,24 @@ export interface AppState extends WorkspaceState {
   updateCompany: (data: Partial<CompanyData>) => Promise<void>;
   
   // --- App Settings ---
+  activeTab: string;
   setActiveTab: (tab: string) => void;
+  showCompanyConfig: boolean;
   setShowCompanyConfig: (show: boolean) => void;
   toggleTheme: () => void;
+  
+  // --- Consultas CPE Communication ---
+  cpeConsultaTarget: {
+    rucEmisor: string;
+    tipoDoc: string;
+    serie: string;
+    numero: string;
+    fechaEmision: string;
+    total: string | number;
+    autoExecute?: boolean;
+  } | null;
+  setCpeConsultaTarget: (target: any) => void;
+  consultarCpeFromSire: (doc: any) => void;
   
   // --- Data Actions ---
   savePurchase: (data: PurchaseEntry) => Promise<void>;
@@ -1370,6 +1385,20 @@ export const useStore = create<AppState>()(
       periodsList: [],
       staleVersions: [],
       draftCompra: null, draftVenta: null, draftHonorario: null, draftAsiento: null,
+      cpeConsultaTarget: null,
+      setCpeConsultaTarget: (target: any) => set({ cpeConsultaTarget: target }),
+      consultarCpeFromSire: (doc: any) => {
+        const target = {
+          rucEmisor: doc.doc_num || doc.rucEmisor || get().currentCompany?.ruc || '',
+          tipoDoc: doc.tipo_doc || '01',
+          serie: doc.serie || '',
+          numero: doc.numero || '',
+          fechaEmision: doc.fecha || '',
+          total: doc.total || '',
+          autoExecute: true
+        };
+        set({ cpeConsultaTarget: target, activeTab: 'CONSULTAS' });
+      },
       adminSuggestions: [],
       adminUsers: [],
       isInspectingUser: false,
