@@ -427,7 +427,7 @@ export interface AppState extends WorkspaceState {
   setShowCompanyConfig: (show: boolean) => void;
   toggleTheme: () => void;
   
-  // --- Consultas CPE Communication ---
+  // --- Consultas CPE Communication & Persistence ---
   cpeConsultaTarget: {
     rucEmisor: string;
     tipoDoc: string;
@@ -439,6 +439,10 @@ export interface AppState extends WorkspaceState {
   } | null;
   setCpeConsultaTarget: (target: any) => void;
   consultarCpeFromSire: (doc: any) => void;
+  cpeHistorialMap: Record<string, any[]>;
+  setCpeHistorial: (ruc: string, historial: any[]) => void;
+  addCpeResultado: (ruc: string, resultado: any) => void;
+  clearCpeHistorial: (ruc: string) => void;
   
   // --- Data Actions ---
   savePurchase: (data: PurchaseEntry) => Promise<void>;
@@ -1396,6 +1400,26 @@ export const useStore = create<AppState>()(
           autoExecute: true
         };
         set({ cpeConsultaTarget: target, activeTab: 'CONSULTAS' });
+      },
+      cpeHistorialMap: {},
+      setCpeHistorial: (ruc: string, historial: any[]) => {
+        set(state => ({
+          cpeHistorialMap: { ...state.cpeHistorialMap, [ruc]: historial }
+        }));
+      },
+      addCpeResultado: (ruc: string, resultado: any) => {
+        set(state => {
+          const current = state.cpeHistorialMap[ruc] || [];
+          const filtered = current.filter(item => item.id !== resultado.id);
+          return {
+            cpeHistorialMap: { ...state.cpeHistorialMap, [ruc]: [resultado, ...filtered] }
+          };
+        });
+      },
+      clearCpeHistorial: (ruc: string) => {
+        set(state => ({
+          cpeHistorialMap: { ...state.cpeHistorialMap, [ruc]: [] }
+        }));
       },
       adminSuggestions: [],
       adminUsers: [],

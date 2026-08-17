@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   ExternalLink,
   ShieldCheck,
   Building2,
@@ -38,7 +39,8 @@ import {
   Eye,
   Printer,
   X,
-  PackageCheck
+  PackageCheck,
+  FolderOpen
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -46,13 +48,27 @@ interface ConsultasViewProps {
 }
 
 export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) {
-  const { currentCompany, purchases, cpeConsultaTarget, setCpeConsultaTarget, syncCurrentWorkspace } = useStore();
+  const {
+    currentCompany,
+    purchases,
+    cpeConsultaTarget,
+    setCpeConsultaTarget,
+    syncCurrentWorkspace,
+    cpeHistorialMap,
+    setCpeHistorial,
+    clearCpeHistorial
+  } = useStore();
+
   const activeCompany = currentWorkspace || currentCompany;
+  const companyRuc = activeCompany?.ruc || 'default';
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'individual' | 'masiva'>('individual');
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [showRecentSelector, setShowRecentSelector] = useState(true);
+
+  // Formulario Individual
   const [formData, setFormData] = useState({
     rucEmisor: '',
     tipoDoc: '01',
@@ -62,12 +78,87 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     total: ''
   });
   const [masivaText, setMasivaText] = useState('');
-  const [resultados, setResultados] = useState<any[]>([]);
-  const [showRecentSelector, setShowRecentSelector] = useState(true);
+
+  // ═══ Persistencia Global de Resultados ═══
+  const resultados = useMemo(() => {
+    if (cpeHistorialMap && cpeHistorialMap[companyRuc]) {
+      return cpeHistorialMap[companyRuc];
+    }
+    try {
+      const saved = localStorage.getItem(`cpe_history_${companyRuc}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  }, [cpeHistorialMap, companyRuc]);
+
+  const updateResultados = (newResults: any[] | ((prev: any[]) => any[])) => {
+    const updated = typeof newResults === 'function' ? newResults(resultados) : newResults;
+    setCpeHistorial(companyRuc, updated);
+    try {
+      localStorage.setItem(`cpe_history_${companyRuc}`, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleLimpiarHistorial = () => {
+    clearCpeHistorial(companyRuc);
+    try {
+      localStorage.removeItem(`cpe_history_${companyRuc}`);
+    } catch (e) {}
+    toast.success('Historial de consultas limpiado.');
+  };
 
   const toggleExpandRow = (rowId: string) => {
     setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
   };
+
+  // ═══ Gestión de SIRE por Años y Meses ═══
+  const availableYears = useMemo(() => {
+    if (!purchases || purchases.length === 0) return [new Date().getFullYear().toString()];
+    const yearsSet = new Set<string>();
+    purchases.forEach((p: any) => {
+      if (p.fecha && p.fecha.includes('-')) {
+        const y = p.fecha.split('-')[0];
+        if (y && y.length === 4) yearsSet.add(y);
+      }
+    });
+    if (yearsSet.size === 0) yearsSet.add(new Date().getFullYear().toString());
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [purchases]);
+
+  const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || '2026');
+  const [selectedSireMonth, setSelectedSireMonth] = useState<string | null>(null);
+
+  const MESES_INFO = [
+    { key: '01', nombre: 'Enero', abrev: 'ENE' },
+    { key: '02', nombre: 'Febrero', abrev: 'FEB' },
+    { key: '03', nombre: 'Marzo', abrev: 'MAR' },
+    { key: '04', nombre: 'Abril', abrev: 'ABR' },
+    { key: '05', nombre: 'Mayo', abrev: 'MAY' },
+    { key: '06', nombre: 'Junio', abrev: 'JUN' },
+    { key: '07', nombre: 'Julio', abrev: 'JUL' },
+    { key: '08', nombre: 'Agosto', abrev: 'AGO' },
+    { key: '09', nombre: 'Setiembre', abrev: 'SET' },
+    { key: '10', nombre: 'Octubre', abrev: 'OCT' },
+    { key: '11', nombre: 'Noviembre', abrev: 'NOV' },
+    { key: '12', nombre: 'Diciembre', abrev: 'DIC' }
+  ];
+
+  // Comprobantes filtrados por año
+  const yearPurchases = useMemo(() => {
+    if (!purchases) return [];
+    return purchases.filter((p: any) => p.fecha?.startsWith(`${selectedYear}-`));
+  }, [purchases, selectedYear]);
+
+  // Comprobantes filtrados por mes
+  const monthPurchases = useMemo(() => {
+    if (!selectedSireMonth) return [];
+    return yearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedYear}-${selectedSireMonth}`));
+  }, [yearPurchases, selectedYear, selectedSireMonth]);
+
+  const selectedMonthObj = useMemo(() => {
+    if (!selectedSireMonth) return null;
+    return MESES_INFO.find(m => m.key === selectedSireMonth) || null;
+  }, [selectedSireMonth]);
 
   // Helper para descarga automática de archivos en el navegador con soporte UTF-8
   const descargarBase64 = (base64: string, fileName: string, mimeType: string = 'image/png') => {
@@ -163,7 +254,11 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       });
       
       const resList = Array.isArray(response) ? response : (response?.resultados || []);
-      setResultados(prev => [...resList, ...prev]);
+      updateResultados((prev: any[]) => {
+        const newIds = new Set(resList.map((r: any) => r.id));
+        const remaining = prev.filter((r: any) => !newIds.has(r.id));
+        return [...resList, ...remaining];
+      });
       
       if (resList.length > 0 && resList[0].estado === 'ACEPTADO') {
         setSelectedDocForPreview(resList[0]);
@@ -259,8 +354,8 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   // Resumen de Estadísticas
   const stats = useMemo(() => {
     const total = resultados.length;
-    const aceptados = resultados.filter(r => r.estado === 'ACEPTADO').length;
-    const anulados = resultados.filter(r => r.estado === 'ANULADO' || r.estado?.includes('ANULADO')).length;
+    const aceptados = resultados.filter((r: any) => r.estado === 'ACEPTADO').length;
+    const anulados = resultados.filter((r: any) => r.estado === 'ANULADO' || r.estado?.includes('ANULADO')).length;
     const otros = total - aceptados - anulados;
     return { total, aceptados, anulados, otros };
   }, [resultados]);
@@ -278,7 +373,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
         }
         subtitle={
           activeCompany ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 flex-wrap">
               <span className="text-app-text font-bold">{activeCompany.name}</span>
               <span>• RUC: {activeCompany.ruc}</span>
               {(activeCompany.sol_user && activeCompany.sol_pass) ? (
@@ -299,9 +394,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {resultados.length > 0 && (
               <button
-                onClick={() => setResultados([])}
+                onClick={handleLimpiarHistorial}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
-                title="Limpiar resultados de pantalla"
+                title="Limpiar resultados guardados"
               >
                 <Trash2 size={13} />
                 <span>Limpiar</span>
@@ -316,7 +411,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               }`}
             >
               <Layers size={13} />
-              <span>{showRecentSelector ? 'Ocultar Recientes' : 'Cargar de SIRE/Compras'}</span>
+              <span>{showRecentSelector ? 'Ocultar SIRE' : 'Ver SIRE'}</span>
             </button>
           </div>
         }
@@ -324,103 +419,205 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
       {/* ═══ Contenedor Principal con Scrollbar Fluido y 100% de Ancho ═══ */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
-        <div className="max-w-[1600px] mx-auto flex flex-col gap-6 w-full">
+        <div className="max-w-[1600px] mx-auto flex flex-col gap-5 w-full">
 
-          {/* ═══ Selector Rápido de Comprobantes Recientes (Comunicación Directa SIRE/Compras) ═══ */}
-          {showRecentSelector && purchases && purchases.length > 0 && (
-            <div className="card-elevated p-4 flex flex-col gap-3 animate-fade-in bg-app-surface/60 border border-app-border rounded-2xl">
-              <div className="flex items-center justify-between">
+          {/* ═══ MÓDULO: COMPROBANTES REGISTRADOS EN SIRE (AÑOS Y MESES) ═══ */}
+          {showRecentSelector && (
+            <div className="card-elevated p-4 flex flex-col gap-3.5 animate-fade-in bg-app-surface/60 border border-app-border rounded-2xl">
+              
+              {/* Cabecera del SIRE con Selector de Años */}
+              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-app-border/60 pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
-                    Comprobantes Registrados en el Período (1-Click para Cargar o Consultar)
+                    COMPROBANTES REGISTRADOS EN SIRE
                   </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase">
+                    {yearPurchases.length} comprobantes en {selectedYear}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-app-muted">
-                  {purchases.slice(0, 8).length} comprobantes recientes disponibles
-                </span>
+
+                {/* Selector de Año */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-app-muted uppercase">Ejercicio / Año:</span>
+                  <div className="relative">
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => {
+                        setSelectedYear(e.target.value);
+                        setSelectedSireMonth(null);
+                      }}
+                      className="pl-7 pr-4 py-1 bg-app-bg border border-app-border rounded-lg text-xs font-bold text-app-text outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      {availableYears.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <Calendar size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {purchases.slice(0, 8).map((p: any) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between p-2.5 bg-app-bg hover:bg-blue-500/5 border border-app-border hover:border-blue-500/30 rounded-xl transition-all group"
-                  >
-                    <div className="flex flex-col min-w-0 pr-2">
-                      <span className="text-[11px] font-black text-app-text tracking-tight truncate">
-                        {p.tipo_doc} {p.serie}-{p.numero}
-                      </span>
-                      <span className="text-[9px] text-app-muted truncate uppercase font-medium">
-                        {p.nombre || p.doc_num}
-                      </span>
-                      <span className="text-[9px] font-mono font-bold text-blue-500 mt-0.5">
-                        S/ {Number(p.total || 0).toFixed(2)} • {p.fecha}
-                      </span>
-                    </div>
+              {/* VISTA 1: CUADRÍCULA DE 12 MESES */}
+              {!selectedSireMonth ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                  {MESES_INFO.map(m => {
+                    const mPurchases = yearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedYear}-${m.key}`));
+                    const count = mPurchases.length;
+                    const totalSum = mPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0);
+                    const hasItems = count > 0;
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleSelectRecentPurchase(p, false)}
-                        className="p-1.5 rounded-lg bg-app-surface hover:bg-blue-500/20 text-app-muted hover:text-blue-500 border border-app-border transition-all"
-                        title="Cargar datos en el formulario"
+                    return (
+                      <div
+                        key={m.key}
+                        onClick={() => {
+                          if (hasItems) setSelectedSireMonth(m.key);
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all select-none ${
+                          hasItems
+                            ? 'bg-app-bg hover:bg-blue-500/10 border-app-border hover:border-blue-500/40 cursor-pointer shadow-2xs group'
+                            : 'bg-app-bg/40 border-app-border/40 opacity-60 cursor-not-allowed'
+                        }`}
                       >
-                        <ArrowRight size={13} />
-                      </button>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-black uppercase tracking-tight ${hasItems ? 'text-app-text group-hover:text-blue-500' : 'text-app-muted'}`}>
+                            {m.nombre}
+                          </span>
+                          <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-md ${
+                            hasItems ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-app-surface text-app-muted'
+                          }`}>
+                            {count}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-bold text-app-muted uppercase tracking-wider">Monto Total</span>
+                          <span className="text-[11px] font-mono font-black text-app-text">
+                            S/ {totalSum.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {hasItems ? (
+                          <div className="text-[9px] font-bold text-blue-500 flex items-center gap-1 mt-0.5">
+                            <span>Ver facturas</span>
+                            <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                          </div>
+                        ) : (
+                          <div className="text-[9px] text-app-muted italic mt-0.5">
+                            Sin registros
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* VISTA 2: DRILL-DOWN DE COMPROBANTES DEL MES SELECCIONADO */
+                <div className="flex flex-col gap-3 animate-fade-in">
+                  <div className="flex items-center justify-between bg-blue-500/5 border border-blue-500/20 p-2.5 rounded-xl flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
                       <button
-                        onClick={() => handleSelectRecentPurchase(p, true)}
-                        disabled={loading}
-                        className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all"
-                        title="Consultar inmediatamente en SUNAT API"
+                        onClick={() => setSelectedSireMonth(null)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
                       >
-                        <Search size={13} />
+                        <ArrowLeft size={13} />
+                        <span>Volver a los meses</span>
                       </button>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-app-text">
+                          Comprobantes de {selectedMonthObj?.nombre} {selectedYear}
+                        </h4>
+                        <span className="text-[10px] text-app-muted font-medium">
+                          {monthPurchases.length} comprobante(s) registrado(s) • Total: S/ {monthPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Grid de comprobantes de este mes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto custom-scrollbar p-0.5">
+                    {monthPurchases.map((p: any) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-2.5 bg-app-bg hover:bg-blue-500/5 border border-app-border hover:border-blue-500/30 rounded-xl transition-all group"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="text-[11px] font-black text-app-text tracking-tight truncate">
+                            {p.tipo_doc} {p.serie}-{p.numero}
+                          </span>
+                          <span className="text-[9px] text-app-muted truncate uppercase font-medium">
+                            {p.nombre || p.doc_num}
+                          </span>
+                          <span className="text-[9px] font-mono font-bold text-blue-500 mt-0.5">
+                            S/ {Number(p.total || 0).toFixed(2)} • {p.fecha}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleSelectRecentPurchase(p, false)}
+                            className="p-1.5 rounded-lg bg-app-surface hover:bg-blue-500/20 text-app-muted hover:text-blue-500 border border-app-border transition-all cursor-pointer"
+                            title="Cargar datos en el formulario"
+                          >
+                            <ArrowRight size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleSelectRecentPurchase(p, true)}
+                            disabled={loading}
+                            className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
+                            title="Consultar inmediatamente en SUNAT API"
+                          >
+                            <Search size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
-          {/* ═══ Resumen de Estadísticas (Cards) ═══ */}
+          {/* ═══ Resumen de Estadísticas (Compactas y Proporcionadas) ═══ */}
           {resultados.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Total Consultadas</span>
-                  <span className="text-xl font-black text-app-text leading-none mt-1">{stats.total}</span>
+                  <span className="text-[9px] font-black text-blue-500 uppercase tracking-wider">Total Consultadas</span>
+                  <span className="text-base font-black font-mono text-app-text leading-tight mt-0.5">{stats.total}</span>
                 </div>
-                <Layers className="text-blue-500/40" size={24} />
+                <Layers className="text-blue-500/40" size={18} />
               </div>
 
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Aceptadas (Válidas)</span>
-                  <span className="text-xl font-black text-emerald-500 leading-none mt-1">{stats.aceptados}</span>
+                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">Aceptadas (Válidas)</span>
+                  <span className="text-base font-black font-mono text-emerald-500 leading-tight mt-0.5">{stats.aceptados}</span>
                 </div>
-                <CheckCircle2 className="text-emerald-500/40" size={24} />
+                <CheckCircle2 className="text-emerald-500/40" size={18} />
               </div>
 
-              <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+              <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Anuladas / Rechazadas</span>
-                  <span className="text-xl font-black text-rose-500 leading-none mt-1">{stats.anulados}</span>
+                  <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider">Anuladas / Rechazadas</span>
+                  <span className="text-base font-black font-mono text-rose-500 leading-tight mt-0.5">{stats.anulados}</span>
                 </div>
-                <AlertCircle className="text-rose-500/40" size={24} />
+                <AlertCircle className="text-rose-500/40" size={18} />
               </div>
 
-              <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+              <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-purple-500 uppercase tracking-widest">Otros / Observados</span>
-                  <span className="text-xl font-black text-purple-500 leading-none mt-1">{stats.otros}</span>
+                  <span className="text-[9px] font-black text-purple-500 uppercase tracking-wider">Otros / Observados</span>
+                  <span className="text-base font-black font-mono text-purple-500 leading-tight mt-0.5">{stats.otros}</span>
                 </div>
-                <FileCheck className="text-purple-500/40" size={24} />
+                <FileCheck className="text-purple-500/40" size={18} />
               </div>
             </div>
           )}
 
           {/* ═══ Contenido: Formulario y Tabla de Resultados ═══ */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             
             {/* Panel Izquierdo: Formulario */}
             <div className="col-span-1 lg:col-span-4 flex flex-col gap-4">
@@ -429,7 +626,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                 <div className="flex border-b border-app-border bg-app-bg/50 p-1">
                   <button
                     onClick={() => setActiveTab('individual')}
-                    className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
                       activeTab === 'individual'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-app-muted hover:text-app-text hover:bg-app-hover'
@@ -439,7 +636,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   </button>
                   <button
                     onClick={() => setActiveTab('masiva')}
-                    className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${
+                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
                       activeTab === 'masiva'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-app-muted hover:text-app-text hover:bg-app-hover'
@@ -449,18 +646,18 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   </button>
                 </div>
 
-                <div className="p-5">
+                <div className="p-4">
                   {activeTab === 'individual' ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3.5">
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                           Tipo de Documento
                         </label>
                         <select
                           name="tipoDoc"
                           value={formData.tipoDoc}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                          className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all cursor-pointer"
                         >
                           <option value="01">Factura Electrónica (01)</option>
                           <option value="03">Boleta de Venta (03)</option>
@@ -470,8 +667,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         </select>
                       </div>
 
+                      {/* Input RUC con padding corregido para evitar solapar el icono */}
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                           RUC Emisor (Proveedor / Empresa)
                         </label>
                         <div className="relative">
@@ -481,15 +679,15 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                             onChange={handleInputChange}
                             placeholder="Ej. 20609396033"
                             maxLength={11}
-                            className="w-full pl-9 pr-3 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                            className="w-full pl-11 pr-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
                           />
-                          <Building2 size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted" />
+                          <Building2 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                             Serie
                           </label>
                           <input
@@ -498,11 +696,11 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                             onChange={handleInputChange}
                             placeholder="F001"
                             maxLength={4}
-                            className="w-full px-3 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all"
+                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                             Número
                           </label>
                           <input
@@ -510,61 +708,57 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                             value={formData.numero}
                             onChange={handleInputChange}
                             placeholder="84"
-                            className="w-full px-3 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                             Fecha Emisión
                           </label>
-                          <div className="relative">
-                            <input
-                              type="date"
-                              name="fechaEmision"
-                              value={formData.fechaEmision}
-                              onChange={handleInputChange}
-                              className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
-                            />
-                          </div>
+                          <input
+                            type="date"
+                            name="fechaEmision"
+                            value={formData.fechaEmision}
+                            onChange={handleInputChange}
+                            className="w-full px-2.5 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                          />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1.5">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                             Monto Total
                           </label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              name="total"
-                              step="0.01"
-                              value={formData.total}
-                              onChange={handleInputChange}
-                              placeholder="0.00"
-                              className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
-                            />
-                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            name="total"
+                            value={formData.total}
+                            onChange={handleInputChange}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                          />
                         </div>
                       </div>
 
                       <button
                         onClick={handleConsultarIndividual}
                         disabled={loading}
-                        className="w-full mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-3 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="w-full mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {loading ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={15} className="animate-spin" />
                         ) : (
-                          <Search size={16} />
+                          <Search size={15} />
                         )}
                         <span>Consultar y Descargar CPE</span>
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3.5">
                       <div>
-                        <div className="flex justify-between items-center mb-1.5">
+                        <div className="flex justify-between items-center mb-1">
                           <label className="text-[10px] font-black uppercase tracking-wider text-app-muted">
                             Lote (RUC|TIPO|SERIE|NUMERO|FECHA|TOTAL)
                           </label>
@@ -575,31 +769,31 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   `${p.doc_num || activeCompany.ruc}|${p.tipo_doc || '01'}|${p.serie}|${p.numero}|${p.fecha || ''}|${p.total || 0}`
                                 ).join('\n');
                                 setMasivaText(txt);
-                                toast.success(`Se importaron ${purchases.slice(0, 50).length} facturas de compras.`);
+                                toast.success(`Se importaron ${purchases.slice(0, 50).length} facturas.`);
                               }
                             }}
                             className="text-[9px] font-black text-blue-500 uppercase hover:underline cursor-pointer"
                           >
-                            Cargar de Compras
+                            Cargar de SIRE
                           </button>
                         </div>
                         <textarea
                           value={masivaText}
                           onChange={(e) => setMasivaText(e.target.value)}
                           placeholder="20609396033|01|F001|84|2026-08-12|3693.11&#10;20609396033|01|F001|83|2026-08-12|262.61"
-                          className="w-full h-52 p-3 bg-app-bg border border-app-border rounded-xl text-xs font-mono text-app-text outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar whitespace-pre leading-relaxed"
+                          className="w-full h-44 p-3 bg-app-bg border border-app-border rounded-xl text-xs font-mono text-app-text outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar whitespace-pre leading-relaxed"
                         />
                       </div>
 
                       <button
                         onClick={handleConsultarMasiva}
                         disabled={loading}
-                        className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-3 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {loading ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={15} className="animate-spin" />
                         ) : (
-                          <Layers size={16} />
+                          <Layers size={15} />
                         )}
                         <span>Procesar Lote Masivo</span>
                       </button>
@@ -609,17 +803,17 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               </div>
             </div>
 
-            {/* Panel Derecho: Tabla de Resultados Full-Size con Concepto de Factura */}
+            {/* Panel Derecho: Tabla de Resultados Full-Size con Concepto de Factura e IGV */}
             <div className="col-span-1 lg:col-span-8 flex flex-col">
               <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col">
-                <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
+                <div className="px-5 py-3 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-blue-500" />
+                    <CheckCircle2 size={15} className="text-blue-500" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
                       Historial de Consultas Realizadas
                     </h3>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full">
+                  <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-mono">
                     {resultados.length} registros
                   </span>
                 </div>
@@ -631,20 +825,20 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         <FileSearch size={36} className="text-app-muted/50" />
                       </div>
                       <p className="text-xs font-black uppercase tracking-wider text-app-text">
-                        No hay consultas recientes en esta sesión
+                        No hay consultas registradas en esta sesión
                       </p>
                       <p className="text-[11px] text-app-muted max-w-sm mt-1">
-                        Utiliza el formulario de la izquierda o haz clic en "Cargar de SIRE/Compras" para consultar la validez de cualquier factura en SUNAT.
+                        Utiliza el formulario de la izquierda o selecciona comprobantes de SIRE para consultar la validez y extraer los detalles con IGV.
                       </p>
                     </div>
                   ) : (
                     <table className="w-full text-left border-collapse min-w-[880px]">
                       <thead className="sticky top-0 z-10 bg-app-surface border-b border-app-border shadow-xs">
                         <tr className="text-[9px] font-black uppercase tracking-widest text-app-muted">
-                          <th className="px-4 py-3 w-[25%]">Comprobante / Emisor</th>
-                          <th className="px-3 py-3 w-[15%]">Estado & Monto</th>
-                          <th className="px-4 py-3 w-[40%]">Concepto de Factura</th>
-                          <th className="px-4 py-3 w-[20%] text-right">Descargas</th>
+                          <th className="px-4 py-2.5 w-[25%]">Comprobante / Emisor</th>
+                          <th className="px-3 py-2.5 w-[15%]">Estado & Monto</th>
+                          <th className="px-4 py-2.5 w-[42%]">Concepto de Factura (Detalle & IGV)</th>
+                          <th className="px-4 py-2.5 w-[18%] text-right">Descargas</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
@@ -673,7 +867,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                           return (
                             <tr key={idx} className="hover:bg-app-hover/40 transition-colors">
                               {/* 1. Comprobante / Emisor */}
-                              <td className="px-4 py-3.5 align-top">
+                              <td className="px-4 py-3 align-top">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-black text-[11px]">
@@ -693,8 +887,8 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                               </td>
 
                               {/* 2. Estado & Monto Total */}
-                              <td className="px-3 py-3.5 align-top">
-                                <div className="flex flex-col gap-1.5">
+                              <td className="px-3 py-3 align-top">
+                                <div className="flex flex-col gap-1">
                                   <span
                                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border w-fit ${
                                       isAceptado
@@ -707,7 +901,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     {isAceptado && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                                     {res.estado || 'ACEPTADO'}
                                   </span>
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col mt-0.5">
                                     <span className="text-[9px] text-app-muted font-bold uppercase">Total</span>
                                     <span className="text-xs font-black font-mono text-app-text">
                                       S/ {Number(String(res.importeTotal || '0').replace(/[^0-9.]/g, '') || 0).toFixed(2)}
@@ -716,14 +910,14 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                 </div>
                               </td>
 
-                              {/* 3. CONCEPTO DE FACTURA (Ítems / Cantidades / Precios) */}
-                              <td className="px-4 py-3.5 align-top">
+                              {/* 3. CONCEPTO DE FACTURA (Ítems / Cantidades / Precios e IGV) */}
+                              <td className="px-4 py-3 align-top">
                                 {items && items.length > 0 ? (
                                   <div className="flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-[10px] font-black uppercase tracking-wider text-app-text flex items-center gap-1">
                                         <PackageCheck size={13} className="text-emerald-500" />
-                                        {items.length} {items.length === 1 ? 'Ítem Detallado' : 'Ítems Detallados'}
+                                        {items.length} {items.length === 1 ? 'Ítem Facturado' : 'Ítems Facturados'}
                                       </span>
                                       {items.length > 2 && (
                                         <button
@@ -743,33 +937,42 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                       )}
                                     </div>
 
-                                    {/* Lista de Conceptos / Productos */}
+                                    {/* Lista de Conceptos con IGV Explícito */}
                                     <div className="space-y-1">
-                                      {(isExpanded ? items : items.slice(0, 2)).map((it, itIdx) => (
-                                        <div
-                                          key={itIdx}
-                                          className="p-1.5 rounded-lg bg-app-bg/80 border border-app-border/70 text-[10px] flex flex-col gap-0.5 hover:border-app-border transition-colors"
-                                        >
-                                          <div className="flex items-start justify-between gap-2">
-                                            <span className="font-bold text-app-text leading-tight flex-1">
-                                              {it.descripcion}
-                                            </span>
-                                            <span className="font-mono font-bold text-app-text shrink-0">
-                                              S/ {Number(it.subtotal || (it.cantidad * it.valorUnitario)).toFixed(2)}
-                                            </span>
+                                      {(isExpanded ? items : items.slice(0, 2)).map((it, itIdx) => {
+                                        const subtotalVal = Number(it.subtotal || (it.cantidad * it.valorUnitario));
+                                        const igvVal = Number(it.igv || (subtotalVal * 0.18));
+                                        const totalItemVal = subtotalVal + igvVal;
+
+                                        return (
+                                          <div
+                                            key={itIdx}
+                                            className="p-1.5 rounded-lg bg-app-bg/80 border border-app-border/70 text-[10px] flex flex-col gap-1 hover:border-app-border transition-colors"
+                                          >
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span className="font-bold text-app-text leading-tight flex-1">
+                                                {it.descripcion}
+                                              </span>
+                                              <span className="font-mono font-black text-app-text shrink-0">
+                                                S/ {totalItemVal.toFixed(2)}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-x-2 gap-y-0.5 text-[9px] text-app-muted flex-wrap">
+                                              <span className="px-1 py-0.2 rounded bg-app-surface border border-app-border font-mono font-medium">
+                                                Cant: {it.cantidad} {it.unidadMedida}
+                                              </span>
+                                              {it.codigo && it.codigo !== '-' && (
+                                                <span className="font-mono">Cód: {it.codigo}</span>
+                                              )}
+                                              <span className="font-mono">V. Unit: S/ {Number(it.valorUnitario).toFixed(4)}</span>
+                                              <span className="font-mono">Base: S/ {subtotalVal.toFixed(2)}</span>
+                                              <span className="font-mono font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">
+                                                IGV (18%): S/ {igvVal.toFixed(2)}
+                                              </span>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-2 text-[9px] text-app-muted flex-wrap">
-                                            <span className="px-1 py-0.2 rounded bg-app-surface border border-app-border font-mono font-medium">
-                                              {it.cantidad} {it.unidadMedida}
-                                            </span>
-                                            {it.codigo && it.codigo !== '-' && (
-                                              <span className="font-mono">Cód: {it.codigo}</span>
-                                            )}
-                                            <span>V. Unit: S/ {Number(it.valorUnitario).toFixed(4)}</span>
-                                            {it.icbper > 0 && <span>ICBPER: S/ {Number(it.icbper).toFixed(2)}</span>}
-                                          </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 ) : (
@@ -785,7 +988,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                               </td>
 
                               {/* 4. Descargas y Acciones */}
-                              <td className="px-4 py-3.5 align-top text-right">
+                              <td className="px-4 py-3 align-top text-right">
                                 <div className="flex items-center justify-end gap-1 flex-nowrap">
                                   {/* Botón Ver PDF */}
                                   <button
