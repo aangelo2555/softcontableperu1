@@ -146,36 +146,37 @@ class CpeHandler {
           
           logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE mediante Enlace Directo...');
           
-          // Navegación directa recomendada por el usuario, preservando la sesión (parámetro s)
-          const sParam = await page.evaluate(() => {
-              const urlMatch = window.location.href.match(/[?&]s=([^&]+)/);
-              if (urlMatch) return urlMatch[1];
-              
-              const sInput = document.querySelector('input[name="s"]');
-              if (sInput && sInput.value) return sInput.value;
-              
-              for (const iframe of document.querySelectorAll('iframe')) {
-                  const m = (iframe.src || '').match(/[?&]s=([^&]+)/);
-                  if (m) return m[1];
+          logger.info('[CPE] Ejecutando navegación al módulo Consulta CPE simulando click en el menú...');
+          
+          await page.evaluate(() => {
+              // 1. Buscar el enlace por ID o por su atributo onclick/href
+              const enlaces = document.querySelectorAll('a');
+              for (const a of enlaces) {
+                  const href = a.href || '';
+                  const onclick = a.getAttribute('onclick') || '';
+                  if (href.includes('11.38.1.1.1') || onclick.includes('11.38.1.1.1') || a.id === 'nivel4_11_38_1_1_1') {
+                      a.click();
+                      return;
+                  }
               }
-              return 'ww1'; // Default fallback
+              
+              // 2. Fallback: tratar de invocar las funciones globales de ruteo de SUNAT si el <a> no se encuentra
+              try {
+                  if (typeof sendServlet === 'function') {
+                      sendServlet('11.38.1.1.1');
+                  } else if (typeof cargarOpcion === 'function') {
+                      cargarOpcion('11.38.1.1.1');
+                  } else if (typeof irOpcion === 'function') {
+                      irOpcion('11.38.1.1.1');
+                  } else if (typeof window.$ !== 'undefined') {
+                      // Si usan jQuery
+                      $('#nivel4_11_38_1_1_1').trigger('click');
+                  }
+              } catch (err) {}
           });
           
-          const deepLink = `MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
-          logger.info(`[CPE] Inyectando deep link en el src del iframe: ${deepLink}`);
-          
-          await page.evaluate((url) => {
-              const iframe = document.getElementById('iframeApplication');
-              if (iframe) {
-                  iframe.src = url;
-              } else {
-                  // Fallback extremo si no hay iframe (poco probable dado el layout de SUNAT)
-                  window.location.href = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/${url}`;
-              }
-          }, deepLink);
-          
-          // Dar tiempo extra para que la redirección cross-domain hacia e-factura ocurra
-          await page.waitForTimeout(3000);
+          // Dar tiempo generoso para que el iframe procese la petición y cargue el Angular en e-factura
+          await page.waitForTimeout(5000);
           
       } catch (e) {
           logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
