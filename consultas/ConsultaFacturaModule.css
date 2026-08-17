@@ -1,0 +1,1462 @@
+/* ============================
+   CONSULTA FACTURA MODULE
+   ============================ */
+
+.consulta-factura-module {
+  padding: 20px;
+  height: 100%;
+  /* Usar toda la altura disponible del contenedor */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Header Section (Copied from Buzon) */
+.cf-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.cf-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cf-header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+/* Header Buttons */
+.cf-btn-header-constancias,
+.cf-btn-header-close,
+.cf-btn-header-produccion {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.cf-btn-header-constancias {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cf-btn-header-constancias:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.cf-btn-header-produccion {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: auto;
+  /* Push to right */
+}
+
+.cf-btn-header-produccion:hover,
+.cf-btn-header-produccion.active {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.cf-btn-header-close {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.cf-btn-header-close:hover {
+  background: rgba(220, 38, 38, 0.35);
+  transform: translateY(-1px);
+}
+
+.cf-btn-header-constancias .icon,
+.cf-btn-header-close .icon,
+.cf-btn-header-produccion .icon {
+  font-size: 1.1rem;
+}
+
+/* Content Layout (Split Pane) */
+.cf-content {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  min-height: 0;
+  /* Important for nested scrolling */
+  overflow: hidden;
+  /* Prevent container scroll, let panels scroll */
+}
+
+/* Left Panel: Form & List */
+.cf-left-panel {
+  flex: 1;
+  background: var(--bg-card, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-width: 380px;
+  /* Slight reduction */
+  max-width: 500px;
+}
+
+/* Right Panel: Preview/Details */
+.cf-right-panel {
+  flex: 2;
+  /* Takes more space */
+  background: var(--bg-card, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  /* Critical for Flexbox shrinking */
+}
+
+/* Controls / Search Section within Left Panel */
+.cf-controls {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-hover, #f8fafc);
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  /* Don't shrink this section */
+  overflow-y: visible;
+}
+
+/* Search Dropdown Styles (New) */
+.cf-search-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.cf-search-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 6px;
+}
+
+.cf-search-input-wrapper {
+  position: relative;
+}
+
+.cf-search-input-wrapper svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary, #9ca3af);
+  pointer-events: none;
+}
+
+.cf-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--bg-input, #ffffff);
+  color: var(--text-primary, #1f2937);
+  transition: all 0.2s ease;
+}
+
+.cf-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cf-client-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  margin-top: 4px;
+}
+
+.cf-client-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color, #f3f4f6);
+  transition: background 0.15s ease;
+}
+
+.cf-client-item:hover {
+  background: var(--bg-hover, #f1f5f9);
+}
+
+.cf-client-item .empresa {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-client-item .ruc {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+
+/* Existing Form Styles */
+.cf-form-group {
+  margin-bottom: 16px;
+}
+
+.cf-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 6px;
+}
+
+.cf-input,
+.cf-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--bg-input, #ffffff);
+  color: var(--text-primary, #1f2937);
+  transition: all 0.2s ease;
+}
+
+.cf-input:focus,
+.cf-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cf-btn-primary {
+  width: 100%;
+  padding: 8px 14px;
+  /* Reducido de 12px */
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  /* Reducido para compactar */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Reducido de 8px */
+}
+
+.cf-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.cf-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cf-btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* Match other buttons if needed, or keep minimal */
+}
+
+.cf-btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.cf-btn-success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Results List within Left Panel */
+.cf-results-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.cf-result-item {
+  padding: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-card, #ffffff);
+}
+
+.cf-result-item:hover {
+  background: var(--bg-hover, #f1f5f9);
+  border-color: #cbd5e1;
+}
+
+.cf-result-item.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.cf-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cf-item-type {
+  font-weight: 600;
+  color: #1e40af;
+  font-size: 0.9rem;
+}
+
+.cf-item-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.cf-item-details {
+  font-size: 0.85rem;
+  color: var(--text-primary, #334155);
+}
+
+.cf-item-amount {
+  margin-top: 8px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+/* Right Panel Content (Preview) */
+.cf-preview-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-hover, #f8fafc);
+}
+
+.cf-preview-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary, #1f2937);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.cf-preview-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Attachments Layout */
+.cf-attachments-section {
+  padding: 24px;
+  background: var(--bg-card, #ffffff);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.cf-attachments-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 16px;
+  margin-top: 24px;
+}
+
+.cf-attachments-title:first-child {
+  margin-top: 0;
+}
+
+.cf-attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.cf-attachment-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.cf-attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cf-attachment-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* Icon Variants */
+.cf-icon-pdf {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.cf-icon-xml {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
+}
+
+.cf-icon-cdr {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.cf-attachment-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-attachment-name {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.cf-attachment-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.cf-btn-download {
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.cf-btn-download:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cf-btn-download:active {
+  transform: translateY(0);
+}
+
+
+/* Placeholder State */
+.cf-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary, #94a3b8);
+  text-align: center;
+  padding: 40px;
+}
+
+.cf-placeholder svg {
+  margin-bottom: 20px;
+  opacity: 0.4;
+  width: 64px;
+  height: 64px;
+}
+
+.cf-placeholder h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary, #475569);
+}
+
+/* Spinner */
+.cf-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark Mode Support */
+:root.dark-mode .cf-left-panel,
+:root.dark-mode .cf-right-panel,
+:root.dark-mode .cf-document-paper {
+  background: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+/* Neutralize Header in Dark Mode */
+:root.dark-mode .cf-header {
+  background: #1f1f1f;
+  border: 1px solid #333;
+  box-shadow: none;
+}
+
+:root.dark-mode .cf-btn-header-constancias {
+  background: #333;
+  color: #e5e5e5;
+  border-color: #444;
+}
+
+:root.dark-mode .cf-btn-header-constancias:hover {
+  background: #404040;
+}
+
+:root.dark-mode .cf-btn-header-close {
+  background: rgba(127, 29, 29, 0.4);
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+:root.dark-mode .cf-btn-header-close:hover {
+  background: rgba(127, 29, 29, 0.6);
+}
+
+:root.dark-mode .cf-controls,
+:root.dark-mode .cf-preview-header {
+  background: var(--bg-hover, #1a2333);
+  /* Slightly darker/lighter depending on theme */
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-input,
+:root.dark-mode .cf-select {
+  background: var(--bg-input, #374151);
+  border-color: var(--border-color, #4b5563);
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark-mode .cf-result-item {
+  background: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-result-item:hover {
+  background: var(--bg-hover, #374151);
+}
+
+:root.dark-mode .cf-result-item.selected {
+  background: #334155;
+  border-color: #475569;
+  box-shadow: 0 0 0 1px #475569;
+}
+
+:root.dark-mode .cf-preview-content {
+  background: #111827;
+}
+
+:root.dark-mode .cf-item-type {
+  color: #60a5fa;
+}
+
+:root.dark-mode .cf-item-date,
+:root.dark-mode .cf-item-details {
+  color: #94a3b8;
+}
+
+:root.dark-mode .cf-item-amount {
+  color: #f1f5f9;
+}
+
+/* Attachments Dark Mode */
+:root.dark-mode .cf-attachments-section {
+  background: var(--bg-card, #1f2937);
+}
+
+:root.dark-mode .cf-attachments-title {
+  color: #e2e8f0;
+}
+
+:root.dark-mode .cf-attachment-card {
+  background: var(--bg-hover, #374151);
+  border-color: var(--border-color, #4b5563);
+}
+
+:root.dark-mode .cf-attachment-card:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+:root.dark-mode .cf-attachment-name {
+  color: #f1f5f9;
+}
+
+:root.dark-mode .cf-attachment-meta {
+  color: #94a3b8;
+}
+
+.cf-search-input,
+.cf-client-dropdown,
+.cf-client-item {
+  font-family: 'Inter', sans-serif;
+}
+
+:root.dark-mode .cf-search-input {
+  background: var(--bg-input, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #4b5563);
+}
+
+:root.dark-mode .cf-client-dropdown {
+  background: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-client-item:hover {
+  background: var(--bg-hover, #374151);
+}
+
+:root.dark-mode .cf-client-item .empresa {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark-mode .cf-client-item .ruc {
+  color: var(--text-secondary, #9ca3af);
+}
+
+/* ============================================
+   ESTILOS PARA CONSULTA MASIVA
+   ============================================ */
+
+.cf-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.cf-toggle-btn {
+  /* flex: 1; - Removed because grid handles width */
+  width: 100%;
+  padding: 8px 2px;
+  /* Reduced padding */
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8rem;
+  /* Smaller font to fit 4 tabs */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.cf-toggle-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cf-masiva-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: fadeIn 0.3s ease;
+}
+
+.cf-alert-blue {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.cf-alert-green {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.cf-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 150px;
+}
+
+.cf-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cf-btn-secondary {
+  padding: 8px 14px;
+  /* Reducido de 10px 16px */
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 13px;
+  /* Reducido */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cf-btn-secondary:hover {
+  background: #dbeafe;
+}
+
+/* Modo oscuro para nuevos elementos */
+:root.dark-mode .cf-mode-toggle {
+  background: #1f2937;
+}
+
+:root.dark-mode .cf-toggle-btn {
+  color: #94a3b8;
+}
+
+:root.dark-mode .cf-toggle-btn.active {
+  background: #374151;
+  color: #60a5fa;
+}
+
+:root.dark-mode .cf-alert-blue {
+  background: rgba(30, 64, 175, 0.2);
+  border-color: #1e3a8a;
+  color: #93c5fd;
+}
+
+:root.dark-mode .cf-alert-green {
+  background: rgba(22, 101, 52, 0.2);
+  border-color: #14532d;
+  color: #86efac;
+}
+
+:root.dark-mode .cf-tab.active {
+  background: #334155;
+  border-bottom-color: #475569;
+  color: #f1f5f9;
+}
+
+:root.dark-mode .cf-textarea {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+:root.dark-mode .cf-textarea:focus {
+  border-color: #3b82f6;
+}
+
+:root.dark-mode .cf-btn-secondary {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+:root.dark-mode .cf-btn-secondary:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Bot\u00f3n Abrir Excel */
+.cf-btn-abrir-excel {
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+.cf-btn-abrir-excel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+.cf-btn-abrir-excel:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   FILE SELECTOR MODAL STYLES
+   ============================================ */
+
+.cf-file-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  /* Higher than Excel modal */
+  animation: fadeIn 0.2s ease;
+}
+
+.cf-file-selector-modal {
+  background: var(--bg-card, #ffffff);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+.cf-file-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.cf-file-selector-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.cf-btn-close-selector {
+  padding: 6px 10px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.cf-btn-close-selector:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.cf-file-selector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.cf-file-selector-subtitle {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+}
+
+.cf-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cf-file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-card, #ffffff);
+}
+
+.cf-file-item:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.cf-file-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.cf-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cf-file-nombre {
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cf-file-details {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Dark mode for file selector */
+:root.dark-mode .cf-file-selector-overlay {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+:root.dark-mode .cf-file-selector-modal {
+  background: var(--bg-card, #1f2937);
+  border: 1px solid var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-file-selector-header {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-file-selector-header h4 {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark-mode .cf-file-item {
+  background: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-file-item:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+:root.dark-mode .cf-file-nombre {
+  color: var(--text-primary, #f9fafb);
+}
+
+/* ============================================
+   EXCEL MODAL OVERLAY STYLES
+   ============================================ */
+
+/* Full-screen overlay with backdrop blur */
+.cf-excel-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal container */
+.cf-excel-modal {
+  background: var(--bg-card, #ffffff);
+  border-radius: 16px;
+  width: 95%;
+  max-width: 1400px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal header */
+.cf-excel-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.cf-excel-modal-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.cf-excel-modal-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.cf-btn-close-modal {
+  padding: 10px 18px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cf-btn-close-modal:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Sheet tabs in modal */
+.cf-excel-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-hover, #f8fafc);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.cf-excel-tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cf-excel-tab:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.cf-excel-tab.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Modal content - scrollable table area */
+.cf-excel-modal-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-excel-table-container-modal {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+/* Custom Scrollbar for Excel Table */
+.cf-excel-table-container-modal::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.cf-excel-table-container-modal::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.cf-excel-table-container-modal::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 7px;
+  border: 3px solid #f1f5f9;
+}
+
+.cf-excel-table-container-modal::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+:root.dark-mode .cf-excel-table-container-modal::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+:root.dark-mode .cf-excel-table-container-modal::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-color: #1e293b;
+}
+
+:root.dark-mode .cf-excel-table-container-modal::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Excel table styles */
+.cf-excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.cf-excel-table th,
+.cf-excel-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+}
+
+.cf-excel-table th {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: var(--text-primary, #1f2937);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Highlighted columns (H, J, M) */
+.cf-excel-table th.highlight,
+.cf-excel-table td.highlight {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  font-weight: 700;
+  color: #92400e;
+  border-left: 2px solid #f59e0b;
+  border-right: 2px solid #f59e0b;
+}
+
+:root.dark-mode .cf-excel-table th.highlight,
+:root.dark-mode .cf-excel-table td.highlight {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(251, 191, 36, 0.15) 100%);
+  color: #fbbf24;
+  border-left-color: #f59e0b;
+  border-right-color: #f59e0b;
+}
+
+/* Selectable rows */
+.cf-excel-row-selectable {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cf-excel-row-selectable:hover {
+  background: rgba(59, 130, 246, 0.08);
+  transform: scale(1.002);
+}
+
+.cf-excel-row-selectable:active {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* Modal footer */
+.cf-excel-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-hover, #f8fafc);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.cf-btn-select-all {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.cf-btn-select-all:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+}
+
+.cf-btn-select-all:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark mode for Excel modal */
+:root.dark-mode .cf-excel-modal-overlay {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+:root.dark-mode .cf-excel-modal {
+  background: var(--bg-card, #1f2937);
+  border: 1px solid var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-excel-modal-header {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-excel-modal-header h3 {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark-mode .cf-excel-tabs {
+  background: var(--bg-hover, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-excel-tab {
+  color: var(--text-secondary, #9ca3af);
+}
+
+:root.dark-mode .cf-excel-table th {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark-mode .cf-excel-table td {
+  color: var(--text-primary, #e5e7eb);
+  border-color: var(--border-color, #334155);
+}
+
+:root.dark-mode .cf-excel-row-selectable:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+:root.dark-mode .cf-excel-modal-footer {
+  background: var(--bg-hover, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+/* ============================
+   PRODUCTION TABLE STYLES - Fix Text Overflow
+   ============================ */
+
+.cf-produccion-section table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cf-produccion-section table th,
+.cf-produccion-section table td {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.cf-produccion-section table th {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #1e293b;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Column widths */
+.cf-produccion-section table th:nth-child(1),
+.cf-produccion-section table td:nth-child(1) {
+  width: 10%;
+  min-width: 90px;
+}
+
+.cf-produccion-section table th:nth-child(2),
+.cf-produccion-section table td:nth-child(2) {
+  width: 6%;
+  min-width: 50px;
+}
+
+.cf-produccion-section table th:nth-child(3),
+.cf-produccion-section table td:nth-child(3) {
+  width: 10%;
+  min-width: 80px;
+}
+
+.cf-produccion-section table th:nth-child(4),
+.cf-produccion-section table td:nth-child(4) {
+  width: 10%;
+  min-width: 80px;
+}
+
+.cf-produccion-section table th:nth-child(5),
+.cf-produccion-section table td:nth-child(5) {
+  width: 14%;
+  min-width: 100px;
+}
+
+.cf-produccion-section table th:nth-child(6),
+.cf-produccion-section table td:nth-child(6) {
+  width: 10%;
+  min-width: 80px;
+  text-align: right;
+}
+
+.cf-produccion-section table th:nth-child(7),
+.cf-produccion-section table td:nth-child(7) {
+  width: 20%;
+  min-width: 150px;
+}
+
+.cf-produccion-section table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+:root.dark-mode .cf-produccion-section table th {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: #f9fafb;
+  border-color: #374151;
+}
+
+:root.dark-mode .cf-produccion-section table td {
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+:root.dark-mode .cf-produccion-section table tbody tr:hover {
+  background-color: #1e293b;
+}

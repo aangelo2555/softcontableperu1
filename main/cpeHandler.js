@@ -46,7 +46,7 @@ class CpeHandler {
     logger.info(`[CPE SCRAPING] Creando nueva sesión dedicada de Chromium para RUC ${ruc}...`);
     
     const browser = await chromium.launch({
-      headless: true,
+      headless: false, // Modo visible para monitorear en qué fase está operando o fallando
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
