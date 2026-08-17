@@ -2,9 +2,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./logger_web');
-const config = require('./config');
 const { buzonDir } = require('../server/storageConfig');
-const sessionManager = require('./sessionManager');
 
 class CpeHandler {
   constructor() {
@@ -19,382 +17,335 @@ class CpeHandler {
     }
   }
 
-  async capturarDebug(page, nombre = 'cpe_debug.png') {
+  /**
+   * Helper para descargar archivo nativo (XML, CDR, PDF) tras la consulta en SUNAT
+   */
+  async _descargarArchivoNativo(page, tipoArchivo, destinationFolder, baseFilename) {
     try {
-      const screenshotPath = path.join(this.downloadPath, nombre);
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-      logger.info(`[CPE] Captura debug guardada en: ${screenshotPath}`);
+      let btn = null;
+      if (tipoArchivo === 'pdf') {
+        btn = await page.$('button[ngbtooltip="Descargar PDF"]') || await page.$('button i.fa-file-pdf');
+      } else if (tipoArchivo === 'xml') {
+        btn = await page.$('button[ngbtooltip="Descargar XML"]') || await page.$('button i.fa-file-code');
+      } else if (tipoArchivo === 'cdr') {
+        btn = await page.evaluateHandle(() => {
+          const tilde = document.querySelector('button[ngbtooltip="Descargar CDR"]');
+          if (tilde) return tilde;
+          const icons = Array.from(document.querySelectorAll('i'));
+          const icon = icons.find(i => i.classList.contains('fa-file-contract') || i.classList.contains('fa-file-signature'));
+          return icon ? icon.closest('button') : null;
+        });
+      }
+
+      if (!btn) return null;
+
+      const isDisabled = await btn.evaluate(b => b.hasAttribute('disabled') || b.classList.contains('disabled')).catch(() => false);
+      if (isDisabled) return null;
+
+      const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+      let clicked = false;
+      try {
+        if (btn.click) {
+          await btn.click();
+          clicked = true;
+        }
+      } catch (e) {}
+
+      if (!clicked) {
+        await btn.evaluate(b => b.click());
+      }
+
+      const download = await downloadPromise;
+      const suggestedFilename = download.suggestedFilename();
+      const serverExtension = path.extname(suggestedFilename) || (tipoArchivo === 'cdr' ? '.zip' : `.${tipoArchivo}`);
+      
+      const filename = `${baseFilename}${serverExtension}`;
+      const filePath = path.join(destinationFolder, filename);
+
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch (e) {}
+      }
+
+      await download.saveAs(filePath);
+      logger.info(`[CPE SCRAPING] ${tipoArchivo.toUpperCase()} descargado exitosamente: ${filename}`);
+      return filePath;
     } catch (e) {
-      logger.error(`[CPE] Error capturando debug: ${e.message}`);
+      logger.warn(`[CPE SCRAPING] No se pudo descargar ${tipoArchivo}: ${e.message}`);
+      return null;
     }
   }
 
   /**
-   * Proceso principal para autenticar vía Playwright (Clave SOL) y descargar comprobantes de SUNAT
+   * Proceso de scraping fiel a consultas/cpeScrapingHandler.js
+   * 1. Login en SOL
+   * 2. Navegación directa a la interfaz de Nueva Consulta
+   * 3. Relleno de campos en Angular
+   * 4. Extracción de resultados desde el modal
+   * 5. Descarga de XML y CDR
    */
   async descargarLoteCPE({ ruc, usuario, clave, facturas }) {
-    logger.info(`[CPE PLAYWRIGHT] Iniciando proceso de scraping/consulta para RUC ${ruc} (${facturas.length} comprobantes)`);
+    logger.info(`[CPE SCRAPING] Iniciando procesamiento de ${facturas.length} comprobante(s) para RUC ${ruc}`);
     
+    const clientDownloadFolder = path.join(this.downloadPath, ruc);
+    if (!fs.existsSync(clientDownloadFolder)) {
+      fs.mkdirSync(clientDownloadFolder, { recursive: true });
+    }
+
     let browser = null;
     let page = null;
-    let tokenJWT = null;
-    let resultados = [];
+    const resultados = [];
 
     try {
-      // 1. Obtención del Contexto Compartido mediante sessionManager
-      const context = await sessionManager.createOrUpdateContext(ruc);
-      page = await context.newPage();
-      page.setDefaultTimeout(45000);
-
-      // Verificamos si ya estamos autenticados intentando entrar al menú directo
-      logger.info('[CPE] Verificando sesión existente en SUNAT...');
-      await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load' });
-      
-      const isLogged = !page.url().includes('api-seguridad');
-
-      if (!isLogged) {
-          // Si no está logueado, hacemos el login SOL normal con Playwright
-          logger.info('[CPE] Sesión no encontrada. Navegando a SUNAT login para obtener token CPE...');
-          await page.goto('https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc8573727/oauth2/loginMenuSol?resume=/as/N1qK4/resume/as/authorization.ping', { waitUntil: 'load' });
-
-          // Rellenar credenciales con manejo de reintentos
-          await page.waitForSelector('#txtRuc', { state: 'visible' });
-          await page.waitForTimeout(1500);
-          
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            await page.fill('#txtRuc', ruc.trim());
-            await page.fill('#txtUsuario', (usuario || '').trim().toUpperCase());
-            await page.fill('#txtContrasena', (clave || '').trim());
-            await page.waitForTimeout(500);
-            
-            const filledRuc = await page.inputValue('#txtRuc').catch(() => '');
-            const filledUser = await page.inputValue('#txtUsuario').catch(() => '');
-            if (filledRuc === ruc.trim() && filledUser === (usuario || '').trim().toUpperCase()) {
-              break;
-            }
-            logger.info(`[CPE] Campos vacíos o limpiados por SUNAT. Reintento de llenado ${attempt}/3...`);
-          }
-          
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }).catch(() => {}),
-            page.click('#btnAceptar')
-          ]);
-
-          // --- MANEJO DE SESIÓN ACTIVA ---
-          try {
-            await page.waitForTimeout(3000);
-            const sessionHandled = await page.evaluate(() => {
-              const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button, a'));
-              const target = btns.find(b => {
-                 const t = (b.value || b.innerText || '').toLowerCase();
-                 return t.includes('continuar') || t.includes('cerrar sesi') || t.includes('aceptar');
-              });
-              if (target) { target.click(); return true; }
-              return false;
-            });
-            if (sessionHandled) {
-              logger.info('[CPE] Sesión activa manejada, esperando redirección...');
-              await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-            }
-          } catch (e) {}
-
-          // Escapar de OAuth si se quedó atascado
-          if (page.url().includes('api-seguridad')) {
-              logger.info('[CPE] Forzando navegación al menú SOL...');
-              await page.goto('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { waitUntil: 'load', timeout: 60000 }).catch(() => {});
-          }
-      } else {
-          logger.info('[CPE] ¡Sesión previa detectada y reutilizada con éxito!');
-      }
-
-      // Hook interceptor robusto para cazar el token JWT de la red
-      page.on('request', async (request) => {
-          const url = request.url();
-          const authHeader = request.headers()['authorization'];
-          
-          if (authHeader && authHeader.startsWith('Bearer ') && !tokenJWT) {
-              tokenJWT = authHeader.substring(7);
-              logger.info('[CPE] ¡Token JWT interceptado de los Headers HTTP (API Request)!');
-          } else if (url.includes('token=') && !tokenJWT) {
-              try {
-                  const urlObj = new URL(url);
-                  const token = urlObj.searchParams.get('token');
-                  if (token && token.length > 50) {
-                      tokenJWT = token;
-                      logger.info('[CPE] ¡Token JWT interceptado exitosamente de la URL (GET)!');
-                  }
-              } catch (e) {}
-          } else if (request.method() === 'POST' && !tokenJWT) {
-              try {
-                  const postData = request.postData();
-                  if (postData && postData.includes('token=')) {
-                      const params = new URLSearchParams(postData);
-                      const token = params.get('token');
-                      if (token && token.length > 50) {
-                          tokenJWT = token;
-                          logger.info('[CPE] ¡Token JWT interceptado exitosamente del Body (POST)!');
-                      }
-                  }
-              } catch (e) {}
-          }
+      browser = await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-infobars',
+          '--start-maximized'
+        ]
       });
 
-      // Navegación al módulo Consulta CPE mediante Enlace Directo
-      try {
-          logger.info('[CPE] Esperando carga del portal SOL y buscando iframe...');
-          await page.waitForTimeout(4000); 
-          
-          logger.info('[CPE] Ejecutando navegación: Paso 1 - Click en el menú para cargar la pasarela...');
-          
-          try {
-              await page.locator('text=/Nueva Consulta de comprobantes de pago/i').first().click({ force: true, timeout: 5000 });
-          } catch (err) {
-              logger.warn(`[CPE] No se encontró el texto en el menú, intentando fallback por ID: ${err.message}`);
-              await page.evaluate(() => {
-                  if (typeof window.$ !== 'undefined') {
-                      $('#nivel4_11_38_1_1_1').trigger('click');
-                  }
-              });
+      const context = await browser.newContext({
+        acceptDownloads: true,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        viewport: { width: 1366, height: 900 },
+        extraHTTPHeaders: {
+          'Accept-Language': 'es-PE,es;q=0.9,en;q=0.8'
+        }
+      });
+
+      page = await context.newPage();
+
+      // Anti-detección estándar de consultas
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      });
+
+      page.setDefaultTimeout(60000);
+      page.setDefaultNavigationTimeout(90000);
+
+      // ========== PASO 1: LOGIN EN SUNAT SOL ==========
+      const loginUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm';
+      logger.info(`[CPE SCRAPING] PASO 1: Navegando al login SUNAT ${loginUrl}`);
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+      await page.waitForSelector('#txtRuc', { timeout: 35000 });
+
+      logger.info(`[CPE SCRAPING] Rellenando credenciales SOL: ${ruc} - ${usuario}`);
+      await page.fill('#txtRuc', ruc.trim());
+      await page.waitForTimeout(300);
+      await page.fill('#txtUsuario', (usuario || '').trim().toUpperCase());
+      await page.waitForTimeout(300);
+      await page.fill('#txtContrasena', (clave || '').trim());
+      await page.waitForTimeout(300);
+
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 90000 }).catch(() => {}),
+        page.click('#btnAceptar')
+      ]);
+
+      await page.waitForTimeout(3000);
+
+      // Si se queda en api-seguridad OAuth, forzar navegación al menú
+      let currentUrl = page.url();
+      if (currentUrl.includes('api-seguridad')) {
+        logger.info('[CPE SCRAPING] Detectada página OAuth, forzando redirección al menú principal...');
+        await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForTimeout(3000);
+      }
+
+      logger.info('[CPE SCRAPING] Login completado exitosamente.');
+
+      // ========== PASO 2: NAVEGACIÓN DIRECTA A LA INTERFAZ ==========
+      const consultaUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
+      logger.info(`[CPE SCRAPING] PASO 2: Navegando directamente a la interfaz: ${consultaUrl}`);
+      await page.goto(consultaUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+      await page.waitForTimeout(3000);
+
+      // ========== PASO 3: NAVEGAR AL PORTAL CPE ANGULAR ==========
+      const cpeUrl = 'https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/nuevaconsulta/1.0.0/';
+      logger.info(`[CPE SCRAPING] PASO 3: Navegando al portal CPE: ${cpeUrl}`);
+      await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+      await page.waitForTimeout(5000);
+
+      // ========== PASO 4: PROCESAR CADA COMPROBANTE ==========
+      for (let i = 0; i < facturas.length; i++) {
+        const factura = facturas[i];
+        const { rucEmisor, tipoDoc = '01', serie, numero } = factura;
+        logger.info(`[CPE SCRAPING] (${i + 1}/${facturas.length}) Consultando: ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
+
+        try {
+          // 1. Si no estamos en la página del formulario, recargarla
+          if (!page.url().includes('nuevaconsulta')) {
+            await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForTimeout(3000);
           }
-          
-          logger.info('[CPE] Esperando inicialización de la pasarela...');
+
+          // 2. Cerrar cualquier modal previo si estuviera abierto
+          try {
+            await page.click('button.close', { timeout: 1500 });
+            await page.waitForTimeout(500);
+          } catch (e) {}
+
+          // 3. Seleccionar "Recibido"
+          try {
+            await page.click('label[for="recibido"]', { timeout: 5000 });
+          } catch (e) {
+            await page.click('#recibido', { timeout: 5000 }).catch(() => {});
+          }
+
+          // 4. Rellenar RUC Emisor
+          try {
+            await page.fill('input[name="rucEmisor"]', rucEmisor);
+          } catch (e) {
+            await page.fill('input[formcontrolname="rucEmisor"]', rucEmisor);
+          }
+
+          // 5. Tipo Comprobante
+          try {
+            const tipoLabels = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de crédito', '08': 'Nota de débito', 'R1': 'Recibo por Honorarios' };
+            const tipoLabel = tipoLabels[tipoDoc] || 'Factura';
+
+            await page.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 3000 });
+            await page.click(`li[aria-label="${tipoLabel}"]`, { timeout: 2000 }).catch(() => page.click(`text=${tipoLabel}`));
+          } catch (e) {
+            logger.warn(`[CPE SCRAPING] Error seleccionando tipo comprobante: ${e.message}`);
+          }
+
+          // 6. Serie
+          try {
+            await page.fill('input[name="serieComprobante"]', serie);
+          } catch (e) {
+            await page.fill('input[formcontrolname="serieComprobante"]', serie);
+          }
+
+          // 7. Número
+          try {
+            await page.fill('input[name="numeroComprobante"]', String(numero));
+          } catch (e) {
+            await page.fill('input[formcontrolname="numeroComprobante"]', String(numero));
+          }
+
+          // 8. Click en "Consultar"
+          logger.info('[CPE SCRAPING] Haciendo click en Consultar...');
+          try {
+            await page.click('button.boton-primary:has-text("Consultar")');
+          } catch (e) {
+            await page.click('button[type="submit"]:has-text("Consultar")');
+          }
+
+          // 9. Esperar resultado
           await page.waitForTimeout(4000);
-          
-          logger.info('[CPE] Ejecutando navegación: Paso 2 - Inyectando deep link en el iframe...');
-          const sParam = await page.evaluate(() => {
-              const urlMatch = window.location.href.match(/[?&]s=([^&]+)/);
-              if (urlMatch) return urlMatch[1];
-              
-              const sInput = document.querySelector('input[name="s"]');
-              if (sInput && sInput.value) return sInput.value;
-              
-              for (const iframe of document.querySelectorAll('iframe')) {
-                  const m = (iframe.src || '').match(/[?&]s=([^&]+)/);
-                  if (m) return m[1];
+
+          // 10. Extraer resultado del DOM
+          const resultado = await page.evaluate(() => {
+            const body = document.body.innerText;
+            const modal = document.querySelector('div[role="document"].modal-dialog');
+
+            if (!modal) {
+              if (body.includes('No se encontr') || body.includes('sin resultados') || body.includes('no existe') || body.includes('no existe registro')) {
+                return { estado: 'NO_EXISTE', encontrado: false, razonSocial: '', importeTotal: '' };
               }
-              return 'ww1';
-          });
-          
-          const deepLink = `MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
-          await page.evaluate((url) => {
-              const iframe = document.getElementById('iframeApplication');
-              if (iframe) {
-                  iframe.src = url;
-              } else {
-                  window.location.href = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/${url}`;
-              }
-          }, deepLink);
-          
-          await page.waitForTimeout(3000);
-
-          // Paso 3: Navegación directa al portal CPE (según lógica de cpeScrapingHandler.js)
-          const cpeUrl = 'https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/nuevaconsulta/1.0.0/';
-          try {
-              await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-              await page.waitForTimeout(3000);
-          } catch(e) {}
-          
-      } catch (e) {
-          logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
-      }
-
-      // Extraer token de sessionStorage / localStorage
-      logger.info('[CPE] Esperando extracción de token en el iframe (o página principal)...');
-      for (let i = 0; i < 15; i++) {
-          if (tokenJWT) break;
-          
-          let framesToSearch = [page, ...page.frames()];
-          
-          for (const targetFrame of framesToSearch) {
-              if (tokenJWT) break;
-              
-              try {
-                  const frameUrl = targetFrame.url();
-                  if (frameUrl.includes('token=')) {
-                      const token = new URL(frameUrl).searchParams.get('token');
-                      if (token && token.length > 50) {
-                          tokenJWT = token;
-                          logger.info('[CPE] ¡Token extraído de la URL!');
-                          break;
-                      }
-                  }
-              } catch(e) {}
-
-              try {
-                  const token = await targetFrame.evaluate(() => {
-                      for (let j = 0; j < localStorage.length; j++) {
-                          const k = localStorage.key(j);
-                          if (k && k.toLowerCase().includes('token')) {
-                              const v = localStorage.getItem(k);
-                              if (v && v.length > 50) return v;
-                          }
-                      }
-                      for (let j = 0; j < sessionStorage.length; j++) {
-                          const k = sessionStorage.key(j);
-                          if (k && k.toLowerCase().includes('token')) {
-                              const v = sessionStorage.getItem(k);
-                              if (v && v.length > 50) return v;
-                          }
-                      }
-                      return null;
-                  });
-                  
-                  if (token && token.length > 50) {
-                      tokenJWT = token;
-                      logger.info(`[CPE] ¡Token JWT extraído del Storage en el contexto ${targetFrame === page ? 'principal' : 'iframe'}!`);
-                      break;
-                  }
-              } catch(e) {}
-          }
-          await page.waitForTimeout(1000);
-      }
-
-      if (!tokenJWT) {
-          // DOM Fallback para interceptar token
-          logger.warn('[CPE] Token no encontrado en Storage, intentando usar DOM Fallback para interceptarlo en red...');
-          
-          for (const factura of facturas) {
-            if (tokenJWT) break;
-            
-            const { rucEmisor, tipoDoc, serie, numero } = factura;
-            try {
-              const targetContext = page.frames().find(f => f.url().includes('consultacpe') || f.name() === 'iframeApplication') || page;
-              
-              try {
-                  await targetContext.click('label[for="recibido"]', { timeout: 8000, force: true });
-              } catch (e) {
-                  await targetContext.click('#recibido', { timeout: 8000, force: true }).catch(() => {});
-              }
-              
-              try {
-                  await targetContext.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 4000 });
-                  if (tipoDoc === '01') {
-                      await targetContext.locator('li').locator('text="Factura"').first().click({ timeout: 4000 });
-                  }
-              } catch (e) {}
-              
-              await targetContext.fill('input[formcontrolname="rucEmisor"]', rucEmisor).catch(() => {});
-              await targetContext.fill('input[formcontrolname="serieComprobante"]', serie).catch(() => {});
-              await targetContext.fill('input[formcontrolname="numeroComprobante"]', String(numero)).catch(() => {});
-              
-              await targetContext.click('button:has-text("Consultar")', { force: true }).catch(() => {});
-              await page.waitForTimeout(4000);
-            } catch (fallbackErr) {
-              logger.error(`[CPE] Error en DOM Fallback: ${fallbackErr.message}`);
+              if (body.includes('ACEPTADO')) return { estado: 'ACEPTADO', encontrado: true, razonSocial: '', importeTotal: '' };
+              return { estado: 'NO_ENCONTRADO', encontrado: false, razonSocial: '', importeTotal: '' };
             }
+
+            const datos = {
+              estado: 'ENCONTRADO',
+              encontrado: true,
+              razonSocial: '',
+              rucEmisor: '',
+              fechaEmision: '',
+              importeTotal: ''
+            };
+
+            const emisorTable = modal.querySelector('table.emisor');
+            if (emisorTable) {
+              const bTags = emisorTable.querySelectorAll('b');
+              if (bTags.length > 0) datos.razonSocial = bTags[0].innerText.trim();
+            }
+
+            const numeracionTable = modal.querySelector('table.comprobante-numeracion');
+            if (numeracionTable) {
+              const tds = numeracionTable.querySelectorAll('td');
+              tds.forEach(td => {
+                const text = td.innerText;
+                if (text.includes('RUC:')) datos.rucEmisor = text.replace('RUC:', '').trim();
+              });
+            }
+
+            const filasDatos = modal.querySelectorAll('tr.comprobante-datosprincipales');
+            filasDatos.forEach(tr => {
+              const tds = tr.querySelectorAll('td');
+              if (tds.length >= 3 && tds[0].innerText.includes('Fecha de Emisión')) {
+                datos.fechaEmision = tds[2].innerText.trim();
+              }
+            });
+
+            const totalesTable = modal.querySelector('table.comprobante-totales');
+            if (totalesTable) {
+              const filas = totalesTable.querySelectorAll('tr');
+              filas.forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length >= 3 && tds[0].innerText.includes('Importe total')) {
+                  datos.importeTotal = tds[2].innerText.trim();
+                }
+              });
+            }
+
+            if (body.includes('Estado del comprobante: ACEPTADO') || body.includes('ACTIVO')) {
+              datos.estado = 'ACEPTADO';
+            } else if (body.includes('ANULADO') || body.includes('BAJA')) {
+              datos.estado = 'ANULADO';
+            } else {
+              datos.estado = 'ACEPTADO';
+            }
+
+            return datos;
+          });
+
+          logger.info(`[CPE SCRAPING] Resultado para ${serie}-${numero}: ${resultado.estado} (${resultado.razonSocial})`);
+
+          // 11. Descargar XML y CDR si el modal está abierto
+          let xmlPath = null;
+          let cdrPath = null;
+          let pdfPath = null;
+
+          const baseFilename = `${rucEmisor}-${tipoDoc}-${serie}-${numero}`;
+
+          if (resultado.encontrado) {
+            xmlPath = await this._descargarArchivoNativo(page, 'xml', clientDownloadFolder, baseFilename);
+            cdrPath = await this._descargarArchivoNativo(page, 'cdr', clientDownloadFolder, `R-${baseFilename}`);
+            pdfPath = await this._descargarArchivoNativo(page, 'pdf', clientDownloadFolder, baseFilename);
           }
-          
-          if (!tokenJWT) {
-              logger.error('[CPE] Falla crítica: No se pudo obtener el token JWT.');
-              return facturas.map(f => ({ id: f.id, estado: 'ERROR_SIN_TOKEN_SOL' }));
-          }
-      }
 
-      // 2. Ejecutar consultas y descargas usando el Token capturado a través de la API privada de SUNAT
-      for (const factura of facturas) {
-         const { rucEmisor, tipoDoc, serie, numero } = factura;
-         
-         // Formatear fecha a DD/MM/YYYY si viene en formato YYYY-MM-DD
-         let fechaFormateada = factura.fechaEmision || '';
-         if (fechaFormateada.includes('-')) {
-             const parts = fechaFormateada.split('-');
-             if (parts.length === 3 && parts[0].length === 4) {
-                 fechaFormateada = `${parts[2]}/${parts[1]}/${parts[0]}`;
-             }
-         }
+          resultados.push({
+            id: factura.id,
+            estado: resultado.estado,
+            mensaje: resultado.razonSocial ? `${resultado.razonSocial} (S/ ${resultado.importeTotal})` : resultado.estado,
+            xmlPath,
+            cdrPath,
+            pdfPath
+          });
 
-         logger.info(`[CPE] Consultando comprobante en SUNAT: Emisor ${rucEmisor} - ${tipoDoc} - ${serie}-${numero} (${fechaFormateada})`);
-         
-         try {
-             const payload = {
-                 "codComp": tipoDoc,
-                 "numeroSerie": serie,
-                 "numero": String(parseInt(numero, 10) || numero),
-                 "fechaEmision": fechaFormateada,
-                 "monto": String(Number(factura.total || 0).toFixed(2)),
-                 "codTipoOpe": "2" // 2 = Recibido (Compras)
-             };
-
-             const response = await page.request.post(`https://api-cpe.sunat.gob.pe/v1/contribuyente/consultacpe/consulta/comprobante`, {
-                 headers: {
-                     'Authorization': `Bearer ${tokenJWT}`,
-                     'Content-Type': 'application/json',
-                     'Accept': 'application/json, text/plain, */*'
-                 },
-                 data: {
-                     rucEmisor,
-                     numDocIdeReceptor: ruc,
-                     ...payload
-                 }
-             });
-
-             if (response.ok()) {
-                 const resData = await response.json();
-                 logger.info(`[CPE] Respuesta SUNAT para ${serie}-${numero}:`, JSON.stringify(resData));
-                 
-                 const codEstado = String(resData.codEstadoCpe || '');
-                 const msjEstado = resData.msjEstadoCpe || (codEstado === '1' ? 'ACEPTADO' : codEstado === '2' ? 'ANULADO' : codEstado === '0' ? 'NO EXISTE' : 'CONSULTADO');
-
-                 if (codEstado === "1" || resData.archivoXmlBase64) {
-                     const cpeResult = {
-                         id: factura.id,
-                         estado: 'ACEPTADO',
-                         mensaje: msjEstado,
-                         xmlPath: null,
-                         cdrPath: null,
-                         pdfPath: null
-                     };
-                     
-                     if (resData.archivoXmlBase64) {
-                         const xmlBuffer = Buffer.from(resData.archivoXmlBase64, 'base64');
-                         const fileName = `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`;
-                         const filePath = path.join(this.downloadPath, fileName);
-                         fs.writeFileSync(filePath, xmlBuffer);
-                         cpeResult.xmlPath = filePath;
-                     }
-                     if (resData.archivoCdrBase64) {
-                         const cdrBuffer = Buffer.from(resData.archivoCdrBase64, 'base64');
-                         const fileName = `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.zip`;
-                         const filePath = path.join(this.downloadPath, fileName);
-                         fs.writeFileSync(filePath, cdrBuffer);
-                         cpeResult.cdrPath = filePath;
-                     }
-
-                     resultados.push(cpeResult);
-                 } else {
-                     resultados.push({
-                         id: factura.id,
-                         estado: msjEstado.toUpperCase(),
-                         mensaje: msjEstado
-                     });
-                 }
-             } else {
-                 const errText = await response.text().catch(() => '');
-                 logger.warn(`[CPE] Error HTTP ${response.status()} de SUNAT: ${errText}`);
-                 resultados.push({
-                     id: factura.id,
-                     estado: 'ERROR_SUNAT',
-                     mensaje: `HTTP ${response.status()}`
-                 });
-             }
-         } catch (err) {
-             logger.error(`[CPE] Error procesando comprobante ${serie}-${numero}: ${err.message}`);
-             resultados.push({
-                 id: factura.id,
-                 estado: 'ERROR_LOCAL',
-                 mensaje: err.message
-             });
-         }
-         
-         await new Promise(r => setTimeout(r, 600));
+        } catch (itemErr) {
+          logger.error(`[CPE SCRAPING] Error procesando comprobante ${serie}-${numero}: ${itemErr.message}`);
+          resultados.push({
+            id: factura.id,
+            estado: 'ERROR',
+            mensaje: itemErr.message
+          });
+        }
       }
 
     } catch (error) {
-      logger.error(`[CPE] Error general en descargarLoteCPE: ${error.message}`);
+      logger.error(`[CPE SCRAPING] Error general: ${error.message}`);
       throw error;
     } finally {
-      if (page) {
-        await page.close().catch(() => {});
+      if (browser) {
+        await browser.close().catch(() => {});
       }
     }
 
