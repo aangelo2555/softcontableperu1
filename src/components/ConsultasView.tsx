@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { webApiBridge } from '../services/apiBridge';
-import Swal from 'sweetalert2';
+import { toast } from 'react-hot-toast';
 
 interface ConsultasViewProps {
   currentWorkspace: any;
@@ -27,7 +27,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const procesarFacturas = async (facturas: any[]) => {
     if (!currentWorkspace?.ruc) {
-      Swal.fire('Atención', 'Debe seleccionar una empresa activa primero.', 'warning');
+      toast.error('Debe seleccionar una empresa activa primero.');
       return;
     }
 
@@ -39,10 +39,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       });
       
       setResultados(response);
-      Swal.fire('Éxito', `Consulta finalizada. ${response.length} documentos procesados.`, 'success');
+      toast.success(`Consulta finalizada. ${response.length} documentos procesados.`);
     } catch (error: any) {
       console.error(error);
-      Swal.fire('Error', error?.response?.data?.error || error.message || 'Error al consultar SUNAT', 'error');
+      toast.error(error?.response?.data?.error || error.message || 'Error al consultar SUNAT');
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const handleConsultarIndividual = () => {
     if (!formData.rucEmisor || !formData.serie || !formData.numero) {
-      Swal.fire('Faltan Datos', 'RUC Emisor, Serie y Número son obligatorios', 'warning');
+      toast.error('RUC Emisor, Serie y Número son obligatorios');
       return;
     }
     
@@ -67,7 +67,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const handleConsultarMasiva = () => {
     if (!masivaText.trim()) {
-      Swal.fire('Sin Datos', 'Ingrese al menos una factura en el formato RUC|TIPO|SERIE|NUMERO|FECHA|TOTAL', 'warning');
+      toast.error('Ingrese al menos una factura en el formato RUC|TIPO|SERIE|NUMERO|FECHA|TOTAL');
       return;
     }
 
