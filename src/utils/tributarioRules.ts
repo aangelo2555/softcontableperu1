@@ -162,6 +162,7 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     'DATOS',         // Tablas Generales
     'MANTENIMIENTO', // Configuración
     'BUZON',         // Buzón Electrónico
+    'CONSULTAS',     // Consultas CPE
     'SIRE',          // Módulo SIRE
     'ADMIN',         // Panel Admin
     'AI_KNOWLEDGE',  // Base IA (RAG)
