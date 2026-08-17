@@ -1909,10 +1909,6 @@ app.post('/api/cpe/descargar-xml', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Credenciales SOL no configuradas en la empresa.' });
         }
         
-        if (!client_id || !client_secret) {
-            return res.status(400).json({ success: false, error: 'Credenciales API (Client ID/Secret) no configuradas en la empresa.' });
-        }
-        
         const resultados = await cpeHandler.descargarLoteCPE({
             ruc,
             usuario: usuario,

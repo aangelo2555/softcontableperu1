@@ -192,7 +192,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
         title="Consultas y Descarga CPE"
         badge={
           <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black tracking-widest uppercase">
-            SUNAT API OAuth2
+            SUNAT CLAVE SOL
           </span>
         }
         subtitle={
@@ -200,13 +200,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             <span className="flex items-center gap-2">
               <span className="text-app-text font-bold">{activeCompany.name}</span>
               <span>• RUC: {activeCompany.ruc}</span>
-              {activeCompany.sunatClientId ? (
+              {(activeCompany.sol_user && activeCompany.sol_pass) ? (
                 <span className="inline-flex items-center gap-1 text-[9px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  <ShieldCheck size={11} /> API Conectada
+                  <ShieldCheck size={11} /> Clave SOL Conectada
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-[9px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                  <AlertCircle size={11} /> Requiere Credenciales API
+                  <AlertCircle size={11} /> Requiere Usuario / Clave SOL
                 </span>
               )}
             </span>
