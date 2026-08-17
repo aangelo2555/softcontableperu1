@@ -161,9 +161,21 @@ class CpeHandler {
               return 'ww1'; // Default fallback
           });
           
-          const deepLink = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
-          logger.info(`[CPE] Navegando a deep link con parámetro de sesión preservado: ${deepLink}`);
-          await page.goto(deepLink, { waitUntil: 'domcontentloaded' });
+          const deepLink = `MenuInternet.htm?action=execute&code=11.38.1.1.1&s=${sParam}`;
+          logger.info(`[CPE] Inyectando deep link en el src del iframe: ${deepLink}`);
+          
+          await page.evaluate((url) => {
+              const iframe = document.getElementById('iframeApplication');
+              if (iframe) {
+                  iframe.src = url;
+              } else {
+                  // Fallback extremo si no hay iframe (poco probable dado el layout de SUNAT)
+                  window.location.href = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/${url}`;
+              }
+          }, deepLink);
+          
+          // Dar tiempo extra para que la redirección cross-domain hacia e-factura ocurra
+          await page.waitForTimeout(3000);
           
       } catch (e) {
           logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
