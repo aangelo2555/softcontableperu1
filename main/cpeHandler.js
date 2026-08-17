@@ -185,7 +185,14 @@ class CpeHandler {
               }
           }, deepLink);
           
-          await page.waitForTimeout(4000);
+          await page.waitForTimeout(3000);
+
+          // Paso 3: Navegación directa al portal CPE (según lógica de cpeScrapingHandler.js)
+          const cpeUrl = 'https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/nuevaconsulta/1.0.0/';
+          try {
+              await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+              await page.waitForTimeout(3000);
+          } catch(e) {}
           
       } catch (e) {
           logger.warn(`[CPE] Error en navegación directa: ${e.message}`);
