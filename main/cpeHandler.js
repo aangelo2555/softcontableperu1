@@ -154,33 +154,53 @@ class CpeHandler {
       }
 
       // 2. Esperar pacientemente a que el iframe cargue y extraer el token de su sessionStorage
-      logger.info('[CPE] Esperando extracción de token en el iframe...');
+      logger.info('[CPE] Esperando extracción de token en el iframe (o página principal)...');
       for (let i = 0; i < 20; i++) {
           if (tokenJWT) break;
           
-          const frame = page.frame({ name: 'iframeApplication' });
-          if (frame) {
-              // Intento de extracción por URL del frame
+          let framesToSearch = [page, ...page.frames()];
+          
+          for (const targetFrame of framesToSearch) {
+              if (tokenJWT) break;
+              
+              // 1. Intento por URL (si es frame)
               try {
-                  const frameUrl = frame.url();
+                  const frameUrl = targetFrame.url();
                   if (frameUrl.includes('token=')) {
                       const token = new URL(frameUrl).searchParams.get('token');
                       if (token && token.length > 50) {
                           tokenJWT = token;
-                          logger.info('[CPE] ¡Token extraído de la URL del iframe!');
+                          logger.info('[CPE] ¡Token extraído de la URL!');
                           break;
                       }
                   }
               } catch(e) {}
 
-              // Intento de extracción por sessionStorage
+              // 2. Intento por localStorage/sessionStorage
               try {
-                  const token = await frame.evaluate(() => {
-                      return sessionStorage.getItem('token') || localStorage.getItem('token');
+                  const token = await targetFrame.evaluate(() => {
+                      // Buscar en localStorage
+                      for (let j = 0; j < localStorage.length; j++) {
+                          const k = localStorage.key(j);
+                          if (k && k.toLowerCase().includes('token')) {
+                              const v = localStorage.getItem(k);
+                              if (v && v.length > 50) return v;
+                          }
+                      }
+                      // Buscar en sessionStorage
+                      for (let j = 0; j < sessionStorage.length; j++) {
+                          const k = sessionStorage.key(j);
+                          if (k && k.toLowerCase().includes('token')) {
+                              const v = sessionStorage.getItem(k);
+                              if (v && v.length > 50) return v;
+                          }
+                      }
+                      return null;
                   });
+                  
                   if (token && token.length > 50) {
                       tokenJWT = token;
-                      logger.info('[CPE] ¡Token JWT extraído directamente del sessionStorage del iframe!');
+                      logger.info(`[CPE] ¡Token JWT extraído del Storage en el contexto ${targetFrame === page ? 'principal' : 'iframe'}!`);
                       break;
                   }
               } catch(e) {
@@ -191,54 +211,57 @@ class CpeHandler {
       }
 
       if (!tokenJWT) {
-          // Capturas desactivadas a pedido del usuario
-          // await this.capturarDebug(page, 'cpe_token_fail.png');
-          
           // ESTRATEGIA DE RESPALDO (DOM FALLBACK)
-          logger.warn('[CPE] Token no encontrado, intentando usar DOM Fallback (UI navigation)');
+          logger.warn('[CPE] Token no encontrado en Storage, intentando usar DOM Fallback para interceptarlo en red...');
           
           for (const factura of facturas) {
+            if (tokenJWT) break; // Si ya lo interceptó, salimos del fallback!
+            
             const { rucEmisor, tipoDoc, serie, numero } = factura;
-            logger.info(`[CPE] DOM Fallback consultando comprobante: ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
+            logger.info(`[CPE] DOM Fallback consultando comprobante para forzar red: ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
             try {
-              // 1. Encontrar el contexto del iframe
-              let frame = page.frame({ name: 'iframeApplication' });
-              if (!frame) {
-                  frame = page.frames().find(f => f.url().includes('consultacpe') || f.url().includes('MenuInternet'));
-              }
-              const targetContext = frame || page;
+              // 1. Encontrar el contexto (Angular renderiza en el iframe o directo en la página principal)
+              const targetContext = page.frames().find(f => f.url().includes('consultacpe') || f.name() === 'iframeApplication') || page;
               
-              // 2. Click en recibido dentro del iframe
+              // 2. Click en "Recibido" (hacer click en el LABEL, ya que el input puede estar oculto por Bootstrap)
               try {
-                  await targetContext.click('#recibido', { timeout: 3000 });
+                  await targetContext.click('label[for="recibido"]', { timeout: 3000, force: true });
               } catch (e) {
-                  // Fallback al texto visible
-                  await targetContext.locator('text="Recibido"').first().click({ timeout: 5000 });
+                  await targetContext.click('#recibido', { timeout: 3000, force: true });
               }
-              // 3. Rellenar datos
-              await targetContext.fill('[formcontrolname="rucEmisor"]', rucEmisor);
-              await targetContext.fill('[formcontrolname="serieComprobante"]', serie);
-              await targetContext.fill('[formcontrolname="numeroComprobante"]', numero);
               
-              // 4. Click search
-              await targetContext.click('button:has-text("Buscar")');
-              await page.waitForTimeout(3000); // wait for results
+              // 3. Seleccionar tipo de comprobante (Dropdown de PrimeNG)
+              try {
+                  // Abrir dropdown
+                  await targetContext.click('p-dropdown[formcontrolname="tipoComprobanteI"]', { timeout: 3000 });
+                  // Si es factura (01), buscar en la lista
+                  if (tipoDoc === '01') {
+                      await targetContext.locator('li').locator('text="Factura"').first().click({ timeout: 3000 });
+                  }
+              } catch (e) {
+                  logger.warn(`[CPE] No se pudo seleccionar tipo de comprobante en UI: ${e.message}`);
+              }
               
-              // This is a naive implementation since we don't have the full response handling logic here yet
-              resultados.push({
-                 id: factura.id,
-                 estado: 'PENDIENTE_FALLBACK',
-                 xmlPath: null,
-                 cdrPath: null,
-                 pdfPath: null
-              });
+              // 4. Rellenar datos
+              await targetContext.fill('input[formcontrolname="rucEmisor"]', rucEmisor);
+              await targetContext.fill('input[formcontrolname="serieComprobante"]', serie);
+              await targetContext.fill('input[formcontrolname="numeroComprobante"]', numero);
+              
+              // 5. Click Consultar
+              await targetContext.click('button:has-text("Consultar")', { force: true });
+              
+              // Esperar a que la red intercepte el token
+              await page.waitForTimeout(3000);
+              
             } catch (fallbackErr) {
               logger.error(`[CPE] Error en DOM Fallback: ${fallbackErr.message}`);
-              resultados.push({ id: factura.id, estado: 'ERROR_FALLBACK' });
             }
           }
           
-          return resultados;
+          if (!tokenJWT) {
+              logger.error('[CPE] Falla crítica: No se pudo obtener el token JWT ni por Storage ni por red.');
+              return facturas.map(f => ({ id: f.id, estado: 'ERROR_SIN_TOKEN' }));
+          }
       }
 
       // 2. Ejecutar descargas usando el Token capturado a través de la API REST de SUNAT
