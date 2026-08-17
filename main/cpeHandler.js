@@ -19,39 +19,54 @@ class CpeHandler {
   }
 
   /**
-   * Helper para buscar el contexto que contiene los inputs (sea en página principal o iframe)
+   * Helper que espera y localiza el contexto (página principal o iframe) donde Angular renderiza los inputs
    */
-  async _findTargetContext(page) {
-    const inputSelector = 'input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor';
-    
-    // Primero verificar página principal
-    try {
-      const el = await page.$(inputSelector);
-      if (el) return page;
-    } catch (e) {}
-
-    // Luego verificar frames/iframes
-    for (const frame of page.frames()) {
+  async _waitForInputTarget(page, selector, timeout = 25000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      // 1. Revisar en página principal
       try {
-        const el = await frame.$(inputSelector);
-        if (el) return frame;
+        const el = await page.$(selector);
+        if (el) return { target: page, element: el };
       } catch (e) {}
+
+      // 2. Revisar en todos los frames activos
+      for (const frame of page.frames()) {
+        try {
+          const el = await frame.$(selector);
+          if (el) return { target: frame, element: el };
+        } catch (e) {}
+      }
+
+      // 3. Revisar en el iframe de la aplicación SOL (#iframeApplication)
+      try {
+        const iframeHandle = await page.$('#iframeApplication, iframe[name="iframeApplication"], iframe');
+        if (iframeHandle) {
+          const frame = await iframeHandle.contentFrame();
+          if (frame) {
+            const el = await frame.$(selector);
+            if (el) return { target: frame, element: el };
+          }
+        }
+      } catch (e) {}
+
+      await page.waitForTimeout(500);
     }
-    return page;
+    throw new Error(`Timeout ${timeout}ms esperando elemento: ${selector}`);
   }
 
   /**
    * Helper para descargar archivo nativo (XML, CDR, PDF) tras la consulta en SUNAT
    */
-  async _descargarArchivoNativo(contextOrPage, tipoArchivo, destinationFolder, baseFilename) {
+  async _descargarArchivoNativo(target, page, tipoArchivo, destinationFolder, baseFilename) {
     try {
       let btn = null;
       if (tipoArchivo === 'pdf') {
-        btn = await contextOrPage.$('button[ngbtooltip="Descargar PDF"]') || await contextOrPage.$('button i.fa-file-pdf');
+        btn = await target.$('button[ngbtooltip="Descargar PDF"]') || await target.$('button i.fa-file-pdf');
       } else if (tipoArchivo === 'xml') {
-        btn = await contextOrPage.$('button[ngbtooltip="Descargar XML"]') || await contextOrPage.$('button i.fa-file-code');
+        btn = await target.$('button[ngbtooltip="Descargar XML"]') || await target.$('button i.fa-file-code');
       } else if (tipoArchivo === 'cdr') {
-        btn = await contextOrPage.evaluateHandle(() => {
+        btn = await target.evaluateHandle(() => {
           const tilde = document.querySelector('button[ngbtooltip="Descargar CDR"]');
           if (tilde) return tilde;
           const icons = Array.from(document.querySelectorAll('i'));
@@ -65,8 +80,8 @@ class CpeHandler {
       const isDisabled = await btn.evaluate(b => b.hasAttribute('disabled') || b.classList.contains('disabled')).catch(() => false);
       if (isDisabled) return null;
 
-      const page = contextOrPage.page ? contextOrPage.page() : contextOrPage;
-      const downloadPromise = page.waitForEvent('download', { timeout: 8000 });
+      const rootPage = page || (target.page ? target.page() : target);
+      const downloadPromise = rootPage.waitForEvent('download', { timeout: 8000 });
       
       let clicked = false;
       try {
@@ -92,7 +107,7 @@ class CpeHandler {
       }
 
       await download.saveAs(filePath);
-      logger.info(`[CPE SCRAPING] ${tipoArchivo.toUpperCase()} descargado: ${filename}`);
+      logger.info(`[CPE SCRAPING] ${tipoArchivo.toUpperCase()} descargado exitosamente: ${filename}`);
       return filePath;
     } catch (e) {
       logger.warn(`[CPE SCRAPING] No se pudo descargar ${tipoArchivo}: ${e.message}`);
@@ -102,18 +117,16 @@ class CpeHandler {
 
   /**
    * Obtener o inicializar la página de navegación activa en el portal de CPE
-   * Garantiza login exitoso y carga del formulario Angular
    */
   async _getOrInitActivePage(ruc, usuario, clave) {
     let page = this.activePages.get(ruc);
 
-    // 1. Si ya existe una página activa, verificar si el formulario ya está visible
+    // 1. Si ya existe una página abierta, probar si los inputs responden de inmediato
     if (page && !page.isClosed()) {
       try {
-        const target = await this._findTargetContext(page);
-        const hasForm = await target.$('input[name="rucEmisor"], input[formcontrolname="rucEmisor"]');
-        if (hasForm) {
-          logger.info(`[CPE SCRAPING] Reutilizando instancia activa de Chromium en el formulario CPE para RUC ${ruc}`);
+        const check = await this._waitForInputTarget(page, 'input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', 2000);
+        if (check && check.target) {
+          logger.info(`[CPE SCRAPING] Reutilizando instancia abierta y activa de Chromium en el formulario CPE para RUC ${ruc}`);
           return page;
         }
       } catch (e) {
@@ -138,26 +151,31 @@ class CpeHandler {
     logger.info(`[CPE SCRAPING] Navegando a ${loginUrl}`);
     await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
     
-    // Esperar explícitamente el input #txtRuc
+    // Esperar input #txtRuc
     logger.info(`[CPE SCRAPING] Esperando formulario de login SOL...`);
     await page.waitForSelector('#txtRuc', { state: 'visible', timeout: 25000 });
+    await page.waitForTimeout(500);
 
-    logger.info(`[CPE SCRAPING] Ingresando credenciales SOL: ${ruc} / ${usuario}`);
-    await page.fill('#txtRuc', ruc.trim());
-    await page.waitForTimeout(200);
-    await page.fill('#txtUsuario', (usuario || '').trim().toUpperCase());
-    await page.waitForTimeout(200);
-    await page.fill('#txtContrasena', (clave || '').trim());
-    await page.waitForTimeout(200);
+    // Llenado con verificación
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await page.fill('#txtRuc', ruc.trim());
+      await page.fill('#txtUsuario', (usuario || '').trim().toUpperCase());
+      await page.fill('#txtContrasena', (clave || '').trim());
+      await page.waitForTimeout(400);
 
+      const filledRuc = await page.inputValue('#txtRuc').catch(() => '');
+      if (filledRuc === ruc.trim()) break;
+    }
+
+    logger.info(`[CPE SCRAPING] Enviando login para ${ruc} / ${usuario}...`);
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}),
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
       page.click('#btnAceptar')
     ]);
 
     await page.waitForTimeout(3000);
 
-    // Manejar posible popup de sesión activa
+    // Manejar popup de sesión activa si aparece
     try {
       await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button, a'));
@@ -172,14 +190,14 @@ class CpeHandler {
 
     // Si quedó en api-seguridad OAuth, forzar menú principal
     if (page.url().includes('api-seguridad')) {
-      logger.info('[CPE SCRAPING] Forzando redirección al menú principal...');
+      logger.info('[CPE SCRAPING] Redirigiendo al menú principal...');
       await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
       await page.waitForTimeout(2000);
     }
 
     logger.info('[CPE SCRAPING] Login completado. Navegando al portal de Consulta de Comprobantes...');
 
-    // 2. Navegación directa al enlace del módulo
+    // 2. Navegación directa al módulo CPE
     const consultaUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
     await page.goto(consultaUrl, { waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {});
     await page.waitForTimeout(2500);
@@ -187,13 +205,12 @@ class CpeHandler {
     // 3. Navegación al portal CPE Angular
     const cpeUrl = 'https://e-factura.sunat.gob.pe/app/contribuyentems/servicio/consultacpe/consulta/nuevaconsulta/1.0.0/';
     logger.info(`[CPE SCRAPING] Cargando interfaz CPE: ${cpeUrl}`);
-    await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 35000 });
+    await page.goto(cpeUrl, { waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {});
 
-    // 4. Esperar a que el formulario cargue completamente
-    logger.info('[CPE SCRAPING] Esperando renderizado del formulario Angular...');
-    const target = await this._findTargetContext(page);
-    await target.waitForSelector('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', { timeout: 20000 });
-    logger.info('[CPE SCRAPING] ¡Formulario Angular listo para consultas en vivo!');
+    // 4. Esperar y confirmar que el formulario Angular esté presente (sea en page o iframe)
+    logger.info('[CPE SCRAPING] Esperando renderizado de campos del formulario...');
+    await this._waitForInputTarget(page, 'input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', 25000);
+    logger.info('[CPE SCRAPING] ¡Formulario Angular detectado y listo!');
 
     this.activePages.set(ruc, page);
     return page;
@@ -231,7 +248,9 @@ class CpeHandler {
       logger.info(`[CPE SCRAPING] (${i + 1}/${facturas.length}) Procesando ${rucEmisor} - ${tipoDoc} - ${serie}-${numero}`);
 
       try {
-        const target = await this._findTargetContext(page);
+        // Localizar el contexto dinámicamente (page o iframe)
+        const check = await this._waitForInputTarget(page, 'input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', 4000);
+        const target = check.target;
 
         // 1. Cerrar cualquier modal previo
         try {
@@ -239,15 +258,15 @@ class CpeHandler {
           if (closeBtn) await closeBtn.click().catch(() => {});
         } catch (e) {}
 
-        // 2. Seleccionar "Recibido" con timeout de 3s
+        // 2. Seleccionar "Recibido"
         try {
-          await target.click('label[for="recibido"], #recibido', { timeout: 3000 });
+          await target.click('label[for="recibido"], #recibido', { timeout: 2500 });
         } catch (e) {}
 
-        // 3. Rellenar RUC Emisor con timeout de 4s
-        await target.fill('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', rucEmisor, { timeout: 4000 });
+        // 3. Rellenar RUC Emisor
+        await target.fill('input[name="rucEmisor"], input[formcontrolname="rucEmisor"], #rucEmisor', rucEmisor, { timeout: 3500 });
 
-        // 4. Tipo Comprobante con timeout de 3s
+        // 4. Tipo Comprobante
         const tipoLabels = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de crédito', '08': 'Nota de débito', 'R1': 'Recibo por Honorarios' };
         const tipoLabel = tipoLabels[tipoDoc] || 'Factura';
         try {
@@ -255,14 +274,14 @@ class CpeHandler {
           await target.click(`li[aria-label="${tipoLabel}"], text="${tipoLabel}"`, { timeout: 2500 });
         } catch (e) {}
 
-        // 5. Serie con timeout de 3s
-        await target.fill('input[name="serieComprobante"], input[formcontrolname="serieComprobante"], #serieComprobante', serie, { timeout: 3000 });
+        // 5. Serie
+        await target.fill('input[name="serieComprobante"], input[formcontrolname="serieComprobante"], #serieComprobante', serie, { timeout: 2500 });
 
-        // 6. Número con timeout de 3s
-        await target.fill('input[name="numeroComprobante"], input[formcontrolname="numeroComprobante"], #numeroComprobante', String(numero), { timeout: 3000 });
+        // 6. Número
+        await target.fill('input[name="numeroComprobante"], input[formcontrolname="numeroComprobante"], #numeroComprobante', String(numero), { timeout: 2500 });
 
-        // 7. Click en Consultar con timeout de 3s
-        await target.click('button.boton-primary:has-text("Consultar"), button[type="submit"]:has-text("Consultar"), button:has-text("Consultar")', { timeout: 3000 });
+        // 7. Click en Consultar
+        await target.click('button.boton-primary:has-text("Consultar"), button[type="submit"]:has-text("Consultar"), button:has-text("Consultar")', { timeout: 2500 });
 
         // 8. Esperar respuesta de SUNAT (3 segundos)
         await page.waitForTimeout(3000);
@@ -341,8 +360,8 @@ class CpeHandler {
         const baseFilename = `${rucEmisor}-${tipoDoc}-${serie}-${numero}`;
 
         if (resultado.encontrado) {
-          xmlPath = await this._descargarArchivoNativo(target, 'xml', clientDownloadFolder, baseFilename);
-          cdrPath = await this._descargarArchivoNativo(target, 'cdr', clientDownloadFolder, `R-${baseFilename}`);
+          xmlPath = await this._descargarArchivoNativo(target, page, 'xml', clientDownloadFolder, baseFilename);
+          cdrPath = await this._descargarArchivoNativo(target, page, 'cdr', clientDownloadFolder, `R-${baseFilename}`);
         }
 
         resultados.push({
