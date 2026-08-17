@@ -1,20 +1,16 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { parseCpeXml, type CpeParsedData } from '../../utils/cpeXmlParser';
 import {
   X,
   Printer,
   Download,
   FileCode,
-  FileCheck,
   FileText,
   ShieldCheck,
   CheckCircle2,
-  Building2,
-  Calendar,
-  DollarSign,
   Copy,
-  Check,
-  Layers
+  Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -85,7 +81,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     return null;
   }, [xmlString, cdrXmlString]);
 
-  // Fallback con datos directos del documento si no se pudo parsear XML
+  // Fallback con datos directos del documento si aún no hay XML
   const displayData = useMemo(() => {
     if (parsedData) return parsedData;
 
@@ -232,18 +228,18 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-xs animate-fade-in overflow-hidden">
-      <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in relative">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in relative my-auto">
         
         {/* ═══ Header del Modal con Acciones ═══ */}
-        <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/90 flex items-center justify-between gap-3 flex-wrap">
+        <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/95 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
               <FileText size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-black text-app-text uppercase tracking-wider">
                   {displayData.tipoDocDescripcion} {displayData.serie}-{displayData.numero}
                 </h2>
@@ -251,13 +247,13 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                   <CheckCircle2 size={10} /> {doc.estado || 'ACEPTADO'}
                 </span>
               </div>
-              <span className="text-[11px] text-app-muted font-medium">
+              <span className="text-[11px] text-app-muted font-medium block truncate max-w-md">
                 {displayData.emisor.razonSocial} • RUC: {displayData.emisor.ruc}
               </span>
             </div>
           </div>
 
-          {/* Botones de Acción */}
+          {/* Botones de Acción Superiores */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleImprimir}
@@ -271,7 +267,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
             <button
               onClick={handleDescargarXml}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
-              title="Descargar archivo XML oficial"
+              title="Descargar archivo XML oficial de SUNAT"
             >
               <Download size={14} />
               <span>XML</span>
@@ -288,10 +284,10 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         </div>
 
         {/* ═══ Selector de Pestañas ═══ */}
-        <div className="flex border-b border-app-border bg-app-bg/50 px-4 pt-2 gap-2">
+        <div className="flex border-b border-app-border bg-app-bg/50 px-4 pt-2 gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('comprobante')}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'comprobante'
                 ? 'border-blue-500 text-blue-500'
                 : 'border-transparent text-app-muted hover:text-app-text'
@@ -303,7 +299,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
           <button
             onClick={() => setActiveTab('cdr')}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'cdr'
                 ? 'border-purple-500 text-purple-500'
                 : 'border-transparent text-app-muted hover:text-app-text'
@@ -315,7 +311,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
           <button
             onClick={() => setActiveTab('xml')}
-            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'xml'
                 ? 'border-emerald-500 text-emerald-500'
                 : 'border-transparent text-app-muted hover:text-app-text'
@@ -327,19 +323,19 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         </div>
 
         {/* ═══ Cuerpo del Modal: Visualización Vectorial del Comprobante ═══ */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-900/40 custom-scrollbar flex items-center justify-center">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 bg-neutral-900/60 custom-scrollbar flex items-start justify-center">
           
           {/* PESTAÑA 1: REPRESENTACIÓN IMPRESA OFICIAL SUNAT */}
           {activeTab === 'comprobante' && (
             <div
               ref={printRef}
-              className="bg-white text-black rounded-lg shadow-xl p-6 sm:p-8 max-w-[800px] w-full border border-neutral-300 font-sans text-xs flex flex-col gap-4 print:p-0 print:border-0 print:shadow-none"
+              className="bg-white text-black rounded-lg shadow-xl p-4 sm:p-6 md:p-8 w-full max-w-[740px] mx-auto border border-neutral-300 font-sans text-xs flex flex-col gap-3.5 box-border print:p-0 print:border-0 print:shadow-none"
             >
               {/* Encabezado: Datos Emisor + Cuadro RUC */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start border-b border-black pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start border-b border-black pb-3">
                 {/* Lado Izquierdo: Emisor */}
-                <div className="md:col-span-7 flex flex-col gap-1">
-                  <h1 className="text-base font-black text-black tracking-tight uppercase">
+                <div className="md:col-span-7 flex flex-col gap-0.5">
+                  <h1 className="text-base font-black text-black tracking-tight uppercase leading-snug">
                     {displayData.emisor.razonSocial}
                   </h1>
                   {displayData.emisor.nombreComercial && displayData.emisor.nombreComercial !== displayData.emisor.razonSocial && (
@@ -347,17 +343,17 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                       {displayData.emisor.nombreComercial}
                     </span>
                   )}
-                  <span className="text-[10px] text-neutral-600 leading-tight mt-1">
+                  <span className="text-[10px] text-neutral-600 leading-tight mt-0.5">
                     {displayData.emisor.direccion || 'LIMA - PERÚ'}
                   </span>
                 </div>
 
                 {/* Lado Derecho: Cuadro Oficial R.U.C. */}
-                <div className="md:col-span-5 border-2 border-black rounded-md p-3 flex flex-col items-center justify-center text-center bg-neutral-50 shadow-2xs">
+                <div className="md:col-span-5 border-2 border-black rounded-md p-2.5 flex flex-col items-center justify-center text-center bg-neutral-50 shadow-2xs">
                   <span className="text-xs font-black tracking-wider uppercase">
                     R.U.C.: {displayData.emisor.ruc}
                   </span>
-                  <span className="text-xs font-black uppercase my-1 text-blue-900 tracking-wider">
+                  <span className="text-xs font-black uppercase my-0.5 text-blue-900 tracking-wider">
                     {displayData.tipoDocDescripcion}
                   </span>
                   <span className="text-sm font-black font-mono tracking-widest">
@@ -367,7 +363,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
               </div>
 
               {/* Datos del Cliente y Condiciones */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] border-b border-neutral-300 pb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] border-b border-neutral-300 pb-2.5">
                 <div>
                   <span className="font-black text-neutral-700">Fecha de Emisión: </span>
                   <span>{displayData.fechaEmision}</span>
@@ -397,27 +393,27 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
               </div>
 
               {/* Tabla de Items */}
-              <div className="overflow-x-auto">
+              <div className="w-full overflow-x-auto">
                 <table className="w-full text-left border-collapse border border-black text-[10px]">
                   <thead>
                     <tr className="bg-neutral-100 border-b border-black font-black uppercase text-center">
-                      <th className="border-r border-black p-1.5 w-12">Cant.</th>
-                      <th className="border-r border-black p-1.5 w-16">U.M.</th>
-                      <th className="border-r border-black p-1.5 w-20">Código</th>
+                      <th className="border-r border-black p-1.5 w-10">Cant.</th>
+                      <th className="border-r border-black p-1.5 w-14">U.M.</th>
+                      <th className="border-r border-black p-1.5 w-16">Código</th>
                       <th className="border-r border-black p-1.5 text-left">Descripción</th>
-                      <th className="border-r border-black p-1.5 w-24 text-right">V. Unitario</th>
-                      <th className="p-1.5 w-24 text-right">Importe</th>
+                      <th className="border-r border-black p-1.5 w-20 text-right">V. Unit.</th>
+                      <th className="p-1.5 w-20 text-right">Importe</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayData.items.map((item, idx) => (
                       <tr key={idx} className="border-b border-neutral-300">
-                        <td className="border-r border-black p-1.5 text-center font-mono">{item.cantidad}</td>
-                        <td className="border-r border-black p-1.5 text-center">{item.unidadMedida}</td>
-                        <td className="border-r border-black p-1.5 text-center font-mono">{item.codigo}</td>
-                        <td className="border-r border-black p-1.5 font-medium">{item.descripcion}</td>
-                        <td className="border-r border-black p-1.5 text-right font-mono">{displayData.monedaSimbolo} {item.valorUnitario.toFixed(2)}</td>
-                        <td className="p-1.5 text-right font-mono font-bold">{displayData.monedaSimbolo} {item.subtotal.toFixed(2)}</td>
+                        <td className="border-r border-black p-1 text-center font-mono">{item.cantidad}</td>
+                        <td className="border-r border-black p-1 text-center">{item.unidadMedida}</td>
+                        <td className="border-r border-black p-1 text-center font-mono">{item.codigo}</td>
+                        <td className="border-r border-black p-1 font-medium">{item.descripcion}</td>
+                        <td className="border-r border-black p-1 text-right font-mono">{displayData.monedaSimbolo} {item.valorUnitario.toFixed(2)}</td>
+                        <td className="p-1 text-right font-mono font-bold">{displayData.monedaSimbolo} {item.subtotal.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -425,21 +421,21 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
               </div>
 
               {/* Resumen de Totales e Impuestos */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start pt-1">
                 {/* Lado Izquierdo: Son Letras + Código Hash */}
-                <div className="md:col-span-7 flex flex-col gap-2">
-                  <div className="p-2.5 bg-neutral-100 rounded border border-neutral-300 text-[11px] font-bold">
+                <div className="md:col-span-7 flex flex-col gap-1.5">
+                  <div className="p-2 bg-neutral-100 rounded border border-neutral-300 text-[10px] font-bold">
                     <span>{displayData.totales.montoEnLetras}</span>
                   </div>
 
                   {displayData.seguridad.hash && (
-                    <div className="text-[9px] text-neutral-500 font-mono">
+                    <div className="text-[9px] text-neutral-500 font-mono break-all">
                       <span className="font-bold">Resumen Hash: </span>
                       <span>{displayData.seguridad.hash}</span>
                     </div>
                   )}
 
-                  <div className="text-[8px] text-neutral-500 italic mt-2">
+                  <div className="text-[8px] text-neutral-500 italic mt-1 leading-tight">
                     Esta es una representación impresa de la factura electrónica, generada en el Sistema de SUNAT. Puede verificarla utilizando su clave SOL.
                   </div>
                 </div>
@@ -477,10 +473,10 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
           {/* PESTAÑA 2: CONSTANCIA DE RECEPCIÓN CDR */}
           {activeTab === 'cdr' && (
-            <div className="bg-white text-black rounded-lg shadow-xl p-6 sm:p-8 max-w-[700px] w-full border border-neutral-300 flex flex-col gap-4 text-xs">
+            <div className="bg-white text-black rounded-lg shadow-xl p-6 sm:p-8 max-w-[650px] w-full border border-neutral-300 flex flex-col gap-4 text-xs mx-auto">
               <div className="flex items-center gap-3 border-b border-black pb-3">
                 <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                  <ShieldCheck size={28} />
+                  <ShieldCheck size={26} />
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-black">
@@ -522,7 +518,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   onClick={handleDescargarCdr}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer"
                 >
                   <Download size={14} />
                   <span>Descargar Constancia CDR</span>
@@ -533,8 +529,8 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
           {/* PESTAÑA 3: CÓDIGO XML */}
           {activeTab === 'xml' && (
-            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 w-full max-w-4xl flex flex-col gap-3 max-h-[70vh]">
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 w-full max-w-3xl flex flex-col gap-3 max-h-[70vh] mx-auto">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2 flex-wrap gap-2">
                 <span className="text-xs font-mono font-bold text-emerald-400">
                   {displayData.emisor.ruc}-{displayData.tipoDoc}-{displayData.serie}-{displayData.numero}.xml
                 </span>
@@ -556,7 +552,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                 </div>
               </div>
 
-              <pre className="text-[11px] font-mono text-neutral-300 overflow-x-auto overflow-y-auto custom-scrollbar p-3 bg-neutral-900/90 rounded-lg whitespace-pre leading-relaxed max-h-[55vh]">
+              <pre className="text-[11px] font-mono text-neutral-300 overflow-x-auto overflow-y-auto custom-scrollbar p-3 bg-neutral-900/90 rounded-lg whitespace-pre leading-relaxed max-h-[50vh]">
                 {xmlString || 'Contenido XML no disponible en texto plano.'}
               </pre>
             </div>
@@ -565,7 +561,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         </div>
 
         {/* ═══ Footer del Modal ═══ */}
-        <div className="px-6 py-3 border-t border-app-border bg-app-surface flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-app-border bg-app-surface flex items-center justify-between">
           <span className="text-[10px] font-bold text-app-muted">
             Documento estructurado bajo estándar UBL 2.1 SUNAT
           </span>
@@ -580,4 +576,6 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }

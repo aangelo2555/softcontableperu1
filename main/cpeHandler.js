@@ -535,60 +535,118 @@ class CpeHandler {
           let cdrFileName = `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`;
 
           if (resultado.encontrado) {
-            const downloadDest = path.join(clientDownloadFolder, `TEMP_${rucEmisor}_${serie}_${numero}.bin`);
-            const downloadedFile = await this._descargarArchivoSeguro(page, [
-              'button[ngbtooltip="Descargar CDR"]',
-              'button:has(i.fa-file-contract)',
-              'button:has(i.fa-file-signature)',
-              'button[ngbtooltip="Descargar XML"]',
-              'button:has(i.fa-file-code)',
-              'button:has-text("Descargar CDR")',
-              'button:has-text("Descargar XML")',
-              'button:has-text("CDR")',
-              'button:has-text("XML")'
-            ], downloadDest, 12000);
+            // 1. Descargar Factura XML oficial
+            try {
+              const xmlDownloadDest = path.join(clientDownloadFolder, `TEMP_XML_${rucEmisor}_${serie}_${numero}.bin`);
+              const downloadedXmlFile = await this._descargarArchivoSeguro(page, [
+                'button[ngbtooltip="Descargar XML"]',
+                'button:has(i.fa-file-code)',
+                'button:has-text("Descargar XML")',
+                'button:has-text("XML")'
+              ], xmlDownloadDest, 10000);
 
-            if (downloadedFile && fs.existsSync(downloadedFile)) {
-              try {
-                const zip = new AdmZip(downloadedFile);
-                const zipEntries = zip.getEntries();
+              if (downloadedXmlFile && fs.existsSync(downloadedXmlFile)) {
+                try {
+                  const zip = new AdmZip(downloadedXmlFile);
+                  const zipEntries = zip.getEntries();
 
-                for (const entry of zipEntries) {
-                  const entryName = entry.entryName.toLowerCase();
-                  if (entryName.endsWith('.xml')) {
-                    const contentStr = entry.getData().toString('utf8');
-                    const isCdr = entryName.startsWith('r-') || entryName.includes('cdr') || contentStr.includes('ApplicationResponse');
+                  for (const entry of zipEntries) {
+                    const entryName = entry.entryName.toLowerCase();
+                    if (entryName.endsWith('.xml')) {
+                      const contentStr = entry.getData().toString('utf8');
+                      const isCdr = entryName.startsWith('r-') || entryName.includes('cdr') || contentStr.includes('ApplicationResponse');
 
-                    if (isCdr) {
-                      cdrContent = contentStr;
-                      cdrBase64 = Buffer.from(contentStr).toString('base64');
-                      cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
-                      fs.writeFileSync(cdrPath, contentStr);
-                      logger.info(`[CPE SCRAPING] 📦 CDR XML extraído del paquete: ${path.basename(cdrPath)}`);
-                    } else {
-                      xmlContent = contentStr;
-                      xmlBase64 = Buffer.from(contentStr).toString('base64');
-                      xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
-                      fs.writeFileSync(xmlPath, contentStr);
-                      logger.info(`[CPE SCRAPING] 📄 Factura XML extraída del paquete: ${path.basename(xmlPath)}`);
+                      if (isCdr) {
+                        cdrContent = contentStr;
+                        cdrBase64 = Buffer.from(contentStr).toString('base64');
+                        cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                        fs.writeFileSync(cdrPath, contentStr);
+                        logger.info(`[CPE SCRAPING] 📦 CDR XML extraído: ${path.basename(cdrPath)}`);
+                      } else {
+                        xmlContent = contentStr;
+                        xmlBase64 = Buffer.from(contentStr).toString('base64');
+                        xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                        fs.writeFileSync(xmlPath, contentStr);
+                        logger.info(`[CPE SCRAPING] 📄 Factura XML extraída: ${path.basename(xmlPath)}`);
+                      }
                     }
                   }
-                }
-                try { fs.unlinkSync(downloadedFile); } catch (e) {}
-              } catch (notZipErr) {
-                const contentStr = fs.readFileSync(downloadedFile, 'utf8');
-                if (contentStr.includes('ApplicationResponse')) {
-                  cdrContent = contentStr;
-                  cdrBase64 = Buffer.from(contentStr).toString('base64');
-                  cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
-                  fs.renameSync(downloadedFile, cdrPath);
-                } else {
-                  xmlContent = contentStr;
-                  xmlBase64 = Buffer.from(contentStr).toString('base64');
-                  xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
-                  fs.renameSync(downloadedFile, xmlPath);
+                  try { fs.unlinkSync(downloadedXmlFile); } catch (e) {}
+                } catch (notZipErr) {
+                  const contentStr = fs.readFileSync(downloadedXmlFile, 'utf8');
+                  if (contentStr.includes('ApplicationResponse')) {
+                    cdrContent = contentStr;
+                    cdrBase64 = Buffer.from(contentStr).toString('base64');
+                    cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                    fs.renameSync(downloadedXmlFile, cdrPath);
+                  } else {
+                    xmlContent = contentStr;
+                    xmlBase64 = Buffer.from(contentStr).toString('base64');
+                    xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                    fs.renameSync(downloadedXmlFile, xmlPath);
+                    logger.info(`[CPE SCRAPING] 📄 Factura XML directa guardada: ${path.basename(xmlPath)}`);
+                  }
                 }
               }
+            } catch (xmlErr) {
+              logger.warn(`[CPE SCRAPING] Advertencia al descargar XML: ${xmlErr.message}`);
+            }
+
+            // 2. Descargar Constancia CDR oficial
+            try {
+              const cdrDownloadDest = path.join(clientDownloadFolder, `TEMP_CDR_${rucEmisor}_${serie}_${numero}.bin`);
+              const downloadedCdrFile = await this._descargarArchivoSeguro(page, [
+                'button[ngbtooltip="Descargar CDR"]',
+                'button:has(i.fa-file-contract)',
+                'button:has(i.fa-file-signature)',
+                'button:has-text("Descargar CDR")',
+                'button:has-text("CDR")'
+              ], cdrDownloadDest, 10000);
+
+              if (downloadedCdrFile && fs.existsSync(downloadedCdrFile)) {
+                try {
+                  const zip = new AdmZip(downloadedCdrFile);
+                  const zipEntries = zip.getEntries();
+
+                  for (const entry of zipEntries) {
+                    const entryName = entry.entryName.toLowerCase();
+                    if (entryName.endsWith('.xml')) {
+                      const contentStr = entry.getData().toString('utf8');
+                      const isCdr = entryName.startsWith('r-') || entryName.includes('cdr') || contentStr.includes('ApplicationResponse');
+
+                      if (isCdr) {
+                        cdrContent = contentStr;
+                        cdrBase64 = Buffer.from(contentStr).toString('base64');
+                        cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                        fs.writeFileSync(cdrPath, contentStr);
+                        logger.info(`[CPE SCRAPING] 📦 CDR XML extraído: ${path.basename(cdrPath)}`);
+                      } else if (!xmlContent) {
+                        xmlContent = contentStr;
+                        xmlBase64 = Buffer.from(contentStr).toString('base64');
+                        xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                        fs.writeFileSync(xmlPath, contentStr);
+                        logger.info(`[CPE SCRAPING] 📄 Factura XML extraída: ${path.basename(xmlPath)}`);
+                      }
+                    }
+                  }
+                  try { fs.unlinkSync(downloadedCdrFile); } catch (e) {}
+                } catch (notZipErr) {
+                  const contentStr = fs.readFileSync(downloadedCdrFile, 'utf8');
+                  if (contentStr.includes('ApplicationResponse')) {
+                    cdrContent = contentStr;
+                    cdrBase64 = Buffer.from(contentStr).toString('base64');
+                    cdrPath = path.join(clientDownloadFolder, `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                    fs.renameSync(downloadedCdrFile, cdrPath);
+                  } else if (!xmlContent) {
+                    xmlContent = contentStr;
+                    xmlBase64 = Buffer.from(contentStr).toString('base64');
+                    xmlPath = path.join(clientDownloadFolder, `${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`);
+                    fs.renameSync(downloadedCdrFile, xmlPath);
+                  }
+                }
+              }
+            } catch (cdrErr) {
+              logger.warn(`[CPE SCRAPING] Advertencia al descargar CDR: ${cdrErr.message}`);
             }
           }
 

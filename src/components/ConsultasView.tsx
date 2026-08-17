@@ -692,7 +692,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                               <td className="px-4 py-3.5 text-right">
                                 <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                   {/* Botón Principal: Ver PDF / Comprobante en Frontend */}
-                                  {(res.pdfBase64 || res.capturaBase64 || res.xmlPath || res.estado === 'ACEPTADO') && (
+                                  {(res.pdfBase64 || res.capturaBase64 || res.xmlPath || res.xmlBase64 || res.cdrBase64 || res.estado === 'ACEPTADO') && (
                                     <button
                                       onClick={() => setSelectedDocForPreview(res)}
                                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer"
@@ -704,17 +704,25 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   )}
 
                                   {/* Botón Descargar XML */}
-                                  {(res.xmlBase64 || res.xmlPath) && (
+                                  {(res.xmlBase64 || res.xmlContent || res.xmlPath) && (
                                     <button
                                       onClick={() => {
                                         if (res.xmlBase64) {
                                           descargarBase64(res.xmlBase64, res.xmlFileName || `${res.id}.xml`, 'application/xml');
+                                        } else if (res.xmlContent) {
+                                          const blob = new Blob([res.xmlContent], { type: 'application/xml' });
+                                          const link = document.createElement('a');
+                                          link.href = URL.createObjectURL(blob);
+                                          link.download = res.xmlFileName || `${res.id}.xml`;
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
                                         } else if (res.xmlPath) {
                                           handleDescargarArchivoPorRuta(res.xmlPath, res.xmlFileName || `${res.id}.xml`);
                                         }
                                       }}
                                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Descargar archivo XML firmado de SUNAT"
+                                      title="Descargar archivo XML oficial"
                                     >
                                       <Download size={11} />
                                       <span>XML</span>
@@ -722,17 +730,25 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   )}
 
                                   {/* Botón Descargar CDR */}
-                                  {(res.cdrBase64 || res.cdrPath) && (
+                                  {(res.cdrBase64 || res.cdrContent || res.cdrPath) && (
                                     <button
                                       onClick={() => {
                                         if (res.cdrBase64) {
-                                          descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.zip`, 'application/zip');
+                                          descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
+                                        } else if (res.cdrContent) {
+                                          const blob = new Blob([res.cdrContent], { type: 'application/xml' });
+                                          const link = document.createElement('a');
+                                          link.href = URL.createObjectURL(blob);
+                                          link.download = res.cdrFileName || `R-${res.id}.xml`;
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
                                         } else if (res.cdrPath) {
-                                          handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.zip`);
+                                          handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.xml`);
                                         }
                                       }}
                                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer"
-                                      title="Descargar Constancia de Recepción CDR (ZIP)"
+                                      title="Descargar Constancia de Recepción CDR"
                                     >
                                       <Download size={11} />
                                       <span>CDR</span>
