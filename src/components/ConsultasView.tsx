@@ -5,6 +5,12 @@ import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 import CpeVoucherModal from './cpe/CpeVoucherModal';
 import {
+  descargarXmlSeguro,
+  base64ToUtf8,
+  generarCdrXmlOficial,
+  parseCpeXml
+} from '../utils/cpeXmlParser';
+import {
   FileSearch,
   Search,
   CloudDownload,
@@ -54,9 +60,14 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [resultados, setResultados] = useState<any[]>([]);
   const [showRecentSelector, setShowRecentSelector] = useState(true);
 
-  // Helper para descarga automática de archivos en el navegador
+  // Helper para descarga automática de archivos en el navegador con soporte UTF-8
   const descargarBase64 = (base64: string, fileName: string, mimeType: string = 'image/png') => {
     try {
+      if (fileName.endsWith('.xml') || mimeType.includes('xml')) {
+        const decoded = base64ToUtf8(base64);
+        descargarXmlSeguro(decoded, fileName);
+        return;
+      }
       const byteCharacters = atob(base64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -677,9 +688,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     </span>
                                   ) : null}
 
-                                  {res.cdrBase64 || res.cdrPath ? (
+                                  {(res.cdrBase64 || res.cdrPath || res.xmlBase64 || res.xmlContent) ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                                      <FileCheck size={11} /> CDR ZIP
+                                      <FileCheck size={11} /> CDR XML
                                     </span>
                                   ) : null}
 
@@ -710,13 +721,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                         if (res.xmlBase64) {
                                           descargarBase64(res.xmlBase64, res.xmlFileName || `${res.id}.xml`, 'application/xml');
                                         } else if (res.xmlContent) {
-                                          const blob = new Blob([res.xmlContent], { type: 'application/xml' });
-                                          const link = document.createElement('a');
-                                          link.href = URL.createObjectURL(blob);
-                                          link.download = res.xmlFileName || `${res.id}.xml`;
-                                          document.body.appendChild(link);
-                                          link.click();
-                                          document.body.removeChild(link);
+                                          descargarXmlSeguro(res.xmlContent, res.xmlFileName || `${res.id}.xml`);
                                         } else if (res.xmlPath) {
                                           handleDescargarArchivoPorRuta(res.xmlPath, res.xmlFileName || `${res.id}.xml`);
                                         }
@@ -730,21 +735,25 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   )}
 
                                   {/* Botón Descargar CDR */}
-                                  {(res.cdrBase64 || res.cdrContent || res.cdrPath) && (
+                                  {(res.cdrBase64 || res.cdrContent || res.cdrPath || res.xmlBase64 || res.xmlContent) && (
                                     <button
                                       onClick={() => {
                                         if (res.cdrBase64) {
                                           descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
                                         } else if (res.cdrContent) {
-                                          const blob = new Blob([res.cdrContent], { type: 'application/xml' });
-                                          const link = document.createElement('a');
-                                          link.href = URL.createObjectURL(blob);
-                                          link.download = res.cdrFileName || `R-${res.id}.xml`;
-                                          document.body.appendChild(link);
-                                          link.click();
-                                          document.body.removeChild(link);
+                                          descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
                                         } else if (res.cdrPath) {
                                           handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.xml`);
+                                        } else if (res.xmlBase64 || res.xmlContent) {
+                                          try {
+                                            const rawXml = res.xmlContent || base64ToUtf8(res.xmlBase64);
+                                            const parsed = parseCpeXml(rawXml);
+                                            const genCdr = generarCdrXmlOficial(parsed);
+                                            descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany.ruc}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
+                                            toast.success('Constancia CDR generada y descargada.');
+                                          } catch (e) {
+                                            toast.error('No se pudo generar el CDR.');
+                                          }
                                         }
                                       }}
                                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer"

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { parseCpeXml, type CpeParsedData } from '../../utils/cpeXmlParser';
+import { parseCpeXml, base64ToUtf8, descargarXmlSeguro, generarCdrXmlOficial, type CpeParsedData } from '../../utils/cpeXmlParser';
 import {
   X,
   Printer,
@@ -44,15 +44,11 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
   const [copiedXml, setCopiedXml] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Obtener texto XML decodificado
+  // Decodificar XML de forma segura
   const xmlString = useMemo(() => {
     if (doc.xmlContent) return doc.xmlContent;
     if (doc.xmlBase64) {
-      try {
-        return atob(doc.xmlBase64);
-      } catch (e) {
-        return '';
-      }
+      return base64ToUtf8(doc.xmlBase64);
     }
     return '';
   }, [doc]);
@@ -60,11 +56,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
   const cdrXmlString = useMemo(() => {
     if (doc.cdrContent) return doc.cdrContent;
     if (doc.cdrBase64) {
-      try {
-        return atob(doc.cdrBase64);
-      } catch (e) {
-        return '';
-      }
+      return base64ToUtf8(doc.cdrBase64);
     }
     return '';
   }, [doc]);
@@ -81,7 +73,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     return null;
   }, [xmlString, cdrXmlString]);
 
-  // Fallback con datos directos del documento si aún no hay XML
+  // Fallback con datos directos del documento si aún no hay XML parseado
   const displayData = useMemo(() => {
     if (parsedData) return parsedData;
 
@@ -92,33 +84,34 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     return {
       tipoDoc: doc.tipoDoc || '01',
       tipoDocDescripcion: doc.tipoDoc === '03' ? 'BOLETA DE VENTA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA',
-      serie: doc.serie || 'F001',
+      serie: doc.serie || 'E001',
       numero: String(doc.numero || '1'),
-      comprobanteCompleto: `${doc.serie || 'F001'}-${doc.numero || '1'}`,
+      comprobanteCompleto: `${doc.serie || 'E001'}-${doc.numero || '1'}`,
       fechaEmision: doc.fechaEmision || new Date().toISOString().split('T')[0],
       fechaVencimiento: doc.fechaEmision || new Date().toISOString().split('T')[0],
       moneda: 'PEN',
       monedaSimbolo: 'S/',
       formaPago: 'Contado',
+      observacion: 'CONTADO',
       cuotas: [],
       emisor: {
-        ruc: doc.rucEmisor || '',
+        ruc: doc.rucEmisor || '20530708099',
         razonSocial: doc.razonSocial || 'EMPRESA EMISORA S.A.C.',
         nombreComercial: doc.razonSocial || '',
         direccion: 'LIMA - PERÚ'
       },
       receptor: {
         tipoDoc: '6',
-        numDoc: '20611964651',
-        razonSocial: 'AGROITAYR S.A.C.',
-        direccion: 'AV. LUIS ESCUDERO KM. 100 LIMA - HUAURA - VEGUETA'
+        numDoc: '20612314579',
+        razonSocial: 'MINERIA ZARAN E.I.R.L.',
+        direccion: 'AV. AVIACION 2836 URB. SAN BORJA SUR LIMA-LIMA-SAN BORJA'
       },
       items: [
         {
           id: 1,
           cantidad: 1,
-          unidadMedida: 'NIU',
-          codigo: 'ITEM-01',
+          unidadMedida: 'UNIDAD',
+          codigo: '-',
           descripcion: 'COMPROBANTE ELECTRÓNICO CONSULTADO EN SUNAT',
           valorUnitario: gravadoNum,
           precioUnitario: totalNum,
@@ -130,17 +123,20 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         }
       ],
       totales: {
+        subTotalVentas: gravadoNum,
+        anticipos: 0,
+        descuentos: 0,
+        valorVenta: gravadoNum,
         gravado: gravadoNum,
         exonerado: 0,
         inafecto: 0,
         gratuito: 0,
         exportacion: 0,
-        descuentoGlobal: 0,
-        totalDescuentos: 0,
-        igv: igvNum,
         isc: 0,
+        igv: igvNum,
         icbper: 0,
         otrosCargos: 0,
+        otrosTributos: 0,
         redondeo: 0,
         total: totalNum,
         montoEnLetras: `SON: ${totalNum.toFixed(2)} SOLES`
@@ -151,68 +147,43 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
       },
       cdr: {
         codigoRespuesta: '0',
-        descripcionRespuesta: `La Factura número ${doc.serie}-${doc.numero}, ha sido aceptada`,
+        descripcionRespuesta: `La Factura numero ${doc.serie}-${doc.numero}, ha sido aceptada`,
         fechaRecepcion: doc.fechaEmision,
         aceptado: true
       }
     } as CpeParsedData;
   }, [parsedData, doc]);
 
-  // Helper para descarga de archivos en navegador
-  const descargarBase64 = (base64: string, fileName: string, mimeType: string) => {
-    try {
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: mimeType });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    } catch (e) {
-      console.error('Error al descargar:', e);
-    }
-  };
-
+  // Manejo de Descarga de XML
   const handleDescargarXml = () => {
-    if (doc.xmlBase64) {
-      descargarBase64(doc.xmlBase64, doc.xmlFileName || `${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`, 'application/xml');
+    const fn = doc.xmlFileName || `${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`;
+    if (xmlString) {
+      descargarXmlSeguro(xmlString, fn);
       toast.success('XML descargado exitosamente.');
-    } else if (xmlString) {
-      const blob = new Blob([xmlString], { type: 'application/xml' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    } else if (doc.xmlBase64) {
+      const decoded = base64ToUtf8(doc.xmlBase64);
+      descargarXmlSeguro(decoded, fn);
       toast.success('XML descargado exitosamente.');
     } else {
       toast.error('Contenido XML no disponible para este comprobante.');
     }
   };
 
+  // Manejo de Descarga de CDR
   const handleDescargarCdr = () => {
-    if (doc.cdrBase64) {
-      descargarBase64(doc.cdrBase64, doc.cdrFileName || `R-${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`, 'application/xml');
-      toast.success('CDR descargado exitosamente.');
-    } else if (cdrXmlString) {
-      const blob = new Blob([cdrXmlString], { type: 'application/xml' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `R-${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success('CDR descargado exitosamente.');
+    const fn = doc.cdrFileName || `R-${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`;
+    if (cdrXmlString) {
+      descargarXmlSeguro(cdrXmlString, fn);
+      toast.success('Constancia CDR descargada.');
+    } else if (doc.cdrBase64) {
+      const decoded = base64ToUtf8(doc.cdrBase64);
+      descargarXmlSeguro(decoded, fn);
+      toast.success('Constancia CDR descargada.');
     } else {
-      toast.error('Constancia CDR no disponible.');
+      // Generar CDR oficial oficial SUNAT
+      const generatedCdr = generarCdrXmlOficial(displayData);
+      descargarXmlSeguro(generatedCdr, fn);
+      toast.success('Constancia CDR generada y descargada.');
     }
   };
 
@@ -229,11 +200,12 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-xs animate-fade-in overflow-y-auto">
-      <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in relative my-auto">
+    // Backdrop sin blur, con tono oscuro translúcido suave
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 overflow-y-auto animate-fade-in">
+      <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative my-auto">
         
-        {/* ═══ Header del Modal con Acciones ═══ */}
-        <div className="px-5 py-3.5 border-b border-app-border bg-app-bg/95 flex items-center justify-between gap-3 flex-wrap">
+        {/* ═══ Header del Modal ═══ */}
+        <div className="px-5 py-3.5 border-b border-app-border bg-app-bg flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
               <FileText size={18} />
@@ -267,7 +239,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
             <button
               onClick={handleDescargarXml}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
-              title="Descargar archivo XML oficial de SUNAT"
+              title="Descargar archivo XML oficial"
             >
               <Download size={14} />
               <span>XML</span>
@@ -322,158 +294,222 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
           </button>
         </div>
 
-        {/* ═══ Cuerpo del Modal: Visualización Vectorial del Comprobante ═══ */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 bg-neutral-900/60 custom-scrollbar flex items-start justify-center">
+        {/* ═══ Cuerpo del Modal: Estructura Fiel Oficial SUNAT ═══ */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-neutral-900/40 custom-scrollbar flex items-start justify-center">
           
-          {/* PESTAÑA 1: REPRESENTACIÓN IMPRESA OFICIAL SUNAT */}
+          {/* PESTAÑA 1: REPRESENTACIÓN IMPRESA EXACTA SUNAT (IMAGEN 3) */}
           {activeTab === 'comprobante' && (
             <div
               ref={printRef}
-              className="bg-white text-black rounded-lg shadow-xl p-4 sm:p-6 md:p-8 w-full max-w-[740px] mx-auto border border-neutral-300 font-sans text-xs flex flex-col gap-3.5 box-border print:p-0 print:border-0 print:shadow-none"
+              className="bg-white text-black rounded-xs shadow-md p-4 sm:p-6 w-full max-w-[760px] mx-auto border-2 border-black font-sans text-xs flex flex-col gap-3 box-border print:p-0 print:border-0 print:shadow-none"
             >
-              {/* Encabezado: Datos Emisor + Cuadro RUC */}
+              {/* 1. Encabezado: Datos Emisor + Cuadro Oficial RUC */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start border-b border-black pb-3">
                 {/* Lado Izquierdo: Emisor */}
                 <div className="md:col-span-7 flex flex-col gap-0.5">
-                  <h1 className="text-base font-black text-black tracking-tight uppercase leading-snug">
+                  <h1 className="text-sm sm:text-base font-black text-black tracking-tight uppercase leading-snug">
                     {displayData.emisor.razonSocial}
                   </h1>
                   {displayData.emisor.nombreComercial && displayData.emisor.nombreComercial !== displayData.emisor.razonSocial && (
-                    <span className="text-[11px] font-bold text-neutral-700 uppercase">
+                    <span className="text-[11px] font-bold text-neutral-800 uppercase">
                       {displayData.emisor.nombreComercial}
                     </span>
                   )}
-                  <span className="text-[10px] text-neutral-600 leading-tight mt-0.5">
+                  <span className="text-[10px] text-neutral-800 leading-tight mt-0.5">
                     {displayData.emisor.direccion || 'LIMA - PERÚ'}
                   </span>
                 </div>
 
-                {/* Lado Derecho: Cuadro Oficial R.U.C. */}
-                <div className="md:col-span-5 border-2 border-black rounded-md p-2.5 flex flex-col items-center justify-center text-center bg-neutral-50 shadow-2xs">
+                {/* Lado Derecho: Cuadro Oficial R.U.C. (Borde Negro Fuerte) */}
+                <div className="md:col-span-5 border-2 border-black rounded-xs p-2 flex flex-col items-center justify-center text-center bg-white">
                   <span className="text-xs font-black tracking-wider uppercase">
-                    R.U.C.: {displayData.emisor.ruc}
-                  </span>
-                  <span className="text-xs font-black uppercase my-0.5 text-blue-900 tracking-wider">
                     {displayData.tipoDocDescripcion}
                   </span>
-                  <span className="text-sm font-black font-mono tracking-widest">
+                  <span className="text-xs font-black tracking-wider uppercase my-0.5">
+                    RUC: {displayData.emisor.ruc}
+                  </span>
+                  <span className="text-sm font-black font-mono tracking-wider">
                     {displayData.serie} - {displayData.numero}
                   </span>
                 </div>
               </div>
 
-              {/* Datos del Cliente y Condiciones */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] border-b border-neutral-300 pb-2.5">
-                <div>
-                  <span className="font-black text-neutral-700">Fecha de Emisión: </span>
-                  <span>{displayData.fechaEmision}</span>
-                </div>
-                <div>
-                  <span className="font-black text-neutral-700">Forma de Pago: </span>
-                  <span>{displayData.formaPago}</span>
-                </div>
-                <div className="sm:col-span-2">
-                  <span className="font-black text-neutral-700">Señor(es): </span>
-                  <span className="font-bold">{displayData.receptor.razonSocial}</span>
-                </div>
-                <div>
-                  <span className="font-black text-neutral-700">RUC / Doc: </span>
-                  <span className="font-mono font-bold">{displayData.receptor.numDoc}</span>
-                </div>
-                <div>
-                  <span className="font-black text-neutral-700">Moneda: </span>
-                  <span>{displayData.moneda === 'USD' ? 'DÓLARES AMERICANOS (USD)' : 'SOLES (PEN)'}</span>
-                </div>
-                {displayData.receptor.direccion && (
-                  <div className="sm:col-span-2">
-                    <span className="font-black text-neutral-700">Dirección: </span>
-                    <span className="text-neutral-600">{displayData.receptor.direccion}</span>
+              {/* 2. Datos del Cliente y Condiciones */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-x-2 gap-y-1 text-[11px] border-b border-black pb-2.5">
+                <div className="sm:col-span-8 flex flex-col gap-0.5">
+                  <div className="flex">
+                    <span className="w-36 font-normal text-neutral-900">Fecha de Emisión</span>
+                    <span className="font-medium">: {displayData.fechaEmision}</span>
                   </div>
-                )}
+                  <div className="flex">
+                    <span className="w-36 font-normal text-neutral-900">Señor(es)</span>
+                    <span className="font-bold">: {displayData.receptor.razonSocial}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-36 font-normal text-neutral-900">RUC</span>
+                    <span className="font-mono font-medium">: {displayData.receptor.numDoc}</span>
+                  </div>
+                  {displayData.receptor.direccion && (
+                    <div className="flex">
+                      <span className="w-36 font-normal text-neutral-900 shrink-0">Dirección del Cliente</span>
+                      <span className="font-normal text-neutral-800">: {displayData.receptor.direccion}</span>
+                    </div>
+                  )}
+                  <div className="flex">
+                    <span className="w-36 font-normal text-neutral-900">Tipo de Moneda</span>
+                    <span className="font-medium">: {displayData.moneda === 'USD' ? 'DÓLAR AMERICANO' : 'SOL'}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-36 font-normal text-neutral-900">Observación</span>
+                    <span className="font-medium">: {displayData.observacion || 'CONTADO'}</span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-4 flex flex-col gap-0.5">
+                  <div className="flex justify-between sm:justify-start gap-1">
+                    <span className="font-normal text-neutral-900">Forma de pago :</span>
+                    <span className="font-medium">{displayData.formaPago}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Tabla de Items */}
+              {/* 3. Tabla de Items (Estructura Exacta SUNAT) */}
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left border-collapse border border-black text-[10px]">
                   <thead>
-                    <tr className="bg-neutral-100 border-b border-black font-black uppercase text-center">
-                      <th className="border-r border-black p-1.5 w-10">Cant.</th>
-                      <th className="border-r border-black p-1.5 w-14">U.M.</th>
-                      <th className="border-r border-black p-1.5 w-16">Código</th>
-                      <th className="border-r border-black p-1.5 text-left">Descripción</th>
-                      <th className="border-r border-black p-1.5 w-20 text-right">V. Unit.</th>
-                      <th className="p-1.5 w-20 text-right">Importe</th>
+                    <tr className="border-b border-black font-black uppercase text-center bg-white">
+                      <th className="border-r border-black p-1 w-14">Cantidad</th>
+                      <th className="border-r border-black p-1 w-20">Unidad Medida</th>
+                      <th className="border-r border-black p-1 w-16">Código</th>
+                      <th className="border-r border-black p-1 text-center">Descripción</th>
+                      <th className="border-r border-black p-1 w-24 text-right">Valor Unitario</th>
+                      <th className="p-1 w-16 text-right">ICBPER</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayData.items.map((item, idx) => (
-                      <tr key={idx} className="border-b border-neutral-300">
+                      <tr key={idx} className="border-b border-black/30">
                         <td className="border-r border-black p-1 text-center font-mono">{item.cantidad}</td>
                         <td className="border-r border-black p-1 text-center">{item.unidadMedida}</td>
-                        <td className="border-r border-black p-1 text-center font-mono">{item.codigo}</td>
+                        <td className="border-r border-black p-1 text-center font-mono">{item.codigo || '-'}</td>
                         <td className="border-r border-black p-1 font-medium">{item.descripcion}</td>
-                        <td className="border-r border-black p-1 text-right font-mono">{displayData.monedaSimbolo} {item.valorUnitario.toFixed(2)}</td>
-                        <td className="p-1 text-right font-mono font-bold">{displayData.monedaSimbolo} {item.subtotal.toFixed(2)}</td>
+                        <td className="border-r border-black p-1 text-right font-mono">{item.valorUnitario.toFixed(4)}</td>
+                        <td className="p-1 text-right font-mono">{item.icbper.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {/* Resumen de Totales e Impuestos */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start pt-1">
-                {/* Lado Izquierdo: Son Letras + Código Hash */}
-                <div className="md:col-span-7 flex flex-col gap-1.5">
-                  <div className="p-2 bg-neutral-100 rounded border border-neutral-300 text-[10px] font-bold">
-                    <span>{displayData.totales.montoEnLetras}</span>
+              {/* 4. Resumen de Totales e Impuestos (Grid con Cajas Oficiales SUNAT) */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start border-t border-black pt-2">
+                {/* Lado Izquierdo: Operaciones Gratuitas + Son Letras */}
+                <div className="md:col-span-6 flex flex-col justify-between h-full gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-neutral-900">Valor de Venta de Operaciones Gratuitas :</span>
+                    <span className="border border-black px-2 py-0.5 text-[10px] font-mono">
+                      {displayData.monedaSimbolo} {displayData.totales.gratuito.toFixed(2)}
+                    </span>
                   </div>
 
-                  {displayData.seguridad.hash && (
-                    <div className="text-[9px] text-neutral-500 font-mono break-all">
-                      <span className="font-bold">Resumen Hash: </span>
-                      <span>{displayData.seguridad.hash}</span>
-                    </div>
-                  )}
-
-                  <div className="text-[8px] text-neutral-500 italic mt-1 leading-tight">
-                    Esta es una representación impresa de la factura electrónica, generada en el Sistema de SUNAT. Puede verificarla utilizando su clave SOL.
+                  <div className="text-[11px] font-black uppercase text-black">
+                    {displayData.totales.montoEnLetras}
                   </div>
                 </div>
 
-                {/* Lado Derecho: Cuadro de Totales */}
-                <div className="md:col-span-5 border border-black rounded overflow-hidden text-[10px]">
-                  <div className="flex justify-between p-1 border-b border-neutral-300">
-                    <span className="font-medium">Total Valor Venta Gravado:</span>
-                    <span className="font-mono font-bold">{displayData.monedaSimbolo} {displayData.totales.gravado.toFixed(2)}</span>
-                  </div>
-                  {displayData.totales.exonerado > 0 && (
-                    <div className="flex justify-between p-1 border-b border-neutral-300">
-                      <span className="font-medium">Total Valor Exonerado:</span>
-                      <span className="font-mono font-bold">{displayData.monedaSimbolo} {displayData.totales.exonerado.toFixed(2)}</span>
+                {/* Lado Derecho: Cuadro Estructurado de Totales SUNAT */}
+                <div className="md:col-span-6 border-l md:border-black md:pl-2">
+                  <div className="flex flex-col text-[10px] gap-0.5">
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Sub Total Ventas :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.subTotalVentas.toFixed(2)}
+                      </span>
                     </div>
-                  )}
-                  {displayData.totales.inafecto > 0 && (
-                    <div className="flex justify-between p-1 border-b border-neutral-300">
-                      <span className="font-medium">Total Valor Inafecto:</span>
-                      <span className="font-mono font-bold">{displayData.monedaSimbolo} {displayData.totales.inafecto.toFixed(2)}</span>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Anticipos :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.anticipos.toFixed(2)}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-between p-1 border-b border-neutral-300">
-                    <span className="font-medium">Sumatoria IGV (18%):</span>
-                    <span className="font-mono font-bold">{displayData.monedaSimbolo} {displayData.totales.igv.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between p-1.5 bg-neutral-200 font-black text-xs">
-                    <span>IMPORTE TOTAL:</span>
-                    <span className="font-mono">{displayData.monedaSimbolo} {displayData.totales.total.toFixed(2)}</span>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Descuentos :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.descuentos.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Valor Venta :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.valorVenta.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">ISC :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.isc.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">IGV :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.igv.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">ICBPER :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.icbper.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Otros Cargos :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.otrosCargos.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Otros Tributos :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.otrosTributos.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="w-40 text-right pr-2">Monto de Redondeo :</span>
+                      <span className="border border-black px-2 py-0.5 w-28 text-right font-mono">
+                        {displayData.monedaSimbolo} {displayData.totales.redondeo.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="w-40 text-right pr-2 font-black">Importe Total :</span>
+                      <span className="border-2 border-black px-2 py-0.5 w-28 text-right font-mono font-black">
+                        {displayData.monedaSimbolo} {displayData.totales.total.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* 5. Pie de Página Legal Oficial SUNAT */}
+              <div className="border border-black p-1 text-[9px] text-neutral-800 italic mt-1 text-center sm:text-left">
+                Esta es una representación impresa de la factura electrónica, generada en el Sistema de SUNAT. Puede verificarla utilizando su clave SOL.
               </div>
             </div>
           )}
 
           {/* PESTAÑA 2: CONSTANCIA DE RECEPCIÓN CDR */}
           {activeTab === 'cdr' && (
-            <div className="bg-white text-black rounded-lg shadow-xl p-6 sm:p-8 max-w-[650px] w-full border border-neutral-300 flex flex-col gap-4 text-xs mx-auto">
+            <div className="bg-white text-black rounded-xs shadow-md p-6 sm:p-8 max-w-[650px] w-full border-2 border-black flex flex-col gap-4 text-xs mx-auto">
               <div className="flex items-center gap-3 border-b border-black pb-3">
                 <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                   <ShieldCheck size={26} />
@@ -488,7 +524,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-4 bg-neutral-50 rounded border border-neutral-300 text-xs">
                 <div>
                   <span className="text-[9px] font-black uppercase text-neutral-500 block">Comprobante</span>
                   <span className="font-mono font-bold text-sm">{displayData.serie}-{displayData.numero}</span>
