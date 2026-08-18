@@ -47,6 +47,13 @@ interface ConsultasViewProps {
   currentWorkspace?: any;
 }
 
+// Formateador estándar de moneda nacional de Perú (S/ PEN) con comas de miles
+export const formatPEN = (val: number | string | undefined | null): string => {
+  if (val === undefined || val === null || val === '') return '0.00';
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, '')) || 0;
+  return num.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) {
   const {
     currentCompany,
@@ -395,7 +402,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             {resultados.length > 0 && (
               <button
                 onClick={handleLimpiarHistorial}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer shadow-2xs"
                 title="Limpiar resultados guardados"
               >
                 <Trash2 size={13} />
@@ -425,22 +432,22 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
           {showRecentSelector && (
             <div className="card-elevated p-4 flex flex-col gap-3.5 animate-fade-in bg-app-surface/60 border border-app-border rounded-2xl">
               
-              {/* Cabecera del SIRE con Selector de Años */}
+              {/* Cabecera del SIRE con Selector de Años Estilizado */}
               <div className="flex items-center justify-between flex-wrap gap-2 border-b border-app-border/60 pb-2.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
                     COMPROBANTES REGISTRADOS EN SIRE
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase tracking-wider">
                     {yearPurchases.length} comprobantes en {selectedYear}
                   </span>
                 </div>
 
-                {/* Selector de Año con Diseño Premium y Separación de Icono */}
+                {/* Selector de Año con Contenedor Estilizado y Separación Limpia */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black tracking-wider text-app-muted uppercase">Ejercicio / Año:</span>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-app-bg hover:bg-app-hover border border-app-border hover:border-blue-500/40 rounded-xl transition-all shadow-2xs">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-app-bg hover:bg-app-hover border border-app-border hover:border-blue-500/40 rounded-xl transition-all shadow-2xs">
                     <Calendar size={14} className="text-blue-500 shrink-0" />
                     <select
                       value={selectedYear}
@@ -496,7 +503,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         <div className="flex flex-col">
                           <span className="text-[8px] font-bold text-app-muted uppercase tracking-wider">Monto Total</span>
                           <span className="text-[11px] font-mono font-black text-app-text">
-                            S/ {totalSum.toFixed(2)}
+                            S/ {formatPEN(totalSum)}
                           </span>
                         </div>
 
@@ -531,7 +538,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                           Comprobantes de {selectedMonthObj?.nombre} {selectedYear}
                         </h4>
                         <span className="text-[10px] text-app-muted font-medium">
-                          {monthPurchases.length} comprobante(s) registrado(s) • Total: S/ {monthPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0).toFixed(2)}
+                          {monthPurchases.length} comprobante(s) registrado(s) • Total: S/ {formatPEN(monthPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0))}
                         </span>
                       </div>
                     </div>
@@ -552,7 +559,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                             {p.nombre || p.doc_num}
                           </span>
                           <span className="text-[9px] font-mono font-bold text-blue-500 mt-0.5">
-                            S/ {Number(p.total || 0).toFixed(2)} • {p.fecha}
+                            S/ {formatPEN(p.total)} • {p.fecha}
                           </span>
                         </div>
 
@@ -652,39 +659,45 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                 <div className="p-4">
                   {activeTab === 'individual' ? (
                     <div className="space-y-3.5">
+                      {/* Selector Estilizado de Tipo de Documento */}
                       <div>
                         <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                           Tipo de Documento
                         </label>
-                        <select
-                          name="tipoDoc"
-                          value={formData.tipoDoc}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all cursor-pointer"
-                        >
-                          <option value="01">Factura Electrónica (01)</option>
-                          <option value="03">Boleta de Venta (03)</option>
-                          <option value="07">Nota de Crédito (07)</option>
-                          <option value="08">Nota de Débito (08)</option>
-                          <option value="R1">Recibo por Honorarios (R1)</option>
-                        </select>
+                        <div className="relative">
+                          <select
+                            name="tipoDoc"
+                            value={formData.tipoDoc}
+                            onChange={handleInputChange}
+                            className="w-full appearance-none px-3.5 py-2 bg-app-bg border border-app-border hover:border-blue-500/40 rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all cursor-pointer pr-9"
+                          >
+                            <option value="01" className="bg-app-surface text-app-text">Factura Electrónica (01)</option>
+                            <option value="03" className="bg-app-surface text-app-text">Boleta de Venta (03)</option>
+                            <option value="07" className="bg-app-surface text-app-text">Nota de Crédito (07)</option>
+                            <option value="08" className="bg-app-surface text-app-text">Nota de Débito (08)</option>
+                            <option value="R1" className="bg-app-surface text-app-text">Recibo por Honorarios (R1)</option>
+                          </select>
+                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
+                        </div>
                       </div>
 
-                      {/* Input RUC con padding corregido para evitar solapar el icono */}
+                      {/* Input RUC con Contenedor Flex Separado (CERO Solapamiento Posible) */}
                       <div>
                         <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                           RUC Emisor (Proveedor / Empresa)
                         </label>
-                        <div className="relative">
+                        <div className="flex items-center w-full bg-app-bg border border-app-border focus-within:border-blue-500 rounded-xl overflow-hidden transition-all shadow-2xs">
+                          <div className="pl-3 pr-2 py-2 text-blue-500 shrink-0 flex items-center justify-center pointer-events-none">
+                            <Building2 size={16} />
+                          </div>
                           <input
                             name="rucEmisor"
                             value={formData.rucEmisor}
                             onChange={handleInputChange}
                             placeholder="Ej. 20609396033"
                             maxLength={11}
-                            className="w-full pl-11 pr-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                            className="w-full pr-3 py-2 bg-transparent text-xs font-mono font-bold text-app-text outline-none border-none focus:ring-0 placeholder:text-app-muted/50"
                           />
-                          <Building2 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
                         </div>
                       </div>
 
@@ -731,7 +744,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         </div>
                         <div>
                           <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                            Monto Total
+                            Monto Total (S/)
                           </label>
                           <input
                             type="number"
@@ -907,7 +920,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   <div className="flex flex-col mt-0.5">
                                     <span className="text-[9px] text-app-muted font-bold uppercase">Total</span>
                                     <span className="text-xs font-black font-mono text-app-text">
-                                      S/ {Number(String(res.importeTotal || '0').replace(/[^0-9.]/g, '') || 0).toFixed(2)}
+                                      S/ {formatPEN(res.importeTotal)}
                                     </span>
                                   </div>
                                 </div>
@@ -957,7 +970,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                                 {it.descripcion}
                                               </span>
                                               <span className="font-mono font-black text-app-text shrink-0">
-                                                S/ {totalItemVal.toFixed(2)}
+                                                S/ {formatPEN(totalItemVal)}
                                               </span>
                                             </div>
                                             <div className="flex items-center gap-x-2 gap-y-0.5 text-[9px] text-app-muted flex-wrap">
@@ -968,9 +981,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                                 <span className="font-mono">Cód: {it.codigo}</span>
                                               )}
                                               <span className="font-mono">V. Unit: S/ {Number(it.valorUnitario).toFixed(4)}</span>
-                                              <span className="font-mono">Base: S/ {subtotalVal.toFixed(2)}</span>
+                                              <span className="font-mono">Base: S/ {formatPEN(subtotalVal)}</span>
                                               <span className="font-mono font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">
-                                                IGV (18%): S/ {igvVal.toFixed(2)}
+                                                IGV (18%): S/ {formatPEN(igvVal)}
                                               </span>
                                             </div>
                                           </div>
