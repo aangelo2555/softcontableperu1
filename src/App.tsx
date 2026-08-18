@@ -497,6 +497,54 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // --- Auto-verificación de Cuenta por Enlace de Correo (?verify_token=...) ---
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const verifyToken = searchParams.get('verify_token');
+    if (verifyToken) {
+      const loadingToast = toast.loading('Verificando tu cuenta de SoftContable...');
+      fetch('/api/auth/verify-email-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: verifyToken })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            toast.success('🎉 ¡Tu cuenta ha sido verificada exitosamente! Bienvenido a SoftContable.', {
+              id: loadingToast,
+              duration: 5000
+            });
+            if (data.token) {
+              localStorage.setItem('softcontable_token', data.token);
+            }
+            if (data.user) {
+              localStorage.setItem('softcontable_user', JSON.stringify(data.user));
+            }
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState({}, '', window.location.pathname);
+            }
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            toast.error(data.error || 'El enlace de verificación es inválido o ha expirado.', {
+              id: loadingToast,
+              duration: 5000
+            });
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState({}, '', window.location.pathname);
+            }
+          }
+        })
+        .catch(err => {
+          toast.error('Error al comunicarse con el servidor para la verificación.', {
+            id: loadingToast
+          });
+        });
+    }
+  }, []);
+
   // --- Inactivity Timeout watch ---
   useEffect(() => {
     if (!isLoggedIn) return;

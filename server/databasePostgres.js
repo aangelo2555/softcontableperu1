@@ -861,9 +861,19 @@ const db = {
 
     createUser: async (u) => {
         const normalizedEmail = u.email ? u.email.trim().toLowerCase() : '';
+        const isVerified = u.is_verified !== undefined ? u.is_verified : true;
         const result = await query(
-            'INSERT INTO users (id, email, password, name, role) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password, name = EXCLUDED.name, role = EXCLUDED.role',
-            [u.id, normalizedEmail, u.password, u.name, u.role || 'user']
+            `INSERT INTO users (id, email, password, name, role, phone, document_number, is_verified, terms_accepted_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+             ON CONFLICT (email) DO UPDATE SET
+                password = EXCLUDED.password,
+                name = EXCLUDED.name,
+                role = EXCLUDED.role,
+                phone = EXCLUDED.phone,
+                document_number = EXCLUDED.document_number,
+                is_verified = EXCLUDED.is_verified,
+                terms_accepted_at = NOW()`,
+            [u.id, normalizedEmail, u.password, u.name, u.role || 'user', u.phone || null, u.document_number || null, isVerified]
         );
         return result;
     },
@@ -2611,6 +2621,43 @@ async function ensureSchemaConstraints() {
             `);
         } catch (e) {
             console.warn('[POSTGRES] Warning actualizando permisos SuperAdmin:', e.message);
+        }
+
+        // 3.9. Tablas y columnas para Verificación de Correo, Términos y Control Anti-Abuso de Trial
+        try {
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS document_number VARCHAR(15);
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+                CREATE TABLE IF NOT EXISTS email_verifications (
+                    id VARCHAR(64) PRIMARY KEY,
+                    user_id VARCHAR(64) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    token VARCHAR(64) NOT NULL,
+                    otp_code VARCHAR(10) NOT NULL,
+                    expires_at TIMESTAMP NOT NULL,
+                    is_used BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS trial_history (
+                    id VARCHAR(64) PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    user_id VARCHAR(64),
+                    ip_address VARCHAR(45),
+                    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_email_verif_token ON email_verifications(token);
+                CREATE INDEX IF NOT EXISTS idx_email_verif_email_otp ON email_verifications(email, otp_code);
+                CREATE INDEX IF NOT EXISTS idx_trial_history_email ON trial_history(email);
+            `);
+        } catch (e) {
+            console.warn('[POSTGRES] Warning creando tablas de verificación y trial_history:', e.message);
         }
         
         // 4. Crear o reemplazar vistas

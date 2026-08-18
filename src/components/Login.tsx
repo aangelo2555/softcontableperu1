@@ -26,13 +26,16 @@ import {
     AlertCircle,
     Send,
     ShieldAlert,
-    RefreshCw
+    RefreshCw,
+    Phone
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
 import { LegalPages } from './LegalPages';
 import { CookieBanner } from './CookieBanner';
 import { PasswordStrengthChecker, checkPasswordStrength } from './ui/PasswordStrengthChecker';
+import { TermsModal } from './TermsModal';
+import { EmailVerificationModal } from './EmailVerificationModal';
 
 const customStyles = `
   .light-card-pro {
@@ -75,6 +78,7 @@ export const Login: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [isStudentModeActive, setIsStudentModeActive] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorAlert, setErrorAlert] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -82,6 +86,13 @@ export const Login: React.FC = () => {
         password: '',
         name: ''
     });
+    const [phone, setPhone] = useState('');
+    const [documentNumber, setDocumentNumber] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
+    const [showTermsModal, setShowTermsModal] = useState(false);
+    const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+    const [verificationEmail, setVerificationEmail] = useState('');
 
     const [showLoginLegal, setShowLoginLegal] = useState<'terms' | 'privacy' | 'security' | 'confidentiality' | 'cookies' | 'eula' | 'legal' | null>(null);
 
@@ -112,15 +123,56 @@ export const Login: React.FC = () => {
         return () => clearInterval(interval);
     }, [resendCooldown]);
 
+    const executeProfessionalRegister = async () => {
+        setIsLoading(true);
+        setErrorAlert(null);
+        try {
+            const res = await webApiBridge.authRegister({
+                ...formData,
+                phone,
+                documentNumber,
+                termsAccepted: true
+            });
+
+            if (res.success) {
+                if (res.requireVerification) {
+                    setVerificationEmail(formData.email);
+                    setShowEmailVerificationModal(true);
+                    toast.success(res.message || '¡Cuenta creada! Revisa tu correo electrónico.');
+                } else if (res.token) {
+                    localStorage.setItem('softcontable_token', res.token);
+                    if (res.user) {
+                        localStorage.setItem('softcontable_user', JSON.stringify(res.user));
+                    }
+                    toast.success('¡Registro exitoso!');
+                    window.location.reload();
+                } else {
+                    toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                    setIsLogin(true);
+                }
+            } else {
+                const errMsg = res.error || 'Error al registrarse';
+                setErrorAlert(errMsg);
+                toast.error(errMsg);
+            }
+        } catch (error: any) {
+            const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
+            setErrorAlert(errMsg);
+            toast.error(errMsg);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
         setErrorAlert(null);
 
         const requestedMode = isStudentModeActive ? 'estudiante' : 'profesional';
 
-        try {
-            if (isLogin) {
+        if (isLogin) {
+            setIsLoading(true);
+            try {
                 const res = await webApiBridge.authLogin({
                     email: formData.email,
                     password: formData.password,
@@ -153,45 +205,79 @@ export const Login: React.FC = () => {
                     setErrorAlert(errMsg);
                     toast.error(errMsg);
                 }
-            } else {
-                const strength = checkPasswordStrength(formData.password);
-                if (!strength.isValid) {
-                    const msg = 'La contraseña debe tener al menos 8 caracteres y combinar mayúsculas, minúsculas, números y símbolos (!@#$%...).';
-                    setErrorAlert(msg);
-                    toast.error(msg);
-                    setIsLoading(false);
-                    return;
-                }
-
-                const res = isStudentModeActive
-                    ? await webApiBridge.authRegisterStudent(formData)
-                    : await webApiBridge.authRegister(formData);
-                if (res.success) {
-                    if (isStudentModeActive && res.token) {
-                        localStorage.setItem('softcontable_token', res.token);
-                        if (res.user) {
-                            localStorage.setItem('softcontable_user', JSON.stringify(res.user));
-                        }
-                        toast.success('🎓 ¡Registro de estudiante exitoso! Iniciando sesión automáticamente...');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 800);
-                    } else {
-                        toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
-                        setIsLogin(true);
-                    }
+            } catch (error: any) {
+                const resData = error.response?.data;
+                if (resData?.requireVerification) {
+                    setVerificationEmail(resData.email || formData.email);
+                    setShowEmailVerificationModal(true);
+                    toast.error(resData.error || 'Por favor verifica tu correo electrónico.');
                 } else {
-                    const errMsg = res.error || 'Error al registrarse';
+                    const errMsg = resData?.error || resData?.message || 'Error de conexión con el servidor';
                     setErrorAlert(errMsg);
                     toast.error(errMsg);
                 }
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error: any) {
-            const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
-            setErrorAlert(errMsg);
-            toast.error(errMsg);
-        } finally {
-            setIsLoading(false);
+        } else {
+            // Validaciones de Registro
+            const strength = checkPasswordStrength(formData.password);
+            if (!strength.isValid) {
+                const msg = 'La contraseña debe tener al menos 8 caracteres y combinar mayúsculas, minúsculas, números y símbolos (!@#$%...).';
+                setErrorAlert(msg);
+                toast.error(msg);
+                return;
+            }
+
+            if (!isStudentModeActive && formData.password !== confirmPassword) {
+                const msg = 'Las contraseñas no coinciden. Por favor verifícalas.';
+                setErrorAlert(msg);
+                toast.error(msg);
+                return;
+            }
+
+            if (!isStudentModeActive && phone.trim().length > 0 && phone.trim().length < 9) {
+                const msg = 'El teléfono debe tener 9 dígitos (+51).';
+                setErrorAlert(msg);
+                toast.error(msg);
+                return;
+            }
+
+            // Si es estudiante, registrar de inmediato
+            if (isStudentModeActive) {
+                setIsLoading(true);
+                try {
+                    const res = await webApiBridge.authRegisterStudent(formData);
+                    if (res.success) {
+                        if (res.token) {
+                            localStorage.setItem('softcontable_token', res.token);
+                            if (res.user) {
+                                localStorage.setItem('softcontable_user', JSON.stringify(res.user));
+                            }
+                            toast.success('🎓 ¡Registro de estudiante exitoso! Iniciando sesión...');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 800);
+                        } else {
+                            toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                            setIsLogin(true);
+                        }
+                    } else {
+                        const errMsg = res.error || 'Error al registrarse';
+                        setErrorAlert(errMsg);
+                        toast.error(errMsg);
+                    }
+                } catch (error: any) {
+                    const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error al registrarse';
+                    setErrorAlert(errMsg);
+                    toast.error(errMsg);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                // Modo Profesional: Abrir Modal de Términos y Condiciones (Ley N° 29733)
+                setShowTermsModal(true);
+            }
         }
     };
 
@@ -536,6 +622,45 @@ export const Login: React.FC = () => {
                                 </div>
                             )}
 
+                            {!isLogin && !isStudentModeActive && (
+                                <>
+                                    <div className="space-y-0.5">
+                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Teléfono / WhatsApp (+51)</label>
+                                        <div className="relative flex items-center rounded-xl light-input-field">
+                                            <Phone className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                                            <input 
+                                                type="tel"
+                                                required
+                                                maxLength={9}
+                                                inputMode="numeric"
+                                                placeholder="923 887 478"
+                                                className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
+                                                style={{ paddingLeft: '2.3rem' }}
+                                                value={phone}
+                                                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-0.5">
+                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
+                                        <div className="relative flex items-center rounded-xl light-input-field">
+                                            <Building2 className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                                            <input 
+                                                type="text"
+                                                maxLength={11}
+                                                inputMode="numeric"
+                                                placeholder="2060... o DNI"
+                                                className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
+                                                style={{ paddingLeft: '2.3rem' }}
+                                                value={documentNumber}
+                                                onChange={e => setDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
                             <div className="space-y-0.5">
                                 <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
                                 <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
@@ -596,6 +721,47 @@ export const Login: React.FC = () => {
                                     <PasswordStrengthChecker password={formData.password} />
                                 )}
                             </div>
+
+                            {!isLogin && !isStudentModeActive && (
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Confirmar Contraseña</label>
+                                        {confirmPassword.length > 0 && confirmPassword === formData.password && (
+                                            <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle2 size={11} /> Coincide
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
+                                        confirmPassword.length > 0 && confirmPassword === formData.password
+                                            ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
+                                            : ''
+                                    }`}>
+                                        <Lock className={`absolute left-3 w-3.5 h-3.5 ${confirmPassword.length > 0 && confirmPassword === formData.password ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                        <input 
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            required
+                                            placeholder="Repite la contraseña"
+                                            className="w-full py-1.5 sm:py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
+                                            style={{ paddingLeft: '2.3rem', paddingRight: '4rem' }}
+                                            value={confirmPassword}
+                                            onChange={e => setConfirmPassword(e.target.value)}
+                                        />
+                                        <div className="absolute right-2.5 flex items-center gap-1">
+                                            {confirmPassword.length > 0 && confirmPassword === formData.password && (
+                                                <CheckCircle2 size={15} className="text-emerald-500" />
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {isLogin && (
                                 <div className="flex items-center justify-end px-1 pt-0.5 text-xs">
@@ -914,6 +1080,27 @@ export const Login: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Términos y Condiciones Legales (Estilo Flow - Ley N° 29733) */}
+            <TermsModal
+                isOpen={showTermsModal}
+                onClose={() => setShowTermsModal(false)}
+                onAccept={() => {
+                    setShowTermsModal(false);
+                    executeProfessionalRegister();
+                }}
+            />
+
+            {/* Modal de Verificación de Email (OTP 6 dígitos + reenvío) */}
+            <EmailVerificationModal
+                isOpen={showEmailVerificationModal}
+                email={verificationEmail}
+                onClose={() => setShowEmailVerificationModal(false)}
+                onVerificationSuccess={(data) => {
+                    setShowEmailVerificationModal(false);
+                    window.location.reload();
+                }}
+            />
 
             {/* Modal Legal */}
             {showLoginLegal && (

@@ -128,6 +128,18 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/change-password', data);
         return res.data;
     },
+    authVerifyEmailToken: async (data: { token: string }) => {
+        const res = await api.post('/api/auth/verify-email-token', data);
+        return res.data;
+    },
+    authVerifyEmailOtp: async (data: { email: string; otpCode: string }) => {
+        const res = await api.post('/api/auth/verify-email-otp', data);
+        return res.data;
+    },
+    authResendVerification: async (data: { email: string }) => {
+        const res = await api.post('/api/auth/resend-verification', data);
+        return res.data;
+    },
 
     // --- Database API ---
     dbGetWorkspaces: async () => {

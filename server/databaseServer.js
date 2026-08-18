@@ -509,6 +509,52 @@ try {
             )
         `).run();
     } catch (_) {}
+
+    // Columnas y tablas para verificación de correo, términos y control anti-abuso de trial
+    try {
+        const userCols = db.prepare("PRAGMA table_info(users)").all();
+        if (!userCols.some(c => c.name === 'phone')) {
+            db.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run();
+        }
+        if (!userCols.some(c => c.name === 'document_number')) {
+            db.prepare("ALTER TABLE users ADD COLUMN document_number TEXT").run();
+        }
+        if (!userCols.some(c => c.name === 'is_verified')) {
+            db.prepare("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1").run();
+        }
+        if (!userCols.some(c => c.name === 'terms_accepted_at')) {
+            db.prepare("ALTER TABLE users ADD COLUMN terms_accepted_at TEXT").run();
+        }
+
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS email_verifications (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                email TEXT NOT NULL,
+                token TEXT NOT NULL,
+                otp_code TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                is_used INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS trial_history (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                user_id TEXT,
+                ip_address TEXT,
+                started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_email_verif_token ON email_verifications(token);
+            CREATE INDEX IF NOT EXISTS idx_email_verif_email_otp ON email_verifications(email, otp_code);
+            CREATE INDEX IF NOT EXISTS idx_trial_history_email ON trial_history(email);
+        `);
+    } catch (e) {
+        console.warn('[SQLITE] Warning en tablas de verificación:', e.message);
+    }
 } catch (err) {
     console.warn('[SQLITE] Error asignando suscripciones por defecto:', err.message);
 }
@@ -1443,8 +1489,13 @@ try {
 const dbManager = {
     // --- Gestión de Usuarios ---
     createUser: (u) => {
-        const stmt = db.prepare('INSERT INTO users (id, email, password, name, role) VALUES (?, ?, ?, ?, ?)');
-        return stmt.run(u.id, u.email, u.password, u.name, u.role || 'user');
+        const normalizedEmail = u.email ? u.email.trim().toLowerCase() : '';
+        const isVerified = u.is_verified !== undefined ? (u.is_verified ? 1 : 0) : 1;
+        const stmt = db.prepare(`
+            INSERT INTO users (id, email, password, name, role, phone, document_number, is_verified, terms_accepted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        `);
+        return stmt.run(u.id, normalizedEmail, u.password, u.name, u.role || 'user', u.phone || null, u.document_number || null, isVerified);
     },
 
     getUserByEmail: (email) => {

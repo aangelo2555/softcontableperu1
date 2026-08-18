@@ -23,6 +23,22 @@ const authLimiter = rateLimit({
     validate: false
 });
 
+const { sendAccountVerificationEmail, sendResetOtpEmail } = require('./services/emailService');
+
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+    'tempmail.com', '10minutemail.com', 'guerrillamail.com', 'mailinator.com',
+    'yopmail.com', 'throwawaymail.com', 'trashmail.com', 'getnada.com',
+    'mohmal.com', 'sharklasers.com', 'dispostable.com', 'temp-mail.org',
+    'fakeinbox.com', 'crazymailing.com', 'generator.email', 'tempail.com',
+    'burnermail.io', 'mailnull.com', 'mytemp.email'
+]);
+
+function isDisposableEmail(email) {
+    if (!email || !email.includes('@')) return false;
+    const domain = email.split('@')[1].toLowerCase().trim();
+    return DISPOSABLE_EMAIL_DOMAINS.has(domain);
+}
+
 /**
  * Helper: Generar y guardar Refresh Token rotativo en BD (30 días de vigencia)
  */
@@ -51,46 +67,82 @@ async function generateAndStoreRefreshToken(userId) {
     return rawRefreshToken;
 }
 
-// --- REGISTRO ---
+// --- REGISTRO PROFESIONAL ---
 router.post('/register', authLimiter, async (req, res) => {
     try {
-        const { email, password, name } = req.body;
-        console.log(`[AUTH] Intento de registro: ${email}`);
+        const { email, password, name, phone, documentNumber, termsAccepted } = req.body;
+        console.log(`[AUTH] Intento de registro profesional: ${email}`);
 
-        // Verificar si ya existe
-        const existingUser = await dbManager.getUserByEmail(email);
-        if (existingUser) {
-            console.warn(`[AUTH] El correo ${email} ya existe.`);
-            return res.status(400).json({ success: false, error: 'El correo ya está registrado' });
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'El correo y la contraseña son obligatorios.' });
         }
 
-        // Encriptar contraseña
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // 1. Bloqueo de correos desechables / temporales
+        if (isDisposableEmail(normalizedEmail)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Por motivos de seguridad no se permiten correos temporales. Ingresa tu correo real (Gmail, Outlook o corporativo).'
+            });
+        }
+
+        // 2. Validación de contraseña
+        if (password.length < 8) {
+            return res.status(400).json({ success: false, error: 'La contraseña debe tener al menos 8 caracteres.' });
+        }
+
+        // 3. Verificar si ya existe usuario
+        const existingUser = await dbManager.getUserByEmail(normalizedEmail);
+        if (existingUser) {
+            console.warn(`[AUTH] El correo ${normalizedEmail} ya existe.`);
+            return res.status(400).json({ success: false, error: 'El correo ya está registrado. Por favor inicia sesión.' });
+        }
+
+        // 4. Encriptar contraseña
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const usersList = await dbManager.queryAll('SELECT COUNT(*) as count FROM users');
-        const userCount = parseInt(usersList[0]?.count || 0);
-        const normalizedEmail = email.trim().toLowerCase();
-        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : 'user';
+        const isOwner = normalizedEmail === 'aangelo2555@gmail.com';
+        const role = isOwner ? 'super_admin' : 'user';
+        const isVerified = isOwner ? true : false; // El owner queda verificado directamente
+
+        // 5. Verificar si este correo ya usó una prueba gratuita antes (Anti-Abuso)
+        let alreadyHadTrial = false;
+        if (!isOwner) {
+            try {
+                if (USE_POSTGRES) {
+                    const thRes = await dbManager.pool.query('SELECT id FROM trial_history WHERE email = $1', [normalizedEmail]);
+                    alreadyHadTrial = thRes.rows.length > 0;
+                } else {
+                    const thRes = dbManager.prepare('SELECT id FROM trial_history WHERE email = ?').get(normalizedEmail);
+                    alreadyHadTrial = !!thRes;
+                }
+            } catch (thErr) {
+                console.warn('[AUTH] Warning consultando trial_history:', thErr.message);
+            }
+        }
 
         const userId = uuidv4();
         const newUser = {
             id: userId,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
             name: name || 'Usuario',
+            phone: phone || null,
+            document_number: documentNumber || null,
+            is_verified: isVerified,
             role
         };
 
         await dbManager.createUser(newUser);
 
-        // Crear suscripción inicial de prueba (Trial 14 días con 3 workspaces) o Corporativo para Owner
+        // 6. Asignar Suscripción: Trial 14 días (3 empresas) o Suspended si ya usó trial
         try {
             const subId = uuidv4();
-            const isOwner = normalizedEmail === 'aangelo2555@gmail.com';
             const initialPlanId = isOwner ? 'corporativo' : 'starter';
-            const initialStatus = isOwner ? 'active' : 'trial';
-            const initialMaxWs = isOwner ? 9999 : 3;
+            const initialStatus = isOwner ? 'active' : alreadyHadTrial ? 'suspended' : 'trial';
+            const initialMaxWs = isOwner ? 9999 : alreadyHadTrial ? 0 : 3;
             const initialMaxUsers = isOwner ? 9999 : 2;
 
             if (USE_POSTGRES) {
@@ -100,33 +152,279 @@ router.post('/register', authLimiter, async (req, res) => {
                      ON CONFLICT DO NOTHING`,
                     [subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers]
                 );
+
+                if (!isOwner && !alreadyHadTrial) {
+                    await dbManager.pool.query(
+                        `INSERT INTO trial_history (id, email, user_id, ip_address, started_at, expires_at)
+                         VALUES ($1, $2, $3, $4, NOW(), NOW() + INTERVAL '14 days')
+                         ON CONFLICT DO NOTHING`,
+                        [uuidv4(), normalizedEmail, userId, req.ip || null]
+                    );
+                }
             } else {
                 dbManager.prepare(
                     `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
                      VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+14 days'), ${isOwner ? "'2099-12-31'" : "datetime('now', '+14 days')"})`
                 ).run(subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers);
+
+                if (!isOwner && !alreadyHadTrial) {
+                    try {
+                        dbManager.prepare(
+                            `INSERT INTO trial_history (id, email, user_id, ip_address, started_at, expires_at)
+                             VALUES (?, ?, ?, ?, datetime('now'), datetime('now', '+14 days'))`
+                        ).run(uuidv4(), normalizedEmail, userId, req.ip || null);
+                    } catch (_) {}
+                }
             }
         } catch (subErr) {
-            console.warn('[AUTH] Warning creando suscripción trial:', subErr.message);
+            console.warn('[AUTH] Warning creando suscripción:', subErr.message);
         }
 
-        const accessToken = jwt.sign(
-            { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
-            JWT_SECRET,
-            { expiresIn: '15m' }
-        );
-        const refreshToken = await generateAndStoreRefreshToken(newUser.id);
+        // 7. Si es el propietario Angelo, login directo
+        if (isOwner) {
+            const accessToken = jwt.sign(
+                { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+                JWT_SECRET,
+                { expiresIn: '15m' }
+            );
+            const refreshToken = await generateAndStoreRefreshToken(newUser.id);
+            return res.json({
+                success: true,
+                message: '¡Bienvenido SuperAdmin!',
+                accessToken,
+                refreshToken,
+                token: accessToken,
+                user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role }
+            });
+        }
+
+        // 8. Generar Token Seguro (32 bytes) y Código OTP (6 dígitos) para verificación
+        const verifyToken = crypto.randomBytes(32).toString('hex');
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verifId = uuidv4();
+
+        try {
+            if (USE_POSTGRES) {
+                await dbManager.pool.query(
+                    `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                     VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours', false)`,
+                    [verifId, userId, normalizedEmail, verifyToken, otpCode]
+                );
+            } else {
+                dbManager.prepare(
+                    `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                     VALUES (?, ?, ?, ?, ?, datetime('now', '+24 hours'), 0)`
+                ).run(verifId, userId, normalizedEmail, verifyToken, otpCode);
+            }
+        } catch (verifErr) {
+            console.warn('[AUTH] Warning guardando email_verifications:', verifErr.message);
+        }
+
+        // 9. Enviar correo de verificación estilo Flow
+        const host = req.get('host') || 'softcontable.up.railway.app';
+        const protocol = (req.protocol === 'https' || host.includes('railway.app') || process.env.NODE_ENV === 'production') ? 'https' : req.protocol;
+        const verificationUrl = `${protocol}://${host}/?verify_token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+        await sendAccountVerificationEmail({
+            toEmail: normalizedEmail,
+            userName: name || 'Contador',
+            verificationUrl,
+            otpCode
+        });
 
         res.json({
             success: true,
-            message: '¡Usuario registrado exitosamente con 14 días de prueba gratuita!',
+            requireVerification: true,
+            email: normalizedEmail,
+            alreadyHadTrial,
+            message: '¡Cuenta creada! Por favor completa tu registro ingresando el código enviado a tu correo.'
+        });
+    } catch (error) {
+        console.error('[AUTH REGISTER ERROR]', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- VERIFICACIÓN DE EMAIL POR TOKEN (AUTO-LOGIN AL HACER CLIC EN ENLACE) ---
+router.post('/verify-email-token', authLimiter, async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return res.status(400).json({ success: false, error: 'Token de verificación requerido.' });
+        }
+
+        let verif = null;
+        if (USE_POSTGRES) {
+            const vRes = await dbManager.pool.query(
+                `SELECT * FROM email_verifications 
+                 WHERE token = $1 AND is_used = false AND expires_at > NOW() 
+                 ORDER BY created_at DESC LIMIT 1`,
+                [token]
+            );
+            verif = vRes.rows[0];
+        } else {
+            verif = dbManager.prepare(
+                `SELECT * FROM email_verifications 
+                 WHERE token = ? AND is_used = 0 AND expires_at > datetime('now') 
+                 ORDER BY created_at DESC LIMIT 1`
+            ).get(token);
+        }
+
+        if (!verif) {
+            return res.status(400).json({
+                success: false,
+                error: 'El enlace de verificación es inválido o ha expirado. Por favor solicita un nuevo código.'
+            });
+        }
+
+        // Marcar como verificado
+        if (USE_POSTGRES) {
+            await dbManager.pool.query('UPDATE email_verifications SET is_used = true WHERE id = $1', [verif.id]);
+            await dbManager.pool.query('UPDATE users SET is_verified = true WHERE id = $1', [verif.user_id]);
+        } else {
+            dbManager.prepare('UPDATE email_verifications SET is_used = 1 WHERE id = ?').run(verif.id);
+            dbManager.prepare('UPDATE users SET is_verified = 1 WHERE id = ?').run(verif.user_id);
+        }
+
+        const user = await dbManager.getUserByEmail(verif.email);
+        const normalizedEmail = (user.email || '').trim().toLowerCase();
+        const role = (normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : (user.role || 'user');
+
+        const accessToken = jwt.sign(
+            { id: user.id, email: user.email, name: user.name, role },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        const refreshToken = await generateAndStoreRefreshToken(user.id);
+
+        res.json({
+            success: true,
+            message: '¡Tu cuenta ha sido verificada exitosamente! Bienvenido a SoftContable.',
             accessToken,
             refreshToken,
             token: accessToken,
-            user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role }
+            user: { id: user.id, email: user.email, name: user.name, role }
         });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('[AUTH VERIFY TOKEN ERROR]', error);
+        res.status(500).json({ success: false, error: 'Error al verificar el correo electrónico.' });
+    }
+});
+
+// --- VERIFICACIÓN DE EMAIL POR CÓDIGO OTP (AUTO-LOGIN MANUAL) ---
+router.post('/verify-email-otp', authLimiter, async (req, res) => {
+    try {
+        const { email, otpCode } = req.body;
+        if (!email || !otpCode) {
+            return res.status(400).json({ success: false, error: 'Correo y código de 6 dígitos requeridos.' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const cleanOtp = otpCode.toString().trim();
+
+        let verif = null;
+        if (USE_POSTGRES) {
+            const vRes = await dbManager.pool.query(
+                `SELECT * FROM email_verifications 
+                 WHERE email = $1 AND otp_code = $2 AND is_used = false AND expires_at > NOW() 
+                 ORDER BY created_at DESC LIMIT 1`,
+                [normalizedEmail, cleanOtp]
+            );
+            verif = vRes.rows[0];
+        } else {
+            verif = dbManager.prepare(
+                `SELECT * FROM email_verifications 
+                 WHERE email = ? AND otp_code = ? AND is_used = 0 AND expires_at > datetime('now') 
+                 ORDER BY created_at DESC LIMIT 1`
+            ).get(normalizedEmail, cleanOtp);
+        }
+
+        if (!verif) {
+            return res.status(400).json({
+                success: false,
+                error: 'Código de verificación incorrecto o expirado. Revisa tu correo e inténtalo de nuevo.'
+            });
+        }
+
+        // Marcar como verificado
+        if (USE_POSTGRES) {
+            await dbManager.pool.query('UPDATE email_verifications SET is_used = true WHERE id = $1', [verif.id]);
+            await dbManager.pool.query('UPDATE users SET is_verified = true WHERE id = $1', [verif.user_id]);
+        } else {
+            dbManager.prepare('UPDATE email_verifications SET is_used = 1 WHERE id = ?').run(verif.id);
+            dbManager.prepare('UPDATE users SET is_verified = 1 WHERE id = ?').run(verif.user_id);
+        }
+
+        const user = await dbManager.getUserByEmail(normalizedEmail);
+        const role = (normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : (user.role || 'user');
+
+        const accessToken = jwt.sign(
+            { id: user.id, email: user.email, name: user.name, role },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        const refreshToken = await generateAndStoreRefreshToken(user.id);
+
+        res.json({
+            success: true,
+            message: '¡Tu cuenta ha sido verificada exitosamente! Bienvenido a SoftContable.',
+            accessToken,
+            refreshToken,
+            token: accessToken,
+            user: { id: user.id, email: user.email, name: user.name, role }
+        });
+    } catch (error) {
+        console.error('[AUTH VERIFY OTP ERROR]', error);
+        res.status(500).json({ success: false, error: 'Error al validar el código OTP.' });
+    }
+});
+
+// --- REENVIAR CORREO DE VERIFICACIÓN ---
+router.post('/resend-verification', authLimiter, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ success: false, error: 'Correo requerido.' });
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await dbManager.getUserByEmail(normalizedEmail);
+        if (!user) return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
+
+        if (user.is_verified === true || user.is_verified === 1) {
+            return res.json({ success: true, alreadyVerified: true, message: 'Tu cuenta ya está verificada. Puedes iniciar sesión.' });
+        }
+
+        const verifyToken = crypto.randomBytes(32).toString('hex');
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verifId = uuidv4();
+
+        if (USE_POSTGRES) {
+            await dbManager.pool.query(
+                `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                 VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours', false)`,
+                [verifId, user.id, normalizedEmail, verifyToken, otpCode]
+            );
+        } else {
+            dbManager.prepare(
+                `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                 VALUES (?, ?, ?, ?, ?, datetime('now', '+24 hours'), 0)`
+            ).run(verifId, user.id, normalizedEmail, verifyToken, otpCode);
+        }
+
+        const host = req.get('host') || 'softcontable.up.railway.app';
+        const protocol = (req.protocol === 'https' || host.includes('railway.app') || process.env.NODE_ENV === 'production') ? 'https' : req.protocol;
+        const verificationUrl = `${protocol}://${host}/?verify_token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+        await sendAccountVerificationEmail({
+            toEmail: normalizedEmail,
+            userName: user.name || 'Contador',
+            verificationUrl,
+            otpCode
+        });
+
+        res.json({ success: true, message: 'Se ha reenviado el correo de verificación a tu bandeja de entrada.' });
+    } catch (error) {
+        console.error('[AUTH RESEND VERIF ERROR]', error);
+        res.status(500).json({ success: false, error: 'Error al reenviar el correo de verificación.' });
     }
 });
 
@@ -136,7 +434,12 @@ router.post('/register-student', authLimiter, async (req, res) => {
         const { email, password, name } = req.body;
         console.log(`[AUTH] Registro de estudiante: ${email}`);
 
-        const existingUser = await dbManager.getUserByEmail(email);
+        const normalizedEmail = (email || '').trim().toLowerCase();
+        if (isDisposableEmail(normalizedEmail)) {
+            return res.status(400).json({ success: false, error: 'Por favor ingresa un correo real de estudiante (Gmail, Outlook o universitario).' });
+        }
+
+        const existingUser = await dbManager.getUserByEmail(normalizedEmail);
         if (existingUser) {
             return res.status(400).json({ success: false, error: 'El correo ya está registrado' });
         }
@@ -147,9 +450,10 @@ router.post('/register-student', authLimiter, async (req, res) => {
         const userId = uuidv4();
         const newUser = {
             id: userId,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
             name: name || 'Estudiante',
+            is_verified: true, // Estudiantes acceden directamente
             role: 'estudiante'
         };
 
@@ -211,11 +515,23 @@ router.post('/login', authLimiter, async (req, res) => {
         }
 
         const normalizedEmail = user.email.trim().toLowerCase();
+        const isOwner = normalizedEmail === 'aangelo2555@gmail.com';
         let role = user.role || 'user';
-        if (normalizedEmail === 'aangelo2555@gmail.com') {
+        if (isOwner) {
             role = 'super_admin';
         } else if (role === 'admin') {
             role = 'user';
+        }
+
+        // VALIDACIÓN DE VERIFICACIÓN DE CORREO (Excepto Owner y Estudiantes)
+        const isVerified = user.is_verified === true || user.is_verified === 1 || user.is_verified === 't' || isOwner || role === 'estudiante';
+        if (!isVerified) {
+            return res.status(403).json({
+                success: false,
+                requireVerification: true,
+                email: user.email,
+                error: 'Debes completar la verificación de tu correo electrónico antes de ingresar.'
+            });
         }
 
         // VALIDACIÓN DE COHERENCIA ENTRE MODO SOLICITADO Y ROL DE LA CUENTA
@@ -338,8 +654,6 @@ router.post('/logout', async (req, res) => {
         res.status(500).json({ success: false, error: 'Error en logout.' });
     }
 });
-
-const { sendResetOtpEmail } = require('./services/emailService');
 
 // Almacenamiento en memoria para códigos OTP de recuperación (expiran en 15 min)
 const otpStore = new Map();

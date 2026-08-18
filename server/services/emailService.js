@@ -43,13 +43,186 @@ const createTransporter = (usePort587 = true) => {
 };
 
 /**
+ * Despachador central de correos con reintentos en HTTPS (Resend / Brevo) y SMTP fallback.
+ */
+async function sendHtmlEmail({ toEmail, subject, htmlContent, debugLabel = 'EMAIL' }) {
+    console.log(`[EMAIL SERVICE] Enviando [${debugLabel}] a: ${toEmail}`);
+
+    // 1. INTENTO VÍA HTTP API HTTPS (RESEND API - Puerto 443 100% abierto en Railway)
+    if (process.env.RESEND_API_KEY) {
+        try {
+            console.log('[EMAIL SERVICE] Enviando vía Resend HTTP API (Puerto 443 HTTPS)...');
+            const resendRes = await axios.post('https://api.resend.com/emails', {
+                from: 'SOFTCONTABLE <onboarding@resend.dev>',
+                to: [toEmail],
+                subject,
+                html: htmlContent
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 8000
+            });
+            console.log(`[EMAIL SERVICE RESEND SUCCESS] ✅ Correo enviado por Resend HTTPS. ID: ${resendRes.data.id}`);
+            return { success: true, simulated: false, messageId: resendRes.data.id };
+        } catch (resendErr) {
+            console.error(`[EMAIL SERVICE RESEND ERROR]`, resendErr.response?.data || resendErr.message);
+        }
+    }
+
+    // 2. INTENTO VÍA BREVO HTTP API (Puerto 443 HTTPS)
+    if (process.env.BREVO_API_KEY) {
+        try {
+            console.log('[EMAIL SERVICE] Enviando vía Brevo HTTP API (Puerto 443 HTTPS)...');
+            const brevoRes = await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: 'SOFTCONTABLE', email: process.env.GMAIL_USER || 'aangelo2555@gmail.com' },
+                to: [{ email: toEmail }],
+                subject,
+                htmlContent
+            }, {
+                headers: {
+                    'api-key': process.env.BREVO_API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 8000
+            });
+            console.log(`[EMAIL SERVICE BREVO SUCCESS] ✅ Correo enviado por Brevo HTTPS. ID: ${brevoRes.data.messageId}`);
+            return { success: true, simulated: false, messageId: brevoRes.data.messageId };
+        } catch (brevoErr) {
+            console.error(`[EMAIL SERVICE BREVO ERROR]`, brevoErr.response?.data || brevoErr.message);
+        }
+    }
+
+    // 3. INTENTO VÍA GMAIL / SMTP (Nodemailer)
+    let transporter = createTransporter(true);
+    if (transporter) {
+        const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
+        const mailOptions = {
+            from: `"SOFTCONTABLE" <${senderEmail}>`,
+            to: toEmail,
+            subject,
+            html: htmlContent
+        };
+
+        try {
+            const sendPromise = transporter.sendMail(mailOptions);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT_SMTP_587')), 4000)
+            );
+
+            const info = await Promise.race([sendPromise, timeoutPromise]);
+            console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 587). ID: ${info.messageId}`);
+            return { success: true, simulated: false, messageId: info.messageId };
+        } catch (err587) {
+            console.warn(`[EMAIL SERVICE WARN] Puerto 587 falló (${err587.message}). Intentando Puerto 465 SSL...`);
+            try {
+                transporter = createTransporter(false);
+                const sendPromise465 = transporter.sendMail(mailOptions);
+                const timeoutPromise465 = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT_SMTP_465')), 4000)
+                );
+
+                const info465 = await Promise.race([sendPromise465, timeoutPromise465]);
+                console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 465). ID: ${info465.messageId}`);
+                return { success: true, simulated: false, messageId: info465.messageId };
+            } catch (err465) {
+                console.error(`[EMAIL SERVICE ERROR] ❌ Los puertos SMTP tradicionales están bloqueados en el contenedor cloud.`);
+            }
+        }
+    }
+
+    // 4. RESPALDO LOCAL PARA DESARROLLO / CONSOLA
+    console.log(`[EMAIL FALLBACK] [${debugLabel}] Correo para ${toEmail}`);
+    return {
+        success: true,
+        simulated: true,
+        message: `Correo generado localmente.`
+    };
+}
+
+/**
+ * Envía el correo de verificación de cuenta y bienvenida (Plantilla estilo Flow).
+ */
+async function sendAccountVerificationEmail({ toEmail, userName, verificationUrl, otpCode }) {
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a; }
+                .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; padding: 36px 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); }
+                .header { text-align: center; margin-bottom: 28px; }
+                .logo-title { font-size: 24px; font-weight: 900; color: #1e3a8a; letter-spacing: 0.5px; margin: 0; text-transform: uppercase; }
+                .logo-blue { color: #2563eb; }
+                .btn-verify { background: #2563eb; color: #ffffff !important; padding: 14px 34px; border-radius: 12px; font-size: 15px; font-weight: 800; text-decoration: none; display: inline-block; box-shadow: 0 4px 14px rgba(37,99,235,0.25); text-align: center; transition: background 0.2s; }
+                .otp-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px; padding: 18px; text-align: center; margin: 24px 0; }
+                .otp-val { font-size: 30px; font-weight: 900; letter-spacing: 6px; color: #1e40af; font-family: 'Courier New', Courier, monospace; margin: 6px 0; }
+                .contact-card { background: #f1f5f9; border-radius: 14px; padding: 18px 20px; margin-top: 24px; font-size: 13px; color: #334155; line-height: 1.8; }
+                .footer { text-align: center; margin-top: 32px; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 class="logo-title">SOFT <span class="logo-blue">CONTABLE</span></h1>
+                    <p style="font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Sistema Contable en la Nube v2.0</p>
+                </div>
+
+                <p style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">¡Hola ${userName || 'Estimado(a)'}!</p>
+                <p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 20px;">
+                    Gracias por registrarte con nosotros. Estás a un paso de comenzar a usar <strong>SoftContable</strong> y acceder a todas las herramientas que tenemos para ti, tu estudio contable y empresas.
+                </p>
+
+                <p style="font-size: 14px; color: #334155; margin-bottom: 24px;">
+                    Haz click en el siguiente botón para completar tu registro:
+                </p>
+
+                <div style="text-align: center; margin: 28px 0;">
+                    <a href="${verificationUrl}" class="btn-verify" target="_blank">
+                        Completar mi registro
+                    </a>
+                </div>
+
+                <div class="otp-box">
+                    <p style="font-size: 12px; color: #64748b; margin: 0 0 4px 0; font-weight: 600;">O ingresa este código de verificación en pantalla:</p>
+                    <div class="otp-val">${otpCode}</div>
+                    <p style="font-size: 11px; color: #94a3b8; margin: 0;">Válido por 24 horas</p>
+                </div>
+
+                <p style="font-size: 13px; color: #475569; margin-top: 24px; line-height: 1.5;">
+                    Si tienes alguna duda, también puedes contactarnos a través de los datos que te dejamos a continuación:
+                </p>
+
+                <div class="contact-card">
+                    <div>📧 <strong>Correo:</strong> soporte@softcontable.pe</div>
+                    <div>🇵🇪 <strong>Perú:</strong> +51 923 887 478 / Lima</div>
+                    <div>💬 <strong>WhatsApp:</strong> Atención al Cliente &amp; Onboarding</div>
+                </div>
+
+                <div class="footer">
+                    <p style="margin: 0;">&copy; 2026 Angelo Thomas Serna Simeon - SOFTCONTABLE SaaS. Todos los derechos reservados.</p>
+                    <p style="margin: 4px 0 0 0; color: #94a3b8;">Seguridad Contable &amp; Tributaria SUNAT Perú</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    return sendHtmlEmail({
+        toEmail,
+        subject: `✉️ Completa tu registro en SoftContable (${otpCode})`,
+        htmlContent,
+        debugLabel: 'ACCOUNT_VERIFICATION'
+    });
+}
+
+/**
  * Envia un correo electrónico con el código OTP de 6 dígitos para restablecer contraseña.
- * Soporta HTTP API REST (Resend/Brevo en puerto HTTPS 443) y SMTP de Gmail como respaldo.
  */
 async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
-    console.log(`[EMAIL SERVICE] Intentando enviar OTP para: ${toEmail}`);
-    
-    // Plantilla HTML profesional SOFTCONTABLE SaaS
     const htmlContent = `
         <!DOCTYPE html>
         <html lang="es">
@@ -90,107 +263,24 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
                 </p>
 
                 <div class="footer">
-                    <p style="margin: 0;">&copy; 2026 SOFTCONTABLE SaaS. Todos los derechos reservados.</p>
-                    <p style="margin: 4px 0 0 0; color: #94a3b8;">Seguridad Contable &amp; Tributaria SUNAT Perú 2026</p>
+                    <p style="margin: 0;">&copy; 2026 Angelo Thomas Serna Simeon - SOFTCONTABLE SaaS. Todos los derechos reservados.</p>
+                    <p style="margin: 4px 0 0 0; color: #94a3b8;">Seguridad Contable &amp; Tributaria SUNAT Perú</p>
                 </div>
             </div>
         </body>
         </html>
     `;
 
-    // 1. INTENTO VÍA HTTP API HTTPS (RESEND API - Puerto 443 100% abierto en Railway)
-    if (process.env.RESEND_API_KEY) {
-        try {
-            console.log('[EMAIL SERVICE] Enviando vía Resend HTTP API (Puerto 443 HTTPS)...');
-            const resendRes = await axios.post('https://api.resend.com/emails', {
-                from: 'SOFTCONTABLE Security <onboarding@resend.dev>',
-                to: [toEmail],
-                subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
-                html: htmlContent
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 8000
-            });
-            console.log(`[EMAIL SERVICE RESEND SUCCESS] ✅ Correo enviado por Resend HTTPS. ID: ${resendRes.data.id}`);
-            return { success: true, simulated: false, messageId: resendRes.data.id };
-        } catch (resendErr) {
-            console.error(`[EMAIL SERVICE RESEND ERROR]`, resendErr.response?.data || resendErr.message);
-        }
-    }
-
-    // 2. INTENTO VÍA BREVO HTTP API (Puerto 443 HTTPS)
-    if (process.env.BREVO_API_KEY) {
-        try {
-            console.log('[EMAIL SERVICE] Enviando vía Brevo HTTP API (Puerto 443 HTTPS)...');
-            const brevoRes = await axios.post('https://api.brevo.com/v3/smtp/email', {
-                sender: { name: 'SOFTCONTABLE Security', email: process.env.GMAIL_USER || 'aangelo2555@gmail.com' },
-                to: [{ email: toEmail }],
-                subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
-                htmlContent: htmlContent
-            }, {
-                headers: {
-                    'api-key': process.env.BREVO_API_KEY,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 8000
-            });
-            console.log(`[EMAIL SERVICE BREVO SUCCESS] ✅ Correo enviado por Brevo HTTPS. ID: ${brevoRes.data.messageId}`);
-            return { success: true, simulated: false, messageId: brevoRes.data.messageId };
-        } catch (brevoErr) {
-            console.error(`[EMAIL SERVICE BREVO ERROR]`, brevoErr.response?.data || brevoErr.message);
-        }
-    }
-
-    // 3. INTENTO VÍA GMAIL SMTP (Nodemailer)
-    let transporter = createTransporter(true);
-    if (transporter) {
-        const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
-        const mailOptions = {
-            from: `"SOFTCONTABLE Security" <${senderEmail}>`,
-            to: toEmail,
-            subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
-            html: htmlContent
-        };
-
-        try {
-            const sendPromise = transporter.sendMail(mailOptions);
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('TIMEOUT_SMTP_587')), 4000)
-            );
-
-            const info = await Promise.race([sendPromise, timeoutPromise]);
-            console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 587). ID: ${info.messageId}`);
-            return { success: true, simulated: false, messageId: info.messageId };
-        } catch (err587) {
-            console.warn(`[EMAIL SERVICE WARN] Puerto 587 falló (${err587.message}). Intentando Puerto 465 SSL...`);
-            try {
-                transporter = createTransporter(false);
-                const sendPromise465 = transporter.sendMail(mailOptions);
-                const timeoutPromise465 = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT_SMTP_465')), 4000)
-                );
-
-                const info465 = await Promise.race([sendPromise465, timeoutPromise465]);
-                console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 465). ID: ${info465.messageId}`);
-                return { success: true, simulated: false, messageId: info465.messageId };
-            } catch (err465) {
-                console.error(`[EMAIL SERVICE ERROR] ❌ Los puertos SMTP tradicionales están bloqueados en el contenedor cloud de Railway.`);
-            }
-        }
-    }
-
-    // 4. RESPALDO GARANTIZADO (Simulación dev & badge de auto-completado)
-    console.log(`[SECURITY OTP FALLBACK] Código OTP para ${toEmail}: ${otpCode}`);
-    return {
-        success: true,
-        simulated: true,
-        message: `Código generado.`
-    };
+    return sendHtmlEmail({
+        toEmail,
+        subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
+        htmlContent,
+        debugLabel: 'RESET_PASSWORD_OTP'
+    });
 }
 
 module.exports = {
+    sendHtmlEmail,
+    sendAccountVerificationEmail,
     sendResetOtpEmail
 };
