@@ -42,6 +42,31 @@ router.get('/me', async (req, res) => {
             return res.status(401).json({ success: false, error: 'No autenticado.' });
         }
 
+        const isSuperAdminUser = req.user?.role === 'super_admin' || (req.user?.email || '').trim().toLowerCase() === 'aangelo2555@gmail.com';
+        if (isSuperAdminUser) {
+            const workspacesUsed = await getWorkspaceCount(userId);
+            return res.json({
+                success: true,
+                subscription: {
+                    id: 'superadmin-master',
+                    user_id: userId,
+                    plan_id: 'corporativo',
+                    plan_name: 'Corporativo (Master SaaS Propietario)',
+                    status: 'active',
+                    max_workspaces: 9999,
+                    max_users: 9999,
+                    maxWorkspaces: 9999,
+                    workspacesUsed,
+                    daysRemaining: 9999,
+                    isTrial: false,
+                    isActive: true,
+                    isReadOnly: false,
+                    includes_premium: true,
+                    price_pen: 499.00
+                }
+            });
+        }
+
         let sub = null;
         if (USE_POSTGRES) {
             const subRes = await db.pool.query(

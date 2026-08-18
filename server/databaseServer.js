@@ -485,6 +485,15 @@ try {
     for (const u of usersWithoutSub) {
         insertSub.run(require('crypto').randomUUID(), u.id);
     }
+
+    // Garantizar rol super_admin y plan corporativo para Angelo Serna Simeon (Owner)
+    db.prepare("UPDATE users SET role = 'super_admin' WHERE email = 'aangelo2555@gmail.com'").run();
+    db.prepare("UPDATE users SET role = 'user' WHERE email != 'aangelo2555@gmail.com' AND role = 'admin'").run();
+    db.prepare(`
+        UPDATE subscriptions 
+        SET plan_id = 'corporativo', status = 'active', max_workspaces = 9999, max_users = 9999, current_period_end = '2099-12-31'
+        WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin')
+    `).run();
 } catch (err) {
     console.warn('[SQLITE] Error asignando suscripciones por defecto:', err.message);
 }

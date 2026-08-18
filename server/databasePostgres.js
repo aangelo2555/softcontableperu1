@@ -2588,6 +2588,19 @@ async function ensureSchemaConstraints() {
         } catch (e) {
             console.warn('[POSTGRES] Warning al asignar suscripciones default:', e.message);
         }
+
+        // 3.8. Garantizar rol super_admin y plan corporativo para Angelo Serna Simeon (Owner)
+        try {
+            await pool.query(`
+                UPDATE users SET role = 'super_admin' WHERE email = 'aangelo2555@gmail.com';
+                UPDATE users SET role = 'user' WHERE email != 'aangelo2555@gmail.com' AND role = 'admin';
+                UPDATE subscriptions 
+                SET plan_id = 'corporativo', status = 'active', max_workspaces = 9999, max_users = 9999, current_period_end = '2099-12-31'
+                WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin');
+            `);
+        } catch (e) {
+            console.warn('[POSTGRES] Warning actualizando permisos SuperAdmin:', e.message);
+        }
         
         // 4. Crear o reemplazar vistas
         try {

@@ -71,7 +71,7 @@ router.post('/register', authLimiter, async (req, res) => {
         const usersList = await dbManager.queryAll('SELECT COUNT(*) as count FROM users');
         const userCount = parseInt(usersList[0]?.count || 0);
         const normalizedEmail = email.trim().toLowerCase();
-        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : 'admin';
+        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : 'user';
 
         const userId = uuidv4();
         const newUser = {
@@ -208,6 +208,8 @@ router.post('/login', authLimiter, async (req, res) => {
         let role = user.role || 'user';
         if (normalizedEmail === 'aangelo2555@gmail.com') {
             role = 'super_admin';
+        } else if (role === 'admin') {
+            role = 'user';
         }
 
         // VALIDACIÓN DE COHERENCIA ENTRE MODO SOLICITADO Y ROL DE LA CUENTA

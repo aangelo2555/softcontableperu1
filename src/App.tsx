@@ -691,18 +691,9 @@ const App: React.FC = () => {
           { id: 'AI_KNOWLEDGE', label: 'Base IA (RAG)', icon: Database },
         ],
       });
-    } else if (isAdmin) {
-      groups.push({
-        groupLabel: 'Administración',
-        groupIcon: ShieldCheck,
-        items: [
-          { id: 'ADMIN', label: 'Panel Admin', icon: Settings },
-          { id: 'AI_KNOWLEDGE', label: 'Base IA (RAG)', icon: Database },
-        ],
-      });
     }
     return groups;
-  }, [filteredGroups, isAdmin, isSuperAdmin]);
+  }, [filteredGroups, isSuperAdmin]);
 
   const groupHasActiveTab = (group: TabGroup) => group.items.some(item => item.id === activeTab);
 
