@@ -494,6 +494,16 @@ try {
         SET plan_id = 'corporativo', status = 'active', max_workspaces = 9999, max_users = 9999, current_period_end = '2099-12-31'
         WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin')
     `).run();
+
+    // Deduplicar registros en subscriptions conservando solo el más reciente
+    try {
+        db.prepare(`
+            DELETE FROM subscriptions 
+            WHERE rowid NOT IN (
+                SELECT min(rowid) FROM subscriptions GROUP BY user_id
+            )
+        `).run();
+    } catch (_) {}
 } catch (err) {
     console.warn('[SQLITE] Error asignando suscripciones por defecto:', err.message);
 }

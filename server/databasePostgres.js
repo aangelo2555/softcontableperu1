@@ -2589,7 +2589,7 @@ async function ensureSchemaConstraints() {
             console.warn('[POSTGRES] Warning al asignar suscripciones default:', e.message);
         }
 
-        // 3.8. Garantizar rol super_admin y plan corporativo para Angelo Serna Simeon (Owner)
+        // 3.8. Garantizar rol super_admin y plan corporativo para Angelo Serna Simeon (Owner) y deduplicar subscriptions
         try {
             await pool.query(`
                 UPDATE users SET role = 'super_admin' WHERE email = 'aangelo2555@gmail.com';
@@ -2597,6 +2597,14 @@ async function ensureSchemaConstraints() {
                 UPDATE subscriptions 
                 SET plan_id = 'corporativo', status = 'active', max_workspaces = 9999, max_users = 9999, current_period_end = '2099-12-31'
                 WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin');
+
+                -- Deduplicar registros en subscriptions conservando solo el mas reciente por user_id
+                DELETE FROM subscriptions
+                WHERE id NOT IN (
+                    SELECT DISTINCT ON (user_id) id
+                    FROM subscriptions
+                    ORDER BY user_id, updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+                );
             `);
         } catch (e) {
             console.warn('[POSTGRES] Warning actualizando permisos SuperAdmin:', e.message);

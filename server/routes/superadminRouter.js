@@ -154,13 +154,22 @@ router.get('/clients', async (req, res) => {
                     u.id, u.email, u.name, u.role, u.created_at,
                     s.id as subscription_id, s.plan_id, s.status as subscription_status,
                     s.max_workspaces, s.max_users, s.current_period_end, s.trial_ends_at,
-                    p.name as plan_name, p.price_pen,
-                    COUNT(w.ruc) as workspaces_count
+                    COALESCE(p.name, 'Plan Starter') as plan_name, COALESCE(p.price_pen, 49.00) as price_pen,
+                    COALESCE(w.cnt, 0) as workspaces_count
                 FROM users u
-                LEFT JOIN subscriptions s ON u.id = s.user_id
+                LEFT JOIN LATERAL (
+                    SELECT s1.*
+                    FROM subscriptions s1
+                    WHERE s1.user_id = u.id
+                    ORDER BY s1.updated_at DESC NULLS LAST, s1.created_at DESC NULLS LAST
+                    LIMIT 1
+                ) s ON true
                 LEFT JOIN plans p ON s.plan_id = p.id
-                LEFT JOIN workspaces w ON u.id = w.user_id
-                GROUP BY u.id, u.email, u.name, u.role, u.created_at, s.id, s.plan_id, s.status, s.max_workspaces, s.max_users, s.current_period_end, s.trial_ends_at, p.name, p.price_pen
+                LEFT JOIN (
+                    SELECT user_id, COUNT(DISTINCT ruc) as cnt
+                    FROM workspaces
+                    GROUP BY user_id
+                ) w ON u.id = w.user_id
                 ORDER BY u.created_at DESC
             `);
             clients = result.rows;
@@ -170,13 +179,18 @@ router.get('/clients', async (req, res) => {
                     u.id, u.email, u.name, u.role, u.created_at,
                     s.id as subscription_id, s.plan_id, s.status as subscription_status,
                     s.max_workspaces, s.max_users, s.current_period_end, s.trial_ends_at,
-                    p.name as plan_name, p.price_pen,
-                    COUNT(w.ruc) as workspaces_count
+                    COALESCE(p.name, 'Plan Starter') as plan_name, COALESCE(p.price_pen, 49.00) as price_pen,
+                    COALESCE(w.cnt, 0) as workspaces_count
                 FROM users u
-                LEFT JOIN subscriptions s ON u.id = s.user_id
+                LEFT JOIN subscriptions s ON s.id = (
+                    SELECT s2.id FROM subscriptions s2 WHERE s2.user_id = u.id ORDER BY s2.updated_at DESC, s2.created_at DESC LIMIT 1
+                )
                 LEFT JOIN plans p ON s.plan_id = p.id
-                LEFT JOIN workspaces w ON u.id = w.user_id
-                GROUP BY u.id
+                LEFT JOIN (
+                    SELECT user_id, COUNT(DISTINCT ruc) as cnt
+                    FROM workspaces
+                    GROUP BY user_id
+                ) w ON u.id = w.user_id
                 ORDER BY u.created_at DESC
             `).all();
         }

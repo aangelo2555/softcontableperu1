@@ -1009,68 +1009,83 @@ export const AdminView: React.FC = () => {
         icon={<ShieldCheck size={18} />}
         title="Panel de Administración"
         badge={
-          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[9px] text-blue-500 border border-blue-500/20 tracking-[0.2em] uppercase">
+          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[9px] text-blue-500 border border-blue-500/20 tracking-[0.2em] uppercase font-black">
             CONTROL ADMIN
           </span>
         }
         subtitle="Supervisa usuarios registrados, diagnostica incidentes y audita lógicas contables."
         actions={
-          <div className="flex bg-app-bg p-1 rounded-xl border border-app-border shrink-0 w-full sm:w-auto justify-between sm:justify-start">
-            <button
-              onClick={() => setActiveSubTab('BUZON')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                activeSubTab === 'BUZON' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-app-muted hover:text-app-text'
-              }`}
-            >
-              <MessageSquare size={12} />
-              Buzón Inteligente
-              {pendingSuggestionsCount > 0 && (
-                <span className="bg-rose-500 text-white font-bold text-[9px] h-3.5 min-w-3.5 px-1 rounded-full flex items-center justify-center">
-                  {pendingSuggestionsCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveSubTab('USUARIOS')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                activeSubTab === 'USUARIOS' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-app-muted hover:text-app-text'
-              }`}
-            >
-              <Users size={12} />
-              Usuarios & Auditoría
-            </button>
-            <button
-              onClick={() => setActiveSubTab('CONOCIMIENTO_IA')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                activeSubTab === 'CONOCIMIENTO_IA' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-app-muted hover:text-app-text'
-              }`}
-            >
-              <BrainCircuit size={12} />
-              Base de IA
-            </button>
-            <button
-              onClick={() => {
-                setActiveSubTab('PREMIUM_IA');
-                loadPremiumRequests();
-              }}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                activeSubTab === 'PREMIUM_IA' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-app-muted hover:text-app-text'
-              }`}
-            >
-              <Sparkles size={12} />
-              Suscripciones SoftPremium IA
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              loadAdminSuggestions();
+              loadAdminUsers();
+              loadPremiumRequests();
+              toast.success('Datos actualizados');
+            }}
+            className="px-3 py-1.5 bg-app-bg hover:bg-app-hover border border-app-border rounded-xl text-xs font-bold text-app-muted hover:text-app-text transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Recargar datos"
+          >
+            <RefreshCw size={13} />
+            <span className="hidden sm:inline">Actualizar</span>
+          </button>
         }
       />
+
+      {/* Subtab Navigation Bar - Clean, spacious & uncollided */}
+      <div className="bg-app-surface border-b border-app-border px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0">
+        <button
+          onClick={() => setActiveSubTab('BUZON')}
+          className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'BUZON' 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+              : 'bg-app-bg hover:bg-app-hover text-app-muted hover:text-app-text border border-app-border'
+          }`}
+        >
+          <MessageSquare size={13} />
+          Buzón Inteligente
+          {pendingSuggestionsCount > 0 && (
+            <span className="bg-rose-500 text-white font-bold text-[9px] h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+              {pendingSuggestionsCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveSubTab('USUARIOS')}
+          className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'USUARIOS' 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+              : 'bg-app-bg hover:bg-app-hover text-app-muted hover:text-app-text border border-app-border'
+          }`}
+        >
+          <Users size={13} />
+          Usuarios & Auditoría
+        </button>
+        <button
+          onClick={() => setActiveSubTab('CONOCIMIENTO_IA')}
+          className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'CONOCIMIENTO_IA' 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+              : 'bg-app-bg hover:bg-app-hover text-app-muted hover:text-app-text border border-app-border'
+          }`}
+        >
+          <BrainCircuit size={13} />
+          Base de IA
+        </button>
+        <button
+          onClick={() => {
+            setActiveSubTab('PREMIUM_IA');
+            loadPremiumRequests();
+          }}
+          className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'PREMIUM_IA' 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
+              : 'bg-app-bg hover:bg-app-hover text-app-muted hover:text-app-text border border-app-border'
+          }`}
+        >
+          <Sparkles size={13} />
+          Suscripciones SoftPremium
+        </button>
+      </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto p-6 flex flex-col gap-6">

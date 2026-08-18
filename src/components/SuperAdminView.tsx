@@ -307,13 +307,14 @@ export const SuperAdminView: React.FC = () => {
           {/* Filter Bar */}
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
             <div className="relative w-full md:w-96">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-muted" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por correo, nombre o plan..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-app-bg border border-app-border text-xs rounded-xl focus:outline-none focus:border-blue-500 text-app-text"
+                style={{ paddingLeft: '2.5rem' }}
+                className="w-full pl-10 pr-4 py-2.5 bg-app-bg border border-app-border text-xs rounded-xl focus:outline-none focus:border-blue-500 text-app-text transition-colors"
               />
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">

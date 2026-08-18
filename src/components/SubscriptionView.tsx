@@ -495,7 +495,10 @@ export const SubscriptionView: React.FC = () => {
                 <label className="block text-app-muted uppercase text-[10px] mb-1">Nombre en la Tarjeta</label>
                 <input
                   type="text"
-                  placeholder="JUAN PEREZ"
+                  name="ccname"
+                  id="ccname"
+                  autoComplete="cc-name"
+                  placeholder="NOMBRE Y APELLIDO"
                   value={cardHolder}
                   onChange={e => setCardHolder(e.target.value.toUpperCase())}
                   required
@@ -508,14 +511,23 @@ export const SubscriptionView: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
+                    name="cardnumber"
+                    id="cardnumber"
+                    autoComplete="cc-number"
+                    inputMode="numeric"
                     maxLength={19}
-                    placeholder="4111 •••• •••• ••••"
+                    placeholder="1234 5678 9012 3456"
                     value={cardNumber}
-                    onChange={e => setCardNumber(e.target.value)}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                      const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ');
+                      setCardNumber(formatted);
+                    }}
                     required
-                    className="w-full p-2.5 pl-9 bg-app-bg border border-app-border rounded-xl text-app-text outline-none font-mono"
+                    style={{ paddingLeft: '2.5rem' }}
+                    className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none font-mono tracking-wider"
                   />
-                  <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted" />
+                  <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
                 </div>
               </div>
 
@@ -524,10 +536,19 @@ export const SubscriptionView: React.FC = () => {
                   <label className="block text-app-muted uppercase text-[10px] mb-1">Expiración (MM/AA)</label>
                   <input
                     type="text"
+                    name="ccexp"
+                    id="ccexp"
+                    autoComplete="cc-exp"
                     maxLength={5}
-                    placeholder="12/28"
+                    placeholder="MM/AA"
                     value={cardExp}
-                    onChange={e => setCardExp(e.target.value)}
+                    onChange={e => {
+                      let val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      if (val.length >= 3) {
+                        val = val.slice(0, 2) + '/' + val.slice(2);
+                      }
+                      setCardExp(val);
+                    }}
                     required
                     className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none font-mono text-center"
                   />
@@ -536,10 +557,13 @@ export const SubscriptionView: React.FC = () => {
                   <label className="block text-app-muted uppercase text-[10px] mb-1">CVV (3-4 dígitos)</label>
                   <input
                     type="password"
+                    name="cvc"
+                    id="cvc"
+                    autoComplete="cc-csc"
                     maxLength={4}
                     placeholder="•••"
                     value={cardCvv}
-                    onChange={e => setCardCvv(e.target.value)}
+                    onChange={e => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     required
                     className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none font-mono text-center"
                   />
