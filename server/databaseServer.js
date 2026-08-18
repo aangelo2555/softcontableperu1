@@ -495,6 +495,11 @@ try {
         WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin')
     `).run();
 
+    // Normalizar suscripciones starter a 3 empresas
+    try {
+        db.prepare("UPDATE subscriptions SET max_workspaces = 3 WHERE plan_id = 'starter' AND max_workspaces < 3").run();
+    } catch (_) {}
+
     // Deduplicar registros en subscriptions conservando solo el más reciente
     try {
         db.prepare(`

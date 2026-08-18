@@ -125,12 +125,14 @@ router.get('/me', async (req, res) => {
             daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
         }
 
+        const maxWorkspaces = (sub.plan_id === 'corporativo') ? 9999 : (sub.plan_id === 'starter') ? Math.max(3, sub.max_workspaces || 3) : (sub.max_workspaces || 1);
+
         res.json({
             success: true,
             subscription: {
                 ...sub,
                 workspacesUsed,
-                maxWorkspaces: sub.max_workspaces || 1,
+                maxWorkspaces,
                 daysRemaining,
                 isTrial: sub.status === 'trial',
                 isActive: sub.status === 'active' || sub.status === 'trial' || sub.status === 'grace',

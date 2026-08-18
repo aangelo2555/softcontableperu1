@@ -84,21 +84,27 @@ router.post('/register', authLimiter, async (req, res) => {
 
         await dbManager.createUser(newUser);
 
-        // Crear suscripción inicial de prueba (Trial 14 días con 2 workspaces)
+        // Crear suscripción inicial de prueba (Trial 14 días con 3 workspaces) o Corporativo para Owner
         try {
             const subId = uuidv4();
+            const isOwner = normalizedEmail === 'aangelo2555@gmail.com';
+            const initialPlanId = isOwner ? 'corporativo' : 'starter';
+            const initialStatus = isOwner ? 'active' : 'trial';
+            const initialMaxWs = isOwner ? 9999 : 3;
+            const initialMaxUsers = isOwner ? 9999 : 2;
+
             if (USE_POSTGRES) {
                 await dbManager.pool.query(
                     `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
-                     VALUES ($1, $2, 'starter', 'trial', 2, 2, NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '14 days', ${isOwner ? "'2099-12-31'" : "NOW() + INTERVAL '14 days'"})
                      ON CONFLICT DO NOTHING`,
-                    [subId, userId]
+                    [subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers]
                 );
             } else {
                 dbManager.prepare(
                     `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
-                     VALUES (?, ?, 'starter', 'trial', 2, 2, datetime('now', '+14 days'), datetime('now', '+14 days'))`
-                ).run(subId, userId);
+                     VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+14 days'), ${isOwner ? "'2099-12-31'" : "datetime('now', '+14 days')"})`
+                ).run(subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers);
             }
         } catch (subErr) {
             console.warn('[AUTH] Warning creando suscripción trial:', subErr.message);

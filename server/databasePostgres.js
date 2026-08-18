@@ -2598,6 +2598,9 @@ async function ensureSchemaConstraints() {
                 SET plan_id = 'corporativo', status = 'active', max_workspaces = 9999, max_users = 9999, current_period_end = '2099-12-31'
                 WHERE user_id IN (SELECT id FROM users WHERE email = 'aangelo2555@gmail.com' OR role = 'super_admin');
 
+                -- Normalizar suscripciones starter a 3 empresas
+                UPDATE subscriptions SET max_workspaces = 3 WHERE plan_id = 'starter' AND max_workspaces < 3;
+
                 -- Deduplicar registros en subscriptions conservando solo el mas reciente por user_id
                 DELETE FROM subscriptions
                 WHERE id NOT IN (

@@ -216,7 +216,11 @@ export const SubscriptionView: React.FC = () => {
             <div className="mt-6 space-y-2 text-xs font-semibold text-app-muted">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                <span>Hasta {subData?.maxWorkspaces || 1} empresas gestionadas simultáneamente</span>
+                <span>
+                  {subData?.plan_id === 'corporativo' || (subData?.maxWorkspaces && subData.maxWorkspaces >= 50)
+                    ? 'Empresas ilimitadas gestionadas simultáneamente'
+                    : `Hasta ${subData?.maxWorkspaces || 1} empresas gestionadas simultáneamente`}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
