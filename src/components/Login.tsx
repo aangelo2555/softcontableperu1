@@ -374,7 +374,7 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-3 sm:p-5 lg:p-6 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-x-hidden overflow-y-auto">
+        <div className="h-screen w-screen max-h-screen max-w-screen bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-2 sm:p-4 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-hidden">
             <style>{customStyles}{`
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -485,44 +485,44 @@ export const Login: React.FC = () => {
             <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & 100% Responsive)   */}
+            {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Scrollbars)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-md lg:max-w-[1000px] xl:max-w-[1080px] 2xl:max-w-[1140px] h-auto lg:h-[670px] xl:h-[710px] 2xl:h-[740px] max-h-[96vh] bg-white rounded-[32px] lg:rounded-[40px] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[880px] lg:max-w-[940px] xl:max-w-[1000px] h-[92vh] max-h-[560px] sm:max-h-[580px] lg:max-h-[600px] xl:max-h-[620px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[460px] xl:w-[490px] bg-white p-6 sm:p-8 xl:p-9 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
+                <div className={`w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-3 sm:px-6 sm:py-4 flex flex-col justify-between ${isLogin ? 'overflow-hidden' : 'overflow-y-auto login-scroll'} shrink-0`}>
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-1">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-[0_4px_14px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] flex items-center justify-center mx-auto mb-2.5">
-                            <img src="/assets/logo.png" alt="Softcontable" className="w-10 h-10 object-contain drop-shadow-sm" />
+                    <div className="text-center mb-0.5">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-sm flex items-center justify-center mx-auto mb-1.5">
+                            <img src="/assets/logo.png" alt="Softcontable" className="w-8 h-8 object-contain drop-shadow-sm" />
                         </div>
-                        <h1 className="text-xl font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
+                        <h1 className="text-lg font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
                             SOFT CONTABLE
                         </h1>
-                        <p className="text-slate-400 text-[10px] font-bold tracking-[0.25em] uppercase mt-0.5 text-center notranslate" translate="no">
+                        <p className="text-slate-400 text-[9.5px] font-bold tracking-[0.22em] uppercase text-center notranslate" translate="no">
                             SISTEMA CONTABLE EN LA NUBE V2.0
                         </p>
                     </div>
 
                     {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-1">
+                    <div className="flex-1 flex flex-col justify-center py-0.5">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="my-2 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/70 flex items-center gap-1.5 select-none">
+                        <div className="my-1.5 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsStudentModeActive(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none ${
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
                                     !isStudentModeActive 
                                         ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
                                         : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
-                                <Building2 size={14} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Profesional</span>
                             </button>
 
@@ -532,45 +532,45 @@ export const Login: React.FC = () => {
                                     setIsStudentModeActive(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none ${
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
                                     isStudentModeActive 
                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
                                         : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
-                                <GraduationCap size={15} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Estudiante</span>
                             </button>
                         </div>
 
                         {/* Banner informativo del modo */}
-                        <div className={`mb-2.5 p-2.5 rounded-2xl border text-[11px] font-medium flex items-center gap-2.5 ${
+                        <div className={`mb-1.5 p-2 rounded-xl border text-[10.5px] sm:text-[11px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
                                 : 'bg-[#f0f6ff] border-[#dbeafe] text-[#1e40af]'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={15} className="shrink-0 text-indigo-600" />
-                                    <span>Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
+                                    <GraduationCap size={14} className="shrink-0 text-indigo-600" />
+                                    <span className="leading-tight">Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={16} className="shrink-0 text-blue-600" />
-                                    <span>Acceso al sistema contable oficial y empresas.</span>
+                                    <ShieldCheck size={15} className="shrink-0 text-blue-600" />
+                                    <span className="leading-tight">Acceso al sistema contable oficial y empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-3 border-b border-slate-200/80 pb-0.5">
+                        <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     isLogin 
                                         ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -584,7 +584,7 @@ export const Login: React.FC = () => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     !isLogin 
                                         ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -595,19 +595,19 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-2.5 rounded-2xl flex items-start gap-2 animate-in fade-in duration-200">
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
                                     <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
                                 </div>
                             )}
 
                             {!isLogin && (
-                                <div className="space-y-1">
-                                    <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
-                                    <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                        <User className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                                <div className="space-y-0.5">
+                                    <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                        <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type="text"
                                             required
@@ -623,10 +623,10 @@ export const Login: React.FC = () => {
 
                             {!isLogin && !isStudentModeActive && (
                                 <>
-                                    <div className="space-y-1">
-                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
-                                        <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                            <Phone className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                                    <div className="space-y-0.5">
+                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                            <Phone className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="tel"
                                                 required
@@ -640,10 +640,10 @@ export const Login: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1">
-                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
-                                        <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                            <Building2 className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                                    <div className="space-y-0.5">
+                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                            <Building2 className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="text"
                                                 maxLength={11}
@@ -658,10 +658,10 @@ export const Login: React.FC = () => {
                                 </>
                             )}
 
-                            <div className="space-y-1">
-                                <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
-                                <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                    <Mail className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                            <div className="space-y-0.5">
+                                <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                    <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type="email"
                                         required
@@ -674,29 +674,29 @@ export const Login: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                    <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
                                     {!isLogin && checkPasswordStrength(formData.password).isValid && (
                                         <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                             <CheckCircle2 size={11} /> Segura
                                         </span>
                                     )}
                                 </div>
-                                <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                    <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                    <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-8"
+                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
                                     />
-                                    <div className="absolute right-3 flex items-center gap-1">
+                                    <div className="absolute right-2.5 flex items-center gap-1">
                                         {!isLogin && checkPasswordStrength(formData.password).isValid && (
-                                            <CheckCircle2 size={15} className="text-emerald-500" />
+                                            <CheckCircle2 size={14} className="text-emerald-500" />
                                         )}
                                         <button 
                                             type="button"
@@ -704,7 +704,7 @@ export const Login: React.FC = () => {
                                             className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
                                             title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                         >
-                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                                         </button>
                                     </div>
                                 </div>
@@ -714,35 +714,35 @@ export const Login: React.FC = () => {
                             </div>
 
                             {!isLogin && !isStudentModeActive && (
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
+                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
                                         {confirmPassword.length > 0 && confirmPassword === formData.password && (
                                             <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                                 <CheckCircle2 size={11} /> Coincide
                                             </span>
                                         )}
                                     </div>
-                                    <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                        <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                        <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type={showConfirmPassword ? "text" : "password"}
                                             required
                                             placeholder="Repite la contraseña"
-                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-8"
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
                                             value={confirmPassword}
                                             onChange={e => setConfirmPassword(e.target.value)}
                                         />
-                                        <div className="absolute right-3 flex items-center gap-1">
+                                        <div className="absolute right-2.5 flex items-center gap-1">
                                             {confirmPassword.length > 0 && confirmPassword === formData.password && (
-                                                <CheckCircle2 size={15} className="text-emerald-500" />
+                                                <CheckCircle2 size={14} className="text-emerald-500" />
                                             )}
                                             <button 
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
                                             >
-                                                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                                             </button>
                                         </div>
                                     </div>
@@ -750,7 +750,7 @@ export const Login: React.FC = () => {
                             )}
 
                             {isLogin && (
-                                <div className="flex items-center justify-end px-1 pt-0.5">
+                                <div className="flex items-center justify-end px-1">
                                     <button 
                                         type="button" 
                                         onClick={() => {
@@ -775,7 +775,7 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-3 rounded-2xl shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-2.5 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-2.5 rounded-xl shadow-md shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
                                         : 'bg-gradient-to-r from-[#1d4ed8] via-[#2563eb] to-[#3b82f6] hover:from-[#1e40af] hover:to-[#2563eb] text-white'
@@ -797,24 +797,24 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-2 text-center space-y-0.5">
-                        <p className="text-slate-400 text-[10px] font-medium">
+                    <div className="mt-1.5 text-center space-y-0.5">
+                        <p className="text-slate-400 text-[9.5px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
                             <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Privacidad</button>.
                         </p>
-                        <p className="text-slate-400 text-[9.5px] tracking-wider notranslate" translate="no">
+                        <p className="text-slate-400 text-[9px] tracking-wider notranslate" translate="no">
                             &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
                         </p>
                     </div>
                 </div>
 
-                {/* LADO DERECHO: Hero Showcase — Integración Limpia e Inmersiva (Estilo Image 2) */}
-                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-0 m-0 overflow-hidden relative">
+                {/* LADO DERECHO: Hero Showcase — Integración Total sin recortes (Estilo Imagen 2) */}
+                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-1 xl:p-2 overflow-hidden relative h-full">
                     <img 
                         src="/assets/login-hero.png" 
                         alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                        className="w-full h-full object-cover object-left-top select-none pointer-events-none animate-fade-in" 
+                        className="w-full h-full object-contain object-center select-none pointer-events-none animate-fade-in" 
                     />
                 </div>
             </div>
