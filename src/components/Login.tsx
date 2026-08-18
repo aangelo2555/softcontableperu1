@@ -374,8 +374,18 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-screen max-h-screen max-w-screen bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-2 sm:p-4 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-hidden">
+        <div className="min-h-screen w-full bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-3 sm:p-4 lg:p-6 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-y-auto no-scrollbar">
             <style>{customStyles}{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                    width: 0px;
+                    background: transparent;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
                 .login-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 10px; }
@@ -487,10 +497,10 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Scrollbars)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[880px] lg:max-w-[940px] xl:max-w-[1000px] h-[92vh] max-h-[560px] sm:max-h-[580px] lg:max-h-[600px] xl:max-h-[620px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[940px] xl:max-w-[1000px] h-auto lg:h-[92vh] lg:max-h-[580px] xl:max-h-[600px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className={`w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-3 sm:px-6 sm:py-4 flex flex-col justify-between ${isLogin ? 'overflow-hidden' : 'overflow-y-auto login-scroll'} shrink-0`}>
+                <div className="w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-4 sm:px-6 sm:py-5 flex flex-col justify-between overflow-y-auto no-scrollbar shrink-0">
                     
                     {/* Header Marca */}
                     <div className="text-center mb-0.5">
