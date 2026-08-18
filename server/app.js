@@ -212,6 +212,14 @@ app.use('/api/premium/planillas', premiumAiLimiter, premiumPlanillasRoutes);
 app.use('/api/premium/finanzas', premiumAiLimiter, premiumFinanzasRoutes);
 app.use('/api/premium/admin', premiumAdminRoutes);
 
+// --- Rutas SaaS de Facturación, Planes y SuperAdmin ---
+const billingRouter = require('./routes/billingRouter');
+const superadminRouter = require('./routes/superadminRouter');
+
+app.use('/api/subscription', authMiddleware, billingRouter);
+app.use('/api/plans', billingRouter);
+app.use('/api/superadmin', authMiddleware, superadminRouter);
+
 // --- API Endpoints: Database ---
 
 // --- Helper para sanitizar y validar consultas SQL dinámicas ---

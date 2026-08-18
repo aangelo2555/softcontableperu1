@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const dbController = require('../controllers/dbController');
+const { checkWorkspaceLimit } = require('../middleware/billingMiddleware');
 
 /**
  * dbRoutes.js - Definición de rutas desacopladas para /api/db
  */
 
 router.get('/workspaces', dbController.getWorkspaces);
-router.post('/workspaces', dbController.saveWorkspace);
+router.post('/workspaces', checkWorkspaceLimit, dbController.saveWorkspace);
 
 router.get('/workspace/:ruc', dbController.getWorkspaceData);
 router.get('/workspaces/:ruc', dbController.getWorkspaceData);

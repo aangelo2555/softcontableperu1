@@ -2257,6 +2257,99 @@ async function ensureSchemaConstraints() {
                         es_debito_normal INTEGER DEFAULT 1
                     );
                 `
+            },
+            {
+                name: 'plans',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS plans (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        price_pen NUMERIC(10,2) NOT NULL,
+                        price_annual_pen NUMERIC(10,2),
+                        max_workspaces INTEGER NOT NULL,
+                        max_users INTEGER NOT NULL,
+                        includes_premium BOOLEAN DEFAULT false,
+                        features JSONB,
+                        is_active BOOLEAN DEFAULT true,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `
+            },
+            {
+                name: 'subscriptions',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS subscriptions (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        plan_id TEXT NOT NULL REFERENCES plans(id),
+                        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('trial','active','past_due','suspended','grace','cancelled')),
+                        max_workspaces INTEGER NOT NULL DEFAULT 1,
+                        max_users INTEGER NOT NULL DEFAULT 1,
+                        trial_ends_at TIMESTAMPTZ,
+                        current_period_start TIMESTAMPTZ DEFAULT NOW(),
+                        current_period_end TIMESTAMPTZ,
+                        culqi_customer_id TEXT,
+                        culqi_card_token TEXT,
+                        payment_method TEXT DEFAULT 'culqi',
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_sub_user ON subscriptions(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_sub_status ON subscriptions(status);
+                    CREATE INDEX IF NOT EXISTS idx_sub_expiry ON subscriptions(current_period_end);
+                `
+            },
+            {
+                name: 'invoices',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+                        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        amount_pen NUMERIC(10,2) NOT NULL,
+                        status TEXT NOT NULL CHECK (status IN ('pending','paid','failed','refunded')),
+                        culqi_charge_id TEXT,
+                        payment_method TEXT DEFAULT 'culqi',
+                        period_start TIMESTAMPTZ,
+                        period_end TIMESTAMPTZ,
+                        pdf_receipt_url TEXT,
+                        paid_at TIMESTAMPTZ,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_inv_user ON invoices(user_id);
+                `
+            },
+            {
+                name: 'refresh_tokens',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS refresh_tokens (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        token_hash TEXT NOT NULL UNIQUE,
+                        expires_at TIMESTAMPTZ NOT NULL,
+                        revoked BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_rt_user ON refresh_tokens(user_id);
+                `
+            },
+            {
+                name: 'attachments',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS attachments (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        workspace_id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        filename TEXT NOT NULL,
+                        file_size INTEGER,
+                        content_type TEXT,
+                        stored_path TEXT NOT NULL,
+                        uploaded_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+                        uploaded_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_att_composite ON attachments(workspace_id, entity_type, entity_id);
+                `
             }
         ];
         
@@ -2342,7 +2435,11 @@ async function ensureSchemaConstraints() {
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS total_descuento NUMERIC DEFAULT 0;`,
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS neto_pagar NUMERIC DEFAULT 0;`,
             `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS essalud_empleador NUMERIC DEFAULT 0;`,
-            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS sctr_empleador NUMERIC DEFAULT 0;`
+            `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS sctr_empleador NUMERIC DEFAULT 0;`,
+            `ALTER TABLE plan_global ADD COLUMN IF NOT EXISTS es_divisionaria BOOLEAN DEFAULT false;`,
+            `ALTER TABLE plan_global ADD COLUMN IF NOT EXISTS cuenta_cc TEXT;`,
+            `ALTER TABLE plan_global ADD COLUMN IF NOT EXISTS pct_cc NUMERIC(5,2) DEFAULT 0;`,
+            `ALTER TABLE plan_global ADD COLUMN IF NOT EXISTS destino_haber TEXT;`
         ];
 
         // 0. Crear schema premium
@@ -2457,6 +2554,39 @@ async function ensureSchemaConstraints() {
             `);
         } catch (e) {
             console.warn('[POSTGRES] Warning al semillar mapa_pcge_tabla9:', e.message);
+        }
+
+        // 3.6. Semillar catálogo de planes SaaS oficiales
+        try {
+            await pool.query(`
+                INSERT INTO plans (id, name, price_pen, price_annual_pen, max_workspaces, max_users, includes_premium, is_active)
+                VALUES
+                  ('estudiante',  'Estudiante / Free',   0.00,    0.00,    1,    1, false, true),
+                  ('starter',     'Starter / Básico',   49.00,  470.00,    3,    2, false, true),
+                  ('profesional', 'Profesional',        99.00,  950.00,    8,    4, false, true),
+                  ('estudio',     'Estudio Contable',  179.00, 1718.00,   20,   10,  true, true),
+                  ('corporativo', 'Corporativo',       499.00, 4790.00, 9999, 9999,  true, true)
+                ON CONFLICT (id) DO UPDATE SET
+                  name = EXCLUDED.name,
+                  price_pen = EXCLUDED.price_pen,
+                  price_annual_pen = EXCLUDED.price_annual_pen,
+                  max_workspaces = EXCLUDED.max_workspaces,
+                  max_users = EXCLUDED.max_users,
+                  includes_premium = EXCLUDED.includes_premium;
+            `);
+        } catch (e) {
+            console.warn('[POSTGRES] Warning al semillar plans:', e.message);
+        }
+
+        // 3.7. Asignar plan estudiante a usuarios existentes sin suscripción
+        try {
+            await pool.query(`
+                INSERT INTO subscriptions (user_id, plan_id, status, max_workspaces, max_users)
+                SELECT id, 'estudiante', 'active', 1, 1 FROM users
+                WHERE id NOT IN (SELECT user_id FROM subscriptions);
+            `);
+        } catch (e) {
+            console.warn('[POSTGRES] Warning al asignar suscripciones default:', e.message);
         }
         
         // 4. Crear o reemplazar vistas

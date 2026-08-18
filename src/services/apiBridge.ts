@@ -34,10 +34,53 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Interceptor de respuesta para depurar y notificar errores de base de datos
+// Interceptor de respuesta con renovación silenciosa de Refresh Token
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        const originalRequest = error.config;
+        
+        // Si el error es 401 (No autorizado) y la petición no ha sido reintentada
+        // y no es una llamada de login o refresh
+        if (
+            error.response?.status === 401 &&
+            originalRequest &&
+            !originalRequest._retry &&
+            !originalRequest.url?.includes('/api/auth/login') &&
+            !originalRequest.url?.includes('/api/auth/refresh')
+        ) {
+            originalRequest._retry = true;
+            const refreshToken = localStorage.getItem('softcontable_refresh_token');
+
+            if (refreshToken) {
+                try {
+                    console.log('[API BRIDGE] 🔄 Token de acceso expirado. Renovando sesión con Refresh Token...');
+                    const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
+                    
+                    if (res.data?.success && res.data?.accessToken) {
+                        const newAccessToken = res.data.accessToken;
+                        const newRefreshToken = res.data.refreshToken;
+
+                        localStorage.setItem('softcontable_token', newAccessToken);
+                        if (newRefreshToken) {
+                            localStorage.setItem('softcontable_refresh_token', newRefreshToken);
+                        }
+
+                        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                        console.log('[API BRIDGE] ✅ Sesión renovada con éxito. Reintentando operación...');
+                        return api(originalRequest);
+                    }
+                } catch (refreshError) {
+                    console.warn('[API BRIDGE] ⚠️ Error al renovar token. Cerrando sesión.');
+                    localStorage.removeItem('softcontable_token');
+                    localStorage.removeItem('softcontable_refresh_token');
+                    localStorage.removeItem('softcontable_user');
+                    window.location.reload();
+                    return Promise.reject(refreshError);
+                }
+            }
+        }
+
         const serverError = error.response?.data?.error || error.response?.data?.message || error.message;
         console.error('❌ [API BRIDGE ERROR]:', serverError);
         return Promise.reject(error);
@@ -529,6 +572,49 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // --- SaaS Subscriptions & Billing APIs ---
+    subscriptionGetPlans: async () => {
+        const res = await api.get('/api/plans/plans');
+        return res.data;
+    },
+    subscriptionGetMe: async () => {
+        const res = await api.get('/api/subscription/me');
+        return res.data;
+    },
+    subscriptionCheckout: async (data: { planId: string; culqiToken: string; billingCycle?: string; email?: string }) => {
+        const res = await api.post('/api/subscription/checkout', data);
+        return res.data;
+    },
+    subscriptionGetInvoices: async () => {
+        const res = await api.get('/api/subscription/invoices');
+        return res.data;
+    },
+    subscriptionCancel: async () => {
+        const res = await api.put('/api/subscription/cancel');
+        return res.data;
+    },
+
+    // --- SuperAdmin APIs ---
+    superadminGetMetrics: async () => {
+        const res = await api.get('/api/superadmin/metrics');
+        return res.data;
+    },
+    superadminGetClients: async () => {
+        const res = await api.get('/api/superadmin/clients');
+        return res.data;
+    },
+    superadminUpdateClientPlan: async (userId: string, data: { planId: string; status?: string; maxWorkspaces?: number; daysToAdd?: number }) => {
+        const res = await api.put(`/api/superadmin/client/${userId}/plan`, data);
+        return res.data;
+    },
+    superadminImpersonate: async (targetUserId: string) => {
+        const res = await api.post('/api/superadmin/impersonate', { targetUserId });
+        return res.data;
+    },
+    superadminGetInvoices: async () => {
+        const res = await api.get('/api/superadmin/invoices');
+        return res.data;
+    },
 
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},

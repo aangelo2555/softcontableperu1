@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
 const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
@@ -15,12 +16,40 @@ const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026
 
 const authLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minuto
-    max: 15, // Límite por IP por minuto
+    max: 20, // Límite por IP por minuto
     message: { success: false, error: 'Demasiados intentos de acceso desde esta IP, por favor intente de nuevo en un minuto.' },
     standardHeaders: true,
     legacyHeaders: false,
     validate: false
 });
+
+/**
+ * Helper: Generar y guardar Refresh Token rotativo en BD (30 días de vigencia)
+ */
+async function generateAndStoreRefreshToken(userId) {
+    const rawRefreshToken = crypto.randomBytes(64).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+    const tokenId = uuidv4();
+
+    try {
+        if (USE_POSTGRES) {
+            await dbManager.pool.query(
+                `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked)
+                 VALUES ($1, $2, $3, NOW() + INTERVAL '30 days', false)`,
+                [tokenId, userId, tokenHash]
+            );
+        } else {
+            dbManager.prepare(
+                `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked)
+                 VALUES (?, ?, ?, datetime('now', '+30 days'), 0)`
+            ).run(tokenId, userId, tokenHash);
+        }
+    } catch (err) {
+        console.warn('[AUTH] Error guardando refresh token en BD:', err.message);
+    }
+
+    return rawRefreshToken;
+}
 
 // --- REGISTRO ---
 router.post('/register', authLimiter, async (req, res) => {
@@ -42,19 +71,54 @@ router.post('/register', authLimiter, async (req, res) => {
         const usersList = await dbManager.queryAll('SELECT COUNT(*) as count FROM users');
         const userCount = parseInt(usersList[0]?.count || 0);
         const normalizedEmail = email.trim().toLowerCase();
-        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'admin' : 'user';
+        const role = (userCount === 0 || normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : 'admin';
 
+        const userId = uuidv4();
         const newUser = {
-            id: uuidv4(),
+            id: userId,
             email,
             password: hashedPassword,
-            name,
+            name: name || 'Usuario',
             role
         };
 
         await dbManager.createUser(newUser);
 
-        res.json({ success: true, message: 'Usuario registrado exitosamente' });
+        // Crear suscripción inicial de prueba (Trial 14 días con 2 workspaces)
+        try {
+            const subId = uuidv4();
+            if (USE_POSTGRES) {
+                await dbManager.pool.query(
+                    `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
+                     VALUES ($1, $2, 'starter', 'trial', 2, 2, NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
+                     ON CONFLICT DO NOTHING`,
+                    [subId, userId]
+                );
+            } else {
+                dbManager.prepare(
+                    `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
+                     VALUES (?, ?, 'starter', 'trial', 2, 2, datetime('now', '+14 days'), datetime('now', '+14 days'))`
+                ).run(subId, userId);
+            }
+        } catch (subErr) {
+            console.warn('[AUTH] Warning creando suscripción trial:', subErr.message);
+        }
+
+        const accessToken = jwt.sign(
+            { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        const refreshToken = await generateAndStoreRefreshToken(newUser.id);
+
+        res.json({
+            success: true,
+            message: '¡Usuario registrado exitosamente con 14 días de prueba gratuita!',
+            accessToken,
+            refreshToken,
+            token: accessToken,
+            user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role }
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -74,26 +138,47 @@ router.post('/register-student', authLimiter, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        const userId = uuidv4();
         const newUser = {
-            id: uuidv4(),
+            id: userId,
             email,
             password: hashedPassword,
-            name,
+            name: name || 'Estudiante',
             role: 'estudiante'
         };
 
         await dbManager.createUser(newUser);
 
-        // Auto-login: generar token directamente
-        const token = jwt.sign(
+        // Crear suscripción permanente gratuita de Estudiante
+        try {
+            const subId = uuidv4();
+            if (USE_POSTGRES) {
+                await dbManager.pool.query(
+                    `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, current_period_end)
+                     VALUES ($1, $2, 'estudiante', 'active', 1, 1, NOW() + INTERVAL '10 years')
+                     ON CONFLICT DO NOTHING`,
+                    [subId, userId]
+                );
+            } else {
+                dbManager.prepare(
+                    `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, current_period_end)
+                     VALUES (?, ?, 'estudiante', 'active', 1, 1, datetime('now', '+10 years'))`
+                ).run(subId, userId);
+            }
+        } catch (e) {}
+
+        const accessToken = jwt.sign(
             { id: newUser.id, email: newUser.email, name: newUser.name, role: 'estudiante' },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '15m' }
         );
+        const refreshToken = await generateAndStoreRefreshToken(newUser.id);
 
         res.json({
             success: true,
-            token,
+            accessToken,
+            refreshToken,
+            token: accessToken,
             user: { id: newUser.id, email: newUser.email, name: newUser.name, role: 'estudiante' }
         });
     } catch (error) {
@@ -120,10 +205,9 @@ router.post('/login', authLimiter, async (req, res) => {
         }
 
         const normalizedEmail = user.email.trim().toLowerCase();
-        // Preserve estudiante role from DB; only promote to admin for admin emails
         let role = user.role || 'user';
-        if (role === 'admin' || normalizedEmail === 'aangelo2555@gmail.com') {
-            role = 'admin';
+        if (normalizedEmail === 'aangelo2555@gmail.com') {
+            role = 'super_admin';
         }
 
         // VALIDACIÓN DE COHERENCIA ENTRE MODO SOLICITADO Y ROL DE LA CUENTA
@@ -143,20 +227,107 @@ router.post('/login', authLimiter, async (req, res) => {
             });
         }
 
-        // Crear Token
-        const token = jwt.sign(
+        // Generar Access Token de 15 minutos + Refresh Token de 30 días
+        const accessToken = jwt.sign(
             { id: user.id, email: user.email, name: user.name, role },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '15m' }
         );
+        const refreshToken = await generateAndStoreRefreshToken(user.id);
 
         res.json({
             success: true,
-            token,
+            accessToken,
+            refreshToken,
+            token: accessToken, // Retrocompatibilidad
             user: { id: user.id, email: user.email, name: user.name, role }
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- RENOVACIÓN SILENCIOSA DE TOKEN (REFRESH TOKEN) ---
+router.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(401).json({ success: false, error: 'Refresh token no proporcionado.', code: 'NO_REFRESH_TOKEN' });
+        }
+
+        const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+        let record = null;
+        if (USE_POSTGRES) {
+            const result = await dbManager.pool.query(
+                `SELECT r.*, u.email, u.name, u.role
+                 FROM refresh_tokens r
+                 JOIN users u ON r.user_id = u.id
+                 WHERE r.token_hash = $1 AND r.revoked = false AND r.expires_at > NOW()`,
+                [tokenHash]
+            );
+            record = result.rows[0];
+        } else {
+            record = dbManager.prepare(
+                `SELECT r.*, u.email, u.name, u.role
+                 FROM refresh_tokens r
+                 JOIN users u ON r.user_id = u.id
+                 WHERE r.token_hash = ? AND r.revoked = 0 AND r.expires_at > datetime('now')`
+            ).get(tokenHash);
+        }
+
+        if (!record) {
+            return res.status(401).json({ success: false, error: 'Refresh token inválido, revocado o expirado.', code: 'INVALID_REFRESH_TOKEN' });
+        }
+
+        // Rotación de token: Revocar el token utilizado
+        if (USE_POSTGRES) {
+            await dbManager.pool.query('UPDATE refresh_tokens SET revoked = true WHERE id = $1', [record.id]);
+        } else {
+            dbManager.prepare('UPDATE refresh_tokens SET revoked = 1 WHERE id = ?').run(record.id);
+        }
+
+        const normalizedEmail = (record.email || '').trim().toLowerCase();
+        let role = record.role || 'user';
+        if (normalizedEmail === 'aangelo2555@gmail.com') {
+            role = 'super_admin';
+        }
+
+        // Generar nuevo Access Token y nuevo Refresh Token
+        const newAccessToken = jwt.sign(
+            { id: record.user_id, email: record.email, name: record.name, role },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        const newRefreshToken = await generateAndStoreRefreshToken(record.user_id);
+
+        res.json({
+            success: true,
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            token: newAccessToken
+        });
+    } catch (error) {
+        console.error('[REFRESH TOKEN ERROR]', error);
+        res.status(500).json({ success: false, error: 'Error al renovar sesión.' });
+    }
+});
+
+// --- LOGOUT / REVOCACIÓN DE SESIÓN ---
+router.post('/logout', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (refreshToken) {
+            const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+            if (USE_POSTGRES) {
+                await dbManager.pool.query('UPDATE refresh_tokens SET revoked = true WHERE token_hash = $1', [tokenHash]);
+            } else {
+                dbManager.prepare('UPDATE refresh_tokens SET revoked = 1 WHERE token_hash = ?').run(tokenHash);
+            }
+        }
+        res.json({ success: true, message: 'Sesión cerrada correctamente.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Error en logout.' });
     }
 });
 

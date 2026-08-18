@@ -1,17 +1,20 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Building2, Plus, Trash2, ArrowRightCircle, Download, Upload,
-  CheckCircle2, Loader2, Search, HardDrive, Hash, AlertCircle, FileDown, Printer 
+  CheckCircle2, Loader2, Search, HardDrive, Hash, AlertCircle, FileDown, Printer,
+  Sparkles, Lock, ArrowUpRight
 } from 'lucide-react';
 import { useStore } from '../store';
 import { exportSingleSheet } from '../utils/excelExport';
 import ConfirmModal from './shared/ConfirmModal';
 import PageHeader from './ui/PageHeader';
+import { webApiBridge } from '../services/apiBridge';
+import toast from 'react-hot-toast';
 
 const ClientesView: React.FC = () => {
   const {
     workspaces, currentCompany, switchWorkspace, createWorkspace,
-    deleteWorkspace, restoreBackup, syncCurrentWorkspace
+    deleteWorkspace, restoreBackup, syncCurrentWorkspace, setActiveTab
   } = useStore();
 
   const [newRuc, setNewRuc] = useState('');
@@ -20,7 +23,20 @@ const ClientesView: React.FC = () => {
   const [searchFilter, setSearchFilter] = useState('');
   const [confirmDeleteWS, setConfirmDeleteWS] = useState<string | null>(null);
   const [confirmImport, setConfirmImport] = useState<File | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadSubInfo = async () => {
+    try {
+      const res = await webApiBridge.subscriptionGetMe();
+      if (res.success) setSubscriptionInfo(res.subscription);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadSubInfo();
+  }, [workspaces]);
 
   const handleExport = () => {
     syncCurrentWorkspace();
@@ -62,9 +78,21 @@ const ClientesView: React.FC = () => {
 
   const handleCreateClient = async () => {
     if (!newRuc || newRuc.length !== 11) {
-      alert("Ingrese un RUC válido de 11 dígitos");
+      toast.error("Ingrese un RUC válido de 11 dígitos");
       return;
     }
+
+    // Verificar si se alcanzó el límite de empresas del plan
+    if (subscriptionInfo) {
+      const currentCount = Object.values(workspaces).length;
+      const maxAllowed = subscriptionInfo.maxWorkspaces || 1;
+      const alreadyExists = Object.values(workspaces).some(w => w.ruc === newRuc);
+      if (!alreadyExists && currentCount >= maxAllowed) {
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+
     setIsSearchingRuc(true);
     setFetchSuccess(false);
     try {
@@ -80,11 +108,23 @@ const ClientesView: React.FC = () => {
           setFetchSuccess(true);
         }
       }
-      createWorkspace({ ruc: newRuc, name: tempName, address: tempAddress, location: tempLocation, period: new Date().getFullYear().toString() });
+      await createWorkspace({ ruc: newRuc, name: tempName, address: tempAddress, location: tempLocation, period: new Date().getFullYear().toString() });
       setNewRuc('');
+      loadSubInfo();
       setTimeout(() => setFetchSuccess(false), 3000);
-    } catch {
-      createWorkspace({ ruc: newRuc });
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || err.message || '';
+      if (errMsg.includes('Límite de empresas') || err.response?.status === 403) {
+        setShowUpgradeModal(true);
+      } else {
+        try {
+          await createWorkspace({ ruc: newRuc });
+          setNewRuc('');
+          loadSubInfo();
+        } catch (innerErr: any) {
+          setShowUpgradeModal(true);
+        }
+      }
     } finally { setIsSearchingRuc(false); }
   };
 
@@ -96,14 +136,25 @@ const ClientesView: React.FC = () => {
       )
     : workspaceList;
 
+  const maxWorkspaces = subscriptionInfo?.maxWorkspaces || 1;
+  const isLimitReached = workspaceList.length >= maxWorkspaces;
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
       <PageHeader
         icon={<Building2 size={18} />}
         title="Mis Empresas"
-        subtitle={`${workspaceList.length} empresa${workspaceList.length !== 1 ? 's' : ''} registrada${workspaceList.length !== 1 ? 's' : ''}`}
+        subtitle={`${workspaceList.length} de ${maxWorkspaces} empresa${maxWorkspaces !== 1 ? 's' : ''} habilitada${maxWorkspaces !== 1 ? 's' : ''} (${subscriptionInfo?.plan_name || 'Plan Estudiante'})`}
         actions={
           <>
+            {isLimitReached && (
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="h-8 bg-gradient-to-r from-amber-500 to-orange-500 text-white transition-all rounded-xl text-[10px] font-black uppercase flex items-center gap-1.5 px-3 shadow-sm shadow-amber-500/20 cursor-pointer animate-pulse"
+              >
+                <Sparkles size={13} /> Mejorar Plan
+              </button>
+            )}
             <div className="relative hidden md:block group">
               <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-pld-blue transition-colors" />
               <input type="text" placeholder="Buscar empresa o RUC..."
@@ -273,6 +324,48 @@ const ClientesView: React.FC = () => {
         onConfirm={executeImport}
         onCancel={() => setConfirmImport(null)}
       />
+
+      {/* ═══ MODAL UPGRADE DE PLAN ═══ */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-app-surface border border-app-border rounded-3xl p-6 shadow-2xl animate-scale-up text-center">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4">
+              <Sparkles size={28} className="animate-pulse" />
+            </div>
+
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 px-3 py-1 bg-amber-500/10 rounded-full border border-amber-500/20">
+              Límite de Empresas Alcanzado
+            </span>
+
+            <h3 className="text-lg font-black uppercase text-app-text mt-3 mb-2">
+              ¡Lleva tu Estudio al Siguiente Nivel!
+            </h3>
+
+            <p className="text-xs text-app-muted leading-relaxed font-medium mb-6">
+              Has alcanzado el límite máximo de <strong>{maxWorkspaces} empresa(s)</strong> permitidas en tu plan actual (<em>{subscriptionInfo?.plan_name || 'Estudiante'}</em>). Actualiza tu suscripción para añadir más empresas y desbloquear todas las funciones profesionales.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1 py-3 bg-app-bg hover:bg-app-hover border border-app-border rounded-xl font-bold uppercase text-xs cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  setActiveTab('SUBSCRIPTION');
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-black uppercase text-xs cursor-pointer shadow-lg shadow-blue-600/20 flex items-center justify-center gap-1.5"
+              >
+                <span>Ver Planes</span>
+                <ArrowUpRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

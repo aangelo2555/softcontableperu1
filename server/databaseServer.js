@@ -379,7 +379,115 @@ db.exec(`
         user_id TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_buzon_workspace ON buzon_messages(workspace_id);
+
+    CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        price_pen REAL NOT NULL,
+        price_annual_pen REAL,
+        max_workspaces INTEGER NOT NULL,
+        max_users INTEGER NOT NULL,
+        includes_premium INTEGER DEFAULT 0,
+        features TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        max_workspaces INTEGER NOT NULL DEFAULT 1,
+        max_users INTEGER NOT NULL DEFAULT 1,
+        trial_ends_at DATETIME,
+        current_period_start DATETIME DEFAULT CURRENT_TIMESTAMP,
+        current_period_end DATETIME,
+        culqi_customer_id TEXT,
+        culqi_card_token TEXT,
+        payment_method TEXT DEFAULT 'culqi',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY(plan_id) REFERENCES plans(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_sub_user ON subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_sub_status ON subscriptions(status);
+
+    CREATE TABLE IF NOT EXISTS invoices (
+        id TEXT PRIMARY KEY,
+        subscription_id TEXT,
+        user_id TEXT NOT NULL,
+        amount_pen REAL NOT NULL,
+        status TEXT NOT NULL,
+        culqi_charge_id TEXT,
+        payment_method TEXT DEFAULT 'culqi',
+        period_start DATETIME,
+        period_end DATETIME,
+        pdf_receipt_url TEXT,
+        paid_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_user ON invoices(user_id);
+
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        revoked INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_rt_user ON refresh_tokens(user_id);
+
+    CREATE TABLE IF NOT EXISTS attachments (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        file_size INTEGER,
+        content_type TEXT,
+        stored_path TEXT NOT NULL,
+        uploaded_by TEXT,
+        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_att_composite ON attachments(workspace_id, entity_type, entity_id);
 `);
+
+// --- Semillar planes en SQLite ---
+try {
+    const insertPlan = db.prepare(`
+        INSERT OR REPLACE INTO plans (id, name, price_pen, price_annual_pen, max_workspaces, max_users, includes_premium, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertPlan.run('estudiante', 'Estudiante / Free', 0.00, 0.00, 1, 1, 0, 1);
+    insertPlan.run('starter', 'Starter / Básico', 49.00, 470.00, 3, 2, 0, 1);
+    insertPlan.run('profesional', 'Profesional', 99.00, 950.00, 8, 4, 0, 1);
+    insertPlan.run('estudio', 'Estudio Contable', 179.00, 1718.00, 20, 10, 1, 1);
+    insertPlan.run('corporativo', 'Corporativo', 499.00, 4790.00, 9999, 9999, 1, 1);
+} catch (err) {
+    console.warn('[SQLITE] Error semillando planes:', err.message);
+}
+
+// --- Asignar plan estudiante por defecto a usuarios existentes ---
+try {
+    const usersWithoutSub = db.prepare(`
+        SELECT id FROM users WHERE id NOT IN (SELECT user_id FROM subscriptions)
+    `).all();
+    const insertSub = db.prepare(`
+        INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users)
+        VALUES (?, ?, 'estudiante', 'active', 1, 1)
+    `);
+    for (const u of usersWithoutSub) {
+        insertSub.run(require('crypto').randomUUID(), u.id);
+    }
+} catch (err) {
+    console.warn('[SQLITE] Error asignando suscripciones por defecto:', err.message);
+}
 
 // --- MIGRACIÓN PLAN_GLOBAL A MULTI-USUARIO ---
 try {

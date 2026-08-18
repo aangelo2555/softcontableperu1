@@ -50,8 +50,10 @@ import { SoftPremiumDashboard } from './components/SoftPremiumDashboard';
 import { LegalPages } from './components/LegalPages';
 import { CookieBanner } from './components/CookieBanner';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { SubscriptionView } from './components/SubscriptionView';
+import { SuperAdminView } from './components/SuperAdminView';
 import { isStudentMode } from './store';
-import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles, KeyRound } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles, KeyRound, CreditCard } from 'lucide-react';
 
 import {
   LayoutDashboard,
@@ -187,6 +189,7 @@ const SIDEBAR_GROUPS: TabGroup[] = [
     groupIcon: Settings,
     items: [
       { id: 'MANTENIMIENTO', label: 'Configuración', icon: Settings },
+      { id: 'SUBSCRIPTION', label: 'Mi Suscripción', icon: CreditCard },
     ],
   },
 ];
@@ -365,7 +368,13 @@ const App: React.FC = () => {
   const isAdmin = React.useMemo(() => {
     if (!userPayload) return false;
     const email = (userPayload.email || '').trim().toLowerCase();
-    return userPayload.role === 'admin' || email === 'aangelo2555@gmail.com';
+    return userPayload.role === 'admin' || userPayload.role === 'super_admin' || email === 'aangelo2555@gmail.com';
+  }, [userPayload]);
+
+  const isSuperAdmin = React.useMemo(() => {
+    if (!userPayload) return false;
+    const email = (userPayload.email || '').trim().toLowerCase();
+    return userPayload.role === 'super_admin' || email === 'aangelo2555@gmail.com';
   }, [userPayload]);
 
   const userName = React.useMemo(() => {
@@ -432,6 +441,8 @@ const App: React.FC = () => {
       case 'CCC': return <CCCDashboard />;
       case 'FINANCE_NOTES': return <FinanceNotesView />;
       case 'SOFTPREMIUM': return <SoftPremiumDashboard />;
+      case 'SUBSCRIPTION': return <SubscriptionView />;
+      case 'SUPERADMIN': return <SuperAdminView />;
       case 'ADMIN': return <AdminView />;
       case 'AI_KNOWLEDGE': return <AIKnowledgeView />;
       default: return isStudentMode() ? <StudentDashboard /> : <EmpresaView />;
@@ -670,7 +681,17 @@ const App: React.FC = () => {
 
   const computedSidebarGroups = React.useMemo(() => {
     const groups = [...filteredGroups];
-    if (isAdmin) {
+    if (isSuperAdmin) {
+      groups.push({
+        groupLabel: 'SuperAdmin SaaS',
+        groupIcon: ShieldCheck,
+        items: [
+          { id: 'SUPERADMIN', label: 'Consola SaaS', icon: ShieldCheck },
+          { id: 'ADMIN', label: 'Panel Admin', icon: Settings },
+          { id: 'AI_KNOWLEDGE', label: 'Base IA (RAG)', icon: Database },
+        ],
+      });
+    } else if (isAdmin) {
       groups.push({
         groupLabel: 'Administración',
         groupIcon: ShieldCheck,
@@ -681,7 +702,7 @@ const App: React.FC = () => {
       });
     }
     return groups;
-  }, [filteredGroups, isAdmin]);
+  }, [filteredGroups, isAdmin, isSuperAdmin]);
 
   const groupHasActiveTab = (group: TabGroup) => group.items.some(item => item.id === activeTab);
 
