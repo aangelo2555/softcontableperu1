@@ -114,7 +114,7 @@ export function calcularObligacionesContables(
   return libros;
 }
 
-// Tabs habilitados para el Modo Estudiante (ciclo contable esencial)
+// Tabs habilitados para el Modo Estudiante (ciclo contable esencial + suscripción)
 const STUDENT_ENABLED_TABS = new Set([
   'EMPRESA',     // Panel de Práctica (StudentDashboard)
   'PLAN',        // Plan Contable (referencia)
@@ -127,6 +127,7 @@ const STUDENT_ENABLED_TABS = new Set([
   'BALANCE',     // Situación Financiera
   'DIARIO',      // Libro Diario
   'MAYOR',       // Libro Mayor
+  'SUBSCRIPTION',// Mi Suscripción / Planes
 ]);
 
 /**
