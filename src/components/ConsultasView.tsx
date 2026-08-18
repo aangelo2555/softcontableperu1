@@ -90,6 +90,106 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [showRecentSelector, setShowRecentSelector] = useState(true);
 
+  // ═══ Control de Scroll Horizontal Perenne y Sincronizado ═══
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const stickyScrollbarRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+  const [tableScrollInfo, setTableScrollInfo] = useState({
+    scrollLeft: 0,
+    scrollWidth: 0,
+    clientWidth: 0,
+    canScrollLeft: false,
+    canScrollRight: false
+  });
+
+  // Arrastre horizontal con el mouse (Mouse Drag-to-Scroll estilo móvil)
+  const isDraggingMouse = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const updateScrollInfo = () => {
+    if (!tableContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
+    const maxScroll = Math.max(0, scrollWidth - clientWidth);
+    setTableScrollInfo({
+      scrollLeft,
+      scrollWidth,
+      clientWidth,
+      canScrollLeft: scrollLeft > 5,
+      canScrollRight: scrollLeft < maxScroll - 5
+    });
+  };
+
+  const handleTableScroll = () => {
+    if (isSyncingScroll.current) return;
+    isSyncingScroll.current = true;
+    if (tableContainerRef.current && stickyScrollbarRef.current) {
+      stickyScrollbarRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
+    }
+    updateScrollInfo();
+    requestAnimationFrame(() => {
+      isSyncingScroll.current = false;
+    });
+  };
+
+  const handleStickyScroll = () => {
+    if (isSyncingScroll.current) return;
+    isSyncingScroll.current = true;
+    if (tableContainerRef.current && stickyScrollbarRef.current) {
+      tableContainerRef.current.scrollLeft = stickyScrollbarRef.current.scrollLeft;
+    }
+    updateScrollInfo();
+    requestAnimationFrame(() => {
+      isSyncingScroll.current = false;
+    });
+  };
+
+  const scrollTableBy = (delta: number) => {
+    if (!tableContainerRef.current) return;
+    tableContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  // Observador de dimensiones para mantener la barra sincronizada
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollInfo();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollInfo();
+    });
+    resizeObserver.observe(el);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [expandedRows]);
+
+  // Manejadores de arrastre con el ratón
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, a, select, textarea')) return;
+    if (!tableContainerRef.current) return;
+    isDraggingMouse.current = true;
+    dragStartX.current = e.pageX - tableContainerRef.current.offsetLeft;
+    dragStartScrollLeft.current = tableContainerRef.current.scrollLeft;
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingMouse.current || !tableContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableContainerRef.current.offsetLeft;
+    const walk = (x - dragStartX.current) * 1.25;
+    tableContainerRef.current.scrollLeft = dragStartScrollLeft.current - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingMouse.current = false;
+    setIsDragging(false);
+  };
+
   // Selector Personalizado de Tipo de Documento
   const [isTipoDocOpen, setIsTipoDocOpen] = useState(false);
   const tipoDocRef = useRef<HTMLDivElement>(null);
@@ -936,20 +1036,62 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
             {/* Panel Derecho: Tabla de Resultados Full-Size con Concepto de Factura e IGV */}
             <div className="col-span-1 lg:col-span-8 flex flex-col">
-              <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col">
+              <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col relative">
+                
+                {/* Cabecera del Historial con Botones de Desplazamiento Rápido */}
                 <div className="px-5 py-3 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={15} className="text-blue-500" />
+                    <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
                       Historial de Consultas Realizadas
                     </h3>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-mono">
-                    {resultados.length} registros
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {/* Botones de navegación horizontal en la cabecera cuando hay desborde */}
+                    {tableScrollInfo.scrollWidth > tableScrollInfo.clientWidth && (
+                      <div className="flex items-center gap-1 bg-app-surface/90 border border-app-border px-1.5 py-0.5 rounded-lg shadow-2xs">
+                        <span className="text-[9px] font-mono text-app-muted uppercase font-bold mr-0.5 hidden sm:inline">
+                          Desplazar:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => scrollTableBy(-260)}
+                          disabled={!tableScrollInfo.canScrollLeft}
+                          className="p-1 rounded bg-app-bg hover:bg-blue-500/10 text-app-muted hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          title="Desplazar tabla a la izquierda"
+                        >
+                          <ArrowLeft size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollTableBy(260)}
+                          disabled={!tableScrollInfo.canScrollRight}
+                          className="p-1 rounded bg-app-bg hover:bg-blue-500/10 text-app-muted hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          title="Desplazar tabla a la derecha"
+                        >
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-mono shrink-0">
+                      {resultados.length} registros
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+                {/* Contenedor con Scroll Sincronizado y Soporte de Arrastre con Mouse */}
+                <div
+                  ref={tableContainerRef}
+                  onScroll={handleTableScroll}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUpOrLeave}
+                  onMouseLeave={handleMouseUpOrLeave}
+                  className={`flex-1 overflow-x-auto overflow-y-auto custom-scrollbar transition-all ${
+                    isDragging ? 'cursor-grabbing select-none' : 'cursor-grab md:cursor-default'
+                  }`}
+                >
                   {resultados.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-80 text-app-muted p-8 text-center">
                       <div className="p-4 rounded-2xl bg-app-bg border border-app-border mb-3">
@@ -1254,6 +1396,63 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     </table>
                   )}
                 </div>
+
+                {/* ═══ BARRA DE DESPLAZAMIENTO HORIZONTAL PERENNE / STICKY ═══ */}
+                {resultados.length > 0 && tableScrollInfo.scrollWidth > tableScrollInfo.clientWidth && (
+                  <div className="sticky bottom-0 z-20 bg-app-surface/95 backdrop-blur-md border-t border-app-border px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg select-none transition-all">
+                    {/* Botón Desplazar Izquierda */}
+                    <button
+                      type="button"
+                      onClick={() => scrollTableBy(-280)}
+                      disabled={!tableScrollInfo.canScrollLeft}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border hover:border-blue-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-2xs active:scale-95"
+                      title="Desplazar tabla hacia la izquierda"
+                    >
+                      <ArrowLeft size={13} />
+                      <span className="hidden sm:inline">Izquierda</span>
+                    </button>
+
+                    {/* Contenedor de Scrollbar Sincronizada */}
+                    <div className="flex-1 flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center justify-between text-[9px] font-bold text-app-muted px-1">
+                        <span className="flex items-center gap-1.5 text-blue-500 font-black uppercase">
+                          <Layers size={11} />
+                          <span>Barra de Desplazamiento Horizontal</span>
+                        </span>
+                        <span className="font-mono text-[9px] text-app-muted hidden md:inline">
+                          {tableScrollInfo.canScrollLeft && tableScrollInfo.canScrollRight
+                            ? '◄ Desliza en la barra o arrastra la tabla ►'
+                            : !tableScrollInfo.canScrollLeft
+                            ? 'Desliza hacia la derecha para ver Descargas ►'
+                            : '◄ Desliza hacia la izquierda para ver Comprobante'}
+                        </span>
+                      </div>
+
+                      {/* Scrollbar sincronizada con diseño destacado y perenne */}
+                      <div
+                        ref={stickyScrollbarRef}
+                        onScroll={handleStickyScroll}
+                        className="w-full overflow-x-auto cpe-sticky-scrollbar h-3 bg-app-bg rounded-full border border-app-border/80 cursor-ew-resize p-0.5"
+                      >
+                        <div
+                          style={{ width: `${tableScrollInfo.scrollWidth}px`, height: '1px' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Botón Desplazar Derecha */}
+                    <button
+                      type="button"
+                      onClick={() => scrollTableBy(280)}
+                      disabled={!tableScrollInfo.canScrollRight}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border hover:border-blue-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-2xs active:scale-95"
+                      title="Desplazar tabla hacia la derecha (Ver Descargas y Acciones)"
+                    >
+                      <span className="hidden sm:inline">Derecha</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
