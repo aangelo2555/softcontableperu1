@@ -374,7 +374,7 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-2 sm:p-4 lg:p-5 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-hidden">
+        <div className="min-h-screen w-full bg-gradient-to-br from-[#0d2238] via-[#122b47] to-[#091829] flex items-center justify-center p-3 sm:p-5 lg:p-6 font-sans selection:bg-blue-600/20 selection:text-blue-900 relative overflow-x-hidden overflow-y-auto">
             <style>{customStyles}{`
                 .login-scroll::-webkit-scrollbar { width: 4px; }
                 .login-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -487,10 +487,10 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & 100% Responsive)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-md lg:max-w-[960px] xl:max-w-[1040px] 2xl:max-w-[1090px] h-auto lg:h-[610px] xl:h-[640px] bg-white rounded-[32px] lg:rounded-[38px] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-md lg:max-w-[1000px] xl:max-w-[1080px] 2xl:max-w-[1140px] h-auto lg:h-[670px] xl:h-[710px] 2xl:h-[740px] max-h-[96vh] bg-white rounded-[32px] lg:rounded-[40px] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[440px] xl:w-[470px] bg-white p-6 sm:p-7 xl:p-8 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
+                <div className="w-full lg:w-[460px] xl:w-[490px] bg-white p-6 sm:p-8 xl:p-9 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
                     
                     {/* Header Marca */}
                     <div className="text-center mb-1">
