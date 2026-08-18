@@ -1121,9 +1121,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                 )}
                               </td>
 
-                              {/* 4. Descargas y Acciones (Con Reconocedor de Integridad y Reintento 🔄) */}
+                              {/* 4. Descargas y Acciones (Con Reconocedor Individual por Archivo y Botón 🔄) */}
                               <td className="px-4 py-3 align-top text-right">
-                                <div className="flex items-center justify-end gap-1 flex-nowrap">
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap sm:flex-nowrap">
                                   {/* Botón Ver PDF */}
                                   <button
                                     onClick={() => setSelectedDocForPreview(res)}
@@ -1134,82 +1134,117 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     <span>Ver PDF</span>
                                   </button>
 
-                                  {/* Botón XML con Auto-Protección contra Descargas en Blanco */}
-                                  <button
-                                    onClick={() => {
-                                      if (hasValidXml) {
-                                        descargarXmlSeguro(rawXml, res.xmlFileName || `${res.id}.xml`);
-                                      } else {
-                                        // Auto-reparación UBL instantánea
-                                        const repaired = generarXmlFacturaOficial(res);
-                                        descargarXmlSeguro(repaired, res.xmlFileName || `${res.id}.xml`);
-                                        toast.success('XML oficial generado y descargado correctamente.');
-                                      }
-                                    }}
-                                    className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white shadow-xs transition-all cursor-pointer whitespace-nowrap ${
-                                      hasValidXml ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-600/80 hover:bg-emerald-600'
-                                    }`}
-                                    title="Descargar archivo XML oficial"
-                                  >
-                                    <Download size={11} />
-                                    <span>XML</span>
-                                  </button>
+                                  {/* Botón XML: Verde si vino de SUNAT, Ámbar con 🔄 si falta */}
+                                  {hasValidXml ? (
+                                    <button
+                                      onClick={() => descargarXmlSeguro(rawXml, res.xmlFileName || `${res.id}.xml`)}
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                      title="Descargar archivo XML oficial extraído de SUNAT"
+                                    >
+                                      <Download size={11} />
+                                      <span>XML</span>
+                                    </button>
+                                  ) : (
+                                    <div className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden shadow-2xs">
+                                      <button
+                                        onClick={() => {
+                                          const repaired = generarXmlFacturaOficial(res);
+                                          descargarXmlSeguro(repaired, res.xmlFileName || `${res.id}.xml`);
+                                          toast.success('XML oficial generado a partir de la captura SUNAT.');
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-amber-500 hover:text-amber-400 hover:bg-amber-500/20 cursor-pointer whitespace-nowrap transition-colors"
+                                        title="Descargar XML generado automáticamente"
+                                      >
+                                        <Download size={11} />
+                                        <span>XML</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleReintentarComprobante(res)}
+                                        disabled={loading}
+                                        className="px-1.5 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-500 hover:text-white border-l border-amber-500/30 cursor-pointer transition-all disabled:opacity-50"
+                                        title="Falta XML original de SUNAT. Clic para reintentar extracción"
+                                      >
+                                        <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
+                                      </button>
+                                    </div>
+                                  )}
 
-                                  {/* Botón CDR */}
-                                  <button
-                                    onClick={() => {
-                                      if (res.cdrBase64) {
-                                        descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
-                                      } else if (res.cdrContent) {
-                                        descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
-                                      } else if (res.cdrPath) {
-                                        handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.xml`);
-                                      } else {
-                                        try {
+                                  {/* Botón CDR: Púrpura si vino de SUNAT, Ámbar con 🔄 si falta */}
+                                  {res.cdrBase64 || res.cdrContent ? (
+                                    <button
+                                      onClick={() => {
+                                        if (res.cdrBase64) descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
+                                        else if (res.cdrContent) descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                      title="Descargar Constancia de Recepción CDR oficial"
+                                    >
+                                      <Download size={11} />
+                                      <span>CDR</span>
+                                    </button>
+                                  ) : (
+                                    <div className="inline-flex items-center rounded-lg border border-purple-500/30 bg-purple-500/10 overflow-hidden shadow-2xs">
+                                      <button
+                                        onClick={() => {
                                           const parsed = parseCpeXml(rawXml || generarXmlFacturaOficial(res));
                                           const genCdr = generarCdrXmlOficial(parsed);
                                           descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany?.ruc || '20000000001'}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
-                                          toast.success('Constancia CDR descargada.');
-                                        } catch (e) {
-                                          toast.error('No se pudo generar el CDR.');
-                                        }
-                                      }
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                    title="Descargar Constancia de Recepción CDR (XML)"
-                                  >
-                                    <Download size={11} />
-                                    <span>CDR</span>
-                                  </button>
+                                          toast.success('Constancia CDR generada y descargada.');
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 cursor-pointer whitespace-nowrap transition-colors"
+                                        title="Descargar CDR generado automáticamente"
+                                      >
+                                        <Download size={11} />
+                                        <span>CDR</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleReintentarComprobante(res)}
+                                        disabled={loading}
+                                        className="px-1.5 py-1.5 bg-purple-500/20 hover:bg-purple-600 text-purple-400 hover:text-white border-l border-purple-500/30 cursor-pointer transition-all disabled:opacity-50"
+                                        title="Falta CDR original de SUNAT. Clic para reintentar extracción"
+                                      >
+                                        <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
+                                      </button>
+                                    </div>
+                                  )}
 
-                                  {/* Botón Captura PNG (si existe) */}
-                                  {hasCaptura && (
+                                  {/* Botón Captura PNG */}
+                                  {hasCaptura ? (
                                     <button
                                       onClick={() => {
-                                        if (res.capturaBase64) {
-                                          descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
-                                        } else if (res.capturaPath) {
-                                          handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
-                                        }
+                                        if (res.capturaBase64) descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
+                                        else if (res.capturaPath) handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
                                       }}
                                       className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar captura PNG"
+                                      title="Descargar captura PNG de SUNAT"
                                     >
                                       <Camera size={11} />
                                       <span>PNG</span>
                                     </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleReintentarComprobante(res)}
+                                      disabled={loading}
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white border border-amber-500/30 transition-all cursor-pointer whitespace-nowrap"
+                                      title="Falta captura PNG. Clic para reintentar extracción"
+                                    >
+                                      <Camera size={11} />
+                                      <span>PNG 🔄</span>
+                                    </button>
                                   )}
 
-                                  {/* Botón Reconocedor de Reintento / Re-extracción de Archivos (🔄) */}
-                                  <button
-                                    onClick={() => handleReintentarComprobante(res)}
-                                    disabled={loading}
-                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border border-amber-500/20 shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
-                                    title="Re-extraer comprobante y archivos limpios desde SUNAT"
-                                  >
-                                    <RotateCcw size={11} className={loading ? 'animate-spin' : ''} />
-                                    <span>🔄</span>
-                                  </button>
+                                  {/* Botón Reintentar Todo (🔄) */}
+                                  {(!hasValidXml || !hasCaptura || !(res.cdrBase64 || res.cdrContent)) && (
+                                    <button
+                                      onClick={() => handleReintentarComprobante(res)}
+                                      disabled={loading}
+                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border border-amber-500/20 shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+                                      title="Re-extraer comprobante completo desde SUNAT"
+                                    >
+                                      <RotateCcw size={11} className={loading ? 'animate-spin' : ''} />
+                                      <span>🔄</span>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>

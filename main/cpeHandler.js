@@ -493,6 +493,41 @@ class CpeHandler {
               });
             }
 
+            // 5. Items y Conceptos Detallados del Modal SUNAT
+            const items = [];
+            const tables = modal.querySelectorAll('table');
+            tables.forEach(tbl => {
+              const trs = tbl.querySelectorAll('tr');
+              trs.forEach((tr, trIdx) => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length >= 5) {
+                  const cantTxt = tds[0]?.innerText?.replace(/,/g, '')?.trim();
+                  const descTxt = tds[3]?.innerText?.trim() || '';
+                  const unitTxt = tds[4]?.innerText?.replace(/,/g, '')?.trim();
+                  const cantNum = parseFloat(cantTxt);
+                  const unitNum = parseFloat(unitTxt);
+
+                  if (!isNaN(cantNum) && !isNaN(unitNum) && descTxt && 
+                      !descTxt.toLowerCase().includes('descripción') && 
+                      !descTxt.toLowerCase().includes('cantidad')) {
+                    items.push({
+                      id: trIdx,
+                      cantidad: cantNum,
+                      unidadMedida: tds[1]?.innerText?.trim() || 'UNIDAD',
+                      codigo: tds[2]?.innerText?.trim() || '-',
+                      descripcion: descTxt,
+                      valorUnitario: unitNum,
+                      precioUnitario: Number((unitNum * 1.18).toFixed(4)),
+                      subtotal: Number((cantNum * unitNum).toFixed(2)),
+                      igv: Number((cantNum * unitNum * 0.18).toFixed(2)),
+                      icbper: tds[5] ? parseFloat(tds[5]?.innerText?.replace(/,/g, '')?.trim()) || 0 : 0
+                    });
+                  }
+                }
+              });
+            });
+            datos.items = items;
+
             if (body.includes('Estado del comprobante: ACEPTADO') || body.includes('ACTIVO')) {
               datos.estado = 'ACEPTADO';
             } else if (body.includes('ANULADO') || body.includes('BAJA')) {
@@ -502,7 +537,7 @@ class CpeHandler {
             return datos;
           });
 
-          logger.info(`[CPE SCRAPING] Resultado para ${serie}-${numero}: ${resultado.estado} (${resultado.razonSocial || 'Sin Razón Social'})`);
+          logger.info(`[CPE SCRAPING] Resultado para ${serie}-${numero}: ${resultado.estado} (${resultado.razonSocial || 'Sin Razón Social'}) - ${resultado.items?.length || 0} items detectados`);
 
           // ========== CAPTURA DE PANTALLA DEL COMPROBANTE ==========
           let capturaPath = null;
@@ -535,15 +570,22 @@ class CpeHandler {
           let cdrFileName = `R-${rucEmisor}-${tipoDoc}-${serie}-${numero}.xml`;
 
           if (resultado.encontrado) {
-            // 1. Descargar Factura XML oficial
+            // 1. Descargar Factura XML oficial usando selectores precisos del popup SUNAT
             try {
               const xmlDownloadDest = path.join(clientDownloadFolder, `TEMP_XML_${rucEmisor}_${serie}_${numero}.bin`);
               const downloadedXmlFile = await this._descargarArchivoSeguro(page, [
+                'img[src*="xml"]',
+                'a[title*="XML"]',
+                'a[title*="descargar XML"]',
+                'a[onclick*="XML"]',
+                'a[onclick*="xml"]',
                 'button[ngbtooltip="Descargar XML"]',
                 'button:has(i.fa-file-code)',
                 'button:has-text("Descargar XML")',
-                'button:has-text("XML")'
-              ], xmlDownloadDest, 10000);
+                'button:has-text("XML")',
+                '.modal-dialog a:nth-child(2)',
+                'div[role="document"] img:nth-child(2)'
+              ], xmlDownloadDest, 8000);
 
               if (downloadedXmlFile && fs.existsSync(downloadedXmlFile)) {
                 try {
@@ -601,7 +643,7 @@ class CpeHandler {
                 'button:has(i.fa-file-signature)',
                 'button:has-text("Descargar CDR")',
                 'button:has-text("CDR")'
-              ], cdrDownloadDest, 10000);
+              ], cdrDownloadDest, 6000);
 
               if (downloadedCdrFile && fs.existsSync(downloadedCdrFile)) {
                 try {
