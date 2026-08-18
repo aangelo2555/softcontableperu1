@@ -487,42 +487,42 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & 100% Responsive)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-md lg:max-w-[860px] xl:max-w-[940px] 2xl:max-w-[1020px] h-auto lg:h-[88vh] lg:max-h-[580px] xl:max-h-[630px] bg-white rounded-2xl xl:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.4),0_2px_10px_rgba(0,0,0,0.06)] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-md lg:max-w-[960px] xl:max-w-[1040px] 2xl:max-w-[1090px] h-auto lg:h-[610px] xl:h-[640px] bg-white rounded-[32px] lg:rounded-[38px] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[380px] xl:w-[410px] bg-white p-4 sm:p-5 xl:p-6 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
+                <div className="w-full lg:w-[440px] xl:w-[470px] bg-white p-6 sm:p-7 xl:p-8 flex flex-col justify-between overflow-y-auto login-scroll shrink-0">
                     
                     {/* Header Marca */}
-                    <div className="text-center mb-1.5">
-                        <div className="inline-flex items-center justify-center p-1.5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl shadow-sm mb-1">
-                            <img src="/assets/logo.png" alt="Softcontable Logo" className="w-8 h-8 object-contain" />
+                    <div className="text-center mb-1">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-[0_4px_14px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] flex items-center justify-center mx-auto mb-2.5">
+                            <img src="/assets/logo.png" alt="Softcontable" className="w-10 h-10 object-contain drop-shadow-sm" />
                         </div>
-                        <h1 className="text-lg lg:text-xl font-black tracking-wider text-slate-900 uppercase notranslate flex items-center justify-center gap-1.5" translate="no">
-                            SOFT<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CONTABLE</span>
+                        <h1 className="text-xl font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
+                            SOFT CONTABLE
                         </h1>
-                        <p className="text-slate-400 text-[9.5px] font-bold tracking-[0.2em] uppercase mt-0.5 notranslate" translate="no">
-                            Sistema Contable en la Nube v2.0
+                        <p className="text-slate-400 text-[10px] font-bold tracking-[0.25em] uppercase mt-0.5 text-center notranslate" translate="no">
+                            SISTEMA CONTABLE EN LA NUBE V2.0
                         </p>
                     </div>
 
                     {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-0.5">
+                    <div className="flex-1 flex flex-col justify-center py-1">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="mb-2 bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1 select-none">
+                        <div className="my-2 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/70 flex items-center gap-1.5 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsStudentModeActive(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-2 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none ${
                                     !isStudentModeActive 
-                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]' 
-                                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                                        ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
-                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <Building2 size={14} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Profesional</span>
                             </button>
 
@@ -532,47 +532,47 @@ export const Login: React.FC = () => {
                                     setIsStudentModeActive(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none focus:outline-none ${
+                                className={`flex-1 py-2 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none ${
                                     isStudentModeActive 
-                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]' 
-                                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
-                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <GraduationCap size={15} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
                                 <span>Estudiante</span>
                             </button>
                         </div>
 
                         {/* Banner informativo del modo */}
-                        <div className={`mb-2 p-1.5 sm:p-2 rounded-xl border text-[9.5px] font-medium flex items-center gap-1.5 ${
+                        <div className={`mb-2.5 p-2.5 rounded-2xl border text-[11px] font-medium flex items-center gap-2.5 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
-                                : 'bg-blue-50/90 border-blue-200/80 text-blue-900'
+                                : 'bg-[#f0f6ff] border-[#dbeafe] text-[#1e40af]'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={13} className="shrink-0 text-indigo-600" />
+                                    <GraduationCap size={15} className="shrink-0 text-indigo-600" />
                                     <span>Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={13} className="shrink-0 text-blue-600" />
+                                    <ShieldCheck size={16} className="shrink-0 text-blue-600" />
                                     <span>Acceso al sistema contable oficial y empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-2 border-b border-slate-200 pb-0.5">
+                        <div className="flex mb-3 border-b border-slate-200/80 pb-0.5">
                             <button 
                                 type="button"
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
                                 }`}
                             >
@@ -584,9 +584,9 @@ export const Login: React.FC = () => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1 text-[11px] font-extrabold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                                className={`flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     !isLogin 
-                                        ? isStudentModeActive ? 'border-indigo-600 text-indigo-700 font-black' : 'border-blue-600 text-blue-700 font-black' 
+                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
                                 }`}
                             >
@@ -595,26 +595,25 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-2.5" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-2.5 rounded-xl flex items-start gap-2 animate-in fade-in duration-200">
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-2 px-2.5 rounded-2xl flex items-start gap-2 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
                                     <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
                                 </div>
                             )}
 
                             {!isLogin && (
-                                <div className="space-y-0.5">
-                                    <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Nombre Completo</label>
-                                    <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                        <User className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                                <div className="space-y-1">
+                                    <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
+                                    <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                        <User className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                         <input 
                                             type="text"
                                             required
                                             autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
-                                            className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                            style={{ paddingLeft: '2.3rem' }}
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
                                             value={formData.name}
                                             onChange={e => setFormData({...formData, name: e.target.value})}
                                         />
@@ -624,35 +623,33 @@ export const Login: React.FC = () => {
 
                             {!isLogin && !isStudentModeActive && (
                                 <>
-                                    <div className="space-y-0.5">
-                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Teléfono / WhatsApp (+51)</label>
-                                        <div className="relative flex items-center rounded-xl light-input-field">
-                                            <Phone className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                                    <div className="space-y-1">
+                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
+                                        <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                            <Phone className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                             <input 
                                                 type="tel"
                                                 required
                                                 maxLength={9}
                                                 inputMode="numeric"
                                                 placeholder="923 887 478"
-                                                className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                style={{ paddingLeft: '2.3rem' }}
+                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
                                                 value={phone}
                                                 onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-0.5">
-                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
-                                        <div className="relative flex items-center rounded-xl light-input-field">
-                                            <Building2 className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                                    <div className="space-y-1">
+                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
+                                        <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                            <Building2 className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                             <input 
                                                 type="text"
                                                 maxLength={11}
                                                 inputMode="numeric"
                                                 placeholder="2060... o DNI"
-                                                className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                style={{ paddingLeft: '2.3rem' }}
+                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
                                                 value={documentNumber}
                                                 onChange={e => setDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
                                             />
@@ -661,49 +658,43 @@ export const Login: React.FC = () => {
                                 </>
                             )}
 
-                            <div className="space-y-0.5">
-                                <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Correo Electrónico</label>
-                                <div className={`relative flex items-center rounded-xl light-input-field ${isStudentModeActive ? 'light-input-field-student' : ''}`}>
-                                    <Mail className="absolute left-3 w-3.5 h-3.5 text-slate-400" />
+                            <div className="space-y-1">
+                                <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
+                                <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                    <Mail className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                     <input 
                                         type="email"
                                         required
                                         autoComplete="username"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
-                                        className="w-full py-1.5 sm:py-2 pr-3 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.3rem' }}
+                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
                                         value={formData.email}
                                         onChange={e => setFormData({...formData, email: e.target.value})}
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Contraseña</label>
+                                    <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
                                     {!isLogin && checkPasswordStrength(formData.password).isValid && (
                                         <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                             <CheckCircle2 size={11} /> Segura
                                         </span>
                                     )}
                                 </div>
-                                <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
-                                    !isLogin && checkPasswordStrength(formData.password).isValid
-                                        ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
-                                        : isStudentModeActive ? 'light-input-field-student' : ''
-                                }`}>
-                                    <Lock className={`absolute left-3 w-3.5 h-3.5 ${!isLogin && checkPasswordStrength(formData.password).isValid ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                    <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                     <input 
                                         type={showPassword ? "text" : "password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full py-1.5 sm:py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                        style={{ paddingLeft: '2.3rem', paddingRight: '4rem' }}
+                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-8"
                                         value={formData.password}
                                         onChange={e => setFormData({...formData, password: e.target.value})}
                                     />
-                                    <div className="absolute right-2.5 flex items-center gap-1">
+                                    <div className="absolute right-3 flex items-center gap-1">
                                         {!isLogin && checkPasswordStrength(formData.password).isValid && (
                                             <CheckCircle2 size={15} className="text-emerald-500" />
                                         )}
@@ -713,7 +704,7 @@ export const Login: React.FC = () => {
                                             className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
                                             title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                                         >
-                                            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                         </button>
                                     </div>
                                 </div>
@@ -723,31 +714,26 @@ export const Login: React.FC = () => {
                             </div>
 
                             {!isLogin && !isStudentModeActive && (
-                                <div className="space-y-0.5">
+                                <div className="space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[9.5px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Confirmar Contraseña</label>
+                                        <label className="text-[9.5px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
                                         {confirmPassword.length > 0 && confirmPassword === formData.password && (
                                             <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                                 <CheckCircle2 size={11} /> Coincide
                                             </span>
                                         )}
                                     </div>
-                                    <div className={`relative flex items-center rounded-xl light-input-field transition-all duration-300 ${
-                                        confirmPassword.length > 0 && confirmPassword === formData.password
-                                            ? '!border-2 !border-emerald-500 !bg-emerald-50/25 ring-2 ring-emerald-500/20'
-                                            : ''
-                                    }`}>
-                                        <Lock className={`absolute left-3 w-3.5 h-3.5 ${confirmPassword.length > 0 && confirmPassword === formData.password ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                    <div className="relative flex items-center rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                        <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                                         <input 
                                             type={showConfirmPassword ? "text" : "password"}
                                             required
                                             placeholder="Repite la contraseña"
-                                            className="w-full py-1.5 sm:py-2 bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none"
-                                            style={{ paddingLeft: '2.3rem', paddingRight: '4rem' }}
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-8"
                                             value={confirmPassword}
                                             onChange={e => setConfirmPassword(e.target.value)}
                                         />
-                                        <div className="absolute right-2.5 flex items-center gap-1">
+                                        <div className="absolute right-3 flex items-center gap-1">
                                             {confirmPassword.length > 0 && confirmPassword === formData.password && (
                                                 <CheckCircle2 size={15} className="text-emerald-500" />
                                             )}
@@ -756,7 +742,7 @@ export const Login: React.FC = () => {
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
                                             >
-                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                                             </button>
                                         </div>
                                     </div>
@@ -764,7 +750,7 @@ export const Login: React.FC = () => {
                             )}
 
                             {isLogin && (
-                                <div className="flex items-center justify-end px-1 pt-0.5 text-xs">
+                                <div className="flex items-center justify-end px-1 pt-0.5">
                                     <button 
                                         type="button" 
                                         onClick={() => {
@@ -779,7 +765,7 @@ export const Login: React.FC = () => {
                                             setDevCodeNotice(null);
                                             setResendCooldown(0);
                                         }} 
-                                        className="text-blue-600 hover:text-blue-800 transition-colors font-bold cursor-pointer hover:underline text-[10.5px]"
+                                        className="text-[#1d4ed8] hover:underline transition-colors font-bold cursor-pointer text-[11px]"
                                     >
                                         ¿Olvidaste tu clave?
                                     </button>
@@ -789,21 +775,21 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-2 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-1.5 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-3 rounded-2xl shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-2.5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
-                                        : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-blue-600/25'
-                                } disabled:opacity-50 disabled:pointer-events-none`}
+                                        : 'bg-gradient-to-r from-[#1d4ed8] via-[#2563eb] to-[#3b82f6] hover:from-[#1e40af] hover:to-[#2563eb] text-white'
+                                } active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none`}
                             >
                                 {isLoading ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
                                         {isLogin 
                                             ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
                                             : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
                                         }
-                                        <ArrowRight className="w-3.5 h-3.5" />
+                                        <ArrowRight className="w-4 h-4" />
                                     </>
                                 )}
                             </button>
@@ -811,24 +797,24 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-1.5 text-center space-y-0.5">
-                        <p className="text-slate-400 text-[9.5px] font-medium">
+                    <div className="mt-2 text-center space-y-0.5">
+                        <p className="text-slate-400 text-[10px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
                             <button type="button" onClick={() => setShowLoginLegal('privacy')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Privacidad</button>.
                         </p>
-                        <p className="text-slate-300 text-[9px] tracking-wider notranslate" translate="no">
+                        <p className="text-slate-400 text-[9.5px] tracking-wider notranslate" translate="no">
                             &copy; 2026 Angelo Thomas Serna Simeon. SOFTCONTABLE SaaS.
                         </p>
                     </div>
                 </div>
 
-                {/* LADO DERECHO: Hero Showcase — Unificado directamente en fondo blanco y 100% visible en laptops */}
-                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-2 xl:p-3 overflow-hidden relative">
+                {/* LADO DERECHO: Hero Showcase — Integración Limpia e Inmersiva (Estilo Image 2) */}
+                <div className="hidden lg:flex flex-1 bg-white items-center justify-center p-0 m-0 overflow-hidden relative">
                     <img 
                         src="/assets/login-hero.png" 
                         alt="Softcontable 2026 - Sistema Contable en la Nube" 
-                        className="w-full h-full object-contain select-none animate-fade-in" 
+                        className="w-full h-full object-cover object-left-top select-none pointer-events-none animate-fade-in" 
                     />
                 </div>
             </div>
