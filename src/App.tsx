@@ -237,6 +237,13 @@ const STUDENT_SIDEBAR_GROUPS: TabGroup[] = [
       { id: 'BALANCE', label: 'Situación Financiera', icon: Landmark },
     ],
   },
+  {
+    groupLabel: 'Sistema',
+    groupIcon: Settings,
+    items: [
+      { id: 'SUBSCRIPTION', label: 'Mi Suscripción', icon: CreditCard },
+    ],
+  },
 ];
 
 const TAB_LABELS: Record<string, string> = {};

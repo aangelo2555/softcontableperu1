@@ -155,8 +155,21 @@ export const SubscriptionView: React.FC = () => {
 
       if (res.success) {
         toast.success(res.message || '¡Suscripción activada con éxito!', { id: loadingToast });
+        if (res.token) {
+          localStorage.setItem('softcontable_token', res.token);
+        }
+        if (res.user) {
+          localStorage.setItem('softcontable_user', JSON.stringify(res.user));
+        }
         setSelectedPlanForCheckout(null);
         fetchSubscriptionData();
+        // Si el usuario era estudiante y fue promovido a profesional, actualizar la sesión
+        const prevRole = (localStorage.getItem('softcontable_user') ? JSON.parse(localStorage.getItem('softcontable_user') || '{}').role : '');
+        if (res.user?.role === 'user' && prevRole === 'estudiante') {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+        }
       } else {
         toast.error(res.error || 'Error al procesar el pago.', { id: loadingToast });
       }

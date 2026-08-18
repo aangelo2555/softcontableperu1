@@ -292,12 +292,33 @@ router.post('/checkout', async (req, res) => {
             `).run(crypto.randomUUID(), subId, userId, amountSol, chargeId);
         }
 
+        // Si el usuario era estudiante y adquiere un plan pagado, promover a rol 'user' (Modo Profesional)
+        let updatedRole = req.user?.role || 'user';
+        if (req.user?.role === 'estudiante' && plan.id !== 'estudiante') {
+            updatedRole = 'user';
+            if (USE_POSTGRES) {
+                await db.pool.query("UPDATE users SET role = 'user' WHERE id = $1", [userId]);
+            } else {
+                db.prepare("UPDATE users SET role = 'user' WHERE id = ?").run(userId);
+            }
+        }
+
+        // Generar token renovado con el rol actualizado
+        const newAccessToken = jwt.sign(
+            { id: userId, email: userEmail, name: req.user?.name || 'Usuario', role: updatedRole },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
         res.json({
             success: true,
             message: `¡Suscripción al Plan ${plan.name} activada con éxito!`,
             chargeId,
             plan: plan.name,
-            maxWorkspaces: plan.max_workspaces
+            maxWorkspaces: plan.max_workspaces,
+            token: newAccessToken,
+            accessToken: newAccessToken,
+            user: { id: userId, email: userEmail, name: req.user?.name || 'Usuario', role: updatedRole }
         });
     } catch (err) {
         console.error('[CHECKOUT ERROR]', err);
