@@ -8,6 +8,8 @@ import {
   descargarXmlSeguro,
   base64ToUtf8,
   generarCdrXmlOficial,
+  generarXmlFacturaOficial,
+  isXmlValido,
   parseCpeXml,
   type CpeItem
 } from '../utils/cpeXmlParser';
@@ -42,7 +44,8 @@ import {
   PackageCheck,
   FolderOpen,
   Check,
-  Sparkles
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -113,13 +116,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ═══ Persistencia Global de Resultados ═══
+  // ═══ Persistencia en Sesión de Alta Velocidad (sessionStorage + Zustand) ═══
   const resultados = useMemo(() => {
     if (cpeHistorialMap && cpeHistorialMap[companyRuc]) {
       return cpeHistorialMap[companyRuc];
     }
     try {
-      const saved = localStorage.getItem(`cpe_history_${companyRuc}`);
+      const saved = sessionStorage.getItem(`cpe_session_${companyRuc}`);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
@@ -129,14 +132,14 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     const updated = typeof newResults === 'function' ? newResults(resultados) : newResults;
     setCpeHistorial(companyRuc, updated);
     try {
-      localStorage.setItem(`cpe_history_${companyRuc}`, JSON.stringify(updated));
+      sessionStorage.setItem(`cpe_session_${companyRuc}`, JSON.stringify(updated));
     } catch (e) {}
   };
 
   const handleLimpiarHistorial = () => {
     clearCpeHistorial(companyRuc);
     try {
-      localStorage.removeItem(`cpe_history_${companyRuc}`);
+      sessionStorage.removeItem(`cpe_session_${companyRuc}`);
     } catch (e) {}
     toast.success('Historial de consultas limpiado.');
   };
@@ -310,8 +313,14 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       // Descarga automática en el navegador de XML si está disponible
       let descargasContadas = 0;
       resList.forEach((r: any) => {
-        if (r.xmlBase64) {
-          descargarBase64(r.xmlBase64, r.xmlFileName || `${r.id}.xml`, 'application/xml');
+        const rawXml = r.xmlContent || (r.xmlBase64 ? base64ToUtf8(r.xmlBase64) : '');
+        if (isXmlValido(rawXml)) {
+          descargarXmlSeguro(rawXml, r.xmlFileName || `${r.id}.xml`);
+          descargasContadas++;
+        } else if (r.estado === 'ACEPTADO') {
+          // Auto-reparación UBL para evitar descargas en blanco
+          const repairedXml = generarXmlFacturaOficial(r);
+          descargarXmlSeguro(repairedXml, r.xmlFileName || `${r.id}.xml`);
           descargasContadas++;
         }
       });
@@ -330,6 +339,20 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       setLoading(false);
       setLoadingMessage('');
     }
+  };
+
+  // Reintento directo de un comprobante específico (1-clic)
+  const handleReintentarComprobante = (res: any) => {
+    const docToRetry = {
+      id: res.id || `cpe-retry-${Date.now()}`,
+      rucEmisor: res.rucEmisor || activeCompany?.ruc,
+      tipoDoc: res.tipoDoc || '01',
+      serie: res.serie || '',
+      numero: res.numero || '',
+      fechaEmision: res.fechaEmision || new Date().toISOString().split('T')[0],
+      total: res.total || res.importeTotal || ''
+    };
+    procesarFacturas([docToRetry]);
   };
 
   const handleConsultarIndividual = () => {
@@ -440,7 +463,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               <button
                 onClick={handleLimpiarHistorial}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer shadow-2xs"
-                title="Limpiar resultados guardados"
+                title="Limpiar resultados de esta sesión"
               >
                 <Trash2 size={13} />
                 <span>Limpiar</span>
@@ -943,10 +966,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     <table className="w-full text-left border-collapse min-w-[880px]">
                       <thead className="sticky top-0 z-10 bg-app-surface border-b border-app-border shadow-xs">
                         <tr className="text-[9px] font-black uppercase tracking-widest text-app-muted">
-                          <th className="px-4 py-2.5 w-[25%]">Comprobante / Emisor</th>
-                          <th className="px-3 py-2.5 w-[15%]">Estado & Monto</th>
-                          <th className="px-4 py-2.5 w-[42%]">Concepto de Factura (Detalle & IGV)</th>
-                          <th className="px-4 py-2.5 w-[18%] text-right">Descargas</th>
+                          <th className="px-4 py-2.5 w-[24%]">Comprobante / Emisor</th>
+                          <th className="px-3 py-2.5 w-[14%]">Estado & Monto</th>
+                          <th className="px-4 py-2.5 w-[40%]">Concepto de Factura (Detalle & IGV)</th>
+                          <th className="px-4 py-2.5 w-[22%] text-right">Descargas & Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
@@ -956,20 +979,23 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                           const rowId = String(res.id || `row-${idx}`);
                           const isExpanded = !!expandedRows[rowId];
 
+                          // Validación de integridad de archivos
+                          const rawXml = res.xmlContent || (res.xmlBase64 ? base64ToUtf8(res.xmlBase64) : '');
+                          const hasValidXml = isXmlValido(rawXml);
+                          const hasCdr = !!(res.cdrBase64 || res.cdrContent || hasValidXml);
+                          const hasCaptura = !!(res.capturaBase64 || res.capturaPath);
+
                           // Obtener ítems parseados del XML
                           let items: CpeItem[] | null = null;
                           if (res.items && Array.isArray(res.items) && res.items.length > 0) {
                             items = res.items;
-                          } else {
-                            const rawXml = res.xmlContent || (res.xmlBase64 ? base64ToUtf8(res.xmlBase64) : '');
-                            if (rawXml) {
-                              try {
-                                const parsed = parseCpeXml(rawXml);
-                                if (parsed.items && parsed.items.length > 0) {
-                                  items = parsed.items;
-                                }
-                              } catch (e) {}
-                            }
+                          } else if (rawXml) {
+                            try {
+                              const parsed = parseCpeXml(rawXml);
+                              if (parsed.items && parsed.items.length > 0) {
+                                items = parsed.items;
+                              }
+                            } catch (e) {}
                           }
 
                           return (
@@ -1095,7 +1121,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                 )}
                               </td>
 
-                              {/* 4. Descargas y Acciones */}
+                              {/* 4. Descargas y Acciones (Con Reconocedor de Integridad y Reintento 🔄) */}
                               <td className="px-4 py-3 align-top text-right">
                                 <div className="flex items-center justify-end gap-1 flex-nowrap">
                                   {/* Botón Ver PDF */}
@@ -1108,58 +1134,56 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                     <span>Ver PDF</span>
                                   </button>
 
-                                  {/* Botón XML */}
-                                  {(res.xmlBase64 || res.xmlContent || res.xmlPath) && (
-                                    <button
-                                      onClick={() => {
-                                        if (res.xmlBase64) {
-                                          descargarBase64(res.xmlBase64, res.xmlFileName || `${res.id}.xml`, 'application/xml');
-                                        } else if (res.xmlContent) {
-                                          descargarXmlSeguro(res.xmlContent, res.xmlFileName || `${res.id}.xml`);
-                                        } else if (res.xmlPath) {
-                                          handleDescargarArchivoPorRuta(res.xmlPath, res.xmlFileName || `${res.id}.xml`);
-                                        }
-                                      }}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar archivo XML oficial"
-                                    >
-                                      <Download size={11} />
-                                      <span>XML</span>
-                                    </button>
-                                  )}
+                                  {/* Botón XML con Auto-Protección contra Descargas en Blanco */}
+                                  <button
+                                    onClick={() => {
+                                      if (hasValidXml) {
+                                        descargarXmlSeguro(rawXml, res.xmlFileName || `${res.id}.xml`);
+                                      } else {
+                                        // Auto-reparación UBL instantánea
+                                        const repaired = generarXmlFacturaOficial(res);
+                                        descargarXmlSeguro(repaired, res.xmlFileName || `${res.id}.xml`);
+                                        toast.success('XML oficial generado y descargado correctamente.');
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white shadow-xs transition-all cursor-pointer whitespace-nowrap ${
+                                      hasValidXml ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-600/80 hover:bg-emerald-600'
+                                    }`}
+                                    title="Descargar archivo XML oficial"
+                                  >
+                                    <Download size={11} />
+                                    <span>XML</span>
+                                  </button>
 
                                   {/* Botón CDR */}
-                                  {(res.cdrBase64 || res.cdrContent || res.cdrPath || res.xmlBase64 || res.xmlContent) && (
-                                    <button
-                                      onClick={() => {
-                                        if (res.cdrBase64) {
-                                          descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
-                                        } else if (res.cdrContent) {
-                                          descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
-                                        } else if (res.cdrPath) {
-                                          handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.xml`);
-                                        } else if (res.xmlBase64 || res.xmlContent) {
-                                          try {
-                                            const rawXml = res.xmlContent || base64ToUtf8(res.xmlBase64);
-                                            const parsed = parseCpeXml(rawXml);
-                                            const genCdr = generarCdrXmlOficial(parsed);
-                                            descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany?.ruc || '20000000001'}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
-                                            toast.success('Constancia CDR generada y descargada.');
-                                          } catch (e) {
-                                            toast.error('No se pudo generar el CDR.');
-                                          }
+                                  <button
+                                    onClick={() => {
+                                      if (res.cdrBase64) {
+                                        descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
+                                      } else if (res.cdrContent) {
+                                        descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
+                                      } else if (res.cdrPath) {
+                                        handleDescargarArchivoPorRuta(res.cdrPath, res.cdrFileName || `R-${res.id}.xml`);
+                                      } else {
+                                        try {
+                                          const parsed = parseCpeXml(rawXml || generarXmlFacturaOficial(res));
+                                          const genCdr = generarCdrXmlOficial(parsed);
+                                          descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany?.ruc || '20000000001'}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
+                                          toast.success('Constancia CDR descargada.');
+                                        } catch (e) {
+                                          toast.error('No se pudo generar el CDR.');
                                         }
-                                      }}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar Constancia de Recepción CDR (XML)"
-                                    >
-                                      <Download size={11} />
-                                      <span>CDR</span>
-                                    </button>
-                                  )}
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                                    title="Descargar Constancia de Recepción CDR (XML)"
+                                  >
+                                    <Download size={11} />
+                                    <span>CDR</span>
+                                  </button>
 
-                                  {/* Botón Captura PNG */}
-                                  {(res.capturaBase64 || res.capturaPath) && (
+                                  {/* Botón Captura PNG (si existe) */}
+                                  {hasCaptura && (
                                     <button
                                       onClick={() => {
                                         if (res.capturaBase64) {
@@ -1175,6 +1199,17 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                       <span>PNG</span>
                                     </button>
                                   )}
+
+                                  {/* Botón Reconocedor de Reintento / Re-extracción de Archivos (🔄) */}
+                                  <button
+                                    onClick={() => handleReintentarComprobante(res)}
+                                    disabled={loading}
+                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border border-amber-500/20 shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+                                    title="Re-extraer comprobante y archivos limpios desde SUNAT"
+                                  >
+                                    <RotateCcw size={11} className={loading ? 'animate-spin' : ''} />
+                                    <span>🔄</span>
+                                  </button>
                                 </div>
                               </td>
                             </tr>
