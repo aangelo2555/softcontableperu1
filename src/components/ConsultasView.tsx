@@ -437,23 +437,26 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   </span>
                 </div>
 
-                {/* Selector de Año */}
+                {/* Selector de Año con Diseño Premium y Separación de Icono */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-app-muted uppercase">Ejercicio / Año:</span>
-                  <div className="relative">
+                  <span className="text-[10px] font-black tracking-wider text-app-muted uppercase">Ejercicio / Año:</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-app-bg hover:bg-app-hover border border-app-border hover:border-blue-500/40 rounded-xl transition-all shadow-2xs">
+                    <Calendar size={14} className="text-blue-500 shrink-0" />
                     <select
                       value={selectedYear}
                       onChange={(e) => {
                         setSelectedYear(e.target.value);
                         setSelectedSireMonth(null);
                       }}
-                      className="pl-7 pr-4 py-1 bg-app-bg border border-app-border rounded-lg text-xs font-bold text-app-text outline-none focus:border-blue-500 cursor-pointer"
+                      className="bg-transparent text-xs font-black font-mono tracking-wider text-app-text outline-none cursor-pointer py-0.5 pr-1 border-none focus:ring-0"
                     >
                       {availableYears.map(y => (
-                        <option key={y} value={y}>{y}</option>
+                        <option key={y} value={y} className="bg-app-surface text-app-text font-mono font-bold">
+                          {y}
+                        </option>
                       ))}
                     </select>
-                    <Calendar size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
+                    <ChevronDown size={12} className="text-app-muted shrink-0 pointer-events-none" />
                   </div>
                 </div>
               </div>
