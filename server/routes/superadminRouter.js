@@ -205,20 +205,27 @@ router.put('/client/:userId/plan', async (req, res) => {
             plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(planId);
         }
 
-        const maxWs = maxWorkspaces || plan?.max_workspaces || 1;
+        const maxWs = (planId === 'corporativo') ? 9999 : (maxWorkspaces || plan?.max_workspaces || 1);
         const newStatus = status || 'active';
 
         if (USE_POSTGRES) {
-            await db.pool.query(`
-                INSERT INTO subscriptions (user_id, plan_id, status, max_workspaces, max_users, current_period_end, updated_at)
-                VALUES ($1, $2, $3, $4, 10, NOW() + INTERVAL '${daysToAdd || 30} days', NOW())
-                ON CONFLICT (id) DO UPDATE SET
-                    plan_id = EXCLUDED.plan_id,
-                    status = EXCLUDED.status,
-                    max_workspaces = EXCLUDED.max_workspaces,
-                    current_period_end = subscriptions.current_period_end + INTERVAL '${daysToAdd || 30} days',
+            // Actualizar suscripción existente o crear una nueva
+            const updateRes = await db.pool.query(`
+                UPDATE subscriptions SET
+                    plan_id = $2,
+                    status = $3,
+                    max_workspaces = $4,
+                    current_period_end = NOW() + INTERVAL '${daysToAdd || 30} days',
                     updated_at = NOW()
+                WHERE user_id = $1
             `, [userId, planId || 'profesional', newStatus, maxWs]);
+
+            if (updateRes.rowCount === 0) {
+                await db.pool.query(`
+                    INSERT INTO subscriptions (user_id, plan_id, status, max_workspaces, max_users, current_period_end, updated_at)
+                    VALUES ($1, $2, $3, $4, 10, NOW() + INTERVAL '${daysToAdd || 30} days', NOW())
+                `, [userId, planId || 'profesional', newStatus, maxWs]);
+            }
 
             // Registrar en audit_logs
             await db.pool.query(`

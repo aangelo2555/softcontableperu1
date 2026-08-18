@@ -1381,7 +1381,7 @@ export const useStore = create<AppState>()(
       activeTab: 'EMPRESA',
       showCompanyConfig: false,
       isProcessing: false,
-      theme: 'dark',
+      theme: (typeof window !== 'undefined' ? (localStorage.getItem('softcontable_theme') as 'light' | 'dark') : null) || 'light',
       workspaces: [],
       buzonMensajes: [],
       periodsList: [],
@@ -1461,12 +1461,21 @@ export const useStore = create<AppState>()(
           const wsList = Array.isArray(workspaces) ? workspaces : [];
           set({ workspaces: wsList });
           
-          let currentRuc = get().currentCompany?.ruc;
-          // Si la empresa actual en memoria no pertenece a las empresas del usuario autenticado, auto-seleccionar la primera del usuario
-          if (wsList.length > 0 && (!currentRuc || !wsList.some((w: any) => w.ruc === currentRuc))) {
-            const firstWs = wsList[0];
-            set({ currentCompany: firstWs });
-            currentRuc = firstWs.ruc;
+          // Recuperar la última empresa activa en la que estuvo trabajando el usuario
+          const lastActiveRuc = typeof window !== 'undefined' ? localStorage.getItem('softcontable_last_active_ruc') : null;
+          let targetWs = wsList.find((w: any) => w.ruc === lastActiveRuc);
+          
+          // Si no hay guardada o no existe, seleccionar la primera disponible
+          if (!targetWs && wsList.length > 0) {
+            targetWs = wsList[0];
+          }
+
+          let currentRuc = targetWs?.ruc;
+          if (targetWs) {
+            set({ currentCompany: targetWs });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('softcontable_last_active_ruc', targetWs.ruc);
+            }
           }
 
           if (currentRuc) {
@@ -1555,6 +1564,9 @@ export const useStore = create<AppState>()(
 
       switchWorkspace: async (ruc) => {
         if (!electron) return;
+        if (ruc && typeof window !== 'undefined') {
+          localStorage.setItem('softcontable_last_active_ruc', ruc);
+        }
         const data = await electron.dbGetWorkspaceData(ruc);
         const wsInfo = get().workspaces.find(w => w.ruc === ruc);
         if (wsInfo) {
@@ -1620,7 +1632,13 @@ export const useStore = create<AppState>()(
       // --- UI Settings ---
       setActiveTab: (tab) => set({ activeTab: tab }),
       setShowCompanyConfig: (show) => set({ showCompanyConfig: show }),
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'light' ? 'dark' : 'light' })),
+      toggleTheme: () => set((s) => {
+        const next = s.theme === 'light' ? 'dark' : 'light';
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('softcontable_theme', next);
+        }
+        return { theme: next };
+      }),
 
       // --- Data Persistence (Proxy to DB) ---
       savePurchase: async (p) => {

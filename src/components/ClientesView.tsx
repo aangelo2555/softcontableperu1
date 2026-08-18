@@ -82,8 +82,9 @@ const ClientesView: React.FC = () => {
       return;
     }
 
-    // Verificar si se alcanzó el límite de empresas del plan
-    if (subscriptionInfo) {
+    // Verificar si se alcanzó el límite de empresas del plan (excepto si es ilimitado o corporativo)
+    const isUnlimited = subscriptionInfo?.plan_id === 'corporativo' || (subscriptionInfo?.maxWorkspaces && subscriptionInfo.maxWorkspaces >= 50);
+    if (subscriptionInfo && !isUnlimited) {
       const currentCount = Object.values(workspaces).length;
       const maxAllowed = subscriptionInfo.maxWorkspaces || 1;
       const alreadyExists = Object.values(workspaces).some(w => w.ruc === newRuc);
@@ -137,14 +138,19 @@ const ClientesView: React.FC = () => {
     : workspaceList;
 
   const maxWorkspaces = subscriptionInfo?.maxWorkspaces || 1;
-  const isLimitReached = workspaceList.length >= maxWorkspaces;
+  const isUnlimitedPlan = subscriptionInfo?.plan_id === 'corporativo' || maxWorkspaces >= 50;
+  const isLimitReached = !isUnlimitedPlan && workspaceList.length >= maxWorkspaces;
+
+  const subtitleText = isUnlimitedPlan
+    ? `${workspaceList.length} empresas registradas (${subscriptionInfo?.plan_name || 'Plan Corporativo'} · Empresas Ilimitadas)`
+    : `${workspaceList.length} de ${maxWorkspaces} empresa${maxWorkspaces !== 1 ? 's' : ''} habilitada${maxWorkspaces !== 1 ? 's' : ''} (${subscriptionInfo?.plan_name || 'Plan Estudiante'})`;
 
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
       <PageHeader
         icon={<Building2 size={18} />}
         title="Mis Empresas"
-        subtitle={`${workspaceList.length} de ${maxWorkspaces} empresa${maxWorkspaces !== 1 ? 's' : ''} habilitada${maxWorkspaces !== 1 ? 's' : ''} (${subscriptionInfo?.plan_name || 'Plan Estudiante'})`}
+        subtitle={subtitleText}
         actions={
           <>
             {isLimitReached && (

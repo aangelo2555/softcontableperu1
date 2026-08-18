@@ -95,6 +95,11 @@ async function checkWorkspaceLimit(req, res, next) {
             });
         }
 
+        // Plan Corporativo e Ilimitado (50+ empresas): Sin restricción de límite
+        if (subscription.plan_id === 'corporativo' || (subscription.max_workspaces && subscription.max_workspaces >= 50)) {
+            return next();
+        }
+
         const maxAllowed = subscription.max_workspaces || subscription.plan_max_workspaces || 1;
         const currentCount = await getWorkspaceCount(userId);
 

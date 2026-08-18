@@ -289,7 +289,7 @@ const App: React.FC = () => {
 
   const [isGlobalPremium, setIsGlobalPremium] = useState(false);
 
-  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
@@ -525,7 +525,7 @@ const App: React.FC = () => {
 
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // --- SQLite Initialization ---
+  // --- SQLite / PostgreSQL Core Initialization ---
   useEffect(() => {
     const init = async () => {
       // No inicializar si no hay usuario autenticado
@@ -535,13 +535,10 @@ const App: React.FC = () => {
       }
 
       try {
-        // Wait a small bit to ensure electronAPI is injected
-        await new Promise(r => setTimeout(r, 500));
-
         await runMigration();
         await useStore.getState().initApp();
       } catch (error) {
-        console.error("Error initializing SQLite:", error);
+        console.error("Error initializing Database:", error);
         toast.error("Error al conectar con la base de datos.");
       } finally {
         setIsInitializing(false);
@@ -1193,14 +1190,7 @@ const App: React.FC = () => {
           {/* View Content */}
           <main className="flex-1 overflow-hidden relative bg-app-bg">
             <div key={activeTab} className="absolute inset-0 animate-fade-in">
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-full">
-                  <div className="flex flex-col items-center gap-3 text-app-muted">
-                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" strokeWidth={2.5} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Cargando...</span>
-                  </div>
-                </div>
-              }>
+              <Suspense fallback={null}>
                 {renderView()}
               </Suspense>
             </div>

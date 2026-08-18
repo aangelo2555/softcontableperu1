@@ -406,15 +406,21 @@ export const SuperAdminView: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs">{used} / {max}</span>
-                            <div className="w-16 h-1.5 bg-app-bg border border-app-border rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-blue-600'}`}
-                                style={{ width: `${pct}%` }}
-                              />
+                          {c.plan_id === 'corporativo' || max >= 50 ? (
+                            <span className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm">
+                              {used} / Ilimitadas
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs">{used} / {max}</span>
+                              <div className="w-16 h-1.5 bg-app-bg border border-app-border rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-blue-600'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-app-muted text-[11px]">
                           {c.current_period_end ? new Date(c.current_period_end).toLocaleDateString() : 'Permanente'}
@@ -424,9 +430,20 @@ export const SuperAdminView: React.FC = () => {
                             <button
                               onClick={() => {
                                 setSelectedClient(c);
-                                setEditPlanId(c.plan_id || 'profesional');
+                                const targetPlan = c.plan_id || 'profesional';
+                                setEditPlanId(targetPlan);
                                 setEditStatus(c.subscription_status || 'active');
-                                setEditMaxWorkspaces(c.max_workspaces || 8);
+                                if (targetPlan === 'corporativo') {
+                                  setEditMaxWorkspaces(9999);
+                                } else if (targetPlan === 'estudio') {
+                                  setEditMaxWorkspaces(20);
+                                } else if (targetPlan === 'profesional') {
+                                  setEditMaxWorkspaces(8);
+                                } else if (targetPlan === 'starter') {
+                                  setEditMaxWorkspaces(3);
+                                } else {
+                                  setEditMaxWorkspaces(c.max_workspaces || 1);
+                                }
                               }}
                               className="px-2.5 py-1.5 bg-app-bg hover:bg-app-hover border border-app-border text-app-text hover:text-blue-500 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                               title="Modificar plan y cuotas"
@@ -562,14 +579,22 @@ export const SuperAdminView: React.FC = () => {
                 <label className="block text-app-muted uppercase text-[10px] mb-1">Plan SaaS</label>
                 <select
                   value={editPlanId}
-                  onChange={e => setEditPlanId(e.target.value)}
+                  onChange={e => {
+                    const nextPlan = e.target.value;
+                    setEditPlanId(nextPlan);
+                    if (nextPlan === 'corporativo') setEditMaxWorkspaces(9999);
+                    else if (nextPlan === 'estudio') setEditMaxWorkspaces(20);
+                    else if (nextPlan === 'profesional') setEditMaxWorkspaces(8);
+                    else if (nextPlan === 'starter') setEditMaxWorkspaces(3);
+                    else if (nextPlan === 'estudiante') setEditMaxWorkspaces(1);
+                  }}
                   className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
                 >
                   <option value="estudiante">Estudiante / Free (1 empresa)</option>
                   <option value="starter">Starter / Básico (3 empresas - S/ 49)</option>
                   <option value="profesional">Profesional (8 empresas - S/ 99)</option>
                   <option value="estudio">Estudio Contable (20 empresas - S/ 179)</option>
-                  <option value="corporativo">Corporativo (50+ empresas - S/ 499)</option>
+                  <option value="corporativo">Corporativo (Empresas Ilimitadas - S/ 499)</option>
                 </select>
               </div>
 
@@ -590,12 +615,15 @@ export const SuperAdminView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-app-muted uppercase text-[10px] mb-1">Límite Empresas</label>
+                  <label className="block text-app-muted uppercase text-[10px] mb-1">
+                    Límite Empresas {editPlanId === 'corporativo' && '(Ilimitado)'}
+                  </label>
                   <input
-                    type="number"
-                    value={editMaxWorkspaces}
+                    type="text"
+                    value={editPlanId === 'corporativo' ? 'Ilimitadas (50+)' : editMaxWorkspaces}
+                    disabled={editPlanId === 'corporativo'}
                     onChange={e => setEditMaxWorkspaces(Number(e.target.value))}
-                    className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
+                    className="w-full p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none disabled:opacity-60"
                   />
                 </div>
                 <div>

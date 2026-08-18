@@ -250,21 +250,31 @@ export const SubscriptionView: React.FC = () => {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-app-text">{used}</span>
-              <span className="text-sm font-bold text-app-muted">de {max} permitidas</span>
+              <span className="text-sm font-bold text-app-muted">
+                {subData?.plan_id === 'corporativo' || max >= 50 ? 'empresas creadas (Ilimitadas)' : `de ${max} permitidas`}
+              </span>
             </div>
 
             {/* Barra de Progreso */}
             <div className="w-full h-3 bg-app-bg border border-app-border rounded-full mt-4 overflow-hidden p-0.5">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  quotaPct >= 100 ? 'bg-red-500' : quotaPct >= 75 ? 'bg-amber-500' : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                  subData?.plan_id === 'corporativo' || max >= 50
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 w-full'
+                    : quotaPct >= 100
+                    ? 'bg-red-500'
+                    : quotaPct >= 75
+                    ? 'bg-amber-500'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600'
                 }`}
-                style={{ width: `${quotaPct}%` }}
+                style={{ width: subData?.plan_id === 'corporativo' || max >= 50 ? '100%' : `${quotaPct}%` }}
               />
             </div>
 
             <p className="text-[11px] text-app-muted font-medium mt-3">
-              {quotaPct >= 100
+              {subData?.plan_id === 'corporativo' || max >= 50
+                ? '🎉 Su plan Corporativo le permite crear y administrar empresas ilimitadas sin restricciones de cuota.'
+                : quotaPct >= 100
                 ? '⚠️ Ha alcanzado el límite máximo de empresas para su plan. Realice un upgrade para añadir nuevas empresas.'
                 : `Tiene ${max - used} cupo(s) disponible(s) para crear nuevas empresas.`}
             </p>
