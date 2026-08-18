@@ -910,7 +910,9 @@ const App: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-                  <p className={`text-[8px] ${isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>{isStudentMode() ? 'Estudiante' : 'Usuario'}</p>
+                  <p className={`text-[8px] ${isSuperAdmin ? 'text-indigo-600 dark:text-indigo-400' : isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>
+                    {isSuperAdmin ? 'SuperAdmin' : isAdmin ? 'Administrador' : isStudentMode() ? 'Estudiante' : 'Usuario'}
+                  </p>
                 </div>
               </div>
 

@@ -9,23 +9,45 @@ const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026
  * Middleware: requireSuperAdmin
  * Valida que el usuario tenga rol 'super_admin' o sea el propietario Angelo Serna Simeon
  */
-const requireSuperAdmin = (req, res, next) => {
-    const user = req.user;
-    if (!user) {
-        return res.status(401).json({ success: false, error: 'No autenticado.' });
+const requireSuperAdmin = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'No autenticado.' });
+        }
+
+        let email = (user.email || '').trim().toLowerCase();
+        let role = user.role;
+
+        // Consultar la base de datos en tiempo real para evitar inconsistencias por tokens antiguos
+        if (USE_POSTGRES) {
+            const dbUser = await db.pool.query('SELECT role, email FROM users WHERE id = $1', [user.id]);
+            if (dbUser.rows.length > 0) {
+                role = dbUser.rows[0].role;
+                email = (dbUser.rows[0].email || email).trim().toLowerCase();
+            }
+        } else {
+            const dbUser = db.prepare('SELECT role, email FROM users WHERE id = ?').get(user.id);
+            if (dbUser) {
+                role = dbUser.role;
+                email = (dbUser.email || email).trim().toLowerCase();
+            }
+        }
+
+        const isSuperAdmin = role === 'super_admin' || email === 'aangelo2555@gmail.com' || email === (process.env.SUPERADMIN_EMAIL || '').toLowerCase();
+
+        if (!isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                error: 'Acceso denegado. Panel exclusivo para el Administrador del Sistema (Angelo Serna Simeon).'
+            });
+        }
+
+        next();
+    } catch (err) {
+        console.error('[SUPERADMIN AUTH ERROR]', err);
+        return res.status(500).json({ success: false, error: 'Error verificando permisos de SuperAdmin.' });
     }
-
-    const email = (user.email || '').trim().toLowerCase();
-    const isSuperAdmin = user.role === 'super_admin' || email === 'aangelo2555@gmail.com' || email === (process.env.SUPERADMIN_EMAIL || '').toLowerCase();
-
-    if (!isSuperAdmin) {
-        return res.status(403).json({
-            success: false,
-            error: 'Acceso denegado. Panel exclusivo para el Administrador del Sistema (Angelo Serna Simeon).'
-        });
-    }
-
-    next();
 };
 
 router.use(requireSuperAdmin);
