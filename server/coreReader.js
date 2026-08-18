@@ -45,7 +45,20 @@ function getPeriodPatterns(period) {
  */
 async function getWorkspace(workspaceId) {
     if (!workspaceId) return null;
-    return await dbCore.getWorkspaceById(workspaceId);
+    try {
+        if (USE_POSTGRES) {
+            const res = await dbCore.pool.query(
+                'SELECT * FROM public.workspaces WHERE ruc = $1 OR id = $1 LIMIT 1',
+                [workspaceId]
+            );
+            return res.rows[0] ? (dbCore.mapWorkspaceColumns ? dbCore.mapWorkspaceColumns(res.rows[0]) : res.rows[0]) : null;
+        } else {
+            return dbCore.prepare ? dbCore.prepare('SELECT * FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1').get(workspaceId, workspaceId) : null;
+        }
+    } catch (e) {
+        console.warn('[CORE READER GET WORKSPACE ERROR]', e.message);
+        return null;
+    }
 }
 
 /**

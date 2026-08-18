@@ -166,7 +166,9 @@ export function isTabEnabled(tabId: string, company: CompanyData | null | undefi
     'SIRE',          // Módulo SIRE
     'ADMIN',         // Panel Admin
     'AI_KNOWLEDGE',  // Base IA (RAG)
-    'SOFTPREMIUM'    // SoftPremium (IA)
+    'SOFTPREMIUM',   // SoftPremium (IA)
+    'SUBSCRIPTION',  // Mi Suscripción SaaS
+    'SUPERADMIN'     // Consola SuperAdmin SaaS
   ];
 
   if (alwaysEnabled.includes(tabId)) return true;
