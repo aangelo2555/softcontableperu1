@@ -698,7 +698,14 @@ const App: React.FC = () => {
   if (activeTab === 'SOFTPREMIUM' || window.location.pathname === '/premium') {
     return (
       <div className={`fixed inset-0 z-[9999] w-screen h-screen min-h-screen bg-app-bg text-app-text font-sans overflow-y-auto ${theme === 'dark' ? 'dark' : ''}`}>
-        <Toaster position="top-right" reverseOrder={false} />
+        <Toaster
+          position="bottom-right"
+          reverseOrder={false}
+          toastOptions={{
+            duration: 3500,
+            className: 'text-xs font-bold rounded-2xl shadow-xl border border-app-border bg-app-surface text-app-text',
+          }}
+        />
         <SoftPremiumDashboard />
       </div>
     );
@@ -759,7 +766,14 @@ const App: React.FC = () => {
   return (
     <div className={`h-screen w-screen flex flex-col overflow-hidden bg-app-bg text-app-text font-sans selection:bg-blue-600 selection:text-white ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="flex-1 flex overflow-hidden">
-        <Toaster position="top-right" reverseOrder={false} />
+        <Toaster
+          position="bottom-right"
+          reverseOrder={false}
+          toastOptions={{
+            duration: 3500,
+            className: 'text-xs font-bold rounded-2xl shadow-xl border border-app-border bg-app-surface text-app-text',
+          }}
+        />
 
 
 

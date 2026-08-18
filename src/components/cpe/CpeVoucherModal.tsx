@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { parseCpeXml, base64ToUtf8, descargarXmlSeguro, generarCdrXmlOficial, type CpeParsedData } from '../../utils/cpeXmlParser';
 import {
@@ -55,7 +55,32 @@ const formatUnitPrice = (val: number | string | undefined | null): string => {
 export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) {
   const [activeTab, setActiveTab] = useState<'comprobante' | 'cdr' | 'xml'>('comprobante');
   const [copiedXml, setCopiedXml] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar al presionar la tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Gestos táctiles en móvil para deslizar y cerrar
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY !== null) {
+      const touchEndY = e.changedTouches[0].clientY;
+      if (touchEndY - touchStartY > 90) {
+        onClose();
+      }
+      setTouchStartY(null);
+    }
+  };
 
   // Decodificar XML de forma segura
   const xmlString = useMemo(() => {
@@ -248,26 +273,36 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         }
       `}</style>
 
-      {/* Backdrop sin blur, con tono oscuro translúcido suave */}
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 overflow-y-auto animate-fade-in print:p-0 print:bg-transparent">
-        <div className="bg-app-surface border border-app-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative my-auto print:border-none print:shadow-none print:max-h-none print:bg-transparent">
+      {/* Backdrop con Cierre al Clic Exterior */}
+      <div
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 overflow-y-auto animate-fade-in print:p-0 print:bg-transparent"
+      >
+        <div className="bg-app-surface border border-app-border rounded-3xl w-full max-w-4xl max-h-[96vh] flex flex-col shadow-2xl overflow-hidden relative my-auto print:border-none print:shadow-none print:max-h-none print:bg-transparent animate-scale-in">
           
+          {/* Manija táctil para móvil */}
+          <div className="w-12 h-1.5 rounded-full bg-neutral-500/40 mx-auto mt-2.5 sm:hidden" />
+
           {/* ═══ Header del Modal (Oculto en Impresión) ═══ */}
-          <div className="px-5 py-3.5 border-b border-app-border bg-app-bg flex items-center justify-between gap-3 flex-wrap print:hidden">
+          <div className="px-6 py-4 border-b border-app-border bg-app-bg flex items-center justify-between gap-3 flex-wrap print:hidden">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                <FileText size={18} />
+              <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-2xs">
+                <FileText size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm font-black text-app-text uppercase tracking-wider">
+                  <h2 className="text-sm sm:text-base font-black text-app-text uppercase tracking-wider">
                     {displayData.tipoDocDescripcion} {displayData.serie}-{displayData.numero}
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
-                    <CheckCircle2 size={10} /> {doc.estado || 'ACEPTADO'}
+                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={11} /> {doc.estado || 'ACEPTADO'}
                   </span>
                 </div>
-                <span className="text-[11px] text-app-muted font-medium block truncate max-w-md">
+                <span className="text-[11px] text-app-muted font-medium block truncate max-w-md mt-0.5">
                   {displayData.emisor.razonSocial} • RUC: {displayData.emisor.ruc}
                 </span>
               </div>
@@ -277,7 +312,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
             <div className="flex items-center gap-2">
               <button
                 onClick={handleImprimir}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
                 title="Imprimir únicamente la factura oficial"
               >
                 <Printer size={14} />
@@ -286,7 +321,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
               <button
                 onClick={handleDescargarXml}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
                 title="Descargar archivo XML oficial"
               >
                 <Download size={14} />
@@ -295,62 +330,62 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text transition-all cursor-pointer"
-                title="Cerrar modal"
+                className="p-2 rounded-xl bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text transition-all cursor-pointer"
+                title="Cerrar modal (Esc o Clic fuera)"
               >
                 <X size={18} />
               </button>
             </div>
           </div>
 
-          {/* ═══ Selector de Pestañas (Oculto en Impresión) ═══ */}
-          <div className="flex border-b border-app-border bg-app-bg/50 px-4 pt-2 gap-2 overflow-x-auto print:hidden">
+          {/* ═══ Selector de Pestañas con Altura y Espaciado Amplio ═══ */}
+          <div className="flex border-b border-app-border bg-app-bg/80 px-6 py-3.5 gap-3 overflow-x-auto print:hidden">
             <button
               onClick={() => setActiveTab('comprobante')}
-              className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                 activeTab === 'comprobante'
-                  ? 'border-blue-500 text-blue-500'
-                  : 'border-transparent text-app-muted hover:text-app-text'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-app-surface text-app-muted hover:text-app-text hover:bg-app-hover border border-app-border'
               }`}
             >
-              <FileText size={14} />
+              <FileText size={15} />
               <span>Representación Impresa (PDF)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('cdr')}
-              className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                 activeTab === 'cdr'
-                  ? 'border-purple-500 text-purple-500'
-                  : 'border-transparent text-app-muted hover:text-app-text'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'bg-app-surface text-app-muted hover:text-app-text hover:bg-app-hover border border-app-border'
               }`}
             >
-              <ShieldCheck size={14} />
+              <ShieldCheck size={15} />
               <span>Constancia CDR (SUNAT)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('xml')}
-              className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                 activeTab === 'xml'
-                  ? 'border-emerald-500 text-emerald-500'
-                  : 'border-transparent text-app-muted hover:text-app-text'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-app-surface text-app-muted hover:text-app-text hover:bg-app-hover border border-app-border'
               }`}
             >
-              <FileCode size={14} />
+              <FileCode size={15} />
               <span>Código XML</span>
             </button>
           </div>
 
           {/* ═══ Cuerpo del Modal: Estructura Oficial SUNAT ═══ */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-neutral-900/40 custom-scrollbar flex items-start justify-center print:p-0 print:bg-transparent">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-neutral-900/40 custom-scrollbar flex items-start justify-center print:p-0 print:bg-transparent">
             
             {/* PESTAÑA 1: REPRESENTACIÓN IMPRESA EXACTA SUNAT (IMPRIMIBLE) */}
             {activeTab === 'comprobante' && (
               <div
                 id="cpe-print-document"
                 ref={printRef}
-                className="bg-white text-black rounded-xs shadow-md p-4 sm:p-6 w-full max-w-[760px] mx-auto border-2 border-black font-sans text-xs flex flex-col gap-3 box-border"
+                className="bg-white text-black rounded-xs shadow-md p-5 sm:p-7 w-full max-w-[760px] mx-auto border-2 border-black font-sans text-xs flex flex-col gap-3.5 box-border"
               >
                 {/* 1. Encabezado: Datos Emisor + Cuadro Oficial RUC */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start border-b border-black pb-3">
@@ -370,7 +405,7 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                   </div>
 
                   {/* Lado Derecho: Cuadro Oficial R.U.C. (Borde Negro Fuerte) */}
-                  <div className="md:col-span-5 border-2 border-black rounded-xs p-2 flex flex-col items-center justify-center text-center bg-white">
+                  <div className="md:col-span-5 border-2 border-black rounded-xs p-2.5 flex flex-col items-center justify-center text-center bg-white">
                     <span className="text-xs font-black tracking-wider uppercase">
                       {displayData.tipoDocDescripcion}
                     </span>
@@ -427,23 +462,23 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                   <table className="w-full text-left border-collapse border border-black text-[10px]">
                     <thead>
                       <tr className="border-b border-black font-black uppercase text-center bg-white">
-                        <th className="border-r border-black p-1 w-14">Cantidad</th>
-                        <th className="border-r border-black p-1 w-20">Unidad Medida</th>
-                        <th className="border-r border-black p-1 w-16">Código</th>
-                        <th className="border-r border-black p-1 text-center">Descripción</th>
-                        <th className="border-r border-black p-1 w-24 text-right">Valor Unitario</th>
-                        <th className="p-1 w-16 text-right">ICBPER</th>
+                        <th className="border-r border-black p-1.5 w-14">Cantidad</th>
+                        <th className="border-r border-black p-1.5 w-20">Unidad Medida</th>
+                        <th className="border-r border-black p-1.5 w-16">Código</th>
+                        <th className="border-r border-black p-1.5 text-center">Descripción</th>
+                        <th className="border-r border-black p-1.5 w-24 text-right">Valor Unitario</th>
+                        <th className="p-1.5 w-16 text-right">ICBPER</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayData.items.map((item, idx) => (
                         <tr key={idx} className="border-b border-black/30">
-                          <td className="border-r border-black p-1 text-center font-mono">{item.cantidad}</td>
-                          <td className="border-r border-black p-1 text-center">{item.unidadMedida}</td>
-                          <td className="border-r border-black p-1 text-center font-mono">{item.codigo || '-'}</td>
-                          <td className="border-r border-black p-1 font-medium">{item.descripcion}</td>
-                          <td className="border-r border-black p-1 text-right font-mono">{formatUnitPrice(item.valorUnitario)}</td>
-                          <td className="p-1 text-right font-mono">{formatPEN(item.icbper)}</td>
+                          <td className="border-r border-black p-1.5 text-center font-mono">{item.cantidad}</td>
+                          <td className="border-r border-black p-1.5 text-center">{item.unidadMedida}</td>
+                          <td className="border-r border-black p-1.5 text-center font-mono">{item.codigo || '-'}</td>
+                          <td className="border-r border-black p-1.5 font-medium">{item.descripcion}</td>
+                          <td className="border-r border-black p-1.5 text-right font-mono">{formatUnitPrice(item.valorUnitario)}</td>
+                          <td className="p-1.5 text-right font-mono">{formatPEN(item.icbper)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -646,13 +681,13 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
           </div>
 
           {/* ═══ Footer del Modal ═══ */}
-          <div className="px-5 py-3 border-t border-app-border bg-app-surface flex items-center justify-between print:hidden">
+          <div className="px-6 py-4 border-t border-app-border bg-app-surface flex items-center justify-between print:hidden">
             <span className="text-[10px] font-bold text-app-muted">
               Documento estructurado bajo estándar UBL 2.1 SUNAT
             </span>
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer"
+              className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer"
             >
               Cerrar
             </button>

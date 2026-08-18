@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { webApiBridge } from '../services/apiBridge';
 import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
@@ -40,12 +40,23 @@ import {
   Printer,
   X,
   PackageCheck,
-  FolderOpen
+  FolderOpen,
+  Check,
+  Sparkles
 } from 'lucide-react';
 
 interface ConsultasViewProps {
   currentWorkspace?: any;
 }
+
+// Opciones enriquecidas para el Selector Personalizado de Tipo de Documento
+const TIPO_DOC_OPTIONS = [
+  { value: '01', label: 'Factura Electrónica (01)', icon: '📄', code: '01', desc: 'Comprobante tributario para empresas' },
+  { value: '03', label: 'Boleta de Venta (03)', icon: '🧾', code: '03', desc: 'Comprobante para consumidor final' },
+  { value: '07', label: 'Nota de Crédito (07)', icon: '🔄', code: '07', desc: 'Anulación, devolución o descuento' },
+  { value: '08', label: 'Nota de Débito (08)', icon: '📈', code: '08', desc: 'Recargo o aumento en el valor' },
+  { value: 'R1', label: 'Recibo por Honorarios (R1)', icon: '💼', code: 'R1', desc: 'Rentas de cuarta categoría' }
+];
 
 // Formateador estándar de moneda nacional de Perú (S/ PEN) con comas de miles
 export const formatPEN = (val: number | string | undefined | null): string => {
@@ -70,10 +81,15 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const companyRuc = activeCompany?.ruc || 'default';
 
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'individual' | 'masiva'>('individual');
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [showRecentSelector, setShowRecentSelector] = useState(true);
+
+  // Selector Personalizado de Tipo de Documento
+  const [isTipoDocOpen, setIsTipoDocOpen] = useState(false);
+  const tipoDocRef = useRef<HTMLDivElement>(null);
 
   // Formulario Individual
   const [formData, setFormData] = useState({
@@ -85,6 +101,17 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     total: ''
   });
   const [masivaText, setMasivaText] = useState('');
+
+  // Cerrar selector al hacer clic afuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tipoDocRef.current && !tipoDocRef.current.contains(event.target as Node)) {
+        setIsTipoDocOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // ═══ Persistencia Global de Resultados ═══
   const resultados = useMemo(() => {
@@ -242,6 +269,15 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
   };
 
+  const handleSelectTipoDoc = (value: string) => {
+    setFormData(prev => ({ ...prev, tipoDoc: value }));
+    setIsTipoDocOpen(false);
+  };
+
+  const selectedTipoDocObj = useMemo(() => {
+    return TIPO_DOC_OPTIONS.find(o => o.value === formData.tipoDoc) || TIPO_DOC_OPTIONS[0];
+  }, [formData.tipoDoc]);
+
   const procesarFacturas = async (facturas: any[]) => {
     if (!activeCompany?.ruc) {
       toast.error('Debe seleccionar una empresa activa primero.');
@@ -249,7 +285,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     }
 
     setLoading(true);
-    const loadingToast = toast.loading(`Consultando ${facturas.length} comprobante(s) en SUNAT API...`);
+    setLoadingMessage(`Consultando ${facturas.length} comprobante(s) en SUNAT API...`);
     try {
       const response = await webApiBridge.cpeDescargarLote({
         ruc: activeCompany.ruc,
@@ -283,15 +319,16 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       const aceptados = resList.filter((r: any) => r.estado === 'ACEPTADO').length;
       toast.success(
         `Consulta completada (${aceptados} Aceptados). ${descargasContadas > 0 ? `Se descargó el archivo XML a tu equipo.` : ''}`,
-        { id: loadingToast, duration: 4500 }
+        { duration: 4500 }
       );
       await syncCurrentWorkspace();
     } catch (error: any) {
       console.error(error);
       const msg = error?.response?.data?.error || error.message || 'Error al consultar SUNAT';
-      toast.error(`Error: ${msg}`, { id: loadingToast, duration: 6000 });
+      toast.error(`Error: ${msg}`, { duration: 6000 });
     } finally {
       setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -427,6 +464,27 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       {/* ═══ Contenedor Principal con Scrollbar Fluido y 100% de Ancho ═══ */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
         <div className="max-w-[1600px] mx-auto flex flex-col gap-5 w-full">
+
+          {/* ═══ BARRA DE CARGA Y PROGRESO RESPONSIVE (SIN BLOQUEAR EL HEADER) ═══ */}
+          {loading && (
+            <div className="card-elevated p-3.5 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-500/5 border border-blue-500/30 rounded-2xl flex flex-col gap-2 animate-fade-in shadow-md">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 size={16} className="text-blue-500 animate-spin shrink-0" />
+                  <span className="text-xs font-black uppercase tracking-wider text-app-text">
+                    {loadingMessage || 'Consultando comprobantes en SUNAT API...'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono font-black text-blue-500 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                  <span>Conexión Servidores SUNAT</span>
+                </div>
+              </div>
+              <div className="w-full h-1.5 bg-blue-500/20 rounded-full overflow-hidden relative">
+                <div className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 rounded-full animate-indeterminate" />
+              </div>
+            </div>
+          )}
 
           {/* ═══ MÓDULO: COMPROBANTES REGISTRADOS EN SIRE (AÑOS Y MESES) ═══ */}
           {showRecentSelector && (
@@ -659,26 +717,60 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                 <div className="p-4">
                   {activeTab === 'individual' ? (
                     <div className="space-y-3.5">
-                      {/* Selector Estilizado de Tipo de Documento */}
-                      <div>
+                      
+                      {/* SELECTOR PERSONALIZADO DE TIPO DE DOCUMENTO CON DISEÑO RICO */}
+                      <div className="relative" ref={tipoDocRef}>
                         <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                           Tipo de Documento
                         </label>
-                        <div className="relative">
-                          <select
-                            name="tipoDoc"
-                            value={formData.tipoDoc}
-                            onChange={handleInputChange}
-                            className="w-full appearance-none px-3.5 py-2 bg-app-bg border border-app-border hover:border-blue-500/40 rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all cursor-pointer pr-9"
-                          >
-                            <option value="01" className="bg-app-surface text-app-text">Factura Electrónica (01)</option>
-                            <option value="03" className="bg-app-surface text-app-text">Boleta de Venta (03)</option>
-                            <option value="07" className="bg-app-surface text-app-text">Nota de Crédito (07)</option>
-                            <option value="08" className="bg-app-surface text-app-text">Nota de Débito (08)</option>
-                            <option value="R1" className="bg-app-surface text-app-text">Recibo por Honorarios (R1)</option>
-                          </select>
-                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted pointer-events-none" />
+                        
+                        {/* Botón Disparador del Selector */}
+                        <div
+                          onClick={() => setIsTipoDocOpen(!isTipoDocOpen)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-app-bg hover:bg-app-hover border border-app-border focus:border-blue-500 rounded-xl text-xs font-bold text-app-text transition-all cursor-pointer shadow-2xs select-none group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm">{selectedTipoDocObj.icon}</span>
+                            <span className="truncate">{selectedTipoDocObj.label}</span>
+                          </div>
+                          <ChevronDown
+                            size={15}
+                            className={`text-app-muted transition-transform duration-200 shrink-0 ${isTipoDocOpen ? 'rotate-180 text-blue-500' : ''}`}
+                          />
                         </div>
+
+                        {/* Menú Desplegable Personalizado */}
+                        {isTipoDocOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
+                            {TIPO_DOC_OPTIONS.map((opt) => {
+                              const isSelected = opt.value === formData.tipoDoc;
+                              return (
+                                <div
+                                  key={opt.value}
+                                  onClick={() => handleSelectTipoDoc(opt.value)}
+                                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white shadow-sm'
+                                      : 'hover:bg-app-hover text-app-text'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className="text-base">{opt.icon}</span>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-xs font-bold tracking-tight truncate leading-tight">
+                                        {opt.label}
+                                      </span>
+                                      <span className={`text-[9px] truncate leading-tight ${isSelected ? 'text-blue-100' : 'text-app-muted'}`}>
+                                        {opt.desc}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {isSelected && <Check size={14} className="text-white shrink-0 mr-1" />}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       {/* Input RUC con Contenedor Flex Separado (CERO Solapamiento Posible) */}
