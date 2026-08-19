@@ -721,7 +721,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                           <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg space-y-1.5 relative animate-fade-in">
                             <div className="flex justify-between items-center border-b border-blue-500/20 pb-1.5">
                               <span className="text-[9px] font-bold uppercase text-blue-500 flex items-center gap-1">
-                                <Sparkles className="w-3 h-3" /> Respuesta Groq LLaMA-3.3 RAG
+                                <Sparkles className="w-3 h-3" /> Respuesta Groq IA RAG
                               </span>
                               <button 
                                 onClick={() => copyToClipboard(ragAnswers['trib_m1'])}
@@ -1390,7 +1390,7 @@ export const SoftPremiumDashboard: React.FC = () => {
 
       {/* FOOTER SOFTPREMIUM */}
       <footer className="border-t border-app-border px-4 py-3 text-center text-[10px] text-app-muted font-medium bg-app-surface mt-auto">
-        SoftPremium SAAS — Módulo Groq LLaMA-3.3 RAG 4.0 © 2026 Angelo Serna Simeon
+        SoftPremium SAAS — Módulo Groq IA RAG 4.0 © 2026 Angelo Serna Simeon
       </footer>
     </div>
   );

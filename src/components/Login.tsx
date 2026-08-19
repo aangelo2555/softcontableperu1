@@ -81,14 +81,18 @@ export const Login: React.FC = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorAlert, setErrorAlert] = useState<string | null>(null);
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        name: ''
-    });
-    const [phone, setPhone] = useState('');
-    const [documentNumber, setDocumentNumber] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+
+    // Estado independiente para Iniciar Sesión
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+
+    // Estado independiente para Crear Cuenta
+    const [registerName, setRegisterName] = useState('');
+    const [registerPhone, setRegisterPhone] = useState('');
+    const [registerDocumentNumber, setRegisterDocumentNumber] = useState('');
+    const [registerEmail, setRegisterEmail] = useState('');
+    const [registerPassword, setRegisterPassword] = useState('');
+    const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
 
     const [showTermsModal, setShowTermsModal] = useState(false);
     const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
@@ -128,15 +132,19 @@ export const Login: React.FC = () => {
         setErrorAlert(null);
         try {
             const res = await webApiBridge.authRegister({
-                ...formData,
-                phone,
-                documentNumber,
+                name: registerName,
+                email: registerEmail,
+                password: registerPassword,
+                phone: registerPhone,
+                documentNumber: registerDocumentNumber,
                 termsAccepted: true
             });
 
             if (res.success) {
+                setRegisterPassword('');
+                setRegisterConfirmPassword('');
                 if (res.requireVerification) {
-                    setVerificationEmail(formData.email);
+                    setVerificationEmail(registerEmail);
                     setShowEmailVerificationModal(true);
                     toast.success(res.message || '¡Cuenta creada! Revisa tu correo electrónico.');
                 } else if (res.token) {
@@ -148,6 +156,8 @@ export const Login: React.FC = () => {
                     window.location.reload();
                 } else {
                     toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                    setLoginEmail(registerEmail);
+                    setLoginPassword('');
                     setIsLogin(true);
                 }
             } else {
@@ -158,7 +168,9 @@ export const Login: React.FC = () => {
         } catch (error: any) {
             const resData = error.response?.data;
             if (resData?.requireVerification) {
-                setVerificationEmail(resData.email || formData.email);
+                setRegisterPassword('');
+                setRegisterConfirmPassword('');
+                setVerificationEmail(resData.email || registerEmail);
                 setShowEmailVerificationModal(true);
                 toast.success(resData.message || 'Hemos enviado tu código de activación a tu correo.');
             } else {
@@ -181,8 +193,8 @@ export const Login: React.FC = () => {
             setIsLoading(true);
             try {
                 const res = await webApiBridge.authLogin({
-                    email: formData.email,
-                    password: formData.password,
+                    email: loginEmail,
+                    password: loginPassword,
                     mode: requestedMode
                 });
 
@@ -215,7 +227,7 @@ export const Login: React.FC = () => {
             } catch (error: any) {
                 const resData = error.response?.data;
                 if (resData?.requireVerification) {
-                    setVerificationEmail(resData.email || formData.email);
+                    setVerificationEmail(resData.email || loginEmail);
                     setShowEmailVerificationModal(true);
                     toast.error(resData.error || 'Por favor verifica tu correo electrónico.');
                 } else {
@@ -228,7 +240,7 @@ export const Login: React.FC = () => {
             }
         } else {
             // Validaciones de Registro
-            const strength = checkPasswordStrength(formData.password);
+            const strength = checkPasswordStrength(registerPassword);
             if (!strength.isValid) {
                 const msg = 'La contraseña debe tener al menos 8 caracteres y combinar mayúsculas, minúsculas, números y símbolos (!@#$%...).';
                 setErrorAlert(msg);
@@ -236,14 +248,14 @@ export const Login: React.FC = () => {
                 return;
             }
 
-            if (!isStudentModeActive && formData.password !== confirmPassword) {
+            if (!isStudentModeActive && registerPassword !== registerConfirmPassword) {
                 const msg = 'Las contraseñas no coinciden. Por favor verifícalas.';
                 setErrorAlert(msg);
                 toast.error(msg);
                 return;
             }
 
-            if (!isStudentModeActive && phone.trim().length > 0 && phone.trim().length < 9) {
+            if (!isStudentModeActive && registerPhone.trim().length > 0 && registerPhone.trim().length < 9) {
                 const msg = 'El teléfono debe tener 9 dígitos (+51).';
                 setErrorAlert(msg);
                 toast.error(msg);
@@ -254,8 +266,14 @@ export const Login: React.FC = () => {
             if (isStudentModeActive) {
                 setIsLoading(true);
                 try {
-                    const res = await webApiBridge.authRegisterStudent(formData);
+                    const res = await webApiBridge.authRegisterStudent({
+                        name: registerName,
+                        email: registerEmail,
+                        password: registerPassword
+                    });
                     if (res.success) {
+                        setRegisterPassword('');
+                        setRegisterConfirmPassword('');
                         if (res.token) {
                             localStorage.setItem('softcontable_token', res.token);
                             if (res.user) {
@@ -267,6 +285,8 @@ export const Login: React.FC = () => {
                             }, 800);
                         } else {
                             toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+                            setLoginEmail(registerEmail);
+                            setLoginPassword('');
                             setIsLogin(true);
                         }
                     } else {
@@ -368,7 +388,8 @@ export const Login: React.FC = () => {
             if (res.success) {
                 toast.success('¡Contraseña restablecida exitosamente!');
                 setShowForgotPasswordModal(false);
-                setFormData(prev => ({ ...prev, email: forgotEmail }));
+                setLoginEmail(forgotEmail);
+                setLoginPassword('');
                 setIsLogin(true);
             } else {
                 setForgotError(res.error || 'Error al actualizar la contraseña.');
@@ -586,6 +607,7 @@ export const Login: React.FC = () => {
                                 onClick={() => {
                                     setIsLogin(true);
                                     setErrorAlert(null);
+                                    setLoginPassword('');
                                 }}
                                 className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     isLogin 
@@ -600,6 +622,8 @@ export const Login: React.FC = () => {
                                 onClick={() => {
                                     setIsLogin(false);
                                     setErrorAlert(null);
+                                    setRegisterPassword('');
+                                    setRegisterConfirmPassword('');
                                 }}
                                 className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     !isLogin 
@@ -627,12 +651,14 @@ export const Login: React.FC = () => {
                                         <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type="text"
+                                            id="register_name"
+                                            name="register_name"
                                             required
                                             autoComplete="name"
                                             placeholder="Ej. Juan Pérez"
                                             className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
-                                            value={formData.name}
-                                            onChange={e => setFormData({...formData, name: e.target.value})}
+                                            value={registerName}
+                                            onChange={e => setRegisterName(e.target.value)}
                                         />
                                     </div>
                                 </div>
@@ -646,13 +672,16 @@ export const Login: React.FC = () => {
                                             <Phone className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="tel"
+                                                id="register_phone"
+                                                name="register_phone"
                                                 required
                                                 maxLength={9}
                                                 inputMode="numeric"
+                                                autoComplete="tel"
                                                 placeholder="923 887 478"
                                                 className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                value={phone}
-                                                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                                value={registerPhone}
+                                                onChange={e => setRegisterPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                                             />
                                         </div>
                                     </div>
@@ -663,38 +692,45 @@ export const Login: React.FC = () => {
                                             <Building2 className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="text"
+                                                id="register_document"
+                                                name="register_document"
                                                 maxLength={11}
                                                 inputMode="numeric"
+                                                autoComplete="off"
                                                 placeholder="2060... o DNI"
                                                 className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                value={documentNumber}
-                                                onChange={e => setDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                                                value={registerDocumentNumber}
+                                                onChange={e => setRegisterDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
                                             />
                                         </div>
                                     </div>
                                 </>
                             )}
 
+                            {/* Campo Correo Electrónico */}
                             <div className="space-y-0.5">
                                 <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
                                 <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
                                     <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type="email"
+                                        id={isLogin ? "login_email" : "register_email"}
+                                        name={isLogin ? "login_email" : "register_email"}
                                         required
-                                        autoComplete="username"
+                                        autoComplete="email"
                                         placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
                                         className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
-                                        value={formData.email}
-                                        onChange={e => setFormData({...formData, email: e.target.value})}
+                                        value={isLogin ? loginEmail : registerEmail}
+                                        onChange={e => isLogin ? setLoginEmail(e.target.value) : setRegisterEmail(e.target.value)}
                                     />
                                 </div>
                             </div>
 
+                            {/* Campo Contraseña */}
                             <div className="space-y-0.5">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
-                                    {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                    {!isLogin && checkPasswordStrength(registerPassword).isValid && (
                                         <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                             <CheckCircle2 size={11} /> Segura
                                         </span>
@@ -704,15 +740,17 @@ export const Login: React.FC = () => {
                                     <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type={showPassword ? "text" : "password"}
+                                        id={isLogin ? "login_password" : "register_password"}
+                                        name={isLogin ? "login_password" : "register_password"}
                                         required
                                         autoComplete={isLogin ? "current-password" : "new-password"}
                                         placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
                                         className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
-                                        value={formData.password}
-                                        onChange={e => setFormData({...formData, password: e.target.value})}
+                                        value={isLogin ? loginPassword : registerPassword}
+                                        onChange={e => isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
                                     />
                                     <div className="absolute right-2.5 flex items-center gap-1">
-                                        {!isLogin && checkPasswordStrength(formData.password).isValid && (
+                                        {!isLogin && checkPasswordStrength(registerPassword).isValid && (
                                             <CheckCircle2 size={14} className="text-emerald-500" />
                                         )}
                                         <button 
@@ -725,8 +763,8 @@ export const Login: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-                                {!isLogin && formData.password.length > 0 && (
-                                    <PasswordStrengthChecker password={formData.password} />
+                                {!isLogin && registerPassword.length > 0 && (
+                                    <PasswordStrengthChecker password={registerPassword} />
                                 )}
                             </div>
 
@@ -734,7 +772,7 @@ export const Login: React.FC = () => {
                                 <div className="space-y-0.5">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
-                                        {confirmPassword.length > 0 && confirmPassword === formData.password && (
+                                        {registerConfirmPassword.length > 0 && registerConfirmPassword === registerPassword && (
                                             <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
                                                 <CheckCircle2 size={11} /> Coincide
                                             </span>
@@ -744,14 +782,17 @@ export const Login: React.FC = () => {
                                         <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type={showConfirmPassword ? "text" : "password"}
+                                            id="register_confirm_password"
+                                            name="register_confirm_password"
                                             required
+                                            autoComplete="new-password"
                                             placeholder="Repite la contraseña"
                                             className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
-                                            value={confirmPassword}
-                                            onChange={e => setConfirmPassword(e.target.value)}
+                                            value={registerConfirmPassword}
+                                            onChange={e => setRegisterConfirmPassword(e.target.value)}
                                         />
                                         <div className="absolute right-2.5 flex items-center gap-1">
-                                            {confirmPassword.length > 0 && confirmPassword === formData.password && (
+                                            {registerConfirmPassword.length > 0 && registerConfirmPassword === registerPassword && (
                                                 <CheckCircle2 size={14} className="text-emerald-500" />
                                             )}
                                             <button 
@@ -771,7 +812,7 @@ export const Login: React.FC = () => {
                                     <button 
                                         type="button" 
                                         onClick={() => {
-                                            setForgotEmail(formData.email);
+                                            setForgotEmail(loginEmail);
                                             setShowForgotPasswordModal(true);
                                             setForgotStep(1);
                                             setForgotOtpCode('');

@@ -285,7 +285,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
               Asistente Contable IA
               <Sparkles size={12} className="text-yellow-500 fill-yellow-500/20" />
             </h3>
-            <span className="text-[10px] text-app-muted font-bold block mt-0.5">Groq Llama 3.3 + RAG Activo</span>
+            <span className="text-[10px] text-app-muted font-bold block mt-0.5">Groq IA + RAG Activo</span>
           </div>
         </div>
         
