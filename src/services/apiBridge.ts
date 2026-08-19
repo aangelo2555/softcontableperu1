@@ -140,6 +140,10 @@ export const webApiBridge = {
         const res = await api.post('/api/auth/resend-verification', data);
         return res.data;
     },
+    authCheckVerificationStatus: async (params: { email: string }) => {
+        const res = await api.get(`/api/auth/check-verification-status?email=${encodeURIComponent(params.email)}&t=${Date.now()}`);
+        return res.data;
+    },
 
     // --- Database API ---
     dbGetWorkspaces: async () => {

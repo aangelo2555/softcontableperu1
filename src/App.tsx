@@ -515,18 +515,23 @@ const App: React.FC = () => {
               id: loadingToast,
               duration: 5000
             });
-            if (data.token) {
-              localStorage.setItem('softcontable_token', data.token);
+            if (data.token || data.accessToken) {
+              localStorage.setItem('softcontable_token', data.token || data.accessToken);
+            }
+            if (data.refreshToken) {
+              localStorage.setItem('softcontable_refresh_token', data.refreshToken);
             }
             if (data.user) {
               localStorage.setItem('softcontable_user', JSON.stringify(data.user));
             }
+            localStorage.setItem('softcontable_last_activity', Date.now().toString());
+
             if (window.history && window.history.replaceState) {
               window.history.replaceState({}, '', window.location.pathname);
             }
             setTimeout(() => {
               window.location.reload();
-            }, 1000);
+            }, 800);
           } else {
             toast.error(data.error || 'El enlace de verificación es inválido o ha expirado.', {
               id: loadingToast,

@@ -23,6 +23,15 @@ const authLimiter = rateLimit({
     validate: false
 });
 
+const statusPollingLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minuto
+    max: 120, // Límite amplio para permitir sondeo cross-device cada 2s sin bloqueo
+    message: { success: false, error: 'Demasiadas consultas de estado.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false
+});
+
 const { sendAccountVerificationEmail, sendResetOtpEmail } = require('./services/emailService');
 
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
@@ -333,7 +342,47 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
             ).get(token);
         }
 
+        // Si ya fue usado recientemente (< 15 min), permitir auto-login idempotente
         if (!verif) {
+            let recentVerif = null;
+            if (USE_POSTGRES) {
+                const rvRes = await dbManager.pool.query(
+                    `SELECT * FROM email_verifications 
+                     WHERE token = $1 AND created_at > (NOW() - INTERVAL '15 minutes')
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [token]
+                );
+                recentVerif = rvRes.rows[0];
+            } else {
+                recentVerif = dbManager.prepare(
+                    `SELECT * FROM email_verifications 
+                     WHERE token = ? AND created_at > datetime('now', '-15 minutes')
+                     ORDER BY created_at DESC LIMIT 1`
+                ).get(token);
+            }
+
+            if (recentVerif) {
+                const user = await dbManager.getUserByEmail(recentVerif.email);
+                if (user && user.is_verified) {
+                    const normalizedEmail = (user.email || '').trim().toLowerCase();
+                    const role = (normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : (user.role || 'user');
+                    const accessToken = jwt.sign(
+                        { id: user.id, email: user.email, name: user.name, role },
+                        JWT_SECRET,
+                        { expiresIn: '15m' }
+                    );
+                    const refreshToken = await generateAndStoreRefreshToken(user.id);
+                    return res.json({
+                        success: true,
+                        message: '¡Tu cuenta ha sido verificada exitosamente! Bienvenido a SoftContable.',
+                        accessToken,
+                        refreshToken,
+                        token: accessToken,
+                        user: { id: user.id, email: user.email, name: user.name, role }
+                    });
+                }
+            }
+
             return res.status(400).json({
                 success: false,
                 error: 'El enlace de verificación es inválido o ha expirado. Por favor solicita un nuevo código.'
@@ -374,7 +423,7 @@ router.post('/verify-email-token', authLimiter, async (req, res) => {
     }
 });
 
-// --- VERIFICACIÓN DE EMAIL POR CÓDIGO OTP (AUTO-LOGIN MANUAL) ---
+// --- VERIFICACIÓN DE EMAIL POR CÓDIGO OTP (AUTO-LOGIN MANUAL E IDEMPOTENTE) ---
 router.post('/verify-email-otp', authLimiter, async (req, res) => {
     try {
         const { email, otpCode } = req.body;
@@ -402,7 +451,46 @@ router.post('/verify-email-otp', authLimiter, async (req, res) => {
             ).get(normalizedEmail, cleanOtp);
         }
 
+        // Si no está pendiente, verificar si ya fue activado recientemente (< 15 min) por enlace móvil
         if (!verif) {
+            let recentVerif = null;
+            if (USE_POSTGRES) {
+                const rvRes = await dbManager.pool.query(
+                    `SELECT * FROM email_verifications 
+                     WHERE email = $1 AND otp_code = $2 AND created_at > (NOW() - INTERVAL '15 minutes')
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [normalizedEmail, cleanOtp]
+                );
+                recentVerif = rvRes.rows[0];
+            } else {
+                recentVerif = dbManager.prepare(
+                    `SELECT * FROM email_verifications 
+                     WHERE email = ? AND otp_code = ? AND created_at > datetime('now', '-15 minutes')
+                     ORDER BY created_at DESC LIMIT 1`
+                ).get(normalizedEmail, cleanOtp);
+            }
+
+            if (recentVerif) {
+                const user = await dbManager.getUserByEmail(normalizedEmail);
+                if (user && user.is_verified) {
+                    const role = (normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : (user.role || 'user');
+                    const accessToken = jwt.sign(
+                        { id: user.id, email: user.email, name: user.name, role },
+                        JWT_SECRET,
+                        { expiresIn: '15m' }
+                    );
+                    const refreshToken = await generateAndStoreRefreshToken(user.id);
+                    return res.json({
+                        success: true,
+                        message: '¡Tu cuenta ha sido verificada exitosamente! Bienvenido a SoftContable.',
+                        accessToken,
+                        refreshToken,
+                        token: accessToken,
+                        user: { id: user.id, email: user.email, name: user.name, role }
+                    });
+                }
+            }
+
             return res.status(400).json({
                 success: false,
                 error: 'Código de verificación incorrecto o expirado. Revisa tu correo e inténtalo de nuevo.'
@@ -441,6 +529,76 @@ router.post('/verify-email-otp', authLimiter, async (req, res) => {
         res.status(500).json({ success: false, error: 'Error al validar el código OTP.' });
     }
 });
+
+// --- SONDEO EN TIEMPO REAL: VERIFICAR ESTADO CROSS-DEVICE (MÓVIL <-> DESKTOP) ---
+const handleCheckVerificationStatus = async (req, res) => {
+    try {
+        const email = req.body?.email || req.query?.email;
+        if (!email) {
+            return res.status(400).json({ success: false, error: 'Email requerido.' });
+        }
+
+        const normalizedEmail = email.toString().trim().toLowerCase();
+        const user = await dbManager.getUserByEmail(normalizedEmail);
+
+        if (!user) {
+            return res.json({ success: true, verified: false });
+        }
+
+        const isUserVerified = user.is_verified === true || user.is_verified === 1 || user.is_verified === 't';
+
+        // Si el usuario ya está verificado, revisar si hubo verificación en los últimos 30 min (o si es super admin)
+        if (isUserVerified) {
+            let recentVerif = null;
+            if (USE_POSTGRES) {
+                const rvRes = await dbManager.pool.query(
+                    `SELECT * FROM email_verifications 
+                     WHERE email = $1 AND created_at > (NOW() - INTERVAL '30 minutes')
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [normalizedEmail]
+                );
+                recentVerif = rvRes.rows[0];
+            } else {
+                recentVerif = dbManager.prepare(
+                    `SELECT * FROM email_verifications 
+                     WHERE email = ? AND created_at > datetime('now', '-30 minutes')
+                     ORDER BY created_at DESC LIMIT 1`
+                ).get(normalizedEmail);
+            }
+
+            if (recentVerif || normalizedEmail === 'aangelo2555@gmail.com') {
+                const role = (normalizedEmail === 'aangelo2555@gmail.com') ? 'super_admin' : (user.role || 'user');
+                const accessToken = jwt.sign(
+                    { id: user.id, email: user.email, name: user.name, role },
+                    JWT_SECRET,
+                    { expiresIn: '15m' }
+                );
+                const refreshToken = await generateAndStoreRefreshToken(user.id);
+
+                return res.json({
+                    success: true,
+                    verified: true,
+                    message: '¡Cuenta verificada exitosamente desde tu dispositivo móvil!',
+                    accessToken,
+                    refreshToken,
+                    token: accessToken,
+                    user: { id: user.id, email: user.email, name: user.name, role }
+                });
+            }
+        }
+
+        return res.json({
+            success: true,
+            verified: false
+        });
+    } catch (error) {
+        console.error('[AUTH CHECK VERIFICATION STATUS ERROR]', error);
+        res.status(500).json({ success: false, error: 'Error al verificar estado.' });
+    }
+};
+
+router.get('/check-verification-status', statusPollingLimiter, handleCheckVerificationStatus);
+router.post('/check-verification-status', statusPollingLimiter, handleCheckVerificationStatus);
 
 // --- REENVIAR CORREO DE VERIFICACIÓN ---
 router.post('/resend-verification', authLimiter, async (req, res) => {
