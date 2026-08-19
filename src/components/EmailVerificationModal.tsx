@@ -53,20 +53,21 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 
   // --- SONDEO EN TIEMPO REAL: DETECTAR ACTIVACIÓN EN CELULAR / OTRA PESTAÑA ---
   useEffect(() => {
-    if (!isOpen || !email || verifiedFromOtherDevice) return;
+    if (!isOpen || !email) return;
 
     let isSubscribed = true;
     let pollTimer: any = null;
 
     const checkStatus = async () => {
+      if (hasHandledSuccess.current) return;
       try {
         const data = await webApiBridge.authCheckVerificationStatus({ email });
-        if (!isSubscribed) return;
+        if (hasHandledSuccess.current) return;
 
-        if (data && data.success && data.verified && !hasHandledSuccess.current) {
+        if (data && data.success && data.verified) {
           hasHandledSuccess.current = true;
           setVerifiedFromOtherDevice(true);
-          toast.success('🎉 ¡Cuenta activada desde tu dispositivo móvil! Iniciando sesión...', { duration: 4000 });
+          toast.success('🎉 ¡Cuenta activada desde tu dispositivo móvil! Ingresando al sistema...', { duration: 4000 });
           
           if (data.token || data.accessToken) {
             localStorage.setItem('softcontable_token', data.token || data.accessToken);
@@ -79,29 +80,31 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           }
           localStorage.setItem('softcontable_last_activity', Date.now().toString());
 
+          // Redirección y recarga garantizada para entrar al dashboard
           setTimeout(() => {
-            if (isSubscribed) {
+            try {
               onVerificationSuccess(data);
-            }
-          }, 1200);
+            } catch (_) {}
+            window.location.reload();
+          }, 800);
           return;
         }
       } catch (_) {
         // Ignorar fallos de red en sondeo
       }
 
-      if (isSubscribed) {
+      if (isSubscribed && !hasHandledSuccess.current) {
         pollTimer = setTimeout(checkStatus, 2500);
       }
     };
 
-    pollTimer = setTimeout(checkStatus, 2000);
+    pollTimer = setTimeout(checkStatus, 1500);
 
     return () => {
       isSubscribed = false;
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [isOpen, email, verifiedFromOtherDevice]);
+  }, [isOpen, email]);
 
   if (!isOpen) return null;
 
@@ -179,7 +182,10 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         localStorage.setItem('softcontable_last_activity', Date.now().toString());
 
         setTimeout(() => {
-          onVerificationSuccess(data);
+          try {
+            onVerificationSuccess(data);
+          } catch (_) {}
+          window.location.reload();
         }, 800);
       } else {
         const err = data.error || 'Código de verificación incorrecto.';

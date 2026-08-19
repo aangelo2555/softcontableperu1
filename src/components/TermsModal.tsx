@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { X, Shield, FileText, CheckSquare, Square, ExternalLink } from 'lucide-react';
+import { X, Shield, FileText, CheckSquare, ExternalLink } from 'lucide-react';
 
 interface TermsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAccept: () => void;
+  onOpenLegal?: (section: 'terms' | 'privacy') => void;
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, onAccept }) => {
+export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, onAccept, onOpenLegal }) => {
   const [accepted, setAccepted] = useState(false);
 
   if (!isOpen) return null;
@@ -44,9 +45,25 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, onAccep
         {/* Cuerpo del Texto con Scroll */}
         <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 text-xs text-app-muted leading-relaxed flex-1">
           <p className="text-app-text font-semibold">
-            Al continuar con el registro, usted declara haber leído, comprendido y aceptado los 
-            <strong className="text-blue-600 dark:text-blue-400"> Términos y Condiciones Generales de SoftContable SaaS</strong> y sus 
-            <strong className="text-blue-600 dark:text-blue-400"> Políticas de Privacidad</strong>, regulados bajo las normativas vigentes en la República del Perú.
+            Al continuar con el registro, usted declara haber leído, comprendido y aceptado los{' '}
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.('terms')}
+              className="text-blue-600 dark:text-blue-400 font-black underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer inline-flex items-center gap-0.5"
+            >
+              Términos y Condiciones Generales de SoftContable SaaS
+              <ExternalLink size={11} className="inline ml-0.5 shrink-0" />
+            </button>
+            {' '}y sus{' '}
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.('privacy')}
+              className="text-blue-600 dark:text-blue-400 font-black underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer inline-flex items-center gap-0.5"
+            >
+              Políticas de Privacidad
+              <ExternalLink size={11} className="inline ml-0.5 shrink-0" />
+            </button>
+            , regulados bajo las normativas vigentes en la República del Perú.
           </p>
 
           <div className="p-4 bg-app-bg rounded-2xl border border-app-border space-y-3 font-normal">
@@ -96,23 +113,50 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, onAccep
           </p>
         </div>
 
-        {/* Pie del Modal con Checkbox de Aceptación */}
-        <div className="p-5 border-t border-app-border bg-app-surface/90 flex flex-col gap-4 shrink-0">
-          <label 
+        {/* Pie del Modal con Checkbox de Aceptación Bien Alineado */}
+        <div className="p-5 border-t border-app-border bg-app-surface/95 flex flex-col gap-4 shrink-0">
+          <div 
             onClick={() => setAccepted(!accepted)}
-            className="flex items-start gap-3 cursor-pointer select-none group"
+            className="flex items-center gap-3 p-3.5 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-2xl transition-all cursor-pointer select-none"
           >
-            <div className="mt-0.5 text-blue-600 transition-transform group-hover:scale-110">
+            <div className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-transform hover:scale-105">
               {accepted ? (
-                <CheckSquare size={18} className="fill-blue-600 text-white" />
+                <div className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30">
+                  <CheckSquare size={16} className="text-white" />
+                </div>
               ) : (
-                <Square size={18} className="text-app-muted group-hover:text-blue-500" />
+                <div className="w-5 h-5 rounded-md border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-900" />
               )}
             </div>
-            <span className="text-xs font-bold text-app-text leading-tight">
-              Acepto los <strong className="text-blue-600 underline">Términos y Condiciones generales</strong> de SoftContable y sus <strong className="text-blue-600 underline">Políticas de Privacidad</strong>.
-            </span>
-          </label>
+
+            <div className="text-xs text-app-text font-medium leading-relaxed flex-1">
+              <span>Acepto los </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenLegal?.('terms');
+                }}
+                className="text-blue-600 dark:text-blue-400 font-black underline hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer inline-flex items-center gap-0.5"
+              >
+                TÉRMINOS Y CONDICIONES GENERALES
+                <ExternalLink size={11} className="inline ml-0.5 shrink-0" />
+              </button>
+              <span> DE SOFTCONTABLE Y SUS </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenLegal?.('privacy');
+                }}
+                className="text-blue-600 dark:text-blue-400 font-black underline hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer inline-flex items-center gap-0.5"
+              >
+                POLÍTICAS DE PRIVACIDAD
+                <ExternalLink size={11} className="inline ml-0.5 shrink-0" />
+              </button>
+              <span>.</span>
+            </div>
+          </div>
 
           <div className="flex items-center justify-end gap-3 pt-1">
             <button

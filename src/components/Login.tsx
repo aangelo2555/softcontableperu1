@@ -1088,6 +1088,7 @@ export const Login: React.FC = () => {
             <TermsModal
                 isOpen={showTermsModal}
                 onClose={() => setShowTermsModal(false)}
+                onOpenLegal={(section) => setShowLoginLegal(section)}
                 onAccept={() => {
                     setShowTermsModal(false);
                     executeProfessionalRegister();
