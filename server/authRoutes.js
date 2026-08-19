@@ -730,25 +730,49 @@ router.post('/register-student', authLimiter, async (req, res) => {
 // --- GOOGLE OAUTH 2.0 (LOGIN & REGISTRO DIRECTO) ---
 router.post('/google', authLimiter, async (req, res) => {
     try {
-        const { credential, mode } = req.body;
-        if (!credential) {
+        const { credential, accessToken: clientAccessToken, mode } = req.body;
+        if (!credential && !clientAccessToken) {
             return res.status(400).json({ success: false, error: 'Token de credencial de Google requerido.' });
         }
 
-        let payload;
-        try {
-            const ticket = await googleClient.verifyIdToken({
-                idToken: credential,
-                audience: GOOGLE_CLIENT_ID
-            });
-            payload = ticket.getPayload();
-        } catch (verifyError) {
-            console.error('[AUTH GOOGLE] Error verificando token de Google:', verifyError.message);
-            return res.status(401).json({ success: false, error: 'Token de Google inválido o expirado. Por favor reintenta.' });
+        let payload = null;
+
+        // 1. Validar vía ID Token (Criptográfico con verifyIdToken)
+        if (credential) {
+            try {
+                const ticket = await googleClient.verifyIdToken({
+                    idToken: credential,
+                    audience: GOOGLE_CLIENT_ID
+                });
+                payload = ticket.getPayload();
+            } catch (verifyError) {
+                console.warn('[AUTH GOOGLE] Advertencia verificando ID Token:', verifyError.message);
+            }
+        }
+
+        // 2. Validar vía Access Token con Google Userinfo API
+        const tokenToFetch = clientAccessToken || (!payload ? credential : null);
+        if (!payload && tokenToFetch) {
+            try {
+                const userInfoRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokenToFetch}` },
+                    timeout: 10000
+                });
+                if (userInfoRes.data && userInfoRes.data.email) {
+                    payload = {
+                        email: userInfoRes.data.email,
+                        name: userInfoRes.data.name || userInfoRes.data.given_name || 'Usuario Google',
+                        picture: userInfoRes.data.picture,
+                        email_verified: userInfoRes.data.email_verified
+                    };
+                }
+            } catch (userinfoError) {
+                console.error('[AUTH GOOGLE] Error obteniendo userinfo con accessToken:', userinfoError.message);
+            }
         }
 
         if (!payload || !payload.email) {
-            return res.status(400).json({ success: false, error: 'No se pudo obtener el correo de la cuenta de Google.' });
+            return res.status(401).json({ success: false, error: 'No se pudo verificar la cuenta de Google. Por favor intenta de nuevo.' });
         }
 
         const normalizedEmail = payload.email.trim().toLowerCase();

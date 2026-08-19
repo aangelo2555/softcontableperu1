@@ -115,16 +115,16 @@ export const Login: React.FC = () => {
 
     // Estado Autenticación con Google
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    const googleButtonHiddenRef = useRef<HTMLDivElement>(null);
 
-    // Manejar Respuesta de Google Identity Services
-    const handleGoogleCredentialResponse = async (credential: string) => {
+    // Manejar Respuesta de Autenticación de Google (ID Token o Access Token)
+    const handleGoogleAuthResponse = async ({ credential, accessToken }: { credential?: string; accessToken?: string }) => {
         setIsGoogleLoading(true);
         setErrorAlert(null);
         try {
             const requestedMode = isStudentModeActive ? 'estudiante' : 'profesional';
             const res = await webApiBridge.authGoogleLogin({
                 credential,
+                accessToken,
                 mode: requestedMode
             });
 
@@ -154,56 +154,70 @@ export const Login: React.FC = () => {
         }
     };
 
-    // Inicializar Google Identity Services SDK
-    useEffect(() => {
+    // Disparador Oficial y Directo de Google OAuth 2.0 (Evita iframe en blanco)
+    const handleTriggerGoogleLogin = () => {
+        setIsGoogleLoading(true);
+        setErrorAlert(null);
+
         const GOOGLE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '686232326828-5icr0f5eghni2ouvscnging0671v0duf.apps.googleusercontent.com';
 
-        const initGsi = () => {
-            if ((window as any).google?.accounts?.id) {
-                try {
-                    (window as any).google.accounts.id.initialize({
-                        client_id: GOOGLE_CLIENT_ID,
-                        callback: (response: any) => {
-                            if (response.credential) {
-                                handleGoogleCredentialResponse(response.credential);
+        try {
+            // Método Primario Oficial: Google OAuth2 Token Client (Ventana Popup Nativa)
+            if ((window as any).google?.accounts?.oauth2) {
+                const client = (window as any).google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: 'email profile openid',
+                    callback: async (tokenResponse: any) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            await handleGoogleAuthResponse({ accessToken: tokenResponse.access_token });
+                        } else if (tokenResponse?.error) {
+                            console.warn('[GOOGLE OAUTH ERROR]', tokenResponse.error);
+                            setIsGoogleLoading(false);
+                            if (tokenResponse.error !== 'popup_closed_by_user') {
+                                toast.error('No se completó el acceso con Google.');
                             }
-                        },
-                        auto_select: false,
-                        cancel_on_tap_outside: true,
-                    });
-
-                    if (googleButtonHiddenRef.current) {
-                        googleButtonHiddenRef.current.innerHTML = '';
-                        (window as any).google.accounts.id.renderButton(googleButtonHiddenRef.current, {
-                            type: 'standard',
-                            theme: 'outline',
-                            size: 'large',
-                            text: 'continue_with',
-                            shape: 'rectangular',
-                            logo_alignment: 'left',
-                            width: 320
-                        });
+                        } else {
+                            setIsGoogleLoading(false);
+                        }
+                    },
+                    error_callback: (err: any) => {
+                        console.error('[GOOGLE POPUP ERROR]', err);
+                        setIsGoogleLoading(false);
                     }
-                } catch (err) {
-                    console.warn('[GSI INIT ERROR]', err);
-                }
-            }
-        };
+                });
 
-        const timer = setTimeout(initGsi, 300);
-        return () => clearTimeout(timer);
-    }, [isStudentModeActive]);
-
-    const handleTriggerGoogleLogin = () => {
-        if ((window as any).google?.accounts?.id) {
-            const renderedBtn = googleButtonHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement;
-            if (renderedBtn) {
-                renderedBtn.click();
-            } else {
-                (window as any).google.accounts.id.prompt();
+                client.requestAccessToken({ prompt: 'select_account' });
+                return;
             }
-        } else {
-            toast.error('El servicio de Google está cargando. Por favor reintenta en un segundo.');
+
+            // Método Secundario Fallback: Google Identity Services ID Prompt
+            if ((window as any).google?.accounts?.id) {
+                (window as any).google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: (response: any) => {
+                        if (response.credential) {
+                            handleGoogleAuthResponse({ credential: response.credential });
+                        } else {
+                            setIsGoogleLoading(false);
+                        }
+                    },
+                    auto_select: false,
+                    cancel_on_tap_outside: true,
+                });
+                (window as any).google.accounts.id.prompt((notification: any) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        setIsGoogleLoading(false);
+                    }
+                });
+                return;
+            }
+
+            setIsGoogleLoading(false);
+            toast.error('El servicio de Google aún está cargando. Por favor espera un momento.');
+        } catch (e: any) {
+            console.error('[GOOGLE TRIGGER EXCEPTION]', e);
+            setIsGoogleLoading(false);
+            toast.error('Error al abrir la ventana de Google.');
         }
     };
 
@@ -619,29 +633,29 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Scrollbars)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[940px] xl:max-w-[1000px] h-auto lg:h-[92vh] lg:max-h-[580px] xl:max-h-[600px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[940px] xl:max-w-[1000px] h-auto lg:h-[92vh] lg:max-h-[640px] xl:max-h-[660px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
                 {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-4 sm:px-6 sm:py-5 flex flex-col justify-between overflow-y-auto no-scrollbar shrink-0">
+                <div className="w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-3 sm:px-6 sm:py-3.5 flex flex-col justify-between overflow-y-auto no-scrollbar shrink-0">
                     
                     {/* Header Marca */}
                     <div className="text-center mb-0.5">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-sm flex items-center justify-center mx-auto mb-1.5">
-                            <img src="/assets/logo.png" alt="Softcontable" className="w-8 h-8 object-contain drop-shadow-sm" />
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-sm flex items-center justify-center mx-auto mb-1">
+                            <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-sm" />
                         </div>
-                        <h1 className="text-lg font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
+                        <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
                             SOFT CONTABLE
                         </h1>
-                        <p className="text-slate-400 text-[9.5px] font-bold tracking-[0.22em] uppercase text-center notranslate" translate="no">
+                        <p className="text-slate-400 text-[9px] font-bold tracking-[0.22em] uppercase text-center notranslate" translate="no">
                             SISTEMA CONTABLE EN LA NUBE V2.0
                         </p>
                     </div>
 
                     {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-0.5">
+                    <div className="flex-1 flex flex-col justify-center py-0">
                         
                         {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="my-1.5 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
+                        <div className="my-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -676,26 +690,26 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Banner informativo del modo */}
-                        <div className={`mb-1.5 p-2 rounded-xl border text-[10.5px] sm:text-[11px] font-medium flex items-center gap-2 ${
+                        <div className={`mb-1 p-1.5 rounded-xl border text-[10px] sm:text-[10.5px] font-medium flex items-center gap-2 ${
                             isStudentModeActive
                                 ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
                                 : 'bg-[#f0f6ff] border-[#dbeafe] text-[#1e40af]'
                         }`}>
                             {isStudentModeActive ? (
                                 <>
-                                    <GraduationCap size={14} className="shrink-0 text-indigo-600" />
+                                    <GraduationCap size={13} className="shrink-0 text-indigo-600" />
                                     <span className="leading-tight">Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
                                 </>
                             ) : (
                                 <>
-                                    <ShieldCheck size={15} className="shrink-0 text-blue-600" />
+                                    <ShieldCheck size={14} className="shrink-0 text-blue-600" />
                                     <span className="leading-tight">Acceso al sistema contable oficial y empresas.</span>
                                 </>
                             )}
                         </div>
 
                         {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
+                        <div className="flex mb-1.5 border-b border-slate-200/80 pb-0.5">
                             <button 
                                 type="button"
                                 onClick={() => {
@@ -703,7 +717,7 @@ export const Login: React.FC = () => {
                                     setErrorAlert(null);
                                     setLoginPassword('');
                                 }}
-                                className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     isLogin 
                                         ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -719,7 +733,7 @@ export const Login: React.FC = () => {
                                     setRegisterPassword('');
                                     setRegisterConfirmPassword('');
                                 }}
-                                className={`flex-1 py-1.5 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                     !isLogin 
                                         ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
                                         : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -730,7 +744,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Botón Autenticación con Google (Estilo Moderno Imagen 2) */}
-                        <div className="mb-2 space-y-2">
+                        <div className="mb-1.5 space-y-1.5">
                             <button
                                 type="button"
                                 onClick={handleTriggerGoogleLogin}
@@ -750,13 +764,10 @@ export const Login: React.FC = () => {
                                 <span>{isGoogleLoading ? 'Conectando con Google...' : 'Continuar con Google'}</span>
                             </button>
 
-                            {/* Contenedor Iframe Oculto de Google GIS */}
-                            <div ref={googleButtonHiddenRef} className="hidden" aria-hidden="true" />
-
                             {/* Divisor Visual "o" */}
-                            <div className="relative flex items-center justify-center my-1.5">
+                            <div className="relative flex items-center justify-center my-1">
                                 <div className="border-t border-slate-200/90 w-full"></div>
-                                <span className="bg-white px-2 text-[9.5px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
+                                <span className="bg-white px-2 text-[9px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
                                     o con correo
                                 </span>
                                 <div className="border-t border-slate-200/90 w-full"></div>
@@ -764,7 +775,7 @@ export const Login: React.FC = () => {
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-1.5" autoComplete="on">
                             {errorAlert && (
                                 <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
@@ -961,7 +972,7 @@ export const Login: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={isLoading}
-                                className={`w-full font-black py-2.5 rounded-xl shadow-md shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
+                                className={`w-full font-black py-2 rounded-xl shadow-md shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1.5 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
                                         ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
                                         : 'bg-gradient-to-r from-[#1d4ed8] via-[#2563eb] to-[#3b82f6] hover:from-[#1e40af] hover:to-[#2563eb] text-white'
