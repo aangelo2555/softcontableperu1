@@ -88,40 +88,69 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     }
   }, []);
 
-  // Recargar chat aislado cuando cambia el usuario o la empresa activa
+  // Sincronización multi-dispositivo (Desktop <-> Móvil) y recarga de chat
   useEffect(() => {
-    const saved = sessionStorage.getItem(storageKey);
-    if (saved) {
+    let isMounted = true;
+
+    const loadServerChat = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed.map((m: any) => ({
+        const res = await webApiBridge.aiGetChatHistory(companyRuc);
+        if (isMounted && res.success && Array.isArray(res.messages) && res.messages.length > 0) {
+          const loaded = res.messages.map((m: any) => ({
             ...m,
             timestamp: new Date(m.timestamp)
-          })));
+          }));
+          setMessages(loaded);
+          sessionStorage.setItem(storageKey, JSON.stringify(loaded));
           return;
         }
-      } catch (_) {}
-    }
-
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'model',
-        content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
-        timestamp: new Date()
+      } catch (err) {
+        console.warn('[AI CHAT] No se pudo obtener historial del servidor, usando local:', err);
       }
-    ]);
-  }, [storageKey]);
 
-  // Guardar mensajes bajo la clave única del usuario y empresa
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (isMounted) {
+              setMessages(parsed.map((m: any) => ({
+                ...m,
+                timestamp: new Date(m.timestamp)
+              })));
+            }
+            return;
+          }
+        } catch (_) {}
+      }
+
+      if (isMounted) {
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'model',
+            content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
+            timestamp: new Date()
+          }
+        ]);
+      }
+    };
+
+    loadServerChat();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [companyRuc, storageKey]);
+
+  // Guardar mensajes bajo la clave única del usuario y empresa en sesión local
   useEffect(() => {
     if (messages.length > 0) {
       sessionStorage.setItem(storageKey, JSON.stringify(messages));
     }
   }, [messages, storageKey]);
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
     sessionStorage.removeItem(storageKey);
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
@@ -130,6 +159,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
       timestamp: new Date()
     };
     setMessages([welcomeMessage]);
+    try {
+      await webApiBridge.aiClearChatHistory(companyRuc);
+    } catch (_) {}
     toast.success('Conversación reiniciada 🧹');
   };
 
@@ -146,14 +178,15 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
       setInput('');
     }
 
-    // Agregar mensaje del usuario
+    // Agregar mensaje del usuario manteniendo el hilo multi-turno
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: queryText,
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, userMsg]);
+    const currentConversation = [...messages, userMsg];
+    setMessages(currentConversation);
     setLoading(true);
 
     try {
@@ -170,7 +203,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
         description: a.description
       }));
 
-      const response = await webApiBridge.aiGenerate(queryText, companyContext, planContableResumido);
+      // Pasamos el historial conversacional multi-turno a la IA
+      const response = await webApiBridge.aiGenerate(queryText, companyContext, planContableResumido, messages);
 
       if (response.success && response.data) {
         const aiData = response.data;
@@ -190,7 +224,13 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
           }
         };
 
-        setMessages(prev => [...prev, botMsg]);
+        const updatedMessages = [...currentConversation, botMsg];
+        setMessages(updatedMessages);
+
+        // Sincronizar en el servidor (para móvil y otros dispositivos con la misma cuenta)
+        webApiBridge.aiSaveChatHistory(companyRuc, updatedMessages).catch(e => {
+          console.warn('[AI CHAT] Error al sincronizar historial con servidor:', e);
+        });
       } else {
         throw new Error(response.error || 'No se pudo generar el asiento contable.');
       }

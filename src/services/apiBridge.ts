@@ -558,8 +558,20 @@ export const webApiBridge = {
     },
 
     // --- AI Assistant APIs ---
-    aiGenerate: async (premisa: string, companyContext: any, planContable: any[]) => {
-        const res = await api.post('/api/ai/generate', { premisa, companyContext, planContable });
+    aiGenerate: async (premisa: string, companyContext: any, planContable: any[], history?: any[]) => {
+        const res = await api.post('/api/ai/generate', { premisa, companyContext, planContable, history });
+        return res.data;
+    },
+    aiGetChatHistory: async (workspaceId: string) => {
+        const res = await api.get(`/api/ai/chat-history?workspaceId=${encodeURIComponent(workspaceId)}`);
+        return res.data;
+    },
+    aiSaveChatHistory: async (workspaceId: string, messages: any[]) => {
+        const res = await api.post('/api/ai/chat-history', { workspaceId, messages });
+        return res.data;
+    },
+    aiClearChatHistory: async (workspaceId: string) => {
+        const res = await api.delete(`/api/ai/chat-history?workspaceId=${encodeURIComponent(workspaceId)}`);
         return res.data;
     },
     aiGetKnowledge: async (filters?: { sector?: string; regimen?: string; categoria?: string; search?: string }) => {

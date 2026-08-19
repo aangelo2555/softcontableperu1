@@ -258,7 +258,7 @@ function parseCleanJSON(raw) {
 /**
  * Genera un asiento contable a partir de una premisa del usuario.
  */
-async function generateAsiento(premisa, companyContext, planContable) {
+async function generateAsiento(premisa, companyContext, planContable, history = []) {
     try {
         const { key: activeKey, url: activeUrl } = getGroqApiConfig();
         console.log(`[GROQ SERVICE] Procesando solicitud de generación con modelos Groq.`);
@@ -337,11 +337,42 @@ async function generateAsiento(premisa, companyContext, planContable) {
             }
         }
 
+        // 5. Formatear historial conversacional multi-turno previo
+        const previousMessages = [];
+        if (Array.isArray(history) && history.length > 0) {
+            const validHistory = history
+                .filter(m => m && m.id !== 'welcome' && (m.content || m.entry))
+                .slice(-4);
+
+            validHistory.forEach(m => {
+                if (m.role === 'user') {
+                    previousMessages.push({
+                        role: 'user',
+                        content: String(m.content).trim()
+                    });
+                } else if (m.role === 'model' || m.role === 'assistant') {
+                    let assistantSummary = m.content || '';
+                    if (m.entry && Array.isArray(m.entry.asientos) && m.entry.asientos.length > 0) {
+                        const asientoResume = m.entry.asientos.map(a => `${a.glosa}: Debe S/ ${a.lines?.reduce((acc, l) => acc + (l.debe||0), 0) || 0}`).join(' | ');
+                        assistantSummary = `${m.entry.explicacion || m.content || ''} [Asiento: ${asientoResume}]`.trim();
+                    }
+                    previousMessages.push({
+                        role: 'assistant',
+                        content: JSON.stringify({
+                            explicacion: assistantSummary,
+                            niif_norma: m.entry?.niif_norma || 'N/A',
+                            asientos: m.entry?.asientos || []
+                        })
+                    });
+                }
+            });
+        }
+
         const systemInstruction = `Eres el ASISTENTE CONTABLE IA experto en tributación y contabilidad peruana (PCGE 2026, NIIF, SUNAT).
 Responde SIEMPRE en formato JSON válido con la siguiente estructura:
 {
   "explicacion": "Respuesta clara y técnica a la consulta o explicación del asiento",
-  "niif_norma": "NIIF/NIC aplicable (o N/A si es consulta general)",
+  "niif_norma": "Norma NIIF/NIC aplicable (o N/A si es consulta general)",
   "asientos": [
     {
       "glosa": "GLOSA DEL ASIENTO EN MAYÚSCULAS",
@@ -353,9 +384,10 @@ Responde SIEMPRE en formato JSON válido con la siguiente estructura:
 }
 
 REGLAS:
-1. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo se calcula la detracción?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
-2. Si es una transacción económica, genera el asiento contable con Partida Doble (Debe = Haber).
-3. Nunca devuelvas texto fuera del objeto JSON.`;
+1. Recuerda el historial previo de la conversación. Si el usuario pide modificar un monto, cambiar una cuenta o pregunta sobre lo hablado anteriormente (ej: "¿De qué hablamos anteriormente?"), responde en detalle basándote en los mensajes previos.
+2. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo se calcula la detracción?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
+3. Si es una transacción económica o modificación de un asiento previo, genera el asiento contable con Partida Doble (Debe = Haber).
+4. Nunca devuelvas texto fuera del objeto JSON.`;
 
         const promptText = `PREMISA: "${premisa}"
 SECTOR: ${sector} | RÉGIMEN: ${regimen} | UIT 2026: S/ 5,500.00 | IGV: 18%
@@ -364,6 +396,7 @@ ${examplesPrompt}${regsPrompt}${planPromptSection}`;
         const requestBody = {
             messages: [
                 { role: "system", content: systemInstruction },
+                ...previousMessages,
                 { role: "user", content: promptText }
             ],
             response_format: { type: "json_object" },

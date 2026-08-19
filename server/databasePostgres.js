@@ -1305,6 +1305,46 @@ const db = {
             console.error('[POSTGRES] Error deleting ai knowledge:', error.message);
             return { success: false, error: error.message };
         }
+    },
+
+    // --- AI Chat Sessions (Cross-Device Sync) ---
+    getAIChatHistory: async (userId, workspaceId) => {
+        try {
+            const res = await query('SELECT messages_json FROM ai_chat_sessions WHERE user_id = $1 AND workspace_id = $2', [userId, workspaceId]);
+            if (res.rows.length === 0) return [];
+            const parsed = JSON.parse(res.rows[0].messages_json);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            console.error('[POSTGRES] Error en getAIChatHistory:', error.message);
+            return [];
+        }
+    },
+
+    saveAIChatHistory: async (userId, workspaceId, messages) => {
+        try {
+            const id = `${userId}_${workspaceId}`;
+            const jsonStr = typeof messages === 'string' ? messages : JSON.stringify(messages || []);
+            const sql = `
+                INSERT INTO ai_chat_sessions (id, user_id, workspace_id, messages_json, updated_at)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (id) DO UPDATE SET messages_json = $4, updated_at = NOW()
+            `;
+            await query(sql, [id, userId, workspaceId, jsonStr]);
+            return { success: true };
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveAIChatHistory:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    deleteAIChatHistory: async (userId, workspaceId) => {
+        try {
+            await query('DELETE FROM ai_chat_sessions WHERE user_id = $1 AND workspace_id = $2', [userId, workspaceId]);
+            return { success: true };
+        } catch (error) {
+            console.error('[POSTGRES] Error en deleteAIChatHistory:', error.message);
+            return { success: false, error: error.message };
+        }
     }
 };
 
@@ -1698,6 +1738,19 @@ async function ensureSchemaConstraints() {
                     );
                     CREATE INDEX IF NOT EXISTS idx_products_workspace ON products(workspace_id);
                     CREATE INDEX IF NOT EXISTS idx_products_user ON products(user_id);
+                `
+            },
+            {
+                name: 'ai_chat_sessions',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+                        id TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        workspace_id TEXT NOT NULL,
+                        messages_json TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_user_ws ON ai_chat_sessions(user_id, workspace_id);
                 `
             },
             {

@@ -456,6 +456,15 @@ db.exec(`
         FOREIGN KEY(workspace_id) REFERENCES workspaces(ruc) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_att_composite ON attachments(workspace_id, entity_type, entity_id);
+
+    CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL,
+        messages_json TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_chat_user_ws ON ai_chat_sessions(user_id, workspace_id);
 `);
 
 // --- Semillar planes en SQLite ---
@@ -1986,6 +1995,46 @@ const dbManager = {
             return { success: false, error: error.message };
         }
     },
+
+    // --- AI Chat Sessions (Cross-Device Sync) ---
+    getAIChatHistory: (userId, workspaceId) => {
+        try {
+            const row = db.prepare(`SELECT messages_json FROM ai_chat_sessions WHERE user_id = ? AND workspace_id = ?`).get(userId, workspaceId);
+            if (!row || !row.messages_json) return [];
+            const parsed = JSON.parse(row.messages_json);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            console.error('[SQLITE] Error en getAIChatHistory:', error.message);
+            return [];
+        }
+    },
+
+    saveAIChatHistory: (userId, workspaceId, messages) => {
+        try {
+            const id = `${userId}_${workspaceId}`;
+            const jsonStr = typeof messages === 'string' ? messages : JSON.stringify(messages || []);
+            const stmt = db.prepare(`
+                INSERT OR REPLACE INTO ai_chat_sessions (id, user_id, workspace_id, messages_json, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `);
+            stmt.run(id, userId, workspaceId, jsonStr);
+            return { success: true };
+        } catch (error) {
+            console.error('[SQLITE] Error en saveAIChatHistory:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    deleteAIChatHistory: (userId, workspaceId) => {
+        try {
+            db.prepare(`DELETE FROM ai_chat_sessions WHERE user_id = ? AND workspace_id = ?`).run(userId, workspaceId);
+            return { success: true };
+        } catch (error) {
+            console.error('[SQLITE] Error en deleteAIChatHistory:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
     rawDb: db
 };
 

@@ -2402,7 +2402,7 @@ app.get('/api/admin/user-workspace-data/:userId/:ruc', authMiddleware, adminAuth
 
 app.post('/api/ai/generate', authMiddleware, inspectMiddleware, async (req, res) => {
     try {
-        const { premisa, companyContext, planContable } = req.body;
+        const { premisa, companyContext, planContable, history } = req.body;
         if (!premisa) {
             return res.status(400).json({ success: false, error: 'La premisa contable es requerida.' });
         }
@@ -2414,11 +2414,45 @@ app.post('/api/ai/generate', authMiddleware, inspectMiddleware, async (req, res)
         }
 
         const geminiService = require('./geminiService');
-        const result = await geminiService.generateAsiento(premisa, companyContext, planContable);
+        const result = await geminiService.generateAsiento(premisa, companyContext, planContable, history || []);
         
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('[AI ERROR] Error en generateAsiento:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Sincronización de historial de chat IA (Multi-dispositivo Desktop <-> Móvil)
+app.get('/api/ai/chat-history', authMiddleware, async (req, res) => {
+    try {
+        const workspaceId = req.query.workspaceId || 'default';
+        const messages = await db.getAIChatHistory(req.user.id, workspaceId);
+        res.json({ success: true, messages: messages || [] });
+    } catch (error) {
+        console.error('[AI ERROR] Error en getAIChatHistory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/ai/chat-history', authMiddleware, async (req, res) => {
+    try {
+        const { workspaceId, messages } = req.body;
+        const result = await db.saveAIChatHistory(req.user.id, workspaceId || 'default', messages || []);
+        res.json(result);
+    } catch (error) {
+        console.error('[AI ERROR] Error en saveAIChatHistory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/api/ai/chat-history', authMiddleware, async (req, res) => {
+    try {
+        const workspaceId = req.query.workspaceId || 'default';
+        const result = await db.deleteAIChatHistory(req.user.id, workspaceId);
+        res.json(result);
+    } catch (error) {
+        console.error('[AI ERROR] Error en deleteAIChatHistory:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
