@@ -95,8 +95,71 @@ router.post('/register', authLimiter, async (req, res) => {
         // 3. Verificar si ya existe usuario
         const existingUser = await dbManager.getUserByEmail(normalizedEmail);
         if (existingUser) {
-            console.warn(`[AUTH] El correo ${normalizedEmail} ya existe.`);
-            return res.status(400).json({ success: false, error: 'El correo ya está registrado. Por favor inicia sesión.' });
+            const isUserVerified = existingUser.is_verified === true || existingUser.is_verified === 1 || existingUser.is_verified === 't';
+            if (isUserVerified) {
+                console.warn(`[AUTH] El correo ${normalizedEmail} ya existe y está verificado.`);
+                return res.status(400).json({ success: false, error: 'El correo ya está registrado y verificado. Por favor inicia sesión.' });
+            }
+
+            console.log(`[AUTH] El correo ${normalizedEmail} ya existía pero NO está verificado. Actualizando datos y reenviando nuevo código OTP...`);
+            
+            // Actualizar contraseña y datos del usuario existente
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            
+            if (USE_POSTGRES) {
+                await dbManager.pool.query(
+                    `UPDATE users SET password = $1, name = COALESCE($2, name), phone = COALESCE($3, phone), document_number = COALESCE($4, document_number) WHERE id = $5`,
+                    [hashedPassword, name || null, phone || null, documentNumber || null, existingUser.id]
+                );
+            } else {
+                dbManager.prepare(
+                    `UPDATE users SET password = ?, name = COALESCE(?, name), phone = COALESCE(?, phone), document_number = COALESCE(?, document_number) WHERE id = ?`
+                ).run(hashedPassword, name || null, phone || null, documentNumber || null, existingUser.id);
+            }
+
+            // Generar nuevo Token Seguro y Código OTP de 6 dígitos
+            const verifyToken = crypto.randomBytes(32).toString('hex');
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const verifId = uuidv4();
+
+            try {
+                if (USE_POSTGRES) {
+                    await dbManager.pool.query(
+                        `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                         VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours', false)`,
+                        [verifId, existingUser.id, normalizedEmail, verifyToken, otpCode]
+                    );
+                } else {
+                    dbManager.prepare(
+                        `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                         VALUES (?, ?, ?, ?, ?, datetime('now', '+24 hours'), 0)`
+                    ).run(verifId, existingUser.id, normalizedEmail, verifyToken, otpCode);
+                }
+            } catch (verifErr) {
+                console.warn('[AUTH] Warning guardando email_verifications:', verifErr.message);
+            }
+
+            const host = req.get('host') || 'softcontable.up.railway.app';
+            const protocol = (req.protocol === 'https' || host.includes('railway.app') || process.env.NODE_ENV === 'production') ? 'https' : req.protocol;
+            const verificationUrl = `${protocol}://${host}/?verify_token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+            const emailRes = await sendAccountVerificationEmail({
+                toEmail: normalizedEmail,
+                userName: name || existingUser.name || 'Contador',
+                verificationUrl,
+                otpCode
+            });
+
+            return res.json({
+                success: true,
+                requireVerification: true,
+                email: normalizedEmail,
+                isReverification: true,
+                message: 'Tu cuenta ya estaba en proceso de registro. Hemos enviado un nuevo código de activación a tu correo.',
+                simulated: emailRes.simulated || false,
+                devCode: (emailRes.simulated || process.env.NODE_ENV !== 'production') ? otpCode : undefined
+            });
         }
 
         // 4. Encriptar contraseña
@@ -389,7 +452,8 @@ router.post('/resend-verification', authLimiter, async (req, res) => {
         const user = await dbManager.getUserByEmail(normalizedEmail);
         if (!user) return res.status(404).json({ success: false, error: 'Usuario no encontrado.' });
 
-        if (user.is_verified === true || user.is_verified === 1) {
+        const isUserVerified = user.is_verified === true || user.is_verified === 1 || user.is_verified === 't';
+        if (isUserVerified) {
             return res.json({ success: true, alreadyVerified: true, message: 'Tu cuenta ya está verificada. Puedes iniciar sesión.' });
         }
 
@@ -414,14 +478,19 @@ router.post('/resend-verification', authLimiter, async (req, res) => {
         const protocol = (req.protocol === 'https' || host.includes('railway.app') || process.env.NODE_ENV === 'production') ? 'https' : req.protocol;
         const verificationUrl = `${protocol}://${host}/?verify_token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
-        await sendAccountVerificationEmail({
+        const emailRes = await sendAccountVerificationEmail({
             toEmail: normalizedEmail,
             userName: user.name || 'Contador',
             verificationUrl,
             otpCode
         });
 
-        res.json({ success: true, message: 'Se ha reenviado el correo de verificación a tu bandeja de entrada.' });
+        res.json({
+            success: true,
+            message: 'Se ha reenviado el correo de verificación con tu código de 6 dígitos.',
+            simulated: emailRes.simulated || false,
+            devCode: (emailRes.simulated || process.env.NODE_ENV !== 'production') ? otpCode : undefined
+        });
     } catch (error) {
         console.error('[AUTH RESEND VERIF ERROR]', error);
         res.status(500).json({ success: false, error: 'Error al reenviar el correo de verificación.' });
@@ -526,11 +595,46 @@ router.post('/login', authLimiter, async (req, res) => {
         // VALIDACIÓN DE VERIFICACIÓN DE CORREO (Excepto Owner y Estudiantes)
         const isVerified = user.is_verified === true || user.is_verified === 1 || user.is_verified === 't' || isOwner || role === 'estudiante';
         if (!isVerified) {
+            console.log(`[AUTH] Usuario ${normalizedEmail} intentó ingresar sin verificar. Auto-despachando nuevo código OTP...`);
+            
+            // Auto-generar y reenviar código OTP para que el usuario pueda verificar de inmediato
+            const verifyToken = crypto.randomBytes(32).toString('hex');
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const verifId = uuidv4();
+
+            try {
+                if (USE_POSTGRES) {
+                    await dbManager.pool.query(
+                        `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                         VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '24 hours', false)`,
+                        [verifId, user.id, normalizedEmail, verifyToken, otpCode]
+                    );
+                } else {
+                    dbManager.prepare(
+                        `INSERT INTO email_verifications (id, user_id, email, token, otp_code, expires_at, is_used)
+                         VALUES (?, ?, ?, ?, ?, datetime('now', '+24 hours'), 0)`
+                    ).run(verifId, user.id, normalizedEmail, verifyToken, otpCode);
+                }
+
+                const host = req.get('host') || 'softcontable.up.railway.app';
+                const protocol = (req.protocol === 'https' || host.includes('railway.app') || process.env.NODE_ENV === 'production') ? 'https' : req.protocol;
+                const verificationUrl = `${protocol}://${host}/?verify_token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+                await sendAccountVerificationEmail({
+                    toEmail: normalizedEmail,
+                    userName: user.name || 'Contador',
+                    verificationUrl,
+                    otpCode
+                });
+            } catch (e) {
+                console.warn('[AUTH] Error enviando código OTP durante login no verificado:', e.message);
+            }
+
             return res.status(403).json({
                 success: false,
                 requireVerification: true,
                 email: user.email,
-                error: 'Debes completar la verificación de tu correo electrónico antes de ingresar.'
+                error: 'Debes completar la verificación de tu correo electrónico. Te acabamos de enviar un nuevo código de 6 dígitos a tu bandeja de entrada.'
             });
         }
 

@@ -1494,6 +1494,14 @@ const dbManager = {
         const stmt = db.prepare(`
             INSERT INTO users (id, email, password, name, role, phone, document_number, is_verified, terms_accepted_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(email) DO UPDATE SET
+                password = excluded.password,
+                name = excluded.name,
+                role = excluded.role,
+                phone = excluded.phone,
+                document_number = excluded.document_number,
+                is_verified = excluded.is_verified,
+                terms_accepted_at = datetime('now')
         `);
         return stmt.run(u.id, normalizedEmail, u.password, u.name, u.role || 'user', u.phone || null, u.document_number || null, isVerified);
     },

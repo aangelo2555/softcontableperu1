@@ -156,9 +156,16 @@ export const Login: React.FC = () => {
                 toast.error(errMsg);
             }
         } catch (error: any) {
-            const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
-            setErrorAlert(errMsg);
-            toast.error(errMsg);
+            const resData = error.response?.data;
+            if (resData?.requireVerification) {
+                setVerificationEmail(resData.email || formData.email);
+                setShowEmailVerificationModal(true);
+                toast.success(resData.message || 'Hemos enviado tu código de activación a tu correo.');
+            } else {
+                const errMsg = resData?.error || resData?.message || 'Error de conexión con el servidor';
+                setErrorAlert(errMsg);
+                toast.error(errMsg);
+            }
         } finally {
             setIsLoading(false);
         }

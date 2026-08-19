@@ -43,58 +43,91 @@ const createTransporter = (usePort587 = true) => {
 };
 
 /**
- * Despachador central de correos con reintentos en HTTPS (Resend / Brevo) y SMTP fallback.
+ * Despachador central de correos con reintentos en HTTPS (Brevo / Resend / SendGrid) y SMTP (Nodemailer).
  */
-async function sendHtmlEmail({ toEmail, subject, htmlContent, debugLabel = 'EMAIL' }) {
-    console.log(`[EMAIL SERVICE] Enviando [${debugLabel}] a: ${toEmail}`);
+async function sendHtmlEmail({ toEmail, subject, htmlContent, debugLabel = 'EMAIL', otpCode = null, verificationUrl = null }) {
+    console.log(`\n========================================================================`);
+    console.log(`📬 [EMAIL SERVICE] Preparando despacho [${debugLabel}]`);
+    console.log(`👉 Destinatario : ${toEmail}`);
+    console.log(`👉 Asunto       : ${subject}`);
+    if (otpCode) console.log(`🔑 CÓDIGO OTP   : [ ${otpCode} ]`);
+    if (verificationUrl) console.log(`🔗 ENLACE ACT.  : ${verificationUrl}`);
+    console.log(`========================================================================\n`);
 
-    // 1. INTENTO VÍA HTTP API HTTPS (RESEND API - Puerto 443 100% abierto en Railway)
-    if (process.env.RESEND_API_KEY) {
+    // 1. INTENTO VÍA BREVO HTTP API (Puerto 443 HTTPS - Recomendado para Railway / Cloud)
+    const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+    if (brevoApiKey) {
         try {
-            console.log('[EMAIL SERVICE] Enviando vía Resend HTTP API (Puerto 443 HTTPS)...');
-            const resendRes = await axios.post('https://api.resend.com/emails', {
-                from: 'SOFTCONTABLE <onboarding@resend.dev>',
-                to: [toEmail],
-                subject,
-                html: htmlContent
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 8000
-            });
-            console.log(`[EMAIL SERVICE RESEND SUCCESS] ✅ Correo enviado por Resend HTTPS. ID: ${resendRes.data.id}`);
-            return { success: true, simulated: false, messageId: resendRes.data.id };
-        } catch (resendErr) {
-            console.error(`[EMAIL SERVICE RESEND ERROR]`, resendErr.response?.data || resendErr.message);
-        }
-    }
-
-    // 2. INTENTO VÍA BREVO HTTP API (Puerto 443 HTTPS)
-    if (process.env.BREVO_API_KEY) {
-        try {
-            console.log('[EMAIL SERVICE] Enviando vía Brevo HTTP API (Puerto 443 HTTPS)...');
+            console.log('[EMAIL SERVICE] 🚀 Enviando vía Brevo HTTP API (Puerto 443 HTTPS)...');
+            const senderEmail = process.env.BREVO_SENDER || process.env.GMAIL_USER || 'aangelo2555@gmail.com';
             const brevoRes = await axios.post('https://api.brevo.com/v3/smtp/email', {
-                sender: { name: 'SOFTCONTABLE', email: process.env.GMAIL_USER || 'aangelo2555@gmail.com' },
+                sender: { name: 'SOFTCONTABLE', email: senderEmail },
                 to: [{ email: toEmail }],
                 subject,
                 htmlContent
             }, {
                 headers: {
-                    'api-key': process.env.BREVO_API_KEY,
+                    'api-key': brevoApiKey.trim(),
                     'Content-Type': 'application/json'
                 },
-                timeout: 8000
+                timeout: 10000
             });
-            console.log(`[EMAIL SERVICE BREVO SUCCESS] ✅ Correo enviado por Brevo HTTPS. ID: ${brevoRes.data.messageId}`);
-            return { success: true, simulated: false, messageId: brevoRes.data.messageId };
+            console.log(`[EMAIL SERVICE BREVO SUCCESS] ✅ Correo entregado vía Brevo HTTPS. MessageID: ${brevoRes.data.messageId || 'OK'}`);
+            return { success: true, simulated: false, provider: 'brevo', messageId: brevoRes.data.messageId };
         } catch (brevoErr) {
-            console.error(`[EMAIL SERVICE BREVO ERROR]`, brevoErr.response?.data || brevoErr.message);
+            console.error(`[EMAIL SERVICE BREVO ERROR] ⚠️ Brevo falló:`, brevoErr.response?.data || brevoErr.message);
         }
     }
 
-    // 3. INTENTO VÍA GMAIL / SMTP (Nodemailer)
+    // 2. INTENTO VÍA RESEND HTTP API (Puerto 443 HTTPS)
+    if (process.env.RESEND_API_KEY) {
+        try {
+            console.log('[EMAIL SERVICE] 🚀 Enviando vía Resend HTTP API (Puerto 443 HTTPS)...');
+            const fromSender = process.env.RESEND_FROM || 'SOFTCONTABLE <onboarding@resend.dev>';
+            const resendRes = await axios.post('https://api.resend.com/emails', {
+                from: fromSender,
+                to: [toEmail],
+                subject,
+                html: htmlContent
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
+            });
+            console.log(`[EMAIL SERVICE RESEND SUCCESS] ✅ Correo entregado vía Resend HTTPS. ID: ${resendRes.data.id}`);
+            return { success: true, simulated: false, provider: 'resend', messageId: resendRes.data.id };
+        } catch (resendErr) {
+            console.error(`[EMAIL SERVICE RESEND ERROR] ⚠️ Resend falló:`, resendErr.response?.data || resendErr.message);
+        }
+    }
+
+    // 3. INTENTO VÍA SENDGRID HTTP API (Puerto 443 HTTPS)
+    if (process.env.SENDGRID_API_KEY) {
+        try {
+            console.log('[EMAIL SERVICE] 🚀 Enviando vía SendGrid HTTP API (Puerto 443 HTTPS)...');
+            const sendgridSender = process.env.SENDGRID_FROM || process.env.GMAIL_USER || 'aangelo2555@gmail.com';
+            const sgRes = await axios.post('https://api.sendgrid.com/v3/mail/send', {
+                personalizations: [{ to: [{ email: toEmail }] }],
+                from: { email: sendgridSender, name: 'SOFTCONTABLE' },
+                subject,
+                content: [{ type: 'text/html', value: htmlContent }]
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.SENDGRID_API_KEY.trim()}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
+            });
+            console.log(`[EMAIL SERVICE SENDGRID SUCCESS] ✅ Correo entregado vía SendGrid HTTPS.`);
+            return { success: true, simulated: false, provider: 'sendgrid' };
+        } catch (sgErr) {
+            console.error(`[EMAIL SERVICE SENDGRID ERROR] ⚠️ SendGrid falló:`, sgErr.response?.data || sgErr.message);
+        }
+    }
+
+    // 4. INTENTO VÍA GMAIL / SMTP (Nodemailer)
     let transporter = createTransporter(true);
     if (transporter) {
         const senderEmail = process.env.GMAIL_USER || process.env.SMTP_USER;
@@ -106,38 +139,40 @@ async function sendHtmlEmail({ toEmail, subject, htmlContent, debugLabel = 'EMAI
         };
 
         try {
+            console.log('[EMAIL SERVICE] 🚀 Intentando enviar vía SMTP (Puerto 587)...');
             const sendPromise = transporter.sendMail(mailOptions);
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('TIMEOUT_SMTP_587')), 4000)
+                setTimeout(() => reject(new Error('TIMEOUT_SMTP_587')), 6000)
             );
 
             const info = await Promise.race([sendPromise, timeoutPromise]);
             console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 587). ID: ${info.messageId}`);
-            return { success: true, simulated: false, messageId: info.messageId };
+            return { success: true, simulated: false, provider: 'smtp_587', messageId: info.messageId };
         } catch (err587) {
-            console.warn(`[EMAIL SERVICE WARN] Puerto 587 falló (${err587.message}). Intentando Puerto 465 SSL...`);
+            console.warn(`[EMAIL SERVICE WARN] Puerto 587 falló (${err587.message}). Probando Puerto 465 SSL...`);
             try {
                 transporter = createTransporter(false);
                 const sendPromise465 = transporter.sendMail(mailOptions);
                 const timeoutPromise465 = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT_SMTP_465')), 4000)
+                    setTimeout(() => reject(new Error('TIMEOUT_SMTP_465')), 6000)
                 );
 
                 const info465 = await Promise.race([sendPromise465, timeoutPromise465]);
                 console.log(`[EMAIL SERVICE SUCCESS] ✅ Correo enviado exitosamente a ${toEmail} (Puerto 465). ID: ${info465.messageId}`);
-                return { success: true, simulated: false, messageId: info465.messageId };
+                return { success: true, simulated: false, provider: 'smtp_465', messageId: info465.messageId };
             } catch (err465) {
-                console.error(`[EMAIL SERVICE ERROR] ❌ Los puertos SMTP tradicionales están bloqueados en el contenedor cloud.`);
+                console.error(`[EMAIL SERVICE ERROR] ❌ Los puertos SMTP tradicionales fallaron en este entorno (${err465.message}).`);
             }
         }
     }
 
-    // 4. RESPALDO LOCAL PARA DESARROLLO / CONSOLA
-    console.log(`[EMAIL FALLBACK] [${debugLabel}] Correo para ${toEmail}`);
+    // 5. RESPALDO LOCAL / AUDITORÍA EN CONSOLA
+    console.warn(`[EMAIL SERVICE NOTICE] ℹ️ No se pudo entregar por transporte externo (o no hay llaves API configuradas). El código OTP ha quedado registrado en consola.`);
     return {
         success: true,
         simulated: true,
-        message: `Correo generado localmente.`
+        provider: 'console_audit',
+        message: `Código registrado en registros de consola.`
     };
 }
 
@@ -215,7 +250,9 @@ async function sendAccountVerificationEmail({ toEmail, userName, verificationUrl
         toEmail,
         subject: `✉️ Completa tu registro en SoftContable (${otpCode})`,
         htmlContent,
-        debugLabel: 'ACCOUNT_VERIFICATION'
+        debugLabel: 'ACCOUNT_VERIFICATION',
+        otpCode,
+        verificationUrl
     });
 }
 
@@ -275,7 +312,8 @@ async function sendResetOtpEmail({ toEmail, otpCode, userName }) {
         toEmail,
         subject: `🔑 ${otpCode} es tu código de verificación SOFTCONTABLE`,
         htmlContent,
-        debugLabel: 'RESET_PASSWORD_OTP'
+        debugLabel: 'RESET_PASSWORD_OTP',
+        otpCode
     });
 }
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mail, ArrowRight, RefreshCw, CheckCircle2, AlertCircle, X, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { webApiBridge } from '../services/apiBridge';
+
 interface EmailVerificationModalProps {
   isOpen: boolean;
   email: string;
@@ -20,12 +22,14 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(60);
   const [errorMessage, setErrorMessage] = useState('');
+  const [devCodeNotice, setDevCodeNotice] = useState<string | null>(null);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (!isOpen) {
       setOtpDigits(['', '', '', '', '', '']);
       setErrorMessage('');
+      setDevCodeNotice(null);
       return;
     }
 
@@ -98,13 +102,10 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/auth/verify-email-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otpCode: codeToSubmit })
+      const data = await webApiBridge.authVerifyEmailOtp({
+        email,
+        otpCode: codeToSubmit
       });
-
-      const data = await res.json();
 
       if (data.success) {
         toast.success(data.message || '¡Cuenta verificada con éxito!', { duration: 4000 });
@@ -116,11 +117,14 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         }
         onVerificationSuccess(data);
       } else {
-        setErrorMessage(data.error || 'Código de verificación incorrecto.');
-        toast.error(data.error || 'Código incorrecto');
+        const err = data.error || 'Código de verificación incorrecto.';
+        setErrorMessage(err);
+        toast.error(err);
       }
     } catch (err: any) {
-      setErrorMessage('Error al conectar con el servidor: ' + err.message);
+      const msg = err.response?.data?.error || err.response?.data?.message || 'Error al validar el código OTP.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -132,23 +136,22 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      const data = await webApiBridge.authResendVerification({ email });
 
-      const data = await res.json();
       if (data.success) {
         toast.success('¡Nuevo código enviado a tu bandeja de entrada!');
         setCooldown(60);
         setOtpDigits(['', '', '', '', '', '']);
+        if (data.devCode) {
+          setDevCodeNotice(data.devCode);
+        }
         inputsRef.current[0]?.focus();
       } else {
         toast.error(data.error || 'Error al reenviar código.');
       }
     } catch (err: any) {
-      toast.error('Error al reenviar correo: ' + err.message);
+      const msg = err.response?.data?.error || 'Error al reenviar correo.';
+      toast.error(msg);
     } finally {
       setResending(false);
     }
@@ -182,8 +185,28 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           {email}
         </div>
 
+        {devCodeNotice && (
+          <div className="mt-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs p-2.5 rounded-xl flex items-center justify-between">
+            <div className="text-left">
+              <span className="font-bold text-[10px] block">🔑 Código (Modo Pruebas):</span>
+              <span className="text-sm font-mono font-black tracking-widest text-blue-600 dark:text-blue-400">{devCodeNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const chars = devCodeNotice.slice(0, 6).split('');
+                setOtpDigits(chars);
+                submitOtp(devCodeNotice);
+              }}
+              className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg hover:bg-blue-700 cursor-pointer"
+            >
+              Auto-completar
+            </button>
+          </div>
+        )}
+
         {/* Cajas de OTP de 6 dígitos */}
-        <div className="mt-6 flex justify-center gap-2" onPaste={handlePaste}>
+        <div className="mt-5 flex justify-center gap-2" onPaste={handlePaste}>
           {otpDigits.map((digit, idx) => (
             <input
               key={idx}
