@@ -248,7 +248,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     }
   };
 
-  const handleApply = (msgEntry: any, specificAsiento?: any) => {
+  const handleApply = async (msgEntry: any, specificAsiento?: any) => {
     const targetGlosa = specificAsiento ? specificAsiento.glosa : msgEntry.glosa;
     const targetLines = specificAsiento ? (specificAsiento.asiento_json || specificAsiento.lines) : (msgEntry.asiento_json || msgEntry.lines);
 
@@ -257,6 +257,27 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
       return;
     }
     
+    // Auto-crear cuentas de 5 dígitos que falten en el plan
+    if (typeof addAccount === 'function') {
+      const activeCtas = new Set(plan.map(p => String(p.cta).trim()));
+      for (const l of targetLines) {
+        const cta = String(l.cuenta || '').trim();
+        if (cta && /^\d+$/.test(cta) && !activeCtas.has(cta)) {
+          try {
+            await addAccount({
+              cta,
+              description: String(l.detalle || targetGlosa).toUpperCase(),
+              type: 'Balance',
+              reqCenCos: false,
+              amarreDebe: '',
+              amarreHaber: ''
+            });
+            activeCtas.add(cta);
+          } catch (_) {}
+        }
+      }
+    }
+
     // Mapear líneas para el draft contable
     const mappedLines = targetLines.map((l: any, idx: number) => ({
       id: Date.now() + idx + Math.random(),
@@ -270,7 +291,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     toast.success(`¡Asiento "${targetGlosa}" aplicado al borrador actual! ⚡`);
   };
 
-  const handleApplyAllMerged = (msgEntry: any) => {
+  const handleApplyAllMerged = async (msgEntry: any) => {
     if (!msgEntry.asientos || msgEntry.asientos.length === 0) return;
     
     let allLines: any[] = [];
@@ -289,6 +310,27 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     if (allLines.length === 0) {
       toast.error('No hay líneas para aplicar.');
       return;
+    }
+
+    // Auto-crear cuentas que falten en el plan
+    if (typeof addAccount === 'function') {
+      const activeCtas = new Set(plan.map(p => String(p.cta).trim()));
+      for (const l of allLines) {
+        const cta = String(l.cuenta || '').trim();
+        if (cta && /^\d+$/.test(cta) && !activeCtas.has(cta)) {
+          try {
+            await addAccount({
+              cta,
+              description: String(l.detalle || msgEntry.glosa || 'CUENTA').toUpperCase(),
+              type: 'Balance',
+              reqCenCos: false,
+              amarreDebe: '',
+              amarreHaber: ''
+            });
+            activeCtas.add(cta);
+          } catch (_) {}
+        }
+      }
     }
 
     const mappedLines = allLines.map((l: any, idx: number) => ({

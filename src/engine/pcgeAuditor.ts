@@ -54,7 +54,7 @@ export function auditSuggestedAccounts(
   suggestedAccountsMap.forEach((val, cta) => {
     if (!activeCtasSet.has(cta)) {
       const element = parseInt(cta.charAt(0), 10) || 0;
-      const isValidLength = cta.length >= 2;
+      const isValidLength = cta.length >= 5;
       const isNIIFRelated = ['1', '2', '3', '4', '5'].includes(cta.charAt(0));
 
       missing.push({

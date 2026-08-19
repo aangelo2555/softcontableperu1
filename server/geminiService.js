@@ -297,17 +297,17 @@ async function generateAsiento(premisa, companyContext, planContable, history = 
             regsPrompt = `NORMA: ${topReg.titulo} (${topReg.referencia || 'SUNAT'})\n`;
         }
 
-        // 4. Formatear plan contable compacto (solo si es operación contable)
+        // 4. Formatear plan contable compacto con subcuentas analíticas (Mínimo 5 dígitos)
         let planPromptSection = '';
         if (!isConversational) {
             const premisaLower = premisa.toLowerCase();
             const keywordsMap = [
-                { keys: ['venta', 'cobro', 'ingreso', 'factur', 'bolet', 'cliente', 'anticipo cl'], prefixes: ['12', '70', '40', '10'] },
-                { keys: ['compra', 'pago', 'proveedor', 'adquisi', 'activo', 'materia', 'mercader', 'almacen', 'flete'], prefixes: ['60', '42', '40', '10', '20', '24', '61'] },
-                { keys: ['gasto', 'servicio', 'luz', 'agua', 'alquiler', 'honorario', 'publici'], prefixes: ['63', '42', '46', '40', '10', '94', '95', '79'] },
-                { keys: ['planilla', 'sueldo', 'remunera', 'trabajador', 'cts', 'essalud', 'afp', 'onp'], prefixes: ['62', '41', '40', '10', '94', '95', '79'] },
-                { keys: ['tributo', 'impuesto', 'sunat', 'detracc', 'retenc', 'percepc', 'igv', 'renta'], prefixes: ['40', '10', '42', '12'] },
-                { keys: ['activo fijo', 'maquinaria', 'equipo', 'vehiculo', 'mueble', 'depreciac'], prefixes: ['33', '39', '46', '40', '10'] }
+                { keys: ['venta', 'cobro', 'ingreso', 'factur', 'bolet', 'cliente', 'anticipo cl'], prefixes: ['121', '701', '401', '104', '101', '691', '201'] },
+                { keys: ['compra', 'pago', 'proveedor', 'adquisi', 'activo', 'materia', 'mercader', 'almacen', 'flete'], prefixes: ['601', '421', '401', '104', '101', '201', '241', '611'] },
+                { keys: ['gasto', 'servicio', 'luz', 'agua', 'alquiler', 'honorario', 'publici', 'manten'], prefixes: ['631', '636', '635', '421', '424', '469', '401', '104', '101', '941', '951', '791'] },
+                { keys: ['planilla', 'sueldo', 'remunera', 'trabajador', 'cts', 'essalud', 'afp', 'onp', 'gratific'], prefixes: ['621', '627', '411', '403', '407', '104', '101', '941', '951', '791'] },
+                { keys: ['tributo', 'impuesto', 'sunat', 'detracc', 'retenc', 'percepc', 'igv', 'renta'], prefixes: ['401', '104', '101', '421', '121'] },
+                { keys: ['activo fijo', 'maquinaria', 'equipo', 'vehiculo', 'mueble', 'depreciac', 'computo'], prefixes: ['331', '333', '334', '335', '336', '391', '465', '401', '104'] }
             ];
 
             let targetPrefixes = new Set();
@@ -318,22 +318,23 @@ async function generateAsiento(premisa, companyContext, planContable, history = 
             });
 
             if (targetPrefixes.size === 0) {
-                ['10', '12', '20', '40', '42', '60', '63', '70'].forEach(p => targetPrefixes.add(p));
+                ['101', '104', '121', '201', '401', '421', '601', '621', '631', '701', '941', '951', '791'].forEach(p => targetPrefixes.add(p));
             }
-            targetPrefixes.add('10');
-            targetPrefixes.add('40');
 
-            const planFiltrado = (planContable || [])
-                .filter(acc => {
-                    const ctaStr = String(acc.cta || '');
-                    return Array.from(targetPrefixes).some(pref => ctaStr.startsWith(pref));
-                })
-                .slice(0, 20)
+            const detailedAccounts = (planContable || []).filter(acc => {
+                const ctaStr = String(acc.cta || '');
+                return ctaStr.length >= 4 && Array.from(targetPrefixes).some(pref => ctaStr.startsWith(pref));
+            });
+
+            // Priorizar cuentas de 5 dígitos
+            const planFiltrado = detailedAccounts
+                .sort((a, b) => String(b.cta).length - String(a.cta).length)
+                .slice(0, 25)
                 .map(acc => `${acc.cta}: ${acc.desc || acc.description || ''}`)
                 .join(' | ');
 
             if (planFiltrado) {
-                planPromptSection = `\nPLAN CONTABLE DISPONIBLE:\n${planFiltrado}\n`;
+                planPromptSection = `\nPLAN CONTABLE DISPONIBLE (SUBCUENTAS 5 DÍGITOS):\n${planFiltrado}\n`;
             }
         }
 
@@ -377,17 +378,20 @@ Responde SIEMPRE en formato JSON válido con la siguiente estructura:
     {
       "glosa": "GLOSA DEL ASIENTO EN MAYÚSCULAS",
       "lines": [
-        { "cuenta": "cuenta_PCGE", "detalle": "Denominación de la cuenta", "debe": monto_debe, "haber": monto_haber }
+        { "cuenta": "cuenta_PCGE_5_DIGITOS", "detalle": "Denominación de la cuenta", "debe": monto_debe, "haber": monto_haber }
       ]
     }
   ]
 }
 
-REGLAS:
-1. Recuerda el historial previo de la conversación. Si el usuario pide modificar un monto, cambiar una cuenta o pregunta sobre lo hablado anteriormente (ej: "¿De qué hablamos anteriormente?"), responde en detalle basándote en los mensajes previos.
-2. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo se calcula la detracción?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
-3. Si es una transacción económica o modificación de un asiento previo, genera el asiento contable con Partida Doble (Debe = Haber).
-4. Nunca devuelvas texto fuera del objeto JSON.`;
+REGLAS OBLIGATORIAS DE CUENTAS (PCGE PERÚ 2026 - MÍNIMO 5 DÍGITOS):
+1. TODAS las cuentas en "lines" DEBEN TENER OBLIGATORIAMENTE CINCO (5) DÍGITOS O MÁS (ejemplos: 60111, 40111, 42121, 20111, 61111, 12121, 70111, 10411, 10111, 63611, 62111, 41111, 40311, 40711, 94111, 95111, 79111).
+2. ESTÁ TERMINANTEMENTE PROHIBIDO generar cuentas de 2, 3 o 4 dígitos (como 20, 40, 42, 60, 70, 10, etc.). En el sistema contable peruano y libros electrónicos de SUNAT, todo registro se realiza a nivel de subdivisionaria (5 dígitos a más).
+3. Si la empresa no tiene la subcuenta específica en su plan, la IA debe formular y asignar la cuenta de 5 dígitos correspondiente según el estándar PCGE 2026 (ej: 60111 Mercaderías manufacturadas, 40111 IGV cuenta propia, 42121 Facturas por pagar emitidas, 20111 Mercaderías manufacturadas, 61111 Mercaderías, etc.).
+4. Recuerda el historial previo de la conversación. Si el usuario pide modificar un monto, cambiar una cuenta o pregunta sobre lo hablado anteriormente (ej: "¿De qué hablamos anteriormente?"), responde en detalle basándote en los mensajes previos.
+5. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo se calcula la detracción?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
+6. Si es una transacción económica o modificación de un asiento previo, genera el asiento contable con Partida Doble (Debe = Haber).
+7. Nunca devuelvas texto fuera del objeto JSON.`;
 
         const promptText = `PREMISA: "${premisa}"
 SECTOR: ${sector} | RÉGIMEN: ${regimen} | UIT 2026: S/ 5,500.00 | IGV: 18%
