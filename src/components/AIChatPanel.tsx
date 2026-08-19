@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Send, Bot, Sparkles, X, Loader2, CheckCircle, Database, HelpCircle, AlertCircle, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Send, Bot, Sparkles, X, Loader2, CheckCircle, Database, HelpCircle, AlertCircle, Bookmark, BookmarkCheck, RotateCcw } from 'lucide-react';
 import { webApiBridge } from '../services/apiBridge';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
@@ -29,19 +29,28 @@ interface ChatMessage {
 
 export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry }) => {
   const { plan, currentCompany, addAccount } = useStore();
+
+  // Clave de almacenamiento aislada estrictamente por usuario y empresa
+  const userIdentifier = useMemo(() => {
+    const token = localStorage.getItem('softcontable_token');
+    if (!token) return 'guest';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return String(payload.id || payload.email || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
+    } catch {
+      return 'user';
+    }
+  }, []);
+
+  const companyRuc = String(currentCompany?.ruc || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const storageKey = `softcontable_ai_chat_${userIdentifier}_${companyRuc}`;
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = sessionStorage.getItem('softcontable_ai_chat_messages');
+    const saved = sessionStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (
-          parsed.length > 0 &&
-          parsed[0].id === 'welcome' &&
-          parsed[0].content !== '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?'
-        ) {
-          sessionStorage.removeItem('softcontable_ai_chat_messages');
-          return [];
-        } else {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((m: any) => ({
             ...m,
             timestamp: new Date(m.timestamp)
@@ -51,8 +60,16 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
         console.error('Error parsing saved chat messages:', e);
       }
     }
-    return [];
+    return [
+      {
+        id: 'welcome',
+        role: 'model',
+        content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
+        timestamp: new Date()
+      }
+    ];
   });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [welcomeTyping, setWelcomeTyping] = useState(false);
@@ -71,29 +88,50 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
     }
   }, []);
 
+  // Recargar chat aislado cuando cambia el usuario o la empresa activa
+  useEffect(() => {
+    const saved = sessionStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          })));
+          return;
+        }
+      } catch (_) {}
+    }
+
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'model',
+        content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
+        timestamp: new Date()
+      }
+    ]);
+  }, [storageKey]);
+
+  // Guardar mensajes bajo la clave única del usuario y empresa
   useEffect(() => {
     if (messages.length > 0) {
-      sessionStorage.setItem('softcontable_ai_chat_messages', JSON.stringify(messages));
+      sessionStorage.setItem(storageKey, JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, storageKey]);
 
-  useEffect(() => {
-    const saved = sessionStorage.getItem('softcontable_ai_chat_messages');
-    if (!saved || messages.length === 0) {
-      setWelcomeTyping(true);
-      const timer = setTimeout(() => {
-        const welcomeMessage: ChatMessage = {
-          id: 'welcome',
-          role: 'model',
-          content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
-          timestamp: new Date()
-        };
-        setMessages([welcomeMessage]);
-        setWelcomeTyping(false);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  const handleClearChat = () => {
+    sessionStorage.removeItem(storageKey);
+    const welcomeMessage: ChatMessage = {
+      id: 'welcome',
+      role: 'model',
+      content: '¡Hola! Soy tu Asistente Contable IA. ¿En qué puedo ayudarte hoy?',
+      timestamp: new Date()
+    };
+    setMessages([welcomeMessage]);
+    toast.success('Conversación reiniciada 🧹');
+  };
 
   // Auto-scroll al final del chat
   useEffect(() => {
@@ -289,13 +327,22 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose, onApplyEntry 
           </div>
         </div>
         
-        <button 
-          onClick={onClose} 
-          className="p-1.5 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-all"
-          title="Cerrar Asistente"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={handleClearChat}
+            className="p-1.5 rounded-lg hover:bg-app-hover text-app-muted hover:text-pld-blue transition-all cursor-pointer"
+            title="Nueva Consulta / Limpiar Conversación"
+          >
+            <RotateCcw size={15} />
+          </button>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-all cursor-pointer"
+            title="Cerrar Asistente"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Chat Messages */}

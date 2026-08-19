@@ -569,6 +569,7 @@ const App: React.FC = () => {
           localStorage.removeItem('softcontable_token');
           localStorage.removeItem('softcontable_last_activity');
           localStorage.removeItem('pld-ui-preferences');
+          sessionStorage.clear();
           toast.error('Sesión cerrada por inactividad de 20 minutos.');
           setTimeout(() => {
             window.location.reload();
@@ -1335,6 +1336,7 @@ const App: React.FC = () => {
                   onClick={() => {
                     localStorage.removeItem('softcontable_token');
                     localStorage.removeItem('pld-ui-preferences');
+                    sessionStorage.clear();
                     window.location.reload();
                   }}
                   className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg shadow-red-600/20 active:scale-95"
