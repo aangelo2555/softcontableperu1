@@ -239,6 +239,9 @@ function securityHeadersMiddleware(req, res, next) {
     // Prevenir filtración de referrer en peticiones cross-origin
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
+    // Permitir que los popups de Google OAuth2 se comuniquen con la ventana principal
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
     // Deshabilitar caché para endpoints de API
     if (req.originalUrl.startsWith('/api/')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

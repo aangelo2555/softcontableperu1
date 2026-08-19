@@ -68,9 +68,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'softcontable-super-secret-key-2026';
 
-// --- Seguridad: Helmet Middleware ---
+// --- Seguridad: Helmet Middleware (Permitir popups de Google OAuth) ---
 app.use(helmet({
     contentSecurityPolicy: false, // Desactivar CSP estricto para evitar romper SPA React en producción/dev
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // Permitir comunicación con ventanas popup de Google OAuth
 }));
 
 // ═══════════════════════════════════════════════════════════════════════
