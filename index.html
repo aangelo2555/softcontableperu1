@@ -21,25 +21,59 @@
   </head>
   <body style="margin: 0; background-color: #f6f7f9;">
     <div id="root">
-      <!-- PANTALLA DE CARGA INICIAL (COLOR PERLA) PREVIO A REACT / LOGIN -->
-      <div style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #fafbfc 0%, #f4f6f8 50%, #e9edf2 100%); font-family: 'Outfit', sans-serif; z-index: 99999; user-select: none;">
-        <div style="padding: 16px; background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 26px; box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07); margin-bottom: 16px;">
-          <img src="/assets/logo.png" alt="Softcontable Logo" style="width: 72px; height: 72px; object-fit: contain;" />
+      <!-- PANTALLA DE CARGA INICIAL (PEARL GLASS CARD) IDÉNTICA A REACT -->
+      <div style="position: fixed; inset: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 50%, #eff6ff 100%); font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; z-index: 99999; user-select: none; padding: 24px; box-sizing: border-box; overflow: hidden;">
+        
+        <!-- Glows ambientales de fondo -->
+        <div style="position: absolute; top: -120px; left: -120px; width: 380px; height: 380px; background: radial-gradient(circle, rgba(191, 219, 254, 0.45) 0%, rgba(224, 242, 254, 0.2) 50%, transparent 70%); border-radius: 50%; filter: blur(50px); pointer-events: none;"></div>
+        <div style="position: absolute; bottom: -120px; right: -120px; width: 380px; height: 380px; background: radial-gradient(circle, rgba(199, 210, 254, 0.4) 0%, rgba(237, 233, 254, 0.2) 50%, transparent 70%); border-radius: 50%; filter: blur(50px); pointer-events: none;"></div>
+
+        <!-- Tarjeta Central Pearl Glass Card -->
+        <div style="position: relative; z-index: 10; width: 100%; max-width: 380px; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.95); border-radius: 28px; padding: 40px 32px; box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; align-items: center; text-align: center; box-sizing: border-box;">
+          
+          <!-- Contenedor del Logo con Crystal Glow -->
+          <div style="position: relative; margin-bottom: 24px;">
+            <div style="position: absolute; inset: -4px; background: rgba(59, 130, 246, 0.2); border-radius: 24px; filter: blur(14px);"></div>
+            <div style="position: relative; padding: 16px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #ffffff; box-shadow: 0 8px 25px rgba(37, 99, 235, 0.12); border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+              <img src="/assets/logo.png" alt="SoftContable Logo" style="width: 72px; height: 72px; object-fit: contain; display: block;" />
+            </div>
+          </div>
+
+          <!-- Tipografía Principal -->
+          <h1 style="margin: 0 0 4px 0; font-size: 22px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #0f172a; line-height: 1.2;">
+            SOFT<span style="background: linear-gradient(90deg, #2563eb, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CONTABLE</span>
+          </h1>
+          <p style="margin: 0 0 24px 0; font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.2em; text-transform: uppercase;">
+            Sistema Contable en la Nube • SaaS
+          </p>
+
+          <!-- Barra de Progreso Elegante -->
+          <div style="width: 100%; max-width: 200px; height: 6px; background: rgba(226, 232, 240, 0.85); border-radius: 9999px; overflow: hidden; position: relative; margin-bottom: 14px;">
+            <div style="position: absolute; top: 0; bottom: 0; left: 0; width: 50%; background: linear-gradient(90deg, #2563eb, #4f46e5, #06b6d4); border-radius: 9999px; animation: pearlProgress 1.4s infinite ease-in-out;"></div>
+          </div>
+
+          <!-- Texto de Estado con Indicador Pulsante -->
+          <p style="margin: 0; font-size: 12px; font-weight: 600; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #2563eb; animation: pearlPulse 1.5s infinite;"></span>
+            <span>Iniciando motor de base de datos...</span>
+          </p>
         </div>
-        <div style="font-size: 19px; font-weight: 900; color: #0f172a; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">
-          SOFT<span style="color: #2563eb;">CONTABLE</span>
-        </div>
-        <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 20px;">
-          Sistema Contable en la Nube
-        </div>
-        <div style="width: 140px; height: 4px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; position: relative;">
-          <div style="width: 60px; height: 100%; background: linear-gradient(90deg, #2563eb, #4f46e5); border-radius: 9999px; animation: pearlLoading 1.3s infinite ease-in-out;"></div>
-        </div>
+
+        <!-- Versión al pie -->
+        <p style="position: absolute; bottom: 24px; margin: 0; font-size: 10px; font-weight: 700; color: rgba(148, 163, 184, 0.85); letter-spacing: 0.15em; text-transform: uppercase;">
+          Versión 2.0 • 2026
+        </p>
       </div>
+
       <style>
-        @keyframes pearlLoading {
-          0% { transform: translateX(-60px); }
-          100% { transform: translateX(140px); }
+        @keyframes pearlProgress {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(50%); }
+          100% { transform: translateX(200%); }
+        }
+        @keyframes pearlPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.6); opacity: 0.5; }
         }
       </style>
     </div>
