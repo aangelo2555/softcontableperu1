@@ -266,84 +266,82 @@ async function generateAsiento(premisa, companyContext, planContable) {
         const sector = companyContext.businessType || 'COMERCIAL';
         const regimen = companyContext.regimenTributario || 'RG';
 
-        // 1. RAG: Obtener casos y normativas de referencia
-        const { cases: similarCases, regs: similarRegs, confidence, thresholdUsed } = await retrieveSimilarCases(premisa, sector, regimen);
+        // 1. Detectar si es una consulta conversacional/informativa o una operación contable concreta
+        const isConversational = !(/\b(compra|venta|gasto|planilla|sueldo|pago|cobro|factura|boleta|honorario|activo|arrendamiento|depreciac|detracc|retenc|tributo|igv|renta|banco|prestamo|credito|asiento|provision|caja)\b/i.test(premisa))
+            || (/^(hola|buen|que |como |cuant|cual |quien|puedo|para que|ayuda|gracias|adios|chao|saludos)/i.test(premisa.trim()));
 
-        // 2. Formatear casos de referencia para el prompt
-        let examplesPrompt = '';
-        if (confidence === 'LOW') {
-            examplesPrompt += `\n⚠️ ATENCIÓN ASISTENTE: La búsqueda semántica retornó con confianza BAJA (LOW). Se sugiere basar las decisiones contables en las REGLAS CONTABLES Y FISCALES OBLIGATORIAS generales del sistema contable.\n`;
+        // 2. RAG ligero: Obtener casos y normativas solo si es una transacción contable
+        let similarCases = [];
+        let similarRegs = [];
+        let confidence = 'HIGH';
+        let thresholdUsed = 0.15;
+
+        if (!isConversational) {
+            const ragRes = await retrieveSimilarCases(premisa, sector, regimen);
+            similarCases = ragRes.cases || [];
+            similarRegs = ragRes.regs || [];
+            confidence = ragRes.confidence;
+            thresholdUsed = ragRes.thresholdUsed;
         }
+
+        // 3. Formatear ejemplos RAG de forma ultra compacta (máximo 1 caso y 1 norma)
+        let examplesPrompt = '';
         if (similarCases && similarCases.length > 0) {
-            examplesPrompt = '\n--- CASOS PRÁCTICOS DE REFERENCIA ---\n';
-            similarCases.forEach((c, idx) => {
-                const simStr = c.similarity ? ` (Similitud Semántica: ${(c.similarity * 100).toFixed(0)}%)` : '';
-                examplesPrompt += `Caso ${idx + 1}${simStr}:\n`;
-                examplesPrompt += `Premisa: ${c.premisa || ''}\n`;
-                examplesPrompt += `Glosa Sugerida: ${c.glosa || ''}\n`;
-                examplesPrompt += `Asiento Contable (JSON): ${JSON.stringify(c.asiento_json, null, 2)}\n`;
-                if (c.niif_norma) examplesPrompt += `Norma NIIF Aplicada: ${c.niif_norma}\n`;
-                examplesPrompt += `------------------------------------\n`;
-            });
+            const topCase = similarCases[0];
+            examplesPrompt = `\nCASO DE REFERENCIA: ${topCase.titulo || topCase.premisa} -> Glosa: ${topCase.glosa || 'PROVISIÓN'}\n`;
         }
 
         let regsPrompt = '';
         if (similarRegs && similarRegs.length > 0) {
-            regsPrompt = '\n--- LEYES, NORMAS Y RESOLUCIONES SUNAT APLICABLES ---\n';
-            similarRegs.forEach((r, idx) => {
-                const simStr = r.similarity ? ` (Similitud Semántica: ${(r.similarity * 100).toFixed(0)}%)` : '';
-                regsPrompt += `Norma/Regla ${idx + 1}${simStr} [Capa: ${r.tipo}]:\n`;
-                regsPrompt += `Título: ${r.titulo}\n`;
-                regsPrompt += `Contenido: ${r.contenido || r.premisa || ''}\n`;
-                if (r.referencia) regsPrompt += `Referencia Legal: ${r.referencia}\n`;
-                if (r.aplicacion_peru) regsPrompt += `Aplicación en Perú: ${r.aplicacion_peru}\n`;
-                if (r.vigencia) regsPrompt += `Vigencia: ${r.vigencia}\n`;
-                regsPrompt += `------------------------------------\n`;
+            const topReg = similarRegs[0];
+            regsPrompt = `NORMA: ${topReg.titulo} (${topReg.referencia || 'SUNAT'})\n`;
+        }
+
+        // 4. Formatear plan contable compacto (solo si es operación contable)
+        let planPromptSection = '';
+        if (!isConversational) {
+            const premisaLower = premisa.toLowerCase();
+            const keywordsMap = [
+                { keys: ['venta', 'cobro', 'ingreso', 'factur', 'bolet', 'cliente', 'anticipo cl'], prefixes: ['12', '70', '40', '10'] },
+                { keys: ['compra', 'pago', 'proveedor', 'adquisi', 'activo', 'materia', 'mercader', 'almacen', 'flete'], prefixes: ['60', '42', '40', '10', '20', '24', '61'] },
+                { keys: ['gasto', 'servicio', 'luz', 'agua', 'alquiler', 'honorario', 'publici'], prefixes: ['63', '42', '46', '40', '10', '94', '95', '79'] },
+                { keys: ['planilla', 'sueldo', 'remunera', 'trabajador', 'cts', 'essalud', 'afp', 'onp'], prefixes: ['62', '41', '40', '10', '94', '95', '79'] },
+                { keys: ['tributo', 'impuesto', 'sunat', 'detracc', 'retenc', 'percepc', 'igv', 'renta'], prefixes: ['40', '10', '42', '12'] },
+                { keys: ['activo fijo', 'maquinaria', 'equipo', 'vehiculo', 'mueble', 'depreciac'], prefixes: ['33', '39', '46', '40', '10'] }
+            ];
+
+            let targetPrefixes = new Set();
+            keywordsMap.forEach(item => {
+                if (item.keys.some(k => premisaLower.includes(k))) {
+                    item.prefixes.forEach(p => targetPrefixes.add(p));
+                }
             });
-        }
 
-        // 3. Formatear plan contable
-        const premisaLower = premisa.toLowerCase();
-        const keywordsMap = [
-            { keys: ['venta', 'cobro', 'ingreso', 'factur', 'bolet', 'cliente', 'anticipo cl', 'gift', 'canje'], prefixes: ['12', '70', '40', '10'] },
-            { keys: ['compra', 'pago', 'proveedor', 'adquisi', 'activo', 'materia', 'mercader', 'almacen', 'flete'], prefixes: ['60', '42', '40', '10', '20', '24', '25', '61'] },
-            { keys: ['gasto', 'servicio', 'luz', 'agua', 'alquiler', 'honorario', 'recibo', 'publici', 'manten', 'segur'], prefixes: ['63', '42', '46', '40', '10', '94', '95', '79'] },
-            { keys: ['planilla', 'sueldo', 'remunera', 'trabajador', 'empleado', 'gratifica', 'cts', 'essalud', 'afp', 'onp'], prefixes: ['62', '41', '40', '10', '94', '95', '79'] },
-            { keys: ['tributo', 'impuesto', 'sunat', 'detracc', 'retenc', 'percepc', 'igv', 'renta'], prefixes: ['40', '10', '42', '12'] },
-            { keys: ['activo fijo', 'maquinaria', 'equipo', 'vehiculo', 'mueble', 'depreciac', 'capitaliz', 'nic 16', 'niif 16'], prefixes: ['33', '39', '46', '40', '10'] }
-        ];
-
-        let targetPrefixes = new Set();
-        keywordsMap.forEach(item => {
-            if (item.keys.some(k => premisaLower.includes(k))) {
-                item.prefixes.forEach(p => targetPrefixes.add(p));
+            if (targetPrefixes.size === 0) {
+                ['10', '12', '20', '40', '42', '60', '63', '70'].forEach(p => targetPrefixes.add(p));
             }
-        });
+            targetPrefixes.add('10');
+            targetPrefixes.add('40');
 
-        if (targetPrefixes.size === 0) {
-            ['10', '12', '16', '20', '33', '40', '41', '42', '46', '50', '60', '61', '62', '63', '69', '70', '79', '94', '95'].forEach(p => targetPrefixes.add(p));
+            const planFiltrado = (planContable || [])
+                .filter(acc => {
+                    const ctaStr = String(acc.cta || '');
+                    return Array.from(targetPrefixes).some(pref => ctaStr.startsWith(pref));
+                })
+                .slice(0, 20)
+                .map(acc => `${acc.cta}: ${acc.desc || acc.description || ''}`)
+                .join(' | ');
+
+            if (planFiltrado) {
+                planPromptSection = `\nPLAN CONTABLE DISPONIBLE:\n${planFiltrado}\n`;
+            }
         }
-
-        targetPrefixes.add('10');
-        targetPrefixes.add('40');
-
-        const planFiltrado = (planContable || [])
-            .filter(acc => {
-                const ctaStr = String(acc.cta || '');
-                return Array.from(targetPrefixes).some(pref => ctaStr.startsWith(pref));
-            })
-            .map(acc => ({ cta: acc.cta, desc: acc.description }));
-
-        const planResumido = planFiltrado.length > 0 ? planFiltrado : (planContable || []).slice(0, 150).map(a => ({ cta: a.cta, desc: a.description }));
 
         const systemInstruction = `Eres el ASISTENTE CONTABLE IA experto en tributación y contabilidad peruana (PCGE 2026, NIIF, SUNAT).
-Tu misión es generar propuestas de asientos contables precisos o responder con claridad y profesionalismo técnico a las consultas del usuario.
-
-FORMATO DE RETORNO OBLIGATORIO:
-Debes responder SIEMPRE con un objeto JSON válido con la siguiente estructura:
+Responde SIEMPRE en formato JSON válido con la siguiente estructura:
 {
-  "explicacion": "Explicación detallada o respuesta a la pregunta del usuario",
-  "niif_norma": "Norma NIIF/NIC aplicable (o N/A si es consulta general)",
+  "explicacion": "Respuesta clara y técnica a la consulta o explicación del asiento",
+  "niif_norma": "NIIF/NIC aplicable (o N/A si es consulta general)",
   "asientos": [
     {
       "glosa": "GLOSA DEL ASIENTO EN MAYÚSCULAS",
@@ -354,27 +352,14 @@ Debes responder SIEMPRE con un objeto JSON válido con la siguiente estructura:
   ]
 }
 
-REGLAS ESENCIALES:
-1. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo funciona el IGV?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
-2. Si el usuario ingresa una operación o transacción contable (ej: compras, ventas, servicios, planillas, pagos, activos fijos), genera el o los asientos correspondientes cumpliendo estrictamente con el principio de Partida Doble (Debe = Haber).
+REGLAS:
+1. Si el usuario hace una pregunta general, saludo o consulta informativa (ej: "¿Cuántas consultas puedo hacer?", "¿Cómo se calcula la detracción?"), responde cordialmente y en detalle en "explicacion" y devuelve "asientos": [].
+2. Si es una transacción económica, genera el asiento contable con Partida Doble (Debe = Haber).
 3. Nunca devuelvas texto fuera del objeto JSON.`;
 
-        const promptText = `
-PREMISA DEL USUARIO:
-"${premisa}"
-
-SECTOR EMPRESA: "${sector}"
-RÉGIMEN TRIBUTARIO: "${regimen}"
-UIT 2026: S/ 5,500.00
-IGV: 18%
-
-${examplesPrompt}
-${regsPrompt}
-
---- PLAN CONTABLE DE LA EMPRESA ---
-${JSON.stringify(planResumido, null, 2)}
-
-Por favor, genera la respuesta o asiento contable en base a la premisa anterior, respetando el plan contable y las reglas descritas.`;
+        const promptText = `PREMISA: "${premisa}"
+SECTOR: ${sector} | RÉGIMEN: ${regimen} | UIT 2026: S/ 5,500.00 | IGV: 18%
+${examplesPrompt}${regsPrompt}${planPromptSection}`;
 
         const requestBody = {
             messages: [
