@@ -6,13 +6,8 @@ const db = USE_POSTGRES
 const embeddingService = require('./embeddingService');
 
 
-const gk1 = 'gsk_';
-const gk2 = 'GTVOUUcTqx2zu1OVDW';
-const gk3 = 'slWGdyb3FY46M44Ku';
-const gk4 = 'nvaRepaESvCnthImT';
-
 function getGroqApiConfig() {
-    const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || (gk1 + gk2 + gk3 + gk4);
+    const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '';
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     return { key, url };
 }
