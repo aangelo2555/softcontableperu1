@@ -4,8 +4,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const { OAuth2Client } = require('google-auth-library');
 const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
 const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '686232326828-5icr0f5eghni2ouvscnging0671v0duf.apps.googleusercontent.com';
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const rateLimit = require('express-rate-limit');
 
@@ -720,6 +724,195 @@ router.post('/register-student', authLimiter, async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- GOOGLE OAUTH 2.0 (LOGIN & REGISTRO DIRECTO) ---
+router.post('/google', authLimiter, async (req, res) => {
+    try {
+        const { credential, mode } = req.body;
+        if (!credential) {
+            return res.status(400).json({ success: false, error: 'Token de credencial de Google requerido.' });
+        }
+
+        let payload;
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken: credential,
+                audience: GOOGLE_CLIENT_ID
+            });
+            payload = ticket.getPayload();
+        } catch (verifyError) {
+            console.error('[AUTH GOOGLE] Error verificando token de Google:', verifyError.message);
+            return res.status(401).json({ success: false, error: 'Token de Google inválido o expirado. Por favor reintenta.' });
+        }
+
+        if (!payload || !payload.email) {
+            return res.status(400).json({ success: false, error: 'No se pudo obtener el correo de la cuenta de Google.' });
+        }
+
+        const normalizedEmail = payload.email.trim().toLowerCase();
+        const googleName = payload.name || payload.given_name || 'Usuario Google';
+        const isOwner = normalizedEmail === 'aangelo2555@gmail.com';
+        const requestedMode = mode || 'profesional';
+
+        console.log(`[AUTH GOOGLE] Autenticación con Google para: ${normalizedEmail} (Modo: ${requestedMode})`);
+
+        let user = await dbManager.getUserByEmail(normalizedEmail);
+
+        if (!user) {
+            // Auto-registro con Google
+            const userId = uuidv4();
+            const role = isOwner ? 'super_admin' : (requestedMode === 'estudiante' ? 'estudiante' : 'user');
+            
+            // Password aleatorio seguro de respaldo
+            const randomPassword = crypto.randomBytes(32).toString('hex');
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+            // Verificar si ya usó prueba antes
+            let alreadyHadTrial = false;
+            if (!isOwner && role !== 'estudiante') {
+                try {
+                    if (USE_POSTGRES) {
+                        const thRes = await dbManager.pool.query('SELECT id FROM trial_history WHERE email = $1', [normalizedEmail]);
+                        alreadyHadTrial = thRes.rows.length > 0;
+                    } else {
+                        const thRes = dbManager.prepare('SELECT id FROM trial_history WHERE email = ?').get(normalizedEmail);
+                        alreadyHadTrial = !!thRes;
+                    }
+                } catch (thErr) {
+                    console.warn('[AUTH GOOGLE] Warning consultando trial_history:', thErr.message);
+                }
+            }
+
+            const newUser = {
+                id: userId,
+                email: normalizedEmail,
+                password: hashedPassword,
+                name: googleName,
+                phone: null,
+                document_number: null,
+                is_verified: true, // Google garantiza que el correo pertenece al usuario
+                role
+            };
+
+            await dbManager.createUser(newUser);
+
+            // Asignar Suscripción correspondiente
+            try {
+                const subId = uuidv4();
+                if (role === 'estudiante') {
+                    if (USE_POSTGRES) {
+                        await dbManager.pool.query(
+                            `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, current_period_end)
+                             VALUES ($1, $2, 'estudiante', 'active', 1, 1, NOW() + INTERVAL '10 years')
+                             ON CONFLICT DO NOTHING`,
+                            [subId, userId]
+                        );
+                    } else {
+                        dbManager.prepare(
+                            `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, current_period_end)
+                             VALUES (?, ?, 'estudiante', 'active', 1, 1, datetime('now', '+10 years'))`
+                        ).run(subId, userId);
+                    }
+                } else {
+                    const initialPlanId = isOwner ? 'corporativo' : 'starter';
+                    const initialStatus = isOwner ? 'active' : alreadyHadTrial ? 'suspended' : 'trial';
+                    const initialMaxWs = isOwner ? 9999 : alreadyHadTrial ? 0 : 3;
+                    const initialMaxUsers = isOwner ? 9999 : 2;
+
+                    if (USE_POSTGRES) {
+                        await dbManager.pool.query(
+                            `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
+                             VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '14 days', ${isOwner ? "'2099-12-31'" : "NOW() + INTERVAL '14 days'"})
+                             ON CONFLICT DO NOTHING`,
+                            [subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers]
+                        );
+
+                        if (!isOwner && !alreadyHadTrial) {
+                            await dbManager.pool.query(
+                                `INSERT INTO trial_history (id, email, user_id, ip_address, started_at, expires_at)
+                                 VALUES ($1, $2, $3, $4, NOW(), NOW() + INTERVAL '14 days')
+                                 ON CONFLICT DO NOTHING`,
+                                [uuidv4(), normalizedEmail, userId, req.ip || null]
+                            );
+                        }
+                    } else {
+                        dbManager.prepare(
+                            `INSERT INTO subscriptions (id, user_id, plan_id, status, max_workspaces, max_users, trial_ends_at, current_period_end)
+                             VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+14 days'), ${isOwner ? "'2099-12-31'" : "datetime('now', '+14 days')"})`
+                        ).run(subId, userId, initialPlanId, initialStatus, initialMaxWs, initialMaxUsers);
+
+                        if (!isOwner && !alreadyHadTrial) {
+                            try {
+                                dbManager.prepare(
+                                    `INSERT INTO trial_history (id, email, user_id, ip_address, started_at, expires_at)
+                                     VALUES (?, ?, ?, ?, datetime('now'), datetime('now', '+14 days'))`
+                                ).run(uuidv4(), normalizedEmail, userId, req.ip || null);
+                            } catch (_) {}
+                        }
+                    }
+                }
+            } catch (subErr) {
+                console.warn('[AUTH GOOGLE] Warning creando suscripción:', subErr.message);
+            }
+
+            user = newUser;
+        } else {
+            // Usuario existente: si su correo no estaba verificado, verificarlo automáticamente
+            if (user.is_verified !== true && user.is_verified !== 1) {
+                try {
+                    if (USE_POSTGRES) {
+                        await dbManager.pool.query('UPDATE users SET is_verified = true WHERE id = $1', [user.id]);
+                    } else {
+                        dbManager.prepare('UPDATE users SET is_verified = 1 WHERE id = ?').run(user.id);
+                    }
+                    user.is_verified = true;
+                } catch (_) {}
+            }
+        }
+
+        // Determinar rol efectivo
+        let role = user.role || 'user';
+        if (isOwner) {
+            role = 'super_admin';
+        } else if (role === 'admin') {
+            role = 'user';
+        }
+
+        // Validar coherencia de rol vs modo seleccionado
+        if (requestedMode === 'profesional' && role === 'estudiante') {
+            return res.status(400).json({
+                success: false,
+                error: '🎓 Esta cuenta está registrada en Modo Estudiante. Activa la opción "Estudiante" en la pantalla de inicio para ingresar.'
+            });
+        }
+        if (requestedMode === 'estudiante' && role !== 'estudiante' && !isOwner) {
+            return res.status(400).json({
+                success: false,
+                error: '💼 Esta cuenta es de Modo Profesional. Cambia al modo "Profesional" para iniciar sesión.'
+            });
+        }
+
+        const accessToken = jwt.sign(
+            { id: user.id, email: user.email, name: user.name || googleName, role },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        const refreshToken = await generateAndStoreRefreshToken(user.id);
+
+        return res.json({
+            success: true,
+            message: `¡Bienvenido ${user.name || googleName}!`,
+            accessToken,
+            refreshToken,
+            token: accessToken,
+            user: { id: user.id, email: user.email, name: user.name || googleName, role }
+        });
+    } catch (error) {
+        console.error('[AUTH GOOGLE ERROR]', error);
+        return res.status(500).json({ success: false, error: 'Error interno en autenticación con Google.' });
     }
 });
 

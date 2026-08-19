@@ -96,6 +96,10 @@ function convertSQLitePlaceholdersToPostgres(sql: string): string {
 export const webApiBridge = {
     isWebBridge: true,
     // --- Auth API ---
+    authGoogleLogin: async (data: { credential: string; mode?: string }) => {
+        const res = await api.post('/api/auth/google', data);
+        return res.data;
+    },
     authLogin: async (credentials: any) => {
         const res = await api.post('/api/auth/login', credentials);
         return res.data;
