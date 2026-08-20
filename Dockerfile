@@ -27,9 +27,10 @@ COPY main ./main
 COPY modulo ./modulo
 COPY --from=build-stage /app/dist ./dist
 
-# Configurar variables de entorno
+# Configurar variables de entorno y límites de memoria estrictos
 ENV PORT=3001
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=512"
 EXPOSE 3001
 
 # Crear carpetas para datos persistentes
@@ -39,4 +40,4 @@ RUN mkdir -p /app/database /app/SIRE\ SUNAT /app/descargas_buzon
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["node", "server/app.js"]
+CMD ["node", "--max-old-space-size=512", "server/app.js"]

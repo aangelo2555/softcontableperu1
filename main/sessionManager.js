@@ -18,6 +18,12 @@ class SessionManager {
           '--disable-setuid-sandbox',
           '--disable-blink-features=AutomationControlled',
           '--disable-infobars',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote',
+          '--single-process',
+          '--renderer-process-limit=1',
+          '--js-flags=--max-old-space-size=256',
           '--window-size=1366,768'
         ]
       });

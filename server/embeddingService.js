@@ -10,6 +10,10 @@ let loadingPromise = null;
 // Cargar la librería dinámicamente o manejar si falla
 try {
     const transformers = require('@xenova/transformers');
+    if (transformers && transformers.env) {
+        transformers.env.backends.onnx.wasm.numThreads = 1;
+        transformers.env.allowRemoteModels = true;
+    }
     pipeline = transformers.pipeline;
 } catch (e) {
     console.error('[EMBEDDING SERVICE] No se pudo requerir @xenova/transformers:', e.message);
