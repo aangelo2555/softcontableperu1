@@ -31,7 +31,8 @@ import {
   Check,
   FileText,
   AlertCircle,
-  FileCode
+  FileCode,
+  X
 } from 'lucide-react';
 
 interface ConsultasMasivasSheetProps {
@@ -91,10 +92,47 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const { purchases, syncCurrentWorkspace } = useStore();
 
   // Estados de carga de datos
-  const [inputMode, setInputMode] = useState<'excel' | 'texto' | 'sire'>('excel');
-  const [inputText, setInputText] = useState('');
+  const [inputMode, setInputMode] = useState<'excel' | 'sire'>('excel');
   const [stagedList, setStagedList] = useState<CpeRowInput[]>([]);
   const [fileNameLoaded, setFileNameLoaded] = useState<string>('');
+
+  // Estados de SIRE por Año y Mes
+  const availableYears = useMemo(() => {
+    if (!purchases || purchases.length === 0) return [new Date().getFullYear().toString()];
+    const yearsSet = new Set<string>();
+    purchases.forEach((p: any) => {
+      if (p.fecha && p.fecha.includes('-')) {
+        const y = p.fecha.split('-')[0];
+        if (y && y.length === 4) yearsSet.add(y);
+      }
+    });
+    if (yearsSet.size === 0) yearsSet.add(new Date().getFullYear().toString());
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [purchases]);
+
+  const [selectedSireYear, setSelectedSireYear] = useState<string>(availableYears[0] || '2026');
+  const [selectedSireMonth, setSelectedSireMonth] = useState<string | null>(null);
+
+  const MESES_INFO = [
+    { key: '01', nombre: 'Enero', abrev: 'ENE' },
+    { key: '02', nombre: 'Febrero', abrev: 'FEB' },
+    { key: '03', nombre: 'Marzo', abrev: 'MAR' },
+    { key: '04', nombre: 'Abril', abrev: 'ABR' },
+    { key: '05', nombre: 'Mayo', abrev: 'MAY' },
+    { key: '06', nombre: 'Junio', abrev: 'JUN' },
+    { key: '07', nombre: 'Julio', abrev: 'JUL' },
+    { key: '08', nombre: 'Agosto', abrev: 'AGO' },
+    { key: '09', nombre: 'Setiembre', abrev: 'SET' },
+    { key: '10', nombre: 'Octubre', abrev: 'OCT' },
+    { key: '11', nombre: 'Noviembre', abrev: 'NOV' },
+    { key: '12', nombre: 'Diciembre', abrev: 'DIC' }
+  ];
+
+  // Comprobantes del año
+  const sireYearPurchases = useMemo(() => {
+    if (!purchases) return [];
+    return purchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-`));
+  }, [purchases, selectedSireYear]);
 
   // Estados de procesamiento
   const [processing, setProcessing] = useState(false);
@@ -105,7 +143,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   // Estados de resultados
   const [batchResults, setBatchResults] = useState<CpeProcessedResult[]>([]);
   const [lastStats, setLastStats] = useState<any | null>(null);
-  const [lastLoteId, setLastLoteId] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   // Filtros de resultados
@@ -140,27 +177,23 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     const dataEjemplo = [
       {
         'RUC_EMISOR': '20609936224',
+        'RAZON_SOCIAL': 'EL HUERTO DE MI AMADA SAC',
         'TIPO_COMPROBANTE': '01',
         'SERIE': 'E001',
         'NUMERO': '826',
         'FECHA_EMISION': '2026-07-31',
+        'MONEDA': 'PEN',
         'MONTO_TOTAL': '1224.00'
       },
       {
-        'RUC_EMISOR': '20100070970',
+        'RUC_EMISOR': '20609396033',
+        'RAZON_SOCIAL': 'MILLAN MACHINERY PARTS SAC',
         'TIPO_COMPROBANTE': '01',
         'SERIE': 'F001',
-        'NUMERO': '10452',
-        'FECHA_EMISION': '2026-08-05',
-        'MONTO_TOTAL': '350.00'
-      },
-      {
-        'RUC_EMISOR': '20512345678',
-        'TIPO_COMPROBANTE': '03',
-        'SERIE': 'B001',
-        'NUMERO': '542',
-        'FECHA_EMISION': '2026-08-10',
-        'MONTO_TOTAL': '85.50'
+        'NUMERO': '84',
+        'FECHA_EMISION': '2026-08-12',
+        'MONEDA': 'PEN',
+        'MONTO_TOTAL': '3693.11'
       }
     ];
 
@@ -193,8 +226,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         }
 
         const parsed: CpeRowInput[] = rawData.map((row, idx) => {
-          // Detectar columnas flexibles (mayúsculas, minúsculas, con o sin guión)
           const ruc = String(row['RUC_EMISOR'] || row['RUC'] || row['ruc'] || row['numRuc'] || row['doc_num'] || '').trim();
+          const razon = String(row['RAZON_SOCIAL'] || row['RAZON'] || row['nombre'] || row['PROVEEDOR'] || '').trim();
           const tipo = String(row['TIPO_COMPROBANTE'] || row['TIPO'] || row['tipo'] || row['tipo_doc'] || '01').trim().padStart(2, '0');
           const serie = String(row['SERIE'] || row['Serie'] || row['serie'] || '').trim().toUpperCase();
           const numero = String(row['NUMERO'] || row['Numero'] || row['numero'] || row['correlativo'] || '').trim();
@@ -204,6 +237,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           return {
             id: `staged-${idx}-${Date.now()}`,
             rucEmisor: ruc,
+            razonSocial: razon,
             tipoCpe: tipo || '01',
             serie,
             numero,
@@ -228,60 +262,19 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ═══ PARSEO DE TEXTO MANUAL (COPIAR Y PEGAR DE EXCEL) ═══
-  const handleParseText = () => {
-    if (!inputText.trim()) {
-      toast.error('Pegue filas de datos primero.');
+  // ═══ CARGAR COMPROBANTES DE UN MES ESPECÍFICO DE SIRE ═══
+  const handleSeleccionarMesSire = (mesKey: string) => {
+    setSelectedSireMonth(mesKey);
+    const mPurchases = sireYearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-${mesKey}`));
+    
+    if (mPurchases.length === 0) {
+      toast.error('No hay compras registradas en este mes.');
+      setStagedList([]);
       return;
     }
 
-    const lines = inputText.split('\n').filter(l => l.trim().length > 0);
-    const parsed: CpeRowInput[] = [];
-
-    lines.forEach((line, idx) => {
-      // Soportar separador por tabulador (\t), tubería (|) o coma (,)
-      let parts = line.split('\t');
-      if (parts.length < 3) parts = line.split('|');
-      if (parts.length < 3) parts = line.split(',');
-
-      const ruc = (parts[0] || '').trim();
-      const tipo = (parts[1] || '01').trim().padStart(2, '0');
-      const serie = (parts[2] || '').trim().toUpperCase();
-      const numero = (parts[3] || '').trim();
-      const fecha = (parts[4] || '').trim();
-      const monto = (parts[5] || '').trim();
-
-      if (ruc && serie && numero) {
-        parsed.push({
-          id: `txt-${idx}-${Date.now()}`,
-          rucEmisor: ruc,
-          tipoCpe: tipo,
-          serie,
-          numero,
-          fechaEmision: fecha,
-          monto
-        });
-      }
-    });
-
-    if (parsed.length === 0) {
-      toast.error('No se pudo interpretar el formato. Use: RUC [tab/|/,] TIPO [tab] SERIE [tab] NUMERO');
-      return;
-    }
-
-    setStagedList(parsed);
-    toast.success(`Se prepararon ${parsed.length} comprobantes para consulta.`);
-  };
-
-  // ═══ CARGA DESDE EL MÓDULO DE COMPRAS (SIRE) ═══
-  const handleCargarDesdeSire = () => {
-    if (!purchases || purchases.length === 0) {
-      toast.error('No hay compras registradas en el workspace actual.');
-      return;
-    }
-
-    const parsed: CpeRowInput[] = purchases.slice(0, 100).map((p: any, idx: number) => ({
-      id: `sire-${p.id || idx}`,
+    const parsed: CpeRowInput[] = mPurchases.map((p: any, idx: number) => ({
+      id: `sire-${p.id || idx}-${Date.now()}`,
       rucEmisor: String(p.doc_num || '').trim(),
       razonSocial: p.nombre || '',
       tipoCpe: String(p.tipo_doc || '01').trim().padStart(2, '0'),
@@ -292,10 +285,11 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     })).filter((item: CpeRowInput) => item.rucEmisor && item.serie && item.numero);
 
     setStagedList(parsed);
-    toast.success(`Se importaron ${parsed.length} comprobantes desde Compras.`);
+    const mesObj = MESES_INFO.find(m => m.key === mesKey);
+    toast.success(`Se cargaron ${parsed.length} comprobantes de ${mesObj?.nombre} ${selectedSireYear} listos para consultar.`);
   };
 
-  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA ═══
+  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA DIRECTA ═══
   const handleEjecutarConsultaMasiva = async () => {
     if (!activeCompany?.ruc) {
       toast.error('Seleccione una empresa activa.');
@@ -313,8 +307,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
 
     setProcessing(true);
-    setProgress(10);
-    setCurrentStatusText('Autenticando con Clave SOL y obteniendo token Bearer...');
+    setProgress(15);
+    setCurrentStatusText(`Consultando ${stagedList.length} comprobantes en SUNAT API...`);
 
     try {
       const res = await webApiBridge.cpeDirectConsultarMasivo({
@@ -331,7 +325,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
       }
 
       setProgress(100);
-      setLastLoteId(res.loteId);
       setLastStats(res.stats);
       setBatchResults(res.resultados || []);
 
@@ -379,7 +372,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
   };
 
-  // ═══ DESCARGA DIRECTA DE XML OFICIAL SUNAT ═══
+  // ═══ DESCARGA DIRECTA DE XML OFICIAL SUNAT VÍA API INVERSA (/02) ═══
   const handleDescargarXmlDirecto = async (item: any) => {
     const rucEmisor = item.rucEmisor || item.doc_num;
     const tipoCpe = item.tipoCpe || item.tipo || '01';
@@ -438,7 +431,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
   };
 
-  // ═══ EXPORTAR RESULTADOS A EXCEL ═══
+  // ═══ EXPORTAR RESULTADOS A EXCEL (ESTRUCTURA EXACTA) ═══
   const handleExportarExcel = () => {
     if (batchResults.length === 0) {
       toast.error('No hay resultados para exportar.');
@@ -448,21 +441,23 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     const exportData = batchResults.map((r, idx) => {
       const orig: any = r.itemOriginal || {};
       const res: any = r.resultado || {};
+      const itemsStr = (res.items || []).map((it: any) => `${it.cantidad}x ${it.descripcion}`).join(', ');
+
       return {
         'N°': idx + 1,
         'ESTADO SUNAT': r.estado || (r.encontrado ? 'ACEPTADO' : 'NO EXISTE'),
         'RUC EMISOR': res.rucEmisor || orig.rucEmisor,
-        'RAZON SOCIAL EMISOR': res.razonSocialEmisor || orig.razonSocial || '',
+        'RAZON SOCIAL': res.razonSocialEmisor || orig.razonSocial || '',
         'TIPO DOC': res.tipoCpe || orig.tipoCpe,
         'SERIE': res.serie || orig.serie,
         'NUMERO': res.numero || orig.numero,
         'FECHA EMISION': res.fechaEmision || orig.fechaEmision || '',
         'MONEDA': res.moneda || 'PEN',
-        'MONTO GRAVADO (S/)': res.montoGravado || 0,
+        'MONTO GRAVADO': res.montoGravado || 0,
         'IGV (S/)': res.montoIgv || 0,
         'TOTAL (S/)': res.montoTotal || orig.monto || 0,
-        'ITEMS DETALLE': (res.items || []).map((it: any) => `${it.cantidad}x ${it.descripcion} (S/ ${it.montoTotal})`).join('; '),
-        'OBSERVACION': r.mensaje || r.error || 'OK'
+        'ITEMS DETALLE': itemsStr || '—',
+        'OBSERVACION': r.error || r.mensaje || 'OK'
       };
     });
 
@@ -476,7 +471,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   // Filtrar resultados por estado y texto
   const filteredResults = useMemo(() => {
     return batchResults.filter(r => {
-      // Filtro por estado
       if (filterStatus !== 'ALL') {
         if (filterStatus === 'ACEPTADO' && r.estado !== 'ACEPTADO') return false;
         if (filterStatus === 'ANULADO' && r.estado !== 'ANULADO') return false;
@@ -484,7 +478,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         if (filterStatus === 'ERROR' && r.estado !== 'ERROR') return false;
       }
 
-      // Filtro por búsqueda de texto
       if (searchFilter.trim()) {
         const query = searchFilter.toLowerCase();
         const orig: any = r.itemOriginal || {};
@@ -499,34 +492,36 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     });
   }, [batchResults, filterStatus, searchFilter]);
 
-  const toggleRowExpand = (id: string) => {
-    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleRowExpand = (rowId: string) => {
+    setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
   };
 
   return (
-    <div className="flex flex-col gap-5 animate-fade-in w-full">
+    <div className="flex flex-col gap-5 w-full animate-fade-in">
       
-      {/* ═══ BARRA SUPERIOR DE ACCIONES Y MÉTODOS DE ENTRADA ═══ */}
-      <div className="card-elevated bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm">
+      {/* ═══ PANEL DE ENTRADA Y FUENTES DE DATOS ═══ */}
+      <div className="card-elevated bg-app-surface border border-app-border rounded-2xl p-4 sm:p-5 shadow-sm">
+        
+        {/* Cabecera del Panel */}
         <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-app-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+            <div className="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-wide text-app-text flex items-center gap-2">
-                <span>Consultas Masivas de CPE</span>
-                <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                  HTTP DIRECTO • 200ms / CPE
+              <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                <span>CONSULTAS MASIVAS DE CPE</span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
+                  HTTP DIRECTO • 200MS / CPE
                 </span>
-              </h3>
-              <p className="text-[11px] text-app-muted font-medium">
+              </h2>
+              <p className="text-[11px] text-app-muted">
                 Valida decenas de comprobantes por segundo directamente contra los microservicios de SUNAT SOL.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               onClick={descargarPlantilla}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
@@ -536,168 +531,206 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </button>
             <button
               onClick={() => {
-                setShowHistorialModal(true);
                 loadHistorial();
+                setShowHistorialModal(true);
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
             >
-              <History size={13} className="text-indigo-500" />
+              <History size={13} className="text-purple-400" />
               <span>Ver Historial de Lotes</span>
             </button>
           </div>
         </div>
 
-        {/* Selector de Modos de Entrada */}
-        <div className="flex items-center gap-2 mt-4 flex-wrap sm:flex-nowrap">
+        {/* SELECTOR DE 2 SUB-PESTAÑAS PRINCIPALES: EXCEL Y COMPRAS SIRE */}
+        <div className="grid grid-cols-2 gap-2 mt-4">
           <button
             onClick={() => setInputMode('excel')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
               inputMode === 'excel'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-app-bg text-app-muted hover:text-app-text border border-app-border'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-app-bg text-app-muted hover:text-app-text border-app-border hover:border-blue-500/30'
             }`}
           >
             <FileSpreadsheet size={15} />
-            <span>1. Cargar Archivo Excel / CSV</span>
+            <span>1. CARGAR ARCHIVO EXCEL / CSV</span>
           </button>
+
           <button
-            onClick={() => setInputMode('texto')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              inputMode === 'texto'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-app-bg text-app-muted hover:text-app-text border border-app-border'
-            }`}
-          >
-            <FileText size={15} />
-            <span>2. Pegar Columnas de Texto</span>
-          </button>
-          <button
-            onClick={() => {
-              setInputMode('sire');
-              handleCargarDesdeSire();
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            onClick={() => setInputMode('sire')}
+            className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
               inputMode === 'sire'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-app-bg text-app-muted hover:text-app-text border border-app-border'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-app-bg text-app-muted hover:text-app-text border-app-border hover:border-blue-500/30'
             }`}
           >
             <Layers size={15} />
-            <span>3. Desde Compras SIRE</span>
+            <span>2. DESDE COMPRAS SIRE</span>
           </button>
         </div>
 
-        {/* Panel del Modo Seleccionado */}
-        <div className="mt-4">
-          {inputMode === 'excel' && (
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-app-border hover:border-blue-500/50 bg-app-bg/60 rounded-2xl p-6 transition-all group">
-              <UploadCloud size={36} className="text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-app-text mb-1">
-                Arrastra tu archivo Excel o haz clic para seleccionarlo
-              </h4>
-              <p className="text-[10px] text-app-muted mb-3 text-center max-w-md">
-                Debe contener las columnas: <span className="font-mono text-blue-400 font-bold">RUC_EMISOR, TIPO, SERIE, NUMERO</span>.
-              </p>
+        {/* ═══ CONTENIDO SUB-PESTAÑA 1: CARGA DE ARCHIVO EXCEL ═══ */}
+        {inputMode === 'excel' && (
+          <div className="mt-4 flex flex-col gap-3">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-app-border hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer bg-app-bg/50 hover:bg-blue-500/5 transition-all flex flex-col items-center justify-center gap-2"
+            >
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx, .xls, .csv"
+                accept=".xlsx,.xls,.csv"
                 onChange={handleFileUpload}
                 className="hidden"
-                id="file-excel-upload"
               />
-              <label
-                htmlFor="file-excel-upload"
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
-              >
-                Seleccionar Archivo Excel
-              </label>
-              {fileNameLoaded && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
-                  <Check size={14} /> Archivo cargado: {fileNameLoaded} ({stagedList.length} registros)
-                </div>
-              )}
-            </div>
-          )}
-
-          {inputMode === 'texto' && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-app-muted">
-                Pega tus datos (Copia columnas de Excel y pégalas aquí):
-              </label>
-              <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="20609936224	01	E001	826	2026-07-31	1224.00&#10;20100070970	01	F001	10452	2026-08-05	350.00"
-                className="w-full h-32 p-3 bg-app-bg border border-app-border rounded-xl text-xs font-mono text-app-text outline-none focus:border-blue-500 resize-none custom-scrollbar"
-              />
-              <div className="flex justify-end">
-                <button
-                  onClick={handleParseText}
-                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer"
-                >
-                  Procesar Texto Pegado
-                </button>
+              <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
+                <UploadCloud size={28} />
               </div>
-            </div>
-          )}
-
-          {inputMode === 'sire' && (
-            <div className="p-4 bg-app-bg/60 rounded-xl border border-app-border flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Layers size={18} className="text-blue-500" />
-                <span className="text-xs font-bold text-app-text">
-                  Se importaron automáticamente {stagedList.length} comprobantes desde el módulo de Compras locales.
-                </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-app-text">
+                  {fileNameLoaded ? `Archivo cargado: ${fileNameLoaded}` : 'Arrastra tu archivo Excel o haz clic para seleccionarlo'}
+                </p>
+                <p className="text-[10px] text-app-muted mt-0.5">
+                  Debe contener las columnas: RUC_EMISOR, TIPO, SERIE, NUMERO.
+                </p>
               </div>
               <button
-                onClick={handleCargarDesdeSire}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer"
+                type="button"
+                className="mt-1 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-xs transition-all"
               >
-                Recargar Compras
+                Seleccionar Archivo Excel
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Barra de Control de Ejecución (cuando hay elementos en cola) */}
-        {stagedList.length > 0 && (
-          <div className="mt-4 p-3.5 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-app-muted uppercase">Comprobantes listos</span>
-                <span className="text-base font-black font-mono text-app-text">{stagedList.length} comprobantes</span>
-              </div>
-              <div className="h-7 w-px bg-app-border" />
+        {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE POR MESES ═══ */}
+        {inputMode === 'sire' && (
+          <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/50 border border-app-border p-4 rounded-2xl animate-fade-in">
+            {/* Cabecera del SIRE con Selector de Año */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-app-border">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-app-muted">Concurrencia:</span>
-                <select
-                  value={concurrency}
-                  onChange={(e) => setConcurrency(Number(e.target.value))}
-                  className="bg-app-surface border border-app-border text-xs font-bold text-app-text rounded-lg px-2 py-1 outline-none cursor-pointer"
-                >
-                  <option value={2}>2 hilos (Estándar)</option>
-                  <option value={4}>4 hilos (Rápido)</option>
-                  <option value={6}>6 hilos (Ultra rápido)</option>
-                  <option value={8}>8 hilos (Máxima potencia)</option>
-                </select>
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-app-text">
+                  COMPROBANTES REGISTRADOS EN SIRE
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase font-mono">
+                  {sireYearPurchases.length} comprobantes en {selectedSireYear}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Ejercicio / Año:</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-app-surface border border-app-border rounded-xl">
+                  <Calendar size={13} className="text-blue-500" />
+                  <select
+                    value={selectedSireYear}
+                    onChange={(e) => {
+                      setSelectedSireYear(e.target.value);
+                      setSelectedSireMonth(null);
+                      setStagedList([]);
+                    }}
+                    className="bg-transparent text-xs font-black font-mono text-app-text outline-none cursor-pointer border-none py-0"
+                  >
+                    {availableYears.map(y => (
+                      <option key={y} value={y} className="bg-app-surface text-app-text font-mono">
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid de 12 Meses interactivos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              {MESES_INFO.map(m => {
+                const mPurchases = sireYearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-${m.key}`));
+                const count = mPurchases.length;
+                const totalSum = mPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0);
+                const hasItems = count > 0;
+                const isSelected = selectedSireMonth === m.key;
+
+                return (
+                  <div
+                    key={m.key}
+                    onClick={() => {
+                      if (hasItems) handleSeleccionarMesSire(m.key);
+                    }}
+                    className={`p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 transition-all select-none ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm cursor-pointer'
+                        : hasItems
+                        ? 'bg-app-surface hover:bg-blue-500/10 border-app-border hover:border-blue-500/40 cursor-pointer shadow-2xs group'
+                        : 'bg-app-surface/40 border-app-border/40 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[11px] font-black uppercase ${isSelected ? 'text-white' : hasItems ? 'text-app-text group-hover:text-blue-500' : 'text-app-muted'}`}>
+                        {m.nombre}
+                      </span>
+                      <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-md ${
+                        isSelected ? 'bg-white/20 text-white' : hasItems ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-app-bg text-app-muted'
+                      }`}>
+                        {count}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className={`text-[8px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/70' : 'text-app-muted'}`}>Total</span>
+                      <span className={`text-[10px] font-mono font-black ${isSelected ? 'text-white' : 'text-app-text'}`}>
+                        S/ {formatPEN(totalSum)}
+                      </span>
+                    </div>
+
+                    {hasItems ? (
+                      <div className={`text-[8px] font-bold flex items-center gap-1 mt-0.5 ${isSelected ? 'text-white' : 'text-blue-500'}`}>
+                        <span>{isSelected ? 'Cargado ✓' : 'Cargar compras →'}</span>
+                      </div>
+                    ) : (
+                      <div className="text-[8px] text-app-muted italic mt-0.5">
+                        Sin registros
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Resumen de Comprobantes Preparados para Consulta */}
+        {stagedList.length > 0 && (
+          <div className="mt-4 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center justify-between flex-wrap gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-app-text block">
+                  {stagedList.length} Comprobantes Listos para Consultar
+                </span>
+                <span className="text-[11px] text-app-muted">
+                  Origen: {inputMode === 'excel' ? `Excel (${fileNameLoaded || 'cargado'})` : `SIRE Compras (${selectedSireMonth ? MESES_INFO.find(m => m.key === selectedSireMonth)?.nombre : ''} ${selectedSireYear})`}
+                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setStagedList([])}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
               >
-                Limpiar Cola
+                Descartar
               </button>
+
               <button
                 onClick={handleEjecutarConsultaMasiva}
                 disabled={processing}
-                className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md transition-all active:scale-98 cursor-pointer disabled:opacity-50"
               >
                 {processing ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                <span>{processing ? 'Consultando en SUNAT...' : 'Iniciar Consulta Masiva'}</span>
+                <span>{processing ? 'Consultando en SUNAT...' : `Consultar ${stagedList.length} Comprobantes en SUNAT`}</span>
               </button>
             </div>
           </div>
@@ -705,15 +738,18 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
         {/* Barra de Progreso en Vivo */}
         {processing && (
-          <div className="mt-4 p-3 bg-app-bg rounded-xl border border-app-border flex flex-col gap-1.5 animate-pulse">
+          <div className="mt-4 p-3.5 bg-gradient-to-r from-blue-600/10 to-emerald-600/10 rounded-2xl border border-blue-500/30 flex flex-col gap-2 animate-pulse">
             <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-app-text">
-              <span>{currentStatusText || 'Consultando comprobantes en SUNAT...'}</span>
-              <span>Procesando...</span>
+              <span className="flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-blue-500" />
+                {currentStatusText || 'Consultando comprobantes en SUNAT...'}
+              </span>
+              <span className="font-mono text-emerald-500 font-bold">Procesando...</span>
             </div>
             <div className="w-full bg-app-surface h-2 rounded-full overflow-hidden border border-app-border">
               <div
-                className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full transition-all duration-300 rounded-full"
-                style={{ width: `100%` }}
+                className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 h-full transition-all duration-300 rounded-full"
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
@@ -722,45 +758,45 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
       {/* ═══ TARJETAS DE MÉTRICAS DE RESULTADOS ═══ */}
       {lastStats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-500">Total Consultados</span>
-            <span className="text-xl font-black font-mono text-app-text mt-1">{lastStats.total}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-blue-500">Total Consultados</span>
+            <span className="text-lg font-black font-mono text-app-text mt-0.5">{lastStats.total}</span>
           </div>
 
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Aceptados (Válidos)</span>
-            <span className="text-xl font-black font-mono text-emerald-500 mt-1">{lastStats.aceptados}</span>
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">Aceptados (Válidos)</span>
+            <span className="text-lg font-black font-mono text-emerald-500 mt-0.5">{lastStats.aceptados}</span>
           </div>
 
-          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-500">Anulados</span>
-            <span className="text-xl font-black font-mono text-rose-500 mt-1">{lastStats.anulados}</span>
+          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">Anulados</span>
+            <span className="text-lg font-black font-mono text-rose-500 mt-0.5">{lastStats.anulados}</span>
           </div>
 
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-500">No Encontrados</span>
-            <span className="text-xl font-black font-mono text-amber-500 mt-1">{lastStats.noEncontrados}</span>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-amber-500">No Encontrados</span>
+            <span className="text-lg font-black font-mono text-amber-500 mt-0.5">{lastStats.noEncontrados}</span>
           </div>
 
-          <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-purple-500">Total IGV (S/)</span>
-            <span className="text-sm font-black font-mono text-purple-400 mt-1">S/ {formatPEN(lastStats.montoTotalIgv)}</span>
+          <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-purple-500">Total IGV (S/)</span>
+            <span className="text-xs font-black font-mono text-purple-400 mt-0.5">S/ {formatPEN(lastStats.montoTotalIgv)}</span>
           </div>
 
-          <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-3 flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500">Monto Total (S/)</span>
-            <span className="text-sm font-black font-mono text-indigo-400 mt-1">S/ {formatPEN(lastStats.montoTotalGeneral)}</span>
+          <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
+            <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500">Monto Total (S/)</span>
+            <span className="text-xs font-black font-mono text-indigo-400 mt-0.5">S/ {formatPEN(lastStats.montoTotalGeneral)}</span>
           </div>
         </div>
       )}
 
-      {/* ═══ TABLA DE RESULTADOS INTERACTIVA ═══ */}
+      {/* ═══ TABLA DE RESULTADOS (ESTRUCTURA EXACTA DE LA PRIMERA IMAGEN / EXCEL) ═══ */}
       {batchResults.length > 0 && (
         <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
           
           {/* Cabecera y Filtros de la Tabla */}
-          <div className="p-4 border-b border-app-border bg-app-bg/50 flex items-center justify-between flex-wrap gap-3">
+          <div className="p-3.5 border-b border-app-border bg-app-bg/50 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex bg-app-bg border border-app-border rounded-xl p-0.5">
                 {(['ALL', 'ACEPTADO', 'ANULADO', 'NO_EXISTE', 'ERROR'] as const).map(st => (
@@ -811,21 +847,26 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </div>
           </div>
 
-          {/* Tabla de Registros */}
+          {/* Tabla de Registros Estilo Excel */}
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+            <table className="w-full text-left border-collapse min-w-[1300px]">
               <thead>
                 <tr className="border-b border-app-border bg-app-bg/80 text-[10px] font-black uppercase tracking-wider text-app-muted">
-                  <th className="py-2.5 px-4 w-10">#</th>
-                  <th className="py-2.5 px-4">Estado SUNAT</th>
-                  <th className="py-2.5 px-4">Emisor (Proveedor)</th>
-                  <th className="py-2.5 px-4">Comprobante</th>
-                  <th className="py-2.5 px-4">Fecha Emisión</th>
-                  <th className="py-2.5 px-4 text-right">Monto Gravado</th>
-                  <th className="py-2.5 px-4 text-right">IGV</th>
-                  <th className="py-2.5 px-4 text-right">Monto Total</th>
-                  <th className="py-2.5 px-4 text-center">XML</th>
-                  <th className="py-2.5 px-4 text-center">Items</th>
+                  <th className="py-2.5 px-3 w-10 text-center">N°</th>
+                  <th className="py-2.5 px-3">ESTADO SUNAT</th>
+                  <th className="py-2.5 px-3 font-mono">RUC EMISOR</th>
+                  <th className="py-2.5 px-3">RAZON SOCIAL</th>
+                  <th className="py-2.5 px-2 text-center">TIPO DOC</th>
+                  <th className="py-2.5 px-3 font-mono text-center">SERIE</th>
+                  <th className="py-2.5 px-3 font-mono text-center">NUMERO</th>
+                  <th className="py-2.5 px-3 font-mono">FECHA EMISION</th>
+                  <th className="py-2.5 px-2 font-mono text-center">MONEDA</th>
+                  <th className="py-2.5 px-3 font-mono text-right">MONTO GRAVADO</th>
+                  <th className="py-2.5 px-3 font-mono text-right">IGV (S/)</th>
+                  <th className="py-2.5 px-3 font-mono text-right">TOTAL (S/)</th>
+                  <th className="py-2.5 px-3">ITEMS DETALLE</th>
+                  <th className="py-2.5 px-3">OBSERVACION</th>
+                  <th className="py-2.5 px-3 text-center">XML</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-app-border/40 text-xs">
@@ -834,76 +875,127 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                   const res: any = r.resultado || {};
                   const isExpanded = !!expandedRows[`row-${idx}`];
                   const hasItems = res.items && res.items.length > 0;
+                  const itemsPreview = hasItems
+                    ? res.items.map((it: any) => `${it.cantidad}x ${it.descripcion}`).join(', ')
+                    : '—';
+
+                  const isError = r.estado === 'ERROR' || (!r.encontrado && !r.success);
+                  const isAceptado = r.estado === 'ACEPTADO' || (r.success && r.encontrado);
+                  const isAnulado = r.estado === 'ANULADO';
 
                   return (
                     <React.Fragment key={`res-row-${idx}`}>
                       <tr className="hover:bg-app-hover/50 transition-colors">
-                        <td className="py-2.5 px-4 font-mono font-bold text-app-muted">{idx + 1}</td>
+                        <td className="py-2 px-3 font-mono font-bold text-app-muted text-center">{idx + 1}</td>
                         
-                        {/* Estado */}
-                        <td className="py-2.5 px-4">
-                          {r.estado === 'ACEPTADO' ? (
+                        {/* ESTADO SUNAT */}
+                        <td className="py-2 px-3">
+                          {isAceptado ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                              <CheckCircle2 size={12} /> ACEPTADO
+                              <CheckCircle2 size={11} /> ACEPTADO
                             </span>
-                          ) : r.estado === 'ANULADO' ? (
+                          ) : isAnulado ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                              <XCircle size={12} /> ANULADO
+                              <XCircle size={11} /> ANULADO
                             </span>
                           ) : r.estado === 'NO_EXISTE' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                              <AlertTriangle size={12} /> NO EXISTE
+                              <AlertTriangle size={11} /> NO EXISTE
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                              <AlertCircle size={12} /> {r.error || 'ERROR'}
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              <AlertCircle size={11} /> ERROR
                             </span>
                           )}
                         </td>
 
-                        {/* Emisor */}
-                        <td className="py-2.5 px-4">
-                          <div className="flex flex-col">
-                            <span className="font-mono font-bold text-app-text">{res.rucEmisor || orig.rucEmisor}</span>
-                            <span className="text-[11px] text-app-muted truncate max-w-xs">{res.razonSocialEmisor || orig.razonSocial || '—'}</span>
-                          </div>
+                        {/* RUC EMISOR */}
+                        <td className="py-2 px-3 font-mono font-bold text-app-text">
+                          {res.rucEmisor || orig.rucEmisor}
                         </td>
 
-                        {/* Comprobante */}
-                        <td className="py-2.5 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-mono text-[10px] font-bold border border-blue-500/20">
-                              {res.tipoCpe || orig.tipoCpe}
-                            </span>
-                            <span className="font-mono font-black text-app-text">
-                              {res.serie || orig.serie}-{res.numero || orig.numero}
-                            </span>
-                          </div>
+                        {/* RAZON SOCIAL */}
+                        <td className="py-2 px-3">
+                          <span className="text-[11px] font-semibold text-app-text truncate max-w-[200px] block" title={res.razonSocialEmisor || orig.razonSocial}>
+                            {res.razonSocialEmisor || orig.razonSocial || '—'}
+                          </span>
                         </td>
 
-                        {/* Fecha */}
-                        <td className="py-2.5 px-4 font-mono text-app-text">
+                        {/* TIPO DOC */}
+                        <td className="py-2 px-2 text-center">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-mono text-[10px] font-bold border border-blue-500/20">
+                            {res.tipoCpe || orig.tipoCpe || '01'}
+                          </span>
+                        </td>
+
+                        {/* SERIE */}
+                        <td className="py-2 px-3 font-mono font-bold text-app-text text-center">
+                          {res.serie || orig.serie}
+                        </td>
+
+                        {/* NUMERO */}
+                        <td className="py-2 px-3 font-mono font-bold text-app-text text-center">
+                          {res.numero || orig.numero}
+                        </td>
+
+                        {/* FECHA EMISION */}
+                        <td className="py-2 px-3 font-mono text-app-text">
                           {res.fechaEmision || orig.fechaEmision || '—'}
                         </td>
 
-                        {/* Gravado */}
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-app-text">
-                          S/ {formatPEN(res.montoGravado || 0)}
+                        {/* MONEDA */}
+                        <td className="py-2 px-2 font-mono text-center font-bold text-app-muted">
+                          {res.moneda || 'PEN'}
+                        </td>
+
+                        {/* MONTO GRAVADO */}
+                        <td className="py-2 px-3 text-right font-mono font-bold text-app-text">
+                          {formatPEN(res.montoGravado || 0)}
                         </td>
 
                         {/* IGV */}
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-purple-400">
-                          S/ {formatPEN(res.montoIgv || 0)}
+                        <td className="py-2 px-3 text-right font-mono font-bold text-purple-400">
+                          {formatPEN(res.montoIgv || 0)}
                         </td>
 
-                        {/* Total */}
-                        <td className="py-2.5 px-4 text-right font-mono font-black text-emerald-400">
-                          S/ {formatPEN(res.montoTotal || orig.monto || 0)}
+                        {/* TOTAL */}
+                        <td className="py-2 px-3 text-right font-mono font-black text-emerald-400">
+                          {formatPEN(res.montoTotal || orig.monto || 0)}
                         </td>
 
-                        {/* Descarga XML Directa */}
-                        <td className="py-2.5 px-4 text-center">
-                          {r.estado === 'ACEPTADO' ? (
+                        {/* ITEMS DETALLE */}
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-1 max-w-xs">
+                            <span className="text-[11px] text-app-text truncate" title={itemsPreview}>
+                              {itemsPreview}
+                            </span>
+                            {hasItems && (
+                              <button
+                                onClick={() => toggleRowExpand(`row-${idx}`)}
+                                className="p-0.5 rounded hover:bg-app-hover text-blue-500 cursor-pointer shrink-0"
+                                title="Desplegar items"
+                              >
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* OBSERVACION */}
+                        <td className="py-2 px-3">
+                          <span
+                            className={`text-[10px] font-mono truncate max-w-xs block ${
+                              isError ? 'text-purple-400' : 'text-emerald-500 font-bold'
+                            }`}
+                            title={r.error || r.mensaje || 'OK'}
+                          >
+                            {r.error || r.mensaje || 'OK'}
+                          </span>
+                        </td>
+
+                        {/* XML */}
+                        <td className="py-2 px-3 text-center">
+                          {isAceptado ? (
                             <button
                               onClick={() => handleDescargarXmlDirecto(res.rucEmisor ? res : orig)}
                               className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
@@ -916,41 +1008,26 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                             <span className="text-app-muted text-[10px]">—</span>
                           )}
                         </td>
-
-                        {/* Items Toggle */}
-                        <td className="py-2.5 px-4 text-center">
-                          {hasItems ? (
-                            <button
-                              onClick={() => toggleRowExpand(`row-${idx}`)}
-                              className="p-1 rounded-lg hover:bg-app-hover text-blue-500 cursor-pointer transition-all"
-                              title="Ver detalle de items"
-                            >
-                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            </button>
-                          ) : (
-                            <span className="text-app-muted text-[10px]">—</span>
-                          )}
-                        </td>
                       </tr>
 
                       {/* Fila Desplegable de Items */}
                       {isExpanded && hasItems && (
                         <tr className="bg-blue-500/5">
-                          <td colSpan={9} className="p-3">
+                          <td colSpan={15} className="p-3">
                             <div className="bg-app-bg border border-app-border rounded-xl p-3 flex flex-col gap-2">
                               <h5 className="text-[10px] font-black uppercase tracking-wider text-blue-400">
-                                Detalle de Items / Conceptos del Comprobante:
+                                Detalle de Items / Conceptos del Comprobante ({res.serie}-{res.numero}):
                               </h5>
                               <div className="divide-y divide-app-border text-xs">
                                 {res.items.map((it: any, iIdx: number) => (
                                   <div key={iIdx} className="py-1.5 flex items-center justify-between flex-wrap gap-2">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-mono font-bold text-app-muted">{it.cantidad} {it.unidadMedida}</span>
+                                      <span className="font-mono font-bold text-app-muted">{it.cantidad} {it.unidadMedida || 'UND'}</span>
                                       <span className="text-app-text font-medium">{it.descripcion}</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-app-muted text-[11px]">Unit: S/ {formatPEN(it.valorUnitario)}</span>
-                                      <span className="font-mono font-bold text-app-text">Total: S/ {formatPEN(it.montoTotal)}</span>
+                                    <div className="flex items-center gap-3 font-mono font-bold">
+                                      <span className="text-app-muted text-[11px]">Unit: S/ {formatPEN(it.valorUnitario || it.montoTotal / (it.cantidad || 1))}</span>
+                                      <span className="text-emerald-400">Total: S/ {formatPEN(it.montoTotal)}</span>
                                     </div>
                                   </div>
                                 ))}
@@ -968,33 +1045,33 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         </div>
       )}
 
-      {/* ═══ MODAL DE HISTORIAL DE LOTES ANTERIORES ═══ */}
+      {/* ═══ MODAL DE HISTORIAL DE LOTES ═══ */}
       {showHistorialModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="card-elevated bg-app-surface border border-app-border rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between pb-3 border-b border-app-border">
+          <div className="bg-app-surface border border-app-border rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-app-border pb-3">
               <div className="flex items-center gap-2">
-                <History size={18} className="text-indigo-500" />
-                <h4 className="text-sm font-black uppercase text-app-text">
-                  Historial de Consultas Masivas Realizadas
-                </h4>
+                <History className="text-blue-500" size={18} />
+                <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
+                  Historial de Lotes Consultados (Base de Datos)
+                </h3>
               </div>
               <button
                 onClick={() => setShowHistorialModal(false)}
-                className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text cursor-pointer"
+                className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar my-4 space-y-2.5">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {loadingHistorial ? (
-                <div className="py-8 flex justify-center items-center text-app-muted gap-2">
-                  <Loader2 size={16} className="animate-spin" /> Cargando historial...
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-blue-500" size={24} />
                 </div>
               ) : historialLotes.length === 0 ? (
-                <div className="py-8 text-center text-xs text-app-muted italic">
-                  No hay lotes consultados previamente en este workspace.
+                <div className="text-center py-10 text-app-muted text-xs">
+                  No hay lotes previos registrados en este workspace.
                 </div>
               ) : (
                 historialLotes.map(lote => (

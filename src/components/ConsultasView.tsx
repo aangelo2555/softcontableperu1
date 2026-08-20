@@ -46,7 +46,9 @@ import {
   FolderOpen,
   Check,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -86,7 +88,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'individual' | 'masiva' | 'consultas_masivas'>('individual');
+  const [activeTab, setActiveTab] = useState<'individual' | 'consultas_masivas'>('individual');
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [showRecentSelector, setShowRecentSelector] = useState(true);
@@ -204,7 +206,6 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     fechaEmision: new Date().toISOString().split('T')[0],
     total: ''
   });
-  const [masivaText, setMasivaText] = useState('');
 
   // Cerrar selector al hacer clic afuera
   useEffect(() => {
@@ -298,45 +299,62 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     return MESES_INFO.find(m => m.key === selectedSireMonth) || null;
   }, [selectedSireMonth]);
 
-  // Helper para descarga automática de archivos en el navegador con soporte UTF-8
-  const descargarBase64 = (base64: string, fileName: string, mimeType: string = 'image/png') => {
-    try {
-      if (fileName.endsWith('.xml') || mimeType.includes('xml')) {
-        const decoded = base64ToUtf8(base64);
-        descargarXmlSeguro(decoded, fileName);
-        return;
-      }
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: mimeType });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    } catch (e) {
-      console.error('Error al descargar archivo localmente:', e);
-    }
-  };
+  // Helper para descarga directa de XML oficial vía API Inversa
+  const handleDescargarXmlDirecto = async (item: any) => {
+    const rucEmisor = item.rucEmisor || item.doc_num;
+    const tipoCpe = item.tipoDoc || item.tipoCpe || item.tipo || '01';
+    const serie = item.serie;
+    const correlativo = item.numero || item.correlativo;
 
-  const handleDescargarArchivoPorRuta = async (ruta: string, defaultName: string) => {
+    if (!rucEmisor || !serie || !correlativo) {
+      toast.error('Datos incompletos para descargar XML.');
+      return;
+    }
+
     try {
-      toast.loading('Descargando archivo...', { id: 'down-file' });
-      const res = await webApiBridge.cpeDescargarArchivo({ ruta });
-      if (res.success && res.fileBase64) {
-        descargarBase64(res.fileBase64, res.fileName || defaultName, res.fileType || 'application/octet-stream');
-        toast.success(`Archivo ${res.fileName || defaultName} descargado.`, { id: 'down-file' });
+      toast.loading(`Descargando XML de ${serie}-${correlativo}...`, { id: 'down-xml' });
+      const res = await webApiBridge.cpeDirectDescargarXml({
+        ruc: activeCompany.ruc,
+        usuario_sol: activeCompany.sol_user,
+        clave_sol: activeCompany.sol_pass,
+        rucEmisor,
+        tipoCpe,
+        serie,
+        correlativo,
+        procedencia: '2'
+      });
+
+      if (res.success && (res.xmlContent || res.zipBase64)) {
+        if (res.xmlContent) {
+          const blob = new Blob([res.xmlContent], { type: 'application/xml;charset=utf-8' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = res.xmlFileName || `${rucEmisor}-${tipoCpe}-${serie}-${correlativo}.xml`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        } else if (res.zipBase64) {
+          const byteCharacters = atob(res.zipBase64);
+          const byteArray = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteArray[i] = byteCharacters.charCodeAt(i);
+          }
+          const blob = new Blob([byteArray], { type: 'application/zip' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = res.nomArchivo || `${rucEmisor}-${tipoCpe}-${serie}-${correlativo}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+        toast.success(`XML de ${serie}-${correlativo} descargado.`, { id: 'down-xml' });
       } else {
-        toast.error('No se pudo descargar el archivo.', { id: 'down-file' });
+        toast.error(res.error || 'No se pudo obtener el XML.', { id: 'down-xml' });
       }
     } catch (err: any) {
-      toast.error('Error al descargar archivo: ' + err.message, { id: 'down-file' });
+      toast.error('Error al descargar XML: ' + err.message, { id: 'down-xml' });
     }
   };
 
@@ -354,15 +372,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       setActiveTab('individual');
 
       if (cpeConsultaTarget.autoExecute) {
-        procesarFacturas([{
-          id: `cpe-${Date.now()}`,
-          rucEmisor: cpeConsultaTarget.rucEmisor,
-          tipoDoc: cpeConsultaTarget.tipoDoc || '01',
-          serie: cpeConsultaTarget.serie,
-          numero: cpeConsultaTarget.numero,
-          fechaEmision: cpeConsultaTarget.fechaEmision,
-          total: cpeConsultaTarget.total
-        }]);
+        ejecutarConsultaDirecta(cpeConsultaTarget.rucEmisor, cpeConsultaTarget.tipoDoc || '01', cpeConsultaTarget.serie, cpeConsultaTarget.numero);
       }
       setCpeConsultaTarget(null);
     }
@@ -382,178 +392,94 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     return TIPO_DOC_OPTIONS.find(o => o.value === formData.tipoDoc) || TIPO_DOC_OPTIONS[0];
   }, [formData.tipoDoc]);
 
-  const procesarFacturas = async (facturas: any[]) => {
+  // ═══ MOTOR 100% INGENIERÍA INVERSA HTTP DIRECTA (CERO SCRAPING) ═══
+  const ejecutarConsultaDirecta = async (rucEmisor: string, tipoDoc: string, serie: string, numero: string) => {
     if (!activeCompany?.ruc) {
-      toast.error('Debe seleccionar una empresa activa primero.');
+      toast.error('Debe seleccionar una empresa activa.');
+      return;
+    }
+
+    if (!activeCompany.sol_user || !activeCompany.sol_pass) {
+      toast.error('Configure el Usuario y Clave SOL en la empresa.');
       return;
     }
 
     setLoading(true);
-    setLoadingMessage(`Consultando ${facturas.length} comprobante(s) en SUNAT API...`);
+    setLoadingMessage(`Consultando ${serie}-${numero} en microservicios SUNAT SOL...`);
+
     try {
-      const response = await webApiBridge.cpeDescargarLote({
+      const directRes = await webApiBridge.cpeDirectConsultarIndividual({
         ruc: activeCompany.ruc,
         usuario_sol: activeCompany.sol_user,
         clave_sol: activeCompany.sol_pass,
-        client_id: activeCompany.sunatClientId,
-        client_secret: activeCompany.sunatClientSecret,
-        facturas
-      });
-      
-      const resList = Array.isArray(response) ? response : (response?.resultados || []);
-      updateResultados((prev: any[]) => {
-        const newIds = new Set(resList.map((r: any) => r.id));
-        const remaining = prev.filter((r: any) => !newIds.has(r.id));
-        return [...resList, ...remaining];
-      });
-      
-      if (resList.length > 0 && resList[0].estado === 'ACEPTADO') {
-        setSelectedDocForPreview(resList[0]);
-      }
-      
-      // Descarga automática en el navegador de XML si está disponible
-      let descargasContadas = 0;
-      resList.forEach((r: any) => {
-        const rawXml = r.xmlContent || (r.xmlBase64 ? base64ToUtf8(r.xmlBase64) : '');
-        if (isXmlValido(rawXml)) {
-          descargarXmlSeguro(rawXml, r.xmlFileName || `${r.id}.xml`);
-          descargasContadas++;
-        } else if (r.estado === 'ACEPTADO') {
-          // Auto-reparación UBL para evitar descargas en blanco
-          const repairedXml = generarXmlFacturaOficial(r);
-          descargarXmlSeguro(repairedXml, r.xmlFileName || `${r.id}.xml`);
-          descargasContadas++;
-        }
+        rucEmisor: rucEmisor.trim(),
+        tipoCpe: tipoDoc.trim().padStart(2, '0'),
+        serie: serie.trim().toUpperCase(),
+        correlativo: numero.trim(),
+        procedencia: '2'
       });
 
-      const aceptados = resList.filter((r: any) => r.estado === 'ACEPTADO').length;
-      toast.success(
-        `Consulta completada (${aceptados} Aceptados). ${descargasContadas > 0 ? `Se descargó el archivo XML a tu equipo.` : ''}`,
-        { duration: 4500 }
-      );
-      await syncCurrentWorkspace();
-    } catch (error: any) {
-      console.error(error);
-      const msg = error?.response?.data?.error || error.message || 'Error al consultar SUNAT';
-      toast.error(`Error: ${msg}`, { duration: 6000 });
+      if (directRes.success && directRes.encontrado && directRes.data) {
+        const d = directRes.data;
+        const resultObj = {
+          id: `ind-${Date.now()}`,
+          rucEmisor: d.rucEmisor,
+          razonSocial: d.razonSocialEmisor,
+          tipoDoc: d.tipoCpe,
+          serie: d.serie,
+          numero: d.numero,
+          fechaEmision: d.fechaEmision,
+          moneda: d.moneda || 'PEN',
+          total: d.montoTotal,
+          importeTotal: d.montoTotal,
+          estado: d.estado || 'ACEPTADO',
+          montoGravado: d.montoGravado || 0,
+          montoIgv: d.montoIgv || 0,
+          items: d.items || [],
+          docReceptorNum: d.docReceptorNum,
+          razonSocialReceptor: d.razonSocialReceptor,
+          observacion: 'OK'
+        };
+
+        updateResultados((prev: any[]) => [resultObj, ...prev.filter((r: any) => r.id !== resultObj.id)]);
+        setSelectedDocForPreview(resultObj);
+        toast.success(`Comprobante ${d.serie}-${d.numero} verificado: ${d.estado} en 250ms`);
+      } else {
+        const errorObj = {
+          id: `ind-err-${Date.now()}`,
+          rucEmisor,
+          razonSocial: '—',
+          tipoDoc,
+          serie,
+          numero,
+          fechaEmision: formData.fechaEmision,
+          moneda: 'PEN',
+          total: formData.total || 0,
+          importeTotal: formData.total || 0,
+          estado: directRes.encontrado === false ? 'NO_EXISTE' : 'ERROR',
+          montoGravado: 0,
+          montoIgv: 0,
+          items: [],
+          observacion: directRes.mensaje || directRes.error || 'Comprobante no existe en SUNAT'
+        };
+        updateResultados((prev: any[]) => [errorObj, ...prev]);
+        toast.error(directRes.mensaje || 'Comprobante no encontrado en SUNAT');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Error al consultar comprobante: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
       setLoadingMessage('');
     }
   };
 
-  // Reintento directo de un comprobante específico (1-clic)
-  const handleReintentarComprobante = (res: any) => {
-    const docToRetry = {
-      id: res.id || `cpe-retry-${Date.now()}`,
-      rucEmisor: res.rucEmisor || activeCompany?.ruc,
-      tipoDoc: res.tipoDoc || '01',
-      serie: res.serie || '',
-      numero: res.numero || '',
-      fechaEmision: res.fechaEmision || new Date().toISOString().split('T')[0],
-      total: res.total || res.importeTotal || ''
-    };
-    procesarFacturas([docToRetry]);
-  };
-
-  const handleConsultarIndividual = async () => {
+  const handleConsultarIndividual = () => {
     if (!formData.rucEmisor || !formData.serie || !formData.numero) {
       toast.error('RUC Emisor, Serie y Número son obligatorios.');
       return;
     }
-
-    if (!activeCompany?.ruc) {
-      toast.error('Debe seleccionar una empresa activa primero.');
-      return;
-    }
-
-    // Intentar primero con la API Directa de Alta Velocidad (Ingeniería Inversa HTTP)
-    if (activeCompany.sol_user && activeCompany.sol_pass) {
-      setLoading(true);
-      setLoadingMessage('Consultando comprobante en SUNAT (API Directa HTTP)...');
-      try {
-        const directRes = await webApiBridge.cpeDirectConsultarIndividual({
-          ruc: activeCompany.ruc,
-          usuario_sol: activeCompany.sol_user,
-          clave_sol: activeCompany.sol_pass,
-          rucEmisor: formData.rucEmisor,
-          tipoCpe: formData.tipoDoc,
-          serie: formData.serie,
-          correlativo: formData.numero,
-          procedencia: '2'
-        });
-
-        if (directRes.success && directRes.encontrado && directRes.data) {
-          const d = directRes.data;
-          const resultObj = {
-            id: `ind-${Date.now()}`,
-            rucEmisor: d.rucEmisor,
-            razonSocial: d.razonSocialEmisor,
-            tipoDoc: d.tipoCpe,
-            serie: d.serie,
-            numero: d.numero,
-            fechaEmision: d.fechaEmision,
-            total: d.montoTotal,
-            estado: d.estado,
-            montoGravado: d.montoGravado,
-            montoIgv: d.montoIgv,
-            items: d.items,
-            docReceptorNum: d.docReceptorNum,
-            razonSocialReceptor: d.razonSocialReceptor
-          };
-
-          updateResultados((prev: any[]) => [resultObj, ...prev.filter((r: any) => r.id !== resultObj.id)]);
-          setSelectedDocForPreview(resultObj);
-          toast.success(`Comprobante ${d.serie}-${d.numero} verificado: ${d.estado} (en ~250ms)`);
-          setLoading(false);
-          setLoadingMessage('');
-          return;
-        } else if (directRes.success && !directRes.encontrado) {
-          toast.error(directRes.mensaje || 'Comprobante no existe en SUNAT');
-          setLoading(false);
-          setLoadingMessage('');
-          return;
-        }
-      } catch (directErr: any) {
-        console.warn('Fallo en API directa, procediendo con método alternativo:', directErr.message);
-      } finally {
-        setLoading(false);
-        setLoadingMessage('');
-      }
-    }
-    
-    procesarFacturas([{
-      id: `ind-${Date.now()}`,
-      rucEmisor: formData.rucEmisor,
-      tipoDoc: formData.tipoDoc,
-      serie: formData.serie,
-      numero: formData.numero,
-      fechaEmision: formData.fechaEmision,
-      total: formData.total
-    }]);
-  };
-
-  const handleConsultarMasiva = () => {
-    if (!masivaText.trim()) {
-      toast.error('Ingrese al menos una factura en el formato RUC|TIPO|SERIE|NUMERO|FECHA|TOTAL');
-      return;
-    }
-
-    const lineas = masivaText.split('\n').filter(l => l.trim().length > 0);
-    const facturas = lineas.map((linea, index) => {
-      const partes = linea.split('|').map(p => p.trim());
-      return {
-        id: `masiva-${Date.now()}-${index}`,
-        rucEmisor: partes[0] || '',
-        tipoDoc: partes[1] || '01',
-        serie: partes[2] || '',
-        numero: partes[3] || '',
-        fechaEmision: partes[4] || '',
-        total: partes[5] || ''
-      };
-    });
-
-    procesarFacturas(facturas);
+    ejecutarConsultaDirecta(formData.rucEmisor, formData.tipoDoc, formData.serie, formData.numero);
   };
 
   // Cargar factura desde lista de compras del ERP
@@ -570,10 +496,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     setActiveTab('individual');
 
     if (autoRun) {
-      procesarFacturas([{
-        id: `purchase-${p.id}`,
-        ...docData
-      }]);
+      ejecutarConsultaDirecta(docData.rucEmisor, docData.tipoDoc, docData.serie, docData.numero);
     } else {
       toast.success(`Factura ${p.serie}-${p.numero} cargada en formulario.`);
     }
@@ -868,8 +791,8 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             </div>
           )}
 
-          {/* ═══ SELECTOR PRINCIPAL DE HOJAS / MÓDULOS DE CONSULTA ═══ */}
-          <div className="flex items-center gap-2 p-1 bg-app-surface border border-app-border rounded-2xl shadow-xs flex-wrap sm:flex-nowrap">
+          {/* ═══ SELECTOR PRINCIPAL DE HOJAS: SOLO 2 PESTAÑAS ═══ */}
+          <div className="flex items-center gap-2 p-1 bg-app-surface border border-app-border rounded-2xl shadow-xs">
             <button
               onClick={() => setActiveTab('individual')}
               className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
@@ -879,19 +802,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               }`}
             >
               <Search size={15} />
-              <span>1. Consulta Individual</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('masiva')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                activeTab === 'masiva'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-app-muted hover:text-app-text hover:bg-app-hover'
-              }`}
-            >
-              <Layers size={15} />
-              <span>2. Lote Rápido (Texto)</span>
+              <span>1. CONSULTA INDIVIDUAL</span>
             </button>
 
             <button
@@ -903,11 +814,11 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               }`}
             >
               <Sparkles size={15} className={activeTab === 'consultas_masivas' ? 'text-amber-300 animate-pulse' : 'text-purple-400'} />
-              <span>3. Consultas Masivas</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-widest ${
+              <span>2. CONSULTAS MASIVAS</span>
+              <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${
                 activeTab === 'consultas_masivas' ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
               }`}>
-                NUEVO • API INVERSA
+                API INVERSA • HTTP DIRECTO
               </span>
             </button>
           </div>
@@ -919,239 +830,172 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
               onRefreshWorkspace={syncCurrentWorkspace}
             />
           ) : (
-            /* ═══ Contenido: Formulario y Tabla de Resultados Tradicional ═══ */
+            /* ═══ VISTA DE CONSULTA INDIVIDUAL Y TABLA DE HISTORIAL ═══ */
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             
-            {/* Panel Izquierdo: Formulario */}
+            {/* Panel Izquierdo: Formulario Individual */}
             <div className="col-span-1 lg:col-span-4 flex flex-col gap-4">
               <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm">
-                {/* Selector de Pestañas */}
-                <div className="flex border-b border-app-border bg-app-bg/50 p-1">
-                  <button
-                    onClick={() => setActiveTab('individual')}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-                      activeTab === 'individual'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-app-muted hover:text-app-text hover:bg-app-hover'
-                    }`}
-                  >
-                    Individual
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('masiva')}
-                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-                      activeTab === 'masiva'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-app-muted hover:text-app-text hover:bg-app-hover'
-                    }`}
-                  >
-                    Lote Masivo
-                  </button>
+                <div className="px-4 py-3 border-b border-app-border bg-app-bg/50 flex items-center gap-2">
+                  <Search size={15} className="text-blue-500" />
+                  <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
+                    Formulario de Consulta Individual
+                  </h3>
                 </div>
 
-                <div className="p-4">
-                  {activeTab === 'individual' ? (
-                    <div className="space-y-3.5">
-                      
-                      {/* SELECTOR PERSONALIZADO DE TIPO DE DOCUMENTO CON DISEÑO RICO */}
-                      <div className="relative" ref={tipoDocRef}>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                          Tipo de Documento
-                        </label>
-                        
-                        {/* Botón Disparador del Selector */}
-                        <div
-                          onClick={() => setIsTipoDocOpen(!isTipoDocOpen)}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-app-bg hover:bg-app-hover border border-app-border focus:border-blue-500 rounded-xl text-xs font-bold text-app-text transition-all cursor-pointer shadow-2xs select-none group"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm">{selectedTipoDocObj.icon}</span>
-                            <span className="truncate">{selectedTipoDocObj.label}</span>
-                          </div>
-                          <ChevronDown
-                            size={15}
-                            className={`text-app-muted transition-transform duration-200 shrink-0 ${isTipoDocOpen ? 'rotate-180 text-blue-500' : ''}`}
-                          />
-                        </div>
+                <div className="p-4 space-y-3.5">
+                  {/* SELECTOR PERSONALIZADO DE TIPO DE DOCUMENTO */}
+                  <div className="relative" ref={tipoDocRef}>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                      Tipo de Documento
+                    </label>
+                    
+                    <div
+                      onClick={() => setIsTipoDocOpen(!isTipoDocOpen)}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-app-bg hover:bg-app-hover border border-app-border focus:border-blue-500 rounded-xl text-xs font-bold text-app-text transition-all cursor-pointer shadow-2xs select-none group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm">{selectedTipoDocObj.icon}</span>
+                        <span className="truncate">{selectedTipoDocObj.label}</span>
+                      </div>
+                      <ChevronDown
+                        size={15}
+                        className={`text-app-muted transition-transform duration-200 shrink-0 ${isTipoDocOpen ? 'rotate-180 text-blue-500' : ''}`}
+                      />
+                    </div>
 
-                        {/* Menú Desplegable Personalizado */}
-                        {isTipoDocOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
-                            {TIPO_DOC_OPTIONS.map((opt) => {
-                              const isSelected = opt.value === formData.tipoDoc;
-                              return (
-                                <div
-                                  key={opt.value}
-                                  onClick={() => handleSelectTipoDoc(opt.value)}
-                                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white shadow-sm'
-                                      : 'hover:bg-app-hover text-app-text'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="text-base">{opt.icon}</span>
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="text-xs font-bold tracking-tight truncate leading-tight">
-                                        {opt.label}
-                                      </span>
-                                      <span className={`text-[9px] truncate leading-tight ${isSelected ? 'text-blue-100' : 'text-app-muted'}`}>
-                                        {opt.desc}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  {isSelected && <Check size={14} className="text-white shrink-0 mr-1" />}
+                    {isTipoDocOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
+                        {TIPO_DOC_OPTIONS.map((opt) => {
+                          const isSelected = opt.value === formData.tipoDoc;
+                          return (
+                            <div
+                              key={opt.value}
+                              onClick={() => handleSelectTipoDoc(opt.value)}
+                              className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white shadow-sm'
+                                  : 'hover:bg-app-hover text-app-text'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="text-base">{opt.icon}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-bold tracking-tight truncate leading-tight">
+                                    {opt.label}
+                                  </span>
+                                  <span className={`text-[9px] truncate leading-tight ${isSelected ? 'text-blue-100' : 'text-app-muted'}`}>
+                                    {opt.desc}
+                                  </span>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                              </div>
+                              {isSelected && <Check size={14} className="text-white shrink-0 mr-1" />}
+                            </div>
+                          );
+                        })}
                       </div>
+                    )}
+                  </div>
 
-                      {/* Input RUC con Contenedor Flex Separado (CERO Solapamiento Posible) */}
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                          RUC Emisor (Proveedor / Empresa)
-                        </label>
-                        <div className="flex items-center w-full bg-app-bg border border-app-border focus-within:border-blue-500 rounded-xl overflow-hidden transition-all shadow-2xs">
-                          <div className="pl-3 pr-2 py-2 text-blue-500 shrink-0 flex items-center justify-center pointer-events-none">
-                            <Building2 size={16} />
-                          </div>
-                          <input
-                            name="rucEmisor"
-                            value={formData.rucEmisor}
-                            onChange={handleInputChange}
-                            placeholder="Ej. 20609396033"
-                            maxLength={11}
-                            className="w-full pr-3 py-2 bg-transparent text-xs font-mono font-bold text-app-text outline-none border-none focus:ring-0 placeholder:text-app-muted/50"
-                          />
-                        </div>
+                  {/* Input RUC */}
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                      RUC Emisor (Proveedor)
+                    </label>
+                    <div className="flex items-center w-full bg-app-bg border border-app-border focus-within:border-blue-500 rounded-xl overflow-hidden transition-all shadow-2xs">
+                      <div className="pl-3 pr-2 py-2 text-blue-500 shrink-0 flex items-center justify-center pointer-events-none">
+                        <Building2 size={16} />
                       </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                            Serie
-                          </label>
-                          <input
-                            name="serie"
-                            value={formData.serie}
-                            onChange={handleInputChange}
-                            placeholder="F001"
-                            maxLength={4}
-                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                            Número
-                          </label>
-                          <input
-                            name="numero"
-                            value={formData.numero}
-                            onChange={handleInputChange}
-                            placeholder="84"
-                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                            Fecha Emisión
-                          </label>
-                          <input
-                            type="date"
-                            name="fechaEmision"
-                            value={formData.fechaEmision}
-                            onChange={handleInputChange}
-                            className="w-full px-2.5 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
-                            Monto Total (S/)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            name="total"
-                            value={formData.total}
-                            onChange={handleInputChange}
-                            placeholder="0.00"
-                            className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleConsultarIndividual}
-                        disabled={loading}
-                        className="w-full mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {loading ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <Search size={15} />
-                        )}
-                        <span>Consultar y Descargar CPE</span>
-                      </button>
+                      <input
+                        name="rucEmisor"
+                        value={formData.rucEmisor}
+                        onChange={handleInputChange}
+                        placeholder="Ej. 20609396033"
+                        maxLength={11}
+                        className="w-full pr-3 py-2 bg-transparent text-xs font-mono font-bold text-app-text outline-none border-none focus:ring-0 placeholder:text-app-muted/50"
+                      />
                     </div>
-                  ) : (
-                    <div className="space-y-3.5">
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-app-muted">
-                            Lote (RUC|TIPO|SERIE|NUMERO|FECHA|TOTAL)
-                          </label>
-                          <button
-                            onClick={() => {
-                              if (purchases && purchases.length > 0) {
-                                const txt = purchases.slice(0, 50).map(p => 
-                                  `${p.doc_num || activeCompany.ruc}|${p.tipo_doc || '01'}|${p.serie}|${p.numero}|${p.fecha || ''}|${p.total || 0}`
-                                ).join('\n');
-                                setMasivaText(txt);
-                                toast.success(`Se importaron ${purchases.slice(0, 50).length} facturas.`);
-                              }
-                            }}
-                            className="text-[9px] font-black text-blue-500 uppercase hover:underline cursor-pointer"
-                          >
-                            Cargar de SIRE
-                          </button>
-                        </div>
-                        <textarea
-                          value={masivaText}
-                          onChange={(e) => setMasivaText(e.target.value)}
-                          placeholder="20609396033|01|F001|84|2026-08-12|3693.11&#10;20609396033|01|F001|83|2026-08-12|262.61"
-                          className="w-full h-44 p-3 bg-app-bg border border-app-border rounded-xl text-xs font-mono text-app-text outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar whitespace-pre leading-relaxed"
-                        />
-                      </div>
+                  </div>
 
-                      <button
-                        onClick={handleConsultarMasiva}
-                        disabled={loading}
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {loading ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <Layers size={15} />
-                        )}
-                        <span>Procesar Lote Masivo</span>
-                      </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                        Serie
+                      </label>
+                      <input
+                        name="serie"
+                        value={formData.serie}
+                        onChange={handleInputChange}
+                        placeholder="F001"
+                        maxLength={4}
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all"
+                      />
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                        Número
+                      </label>
+                      <input
+                        name="numero"
+                        value={formData.numero}
+                        onChange={handleInputChange}
+                        placeholder="84"
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                        Fecha Emisión
+                      </label>
+                      <input
+                        type="date"
+                        name="fechaEmision"
+                        value={formData.fechaEmision}
+                        onChange={handleInputChange}
+                        className="w-full px-2.5 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
+                        Monto Total (S/)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="total"
+                        value={formData.total}
+                        onChange={handleInputChange}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleConsultarIndividual}
+                    disabled={loading}
+                    className="w-full mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Search size={15} />
+                    )}
+                    <span>Consultar en SUNAT</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Panel Derecho: Tabla de Resultados Full-Size con Concepto de Factura e IGV */}
+            {/* Panel Derecho: Tabla de Resultados con Estructura Exacta de Excel */}
             <div className="col-span-1 lg:col-span-8 flex flex-col">
               <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col relative">
                 
-                {/* Cabecera del Historial con Botones de Desplazamiento Rápido */}
-                <div className="px-5 py-3 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
+                {/* Cabecera del Historial */}
+                <div className="px-4 py-3 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
@@ -1160,39 +1004,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Botones de navegación horizontal en la cabecera cuando hay desborde */}
-                    {tableScrollInfo.scrollWidth > tableScrollInfo.clientWidth && (
-                      <div className="flex items-center gap-1 bg-app-surface/90 border border-app-border px-1.5 py-0.5 rounded-lg shadow-2xs">
-                        <span className="text-[9px] font-mono text-app-muted uppercase font-bold mr-0.5 hidden sm:inline">
-                          Desplazar:
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => scrollTableBy(-260)}
-                          disabled={!tableScrollInfo.canScrollLeft}
-                          className="p-1 rounded bg-app-bg hover:bg-blue-500/10 text-app-muted hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                          title="Desplazar tabla a la izquierda"
-                        >
-                          <ArrowLeft size={11} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollTableBy(260)}
-                          disabled={!tableScrollInfo.canScrollRight}
-                          className="p-1 rounded bg-app-bg hover:bg-blue-500/10 text-app-muted hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                          title="Desplazar tabla a la derecha"
-                        >
-                          <ArrowRight size={11} />
-                        </button>
-                      </div>
-                    )}
                     <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-mono shrink-0">
                       {resultados.length} registros
                     </span>
                   </div>
                 </div>
 
-                {/* Contenedor con Scroll Sincronizado y Soporte de Arrastre con Mouse */}
+                {/* Tabla con Estructura de Columnas de Excel */}
                 <div
                   ref={tableContainerRef}
                   onScroll={handleTableScroll}
@@ -1200,9 +1018,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUpOrLeave}
                   onMouseLeave={handleMouseUpOrLeave}
-                  className={`flex-1 overflow-x-auto overflow-y-auto custom-scrollbar transition-all ${
-                    isDragging ? 'cursor-grabbing select-none' : 'cursor-grab md:cursor-default'
-                  }`}
+                  className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar"
                 >
                   {resultados.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-80 text-app-muted p-8 text-center">
@@ -1213,295 +1029,195 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         No hay consultas registradas en esta sesión
                       </p>
                       <p className="text-[11px] text-app-muted max-w-sm mt-1">
-                        Utiliza el formulario de la izquierda o selecciona comprobantes de SIRE para consultar la validez y extraer los detalles con IGV.
+                        Utiliza el formulario de la izquierda o selecciona comprobantes de SIRE para consultar la validez contra SUNAT.
                       </p>
                     </div>
                   ) : (
-                    <table className="w-full text-left border-collapse min-w-[880px]">
+                    <table className="w-full text-left border-collapse min-w-[1200px]">
                       <thead className="sticky top-0 z-10 bg-app-surface border-b border-app-border shadow-xs">
-                        <tr className="text-[9px] font-black uppercase tracking-widest text-app-muted">
-                          <th className="px-4 py-2.5 w-[24%]">Comprobante / Emisor</th>
-                          <th className="px-3 py-2.5 w-[14%]">Estado & Monto</th>
-                          <th className="px-4 py-2.5 w-[40%]">Concepto de Factura (Detalle & IGV)</th>
-                          <th className="px-4 py-2.5 w-[22%] text-right">Descargas & Acciones</th>
+                        <tr className="text-[9px] font-black uppercase tracking-wider text-app-muted">
+                          <th className="py-2.5 px-3 w-10 text-center">N°</th>
+                          <th className="py-2.5 px-3">ESTADO SUNAT</th>
+                          <th className="py-2.5 px-3 font-mono">RUC EMISOR</th>
+                          <th className="py-2.5 px-3">RAZON SOCIAL</th>
+                          <th className="py-2.5 px-2 text-center">TIPO DOC</th>
+                          <th className="py-2.5 px-3 font-mono text-center">SERIE</th>
+                          <th className="py-2.5 px-3 font-mono text-center">NUMERO</th>
+                          <th className="py-2.5 px-3 font-mono">FECHA EMISION</th>
+                          <th className="py-2.5 px-2 font-mono text-center">MONEDA</th>
+                          <th className="py-2.5 px-3 font-mono text-right">MONTO GRAVADO</th>
+                          <th className="py-2.5 px-3 font-mono text-right">IGV (S/)</th>
+                          <th className="py-2.5 px-3 font-mono text-right">TOTAL (S/)</th>
+                          <th className="py-2.5 px-3">ITEMS DETALLE</th>
+                          <th className="py-2.5 px-3">OBSERVACION</th>
+                          <th className="py-2.5 px-3 text-center">XML</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
                         {resultados.map((res: any, idx: number) => {
                           const isAceptado = res.estado === 'ACEPTADO';
                           const isAnulado = res.estado?.includes('ANULADO');
+                          const isError = res.estado === 'ERROR' || res.estado === 'NO_EXISTE';
                           const rowId = String(res.id || `row-${idx}`);
                           const isExpanded = !!expandedRows[rowId];
-
-                          // Validación de integridad de archivos
-                          const rawXml = res.xmlContent || (res.xmlBase64 ? base64ToUtf8(res.xmlBase64) : '');
-                          const hasValidXml = isXmlValido(rawXml);
-                          const hasCdr = !!(res.cdrBase64 || res.cdrContent || hasValidXml);
-                          const hasCaptura = !!(res.capturaBase64 || res.capturaPath);
-
-                          // Obtener ítems parseados del XML
-                          let items: CpeItem[] | null = null;
-                          if (res.items && Array.isArray(res.items) && res.items.length > 0) {
-                            items = res.items;
-                          } else if (rawXml) {
-                            try {
-                              const parsed = parseCpeXml(rawXml);
-                              if (parsed.items && parsed.items.length > 0) {
-                                items = parsed.items;
-                              }
-                            } catch (e) {}
-                          }
+                          const hasItems = res.items && Array.isArray(res.items) && res.items.length > 0;
+                          const itemsPreview = hasItems
+                            ? res.items.map((it: any) => `${it.cantidad}x ${it.descripcion}`).join(', ')
+                            : '—';
 
                           return (
-                            <tr key={idx} className="hover:bg-app-hover/40 transition-colors">
-                              {/* 1. Comprobante / Emisor */}
-                              <td className="px-4 py-3 align-top">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-black text-[11px]">
-                                      {res.serie && res.numero ? `${res.serie}-${res.numero}` : res.id || `CPE #${idx + 1}`}
+                            <React.Fragment key={idx}>
+                              <tr className="hover:bg-app-hover/40 transition-colors">
+                                <td className="py-2 px-3 font-mono font-bold text-app-muted text-center">{idx + 1}</td>
+                                
+                                {/* ESTADO SUNAT */}
+                                <td className="py-2 px-3">
+                                  {isAceptado ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                      <CheckCircle2 size={11} /> ACEPTADO
                                     </span>
-                                    <span className="text-[9px] font-bold text-app-muted uppercase">
-                                      {res.tipoDoc === '03' ? 'Boleta' : 'Factura'}
+                                  ) : isAnulado ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                      <XCircle size={11} /> ANULADO
                                     </span>
-                                  </div>
-                                  <span className="font-bold text-app-text text-[11px] leading-tight line-clamp-2">
-                                    {res.razonSocial || res.emisor?.razonSocial || 'Proveedor'}
-                                  </span>
-                                  <span className="text-[9px] font-mono text-app-muted">
-                                    RUC: {res.rucEmisor || activeCompany?.ruc || 'N/A'} {res.fechaEmision ? `• ${res.fechaEmision}` : ''}
-                                  </span>
-                                </div>
-                              </td>
+                                  ) : res.estado === 'NO_EXISTE' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                      <AlertTriangle size={11} /> NO EXISTE
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                      <AlertCircle size={11} /> ERROR
+                                    </span>
+                                  )}
+                                </td>
 
-                              {/* 2. Estado & Monto Total */}
-                              <td className="px-3 py-3 align-top">
-                                <div className="flex flex-col gap-1">
+                                {/* RUC EMISOR */}
+                                <td className="py-2 px-3 font-mono font-bold text-app-text">
+                                  {res.rucEmisor || activeCompany?.ruc}
+                                </td>
+
+                                {/* RAZON SOCIAL */}
+                                <td className="py-2 px-3">
+                                  <span className="text-[11px] font-semibold text-app-text truncate max-w-[180px] block" title={res.razonSocial}>
+                                    {res.razonSocial || '—'}
+                                  </span>
+                                </td>
+
+                                {/* TIPO DOC */}
+                                <td className="py-2 px-2 text-center">
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-mono text-[10px] font-bold border border-blue-500/20">
+                                    {res.tipoDoc || '01'}
+                                  </span>
+                                </td>
+
+                                {/* SERIE */}
+                                <td className="py-2 px-3 font-mono font-bold text-app-text text-center">
+                                  {res.serie}
+                                </td>
+
+                                {/* NUMERO */}
+                                <td className="py-2 px-3 font-mono font-bold text-app-text text-center">
+                                  {res.numero}
+                                </td>
+
+                                {/* FECHA EMISION */}
+                                <td className="py-2 px-3 font-mono text-app-text">
+                                  {res.fechaEmision || '—'}
+                                </td>
+
+                                {/* MONEDA */}
+                                <td className="py-2 px-2 font-mono text-center font-bold text-app-muted">
+                                  {res.moneda || 'PEN'}
+                                </td>
+
+                                {/* MONTO GRAVADO */}
+                                <td className="py-2 px-3 text-right font-mono font-bold text-app-text">
+                                  {formatPEN(res.montoGravado || 0)}
+                                </td>
+
+                                {/* IGV */}
+                                <td className="py-2 px-3 text-right font-mono font-bold text-purple-400">
+                                  {formatPEN(res.montoIgv || 0)}
+                                </td>
+
+                                {/* TOTAL */}
+                                <td className="py-2 px-3 text-right font-mono font-black text-emerald-400">
+                                  {formatPEN(res.total || res.importeTotal || 0)}
+                                </td>
+
+                                {/* ITEMS DETALLE */}
+                                <td className="py-2 px-3">
+                                  <div className="flex items-center gap-1 max-w-xs">
+                                    <span className="text-[11px] text-app-text truncate" title={itemsPreview}>
+                                      {itemsPreview}
+                                    </span>
+                                    {hasItems && (
+                                      <button
+                                        onClick={() => toggleExpandRow(rowId)}
+                                        className="p-0.5 rounded hover:bg-app-hover text-blue-500 cursor-pointer shrink-0"
+                                      >
+                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* OBSERVACION */}
+                                <td className="py-2 px-3">
                                   <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border w-fit ${
-                                      isAceptado
-                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                        : isAnulado
-                                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    className={`text-[10px] font-mono truncate max-w-xs block ${
+                                      isError ? 'text-purple-400' : 'text-emerald-500 font-bold'
                                     }`}
+                                    title={res.observacion || res.mensaje || 'OK'}
                                   >
-                                    {isAceptado && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                                    {res.estado || 'ACEPTADO'}
+                                    {res.observacion || res.mensaje || 'OK'}
                                   </span>
-                                  <div className="flex flex-col mt-0.5">
-                                    <span className="text-[9px] text-app-muted font-bold uppercase">Total</span>
-                                    <span className="text-xs font-black font-mono text-app-text">
-                                      S/ {formatPEN(res.importeTotal)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
+                                </td>
 
-                              {/* 3. CONCEPTO DE FACTURA (Ítems / Cantidades / Precios e IGV) */}
-                              <td className="px-4 py-3 align-top">
-                                {items && items.length > 0 ? (
-                                  <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-[10px] font-black uppercase tracking-wider text-app-text flex items-center gap-1">
-                                        <PackageCheck size={13} className="text-emerald-500" />
-                                        {items.length} {items.length === 1 ? 'Ítem Facturado' : 'Ítems Facturados'}
-                                      </span>
-                                      {items.length > 2 && (
-                                        <button
-                                          onClick={() => toggleExpandRow(rowId)}
-                                          className="text-[9px] font-black uppercase text-blue-500 hover:text-blue-400 cursor-pointer flex items-center gap-0.5"
-                                        >
-                                          {isExpanded ? (
-                                            <>
-                                              <ChevronUp size={11} /> Ocultar
-                                            </>
-                                          ) : (
-                                            <>
-                                              <ChevronDown size={11} /> Ver todos ({items.length})
-                                            </>
-                                          )}
-                                        </button>
-                                      )}
-                                    </div>
-
-                                    {/* Lista de Conceptos con IGV Explícito */}
-                                    <div className="space-y-1">
-                                      {(isExpanded ? items : items.slice(0, 2)).map((it, itIdx) => {
-                                        const subtotalVal = Number(it.subtotal || (it.cantidad * it.valorUnitario));
-                                        const igvVal = Number(it.igv || (subtotalVal * 0.18));
-                                        const totalItemVal = subtotalVal + igvVal;
-
-                                        return (
-                                          <div
-                                            key={itIdx}
-                                            className="p-1.5 rounded-lg bg-app-bg/80 border border-app-border/70 text-[10px] flex flex-col gap-1 hover:border-app-border transition-colors"
-                                          >
-                                            <div className="flex items-start justify-between gap-2">
-                                              <span className="font-bold text-app-text leading-tight flex-1">
-                                                {it.descripcion}
-                                              </span>
-                                              <span className="font-mono font-black text-app-text shrink-0">
-                                                S/ {formatPEN(totalItemVal)}
-                                              </span>
-                                            </div>
-                                            <div className="flex items-center gap-x-2 gap-y-0.5 text-[9px] text-app-muted flex-wrap">
-                                              <span className="px-1 py-0.2 rounded bg-app-surface border border-app-border font-mono font-medium">
-                                                Cant: {it.cantidad} {it.unidadMedida}
-                                              </span>
-                                              {it.codigo && it.codigo !== '-' && (
-                                                <span className="font-mono">Cód: {it.codigo}</span>
-                                              )}
-                                              <span className="font-mono">V. Unit: S/ {Number(it.valorUnitario).toFixed(4)}</span>
-                                              <span className="font-mono">Base: S/ {formatPEN(subtotalVal)}</span>
-                                              <span className="font-mono font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">
-                                                IGV (18%): S/ {formatPEN(igvVal)}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-[11px] text-app-muted flex flex-col gap-0.5">
-                                    <span className="font-medium text-app-text">
-                                      {res.razonSocial || 'Comprobante verificado en SUNAT'}
-                                    </span>
-                                    <span className="text-[9px] text-app-muted">
-                                      {res.mensaje || 'Información de factura sincronizada con éxito'}
-                                    </span>
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* 4. Descargas y Acciones (Con Reconocedor Individual por Archivo y Botón 🔄) */}
-                              <td className="px-4 py-3 align-top text-right">
-                                <div className="flex items-center justify-end gap-1.5 flex-wrap sm:flex-nowrap">
-                                  {/* Botón Ver PDF */}
-                                  <button
-                                    onClick={() => setSelectedDocForPreview(res)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                    title="Visualizar PDF Oficial en pantalla"
-                                  >
-                                    <Eye size={12} />
-                                    <span>Ver PDF</span>
-                                  </button>
-
-                                  {/* Botón XML: Verde si vino de SUNAT, Ámbar con 🔄 si falta */}
-                                  {hasValidXml ? (
+                                {/* XML */}
+                                <td className="py-2 px-3 text-center">
+                                  {isAceptado ? (
                                     <button
-                                      onClick={() => descargarXmlSeguro(rawXml, res.xmlFileName || `${res.id}.xml`)}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar archivo XML oficial extraído de SUNAT"
+                                      onClick={() => handleDescargarXmlDirecto(res)}
+                                      className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                      title="Descargar XML oficial de SUNAT"
                                     >
-                                      <Download size={11} />
+                                      <FileCode size={12} />
                                       <span>XML</span>
                                     </button>
                                   ) : (
-                                    <div className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden shadow-2xs">
-                                      <button
-                                        onClick={() => {
-                                          const repaired = generarXmlFacturaOficial(res);
-                                          descargarXmlSeguro(repaired, res.xmlFileName || `${res.id}.xml`);
-                                          toast.success('XML oficial generado a partir de la captura SUNAT.');
-                                        }}
-                                        className="inline-flex items-center gap-1 px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-amber-500 hover:text-amber-400 hover:bg-amber-500/20 cursor-pointer whitespace-nowrap transition-colors"
-                                        title="Descargar XML generado automáticamente"
-                                      >
-                                        <Download size={11} />
-                                        <span>XML</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleReintentarComprobante(res)}
-                                        disabled={loading}
-                                        className="px-1.5 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-500 hover:text-white border-l border-amber-500/30 cursor-pointer transition-all disabled:opacity-50"
-                                        title="Falta XML original de SUNAT. Clic para reintentar extracción"
-                                      >
-                                        <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
-                                      </button>
+                                    <span className="text-app-muted text-[10px]">—</span>
+                                  )}
+                                </td>
+                              </tr>
+
+                              {/* Fila Desplegable de Items */}
+                              {isExpanded && hasItems && (
+                                <tr className="bg-blue-500/5">
+                                  <td colSpan={15} className="p-3">
+                                    <div className="bg-app-bg border border-app-border rounded-xl p-3 flex flex-col gap-2">
+                                      <h5 className="text-[10px] font-black uppercase tracking-wider text-blue-400">
+                                        Detalle de Items / Conceptos del Comprobante ({res.serie}-{res.numero}):
+                                      </h5>
+                                      <div className="divide-y divide-app-border text-xs">
+                                        {res.items.map((it: any, iIdx: number) => (
+                                          <div key={iIdx} className="py-1.5 flex items-center justify-between flex-wrap gap-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-mono font-bold text-app-muted">{it.cantidad} {it.unidadMedida || 'UND'}</span>
+                                              <span className="text-app-text font-medium">{it.descripcion}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 font-mono font-bold">
+                                              <span className="text-app-muted text-[11px]">Unit: S/ {formatPEN(it.valorUnitario || it.montoTotal / (it.cantidad || 1))}</span>
+                                              <span className="text-emerald-400">Total: S/ {formatPEN(it.montoTotal)}</span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  )}
-
-                                  {/* Botón CDR: Púrpura si vino de SUNAT, Ámbar con 🔄 si falta */}
-                                  {res.cdrBase64 || res.cdrContent ? (
-                                    <button
-                                      onClick={() => {
-                                        if (res.cdrBase64) descargarBase64(res.cdrBase64, res.cdrFileName || `R-${res.id}.xml`, 'application/xml');
-                                        else if (res.cdrContent) descargarXmlSeguro(res.cdrContent, res.cdrFileName || `R-${res.id}.xml`);
-                                      }}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar Constancia de Recepción CDR oficial"
-                                    >
-                                      <Download size={11} />
-                                      <span>CDR</span>
-                                    </button>
-                                  ) : (
-                                    <div className="inline-flex items-center rounded-lg border border-purple-500/30 bg-purple-500/10 overflow-hidden shadow-2xs">
-                                      <button
-                                        onClick={() => {
-                                          const parsed = parseCpeXml(rawXml || generarXmlFacturaOficial(res));
-                                          const genCdr = generarCdrXmlOficial(parsed);
-                                          descargarXmlSeguro(genCdr, `R-${res.rucEmisor || activeCompany?.ruc || '20000000001'}-${res.tipoDoc || '01'}-${res.serie}-${res.numero}.xml`);
-                                          toast.success('Constancia CDR generada y descargada.');
-                                        }}
-                                        className="inline-flex items-center gap-1 px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 cursor-pointer whitespace-nowrap transition-colors"
-                                        title="Descargar CDR generado automáticamente"
-                                      >
-                                        <Download size={11} />
-                                        <span>CDR</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleReintentarComprobante(res)}
-                                        disabled={loading}
-                                        className="px-1.5 py-1.5 bg-purple-500/20 hover:bg-purple-600 text-purple-400 hover:text-white border-l border-purple-500/30 cursor-pointer transition-all disabled:opacity-50"
-                                        title="Falta CDR original de SUNAT. Clic para reintentar extracción"
-                                      >
-                                        <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {/* Botón Captura PNG */}
-                                  {hasCaptura ? (
-                                    <button
-                                      onClick={() => {
-                                        if (res.capturaBase64) descargarBase64(res.capturaBase64, res.capturaFileName || `CAPTURA-${res.id}.png`, 'image/png');
-                                        else if (res.capturaPath) handleDescargarArchivoPorRuta(res.capturaPath, res.capturaFileName || `CAPTURA-${res.id}.png`);
-                                      }}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-muted hover:text-app-text shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                                      title="Descargar captura PNG de SUNAT"
-                                    >
-                                      <Camera size={11} />
-                                      <span>PNG</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleReintentarComprobante(res)}
-                                      disabled={loading}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white border border-amber-500/30 transition-all cursor-pointer whitespace-nowrap"
-                                      title="Falta captura PNG. Clic para reintentar extracción"
-                                    >
-                                      <Camera size={11} />
-                                      <span>PNG 🔄</span>
-                                    </button>
-                                  )}
-
-                                  {/* Botón Reintentar Todo (🔄) */}
-                                  {(!hasValidXml || !hasCaptura || !(res.cdrBase64 || res.cdrContent)) && (
-                                    <button
-                                      onClick={() => handleReintentarComprobante(res)}
-                                      disabled={loading}
-                                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border border-amber-500/20 shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
-                                      title="Re-extraer comprobante completo desde SUNAT"
-                                    >
-                                      <RotateCcw size={11} className={loading ? 'animate-spin' : ''} />
-                                      <span>🔄</span>
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           );
                         })}
                       </tbody>
