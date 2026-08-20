@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 const USE_POSTGRES = process.env.USE_POSTGRES === 'true';
 const dbManager = USE_POSTGRES ? require('./databasePostgres') : require('./databaseServer');
 
@@ -732,46 +733,85 @@ router.post('/google', authLimiter, async (req, res) => {
     try {
         const { credential, accessToken: clientAccessToken, mode } = req.body;
         if (!credential && !clientAccessToken) {
-            return res.status(400).json({ success: false, error: 'Token de credencial de Google requerido.' });
+            return res.status(400).json({ success: false, error: 'Token de autenticación de Google requerido.' });
         }
 
         let payload = null;
 
-        // 1. Validar vía ID Token (Criptográfico con verifyIdToken)
-        if (credential) {
+        // 1. Validar con Access Token (Google Userinfo API)
+        const tokenToFetch = clientAccessToken || (!credential?.includes('.') ? credential : null);
+        if (tokenToFetch) {
+            try {
+                let userInfoData = null;
+                if (typeof fetch === 'function') {
+                    const fetchRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                        headers: { Authorization: `Bearer ${tokenToFetch}` },
+                        signal: AbortSignal.timeout(10000)
+                    });
+                    if (fetchRes.ok) {
+                        userInfoData = await fetchRes.json();
+                    }
+                }
+                if (!userInfoData && axios) {
+                    const axiosRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                        headers: { Authorization: `Bearer ${tokenToFetch}` },
+                        timeout: 10000
+                    });
+                    userInfoData = axiosRes.data;
+                }
+
+                if (userInfoData && userInfoData.email) {
+                    payload = {
+                        email: userInfoData.email,
+                        name: userInfoData.name || userInfoData.given_name || 'Usuario Google',
+                        picture: userInfoData.picture,
+                        email_verified: userInfoData.email_verified
+                    };
+                }
+            } catch (userinfoError) {
+                console.warn('[AUTH GOOGLE] Advertencia al obtener userinfo:', userinfoError.message);
+            }
+
+            // Fallback: Google OAuth2Client.getTokenInfo
+            if (!payload) {
+                try {
+                    const tokenInfo = await googleClient.getTokenInfo(tokenToFetch);
+                    if (tokenInfo && tokenInfo.email) {
+                        payload = {
+                            email: tokenInfo.email,
+                            name: 'Usuario Google',
+                            email_verified: tokenInfo.email_verified
+                        };
+                    }
+                } catch (tokenInfoErr) {
+                    console.warn('[AUTH GOOGLE] Advertencia al verificar tokenInfo:', tokenInfoErr.message);
+                }
+            }
+        }
+
+        // 2. Validar con ID Token (JWT verifyIdToken)
+        if (!payload && credential) {
             try {
                 const ticket = await googleClient.verifyIdToken({
                     idToken: credential,
                     audience: GOOGLE_CLIENT_ID
                 });
-                payload = ticket.getPayload();
+                const idPayload = ticket.getPayload();
+                if (idPayload && idPayload.email) {
+                    payload = {
+                        email: idPayload.email,
+                        name: idPayload.name || idPayload.given_name || 'Usuario Google',
+                        picture: idPayload.picture,
+                        email_verified: idPayload.email_verified
+                    };
+                }
             } catch (verifyError) {
                 console.warn('[AUTH GOOGLE] Advertencia verificando ID Token:', verifyError.message);
             }
         }
 
-        // 2. Validar vía Access Token con Google Userinfo API
-        const tokenToFetch = clientAccessToken || (!payload ? credential : null);
-        if (!payload && tokenToFetch) {
-            try {
-                const userInfoRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { Authorization: `Bearer ${tokenToFetch}` },
-                    timeout: 10000
-                });
-                if (userInfoRes.data && userInfoRes.data.email) {
-                    payload = {
-                        email: userInfoRes.data.email,
-                        name: userInfoRes.data.name || userInfoRes.data.given_name || 'Usuario Google',
-                        picture: userInfoRes.data.picture,
-                        email_verified: userInfoRes.data.email_verified
-                    };
-                }
-            } catch (userinfoError) {
-                console.error('[AUTH GOOGLE] Error obteniendo userinfo con accessToken:', userinfoError.message);
-            }
-        }
-
         if (!payload || !payload.email) {
+            console.error('[AUTH GOOGLE ERROR] No se pudo verificar el token de Google recibido.');
             return res.status(401).json({ success: false, error: 'No se pudo verificar la cuenta de Google. Por favor intenta de nuevo.' });
         }
 
