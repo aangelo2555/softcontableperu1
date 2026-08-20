@@ -113,8 +113,10 @@ export const Login: React.FC = () => {
     const [forgotError, setForgotError] = useState<string | null>(null);
     const [forgotMessage, setForgotMessage] = useState<string | null>(null);
 
-    // Estado Autenticación con Google
+    // Estado Autenticación con Google y Pantalla de Carga Instantánea
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [isAuthSuccessLoading, setIsAuthSuccessLoading] = useState(false);
+    const [authSuccessUser, setAuthSuccessUser] = useState<string>('');
 
     // Manejar Respuesta de Autenticación de Google (ID Token o Access Token)
     const handleGoogleAuthResponse = async ({ credential, accessToken }: { credential?: string; accessToken?: string }) => {
@@ -129,6 +131,9 @@ export const Login: React.FC = () => {
             });
 
             if (res.success) {
+                // ACTIVAR DE INMEDIATO LA PANTALLA DE CARGA DE TRANSICIÓN (0ms de retraso)
+                setIsAuthSuccessLoading(true);
+                setAuthSuccessUser(res.user?.name || 'Usuario');
                 localStorage.setItem('softcontable_token', res.token || res.accessToken);
                 if (res.refreshToken) {
                     localStorage.setItem('softcontable_refresh_token', res.refreshToken);
@@ -139,7 +144,7 @@ export const Login: React.FC = () => {
                 toast.success(res.message || '¡Inicio de sesión con Google exitoso!');
                 setTimeout(() => {
                     window.location.reload();
-                }, 300);
+                }, 550);
             } else {
                 const errMsg = res.error || 'Error al iniciar sesión con Google';
                 setErrorAlert(errMsg);
@@ -322,11 +327,16 @@ export const Login: React.FC = () => {
                         return;
                     }
 
+                    setIsAuthSuccessLoading(true);
+                    setAuthSuccessUser(res.user?.name || 'Usuario');
                     localStorage.setItem('softcontable_token', res.token);
                     if (res.user) {
                         localStorage.setItem('softcontable_user', JSON.stringify(res.user));
                     }
-                    window.location.reload();
+                    toast.success('¡Bienvenido a Soft Contable!');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 550);
                 } else {
                     const errMsg = res.error || 'Error al iniciar sesión';
                     setErrorAlert(errMsg);
@@ -633,83 +643,79 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Scrollbars)   */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[940px] xl:max-w-[1000px] h-auto lg:h-[92vh] lg:max-h-[640px] xl:max-h-[660px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[960px] xl:max-w-[1020px] h-auto lg:h-[90vh] lg:min-h-[580px] lg:max-h-[640px] xl:max-h-[660px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[410px] xl:w-[440px] bg-white px-5 py-3 sm:px-6 sm:py-3.5 flex flex-col justify-between overflow-y-auto no-scrollbar shrink-0">
+                {/* LADO IZQUIERDO: Formulario de Autenticación Rediseñado y Espacioso */}
+                <div className="w-full lg:w-[420px] xl:w-[450px] bg-white px-6 py-4 sm:px-7 sm:py-5 flex flex-col justify-between overflow-y-auto no-scrollbar shrink-0 relative">
                     
-                    {/* Header Marca */}
-                    <div className="text-center mb-0.5">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-sm flex items-center justify-center mx-auto mb-1">
-                            <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-sm" />
+                    {/* Pantalla de Carga de Transición Inmediata (Aparece en 0ms tras autenticación exitosa) */}
+                    {isAuthSuccessLoading && (
+                        <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+                            <div className="relative mb-4">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/30 animate-pulse">
+                                    <img src="/assets/logo.png" alt="Softcontable" className="w-9 h-9 object-contain brightness-0 invert" />
+                                </div>
+                                <div className="absolute -inset-1.5 rounded-2xl border-2 border-blue-500/30 animate-spin border-t-blue-600" />
+                            </div>
+                            <h3 className="text-base font-black text-slate-800 tracking-tight mb-1">
+                                ¡Bienvenido{authSuccessUser ? `, ${authSuccessUser.split(' ')[0]}` : ''}!
+                            </h3>
+                            <p className="text-xs text-slate-500 font-medium mb-4">
+                                Iniciando sesión en tu espacio de trabajo...
+                            </p>
+                            <div className="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full w-full animate-pulse" />
+                            </div>
                         </div>
-                        <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
-                            SOFT CONTABLE
-                        </h1>
-                        <p className="text-slate-400 text-[9px] font-bold tracking-[0.22em] uppercase text-center notranslate" translate="no">
-                            SISTEMA CONTABLE EN LA NUBE V2.0
-                        </p>
-                    </div>
+                    )}
 
-                    {/* Contenedor del Formulario */}
-                    <div className="flex-1 flex flex-col justify-center py-0">
-                        
-                        {/* Selector de Modo: Profesional vs Estudiante */}
-                        <div className="my-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
+                    {/* Header Marca + Selector de Modo en Cápsula */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 shadow-2xs flex items-center justify-center">
+                                    <img src="/assets/logo.png" alt="Softcontable" className="w-6 h-6 object-contain drop-shadow-2xs" />
+                                </div>
+                                <div>
+                                    <h1 className="text-sm font-black tracking-wider text-[#1e3a8a] uppercase flex items-center gap-1.5 notranslate" translate="no">
+                                        SOFT CONTABLE
+                                    </h1>
+                                    <p className="text-slate-400 text-[8.5px] font-bold tracking-[0.2em] uppercase notranslate" translate="no">
+                                        SISTEMA CONTABLE EN LA NUBE
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Selector Discreto de Modo Profesional / Estudiante */}
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setIsStudentModeActive(false);
+                                    setIsStudentModeActive(!isStudentModeActive);
                                     setErrorAlert(null);
                                 }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
-                                    !isStudentModeActive 
-                                        ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
-                                        : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                            >
-                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Profesional</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsStudentModeActive(true);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
                                     isStudentModeActive 
-                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                                        : 'text-slate-500 hover:text-slate-800'
+                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 shadow-2xs'
+                                        : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 shadow-2xs'
                                 }`}
+                                title="Cambiar modo de acceso"
                             >
-                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Estudiante</span>
+                                {isStudentModeActive ? (
+                                    <>
+                                        <GraduationCap size={13} className="text-indigo-600" />
+                                        <span>Estudiante</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Building2 size={12} className="text-blue-600" />
+                                        <span>Profesional</span>
+                                    </>
+                                )}
                             </button>
                         </div>
 
-                        {/* Banner informativo del modo */}
-                        <div className={`mb-1 p-1.5 rounded-xl border text-[10px] sm:text-[10.5px] font-medium flex items-center gap-2 ${
-                            isStudentModeActive
-                                ? 'bg-indigo-50/90 border-indigo-200/80 text-indigo-900'
-                                : 'bg-[#f0f6ff] border-[#dbeafe] text-[#1e40af]'
-                        }`}>
-                            {isStudentModeActive ? (
-                                <>
-                                    <GraduationCap size={13} className="shrink-0 text-indigo-600" />
-                                    <span className="leading-tight">Entorno educativo para aprendizaje sin riesgo SUNAT.</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ShieldCheck size={14} className="shrink-0 text-blue-600" />
-                                    <span className="leading-tight">Acceso al sistema contable oficial y empresas.</span>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-1.5 border-b border-slate-200/80 pb-0.5">
+                        {/* Tabs Segmentados Minimalistas: Iniciar Sesión / Crear Cuenta */}
+                        <div className="bg-slate-100/90 p-1 rounded-xl flex items-center mb-3 border border-slate-200/60">
                             <button 
                                 type="button"
                                 onClick={() => {
@@ -717,10 +723,10 @@ export const Login: React.FC = () => {
                                     setErrorAlert(null);
                                     setLoginPassword('');
                                 }}
-                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
                                     isLogin 
-                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        ? 'bg-white text-[#1d4ed8] shadow-xs' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                     }`}
                             >
                                 Iniciar Sesión
@@ -733,23 +739,27 @@ export const Login: React.FC = () => {
                                     setRegisterPassword('');
                                     setRegisterConfirmPassword('');
                                 }}
-                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
                                     !isLogin 
-                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                                        ? 'bg-white text-[#1d4ed8] shadow-xs' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
                             >
                                 Crear Cuenta
                             </button>
                         </div>
+                    </div>
 
-                        {/* Botón Autenticación con Google (Estilo Moderno Imagen 2) */}
-                        <div className="mb-1.5 space-y-1.5">
+                    {/* Contenedor del Formulario Principal */}
+                    <div className="flex-1 flex flex-col justify-center">
+                        
+                        {/* Botón Autenticación con Google */}
+                        <div className="mb-2 space-y-2">
                             <button
                                 type="button"
                                 onClick={handleTriggerGoogleLogin}
-                                disabled={isGoogleLoading || isLoading}
-                                className="w-full py-2 px-3 rounded-xl border border-slate-300/90 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-2.5 transition-all duration-200 shadow-xs hover:shadow hover:border-slate-400 cursor-pointer select-none active:scale-[0.99] disabled:opacity-50"
+                                disabled={isGoogleLoading || isLoading || isAuthSuccessLoading}
+                                className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-semibold text-xs flex items-center justify-center gap-2.5 transition-all duration-150 shadow-2xs hover:border-slate-300 hover:shadow-xs cursor-pointer select-none active:scale-[0.99] disabled:opacity-50"
                             >
                                 {isGoogleLoading ? (
                                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
@@ -764,20 +774,20 @@ export const Login: React.FC = () => {
                                 <span>{isGoogleLoading ? 'Conectando con Google...' : 'Continuar con Google'}</span>
                             </button>
 
-                            {/* Divisor Visual "o" */}
-                            <div className="relative flex items-center justify-center my-1">
-                                <div className="border-t border-slate-200/90 w-full"></div>
-                                <span className="bg-white px-2 text-[9px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
+                            {/* Divisor Visual Sutil */}
+                            <div className="relative flex items-center justify-center my-1.5">
+                                <div className="border-t border-slate-200/80 w-full"></div>
+                                <span className="bg-white px-2.5 text-[9px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
                                     o con correo
                                 </span>
-                                <div className="border-t border-slate-200/90 w-full"></div>
+                                <div className="border-t border-slate-200/80 w-full"></div>
                             </div>
                         </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-1.5" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
                             {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
+                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2.5 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
                                     <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
                                 </div>
@@ -785,8 +795,8 @@ export const Login: React.FC = () => {
 
                             {!isLogin && (
                                 <div className="space-y-0.5">
-                                    <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                         <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type="text"
@@ -806,8 +816,8 @@ export const Login: React.FC = () => {
                             {!isLogin && !isStudentModeActive && (
                                 <>
                                     <div className="space-y-0.5">
-                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                             <Phone className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="tel"
@@ -826,8 +836,8 @@ export const Login: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-0.5">
-                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                             <Building2 className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                             <input 
                                                 type="text"
@@ -848,8 +858,8 @@ export const Login: React.FC = () => {
 
                             {/* Campo Correo Electrónico */}
                             <div className="space-y-0.5">
-                                <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
-                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                     <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type="email"
@@ -868,14 +878,14 @@ export const Login: React.FC = () => {
                             {/* Campo Contraseña */}
                             <div className="space-y-0.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
                                     {!isLogin && checkPasswordStrength(registerPassword).isValid && (
-                                        <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                        <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
                                             <CheckCircle2 size={11} /> Segura
                                         </span>
                                     )}
                                 </div>
-                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                     <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type={showPassword ? "text" : "password"}
@@ -910,14 +920,14 @@ export const Login: React.FC = () => {
                             {!isLogin && !isStudentModeActive && (
                                 <div className="space-y-0.5">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-black text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
                                         {registerConfirmPassword.length > 0 && registerConfirmPassword === registerPassword && (
-                                            <span className="text-[8.5px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                                            <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
                                                 <CheckCircle2 size={11} /> Coincide
                                             </span>
                                         )}
                                     </div>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-xs">
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
                                         <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type={showConfirmPassword ? "text" : "password"}
@@ -971,11 +981,11 @@ export const Login: React.FC = () => {
 
                             <button 
                                 type="submit"
-                                disabled={isLoading}
-                                className={`w-full font-black py-2 rounded-xl shadow-md shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 mt-1.5 cursor-pointer text-xs uppercase tracking-wider ${
+                                disabled={isLoading || isAuthSuccessLoading}
+                                className={`w-full font-bold py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
                                     isStudentModeActive
-                                        ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/25'
-                                        : 'bg-gradient-to-r from-[#1d4ed8] via-[#2563eb] to-[#3b82f6] hover:from-[#1e40af] hover:to-[#2563eb] text-white'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/20'
+                                        : 'bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] hover:from-[#1e40af] hover:to-[#1d4ed8] text-white shadow-blue-600/25'
                                 } active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none`}
                             >
                                 {isLoading ? (
@@ -994,7 +1004,7 @@ export const Login: React.FC = () => {
                     </div>
 
                     {/* Avisos Legales y Derechos */}
-                    <div className="mt-1.5 text-center space-y-0.5">
+                    <div className="mt-2 text-center space-y-0.5">
                         <p className="text-slate-400 text-[9.5px] font-medium">
                             Al ingresar aceptas nuestros{' '}
                             <button type="button" onClick={() => setShowLoginLegal('terms')} className="text-slate-600 hover:text-blue-600 underline font-semibold cursor-pointer transition-colors">Términos</button>{' '}y{' '}
