@@ -621,7 +621,7 @@ class SunatDirectCpeService {
 
     const datosEmisor = item.datosEmisor || {};
     const datosReceptor = item.datosReceptor || {};
-    const procedencia = item.procedenciaIndivual || {};
+    const proc = item.procedenciaMasiva || item.procedenciaIndivual || item.procedenciaIndividual || {};
 
     const rawEstado = String(item.indEstadoCpe ?? '').trim();
     let estado = 'DESCONOCIDO';
@@ -630,6 +630,23 @@ class SunatDirectCpeService {
     else if (rawEstado === '3') estado = 'AUTORIZADO';
     else if (rawEstado === '4') estado = 'NO_AUTORIZADO';
     else estado = rawEstado ? `ESTADO_${rawEstado}` : 'ACEPTADO';
+
+    const montoGravado = Number(proc.mtoTotalValVentaGrabado ?? proc.mtoOpGravado ?? proc.mtoSubTotal ?? 0);
+    const montoExonerado = Number(proc.mtoTotalValVentaExonerado ?? proc.mtoOpExonerado ?? 0);
+    const montoInafecto = Number(proc.mtoTotalValVentaInafecto ?? proc.mtoOpInafecto ?? 0);
+    const montoIgv = Number(proc.mtoSumIGV ?? proc.mtoIGV ?? 0);
+    const montoIsc = Number(proc.mtoSumISC ?? proc.mtoISC ?? 0);
+    const montoIcbper = Number(proc.mtoSumICBPER ?? proc.mtoICBPER ?? 0);
+    const montoOtrosTributos = Number(proc.mtoSumOtrosTributos ?? proc.mtoOtrosTributos ?? 0);
+    
+    // Si montoTotal no viene en procedencia, calcular de items o sumatoria
+    let montoTotal = Number(proc.mtoImporteTotal ?? item.mtoImpTotal ?? item.mtoTotal ?? 0);
+    if (montoTotal === 0 && Array.isArray(item.informacionItems) && item.informacionItems.length > 0) {
+      montoTotal = item.informacionItems.reduce((acc, it) => acc + Number(it.mtoImpTotal || 0), 0);
+    }
+    if (montoTotal === 0 && montoGravado > 0) {
+      montoTotal = Number((montoGravado + montoIgv + montoExonerado + montoInafecto + montoIsc + montoIcbper + montoOtrosTributos).toFixed(2));
+    }
 
     return {
       rucEmisor: datosEmisor.numRuc || '',
@@ -648,14 +665,14 @@ class SunatDirectCpeService {
       fechaRegistro: item.fecRegistro || '',
       estado: estado,
       indEstadoCpe: rawEstado,
-      montoGravado: Number(procedencia.mtoOpGravado || procedencia.mtoSubTotal || 0),
-      montoExonerado: Number(procedencia.mtoOpExonerado || 0),
-      montoInafecto: Number(procedencia.mtoOpInafecto || 0),
-      montoIgv: Number(procedencia.mtoIGV || 0),
-      montoIsc: Number(procedencia.mtoISC || 0),
-      montoIcbper: Number(procedencia.mtoICBPER || 0),
-      montoOtrosTributos: Number(procedencia.mtoOtrosTributos || 0),
-      montoTotal: Number(procedencia.mtoImporteTotal || item.mtoImpTotal || 0),
+      montoGravado,
+      montoExonerado,
+      montoInafecto,
+      montoIgv,
+      montoIsc,
+      montoIcbper,
+      montoOtrosTributos,
+      montoTotal,
       desMontoLetras: item.desMtoTotalLetras || '',
       items: (item.informacionItems || []).map(it => ({
         cantidad: Number(it.cntItems || 1),
@@ -673,7 +690,7 @@ class SunatDirectCpeService {
   /**
    * Consulta individual de un comprobante electrónico en SUNAT con auto-reintento
    */
-  async consultarComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia = '2', maxRetries = 2 }) {
+  async consultarComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia = '2', maxRetries = 3 }) {
     const rucLimpiado = String(rucEmisor || '').trim();
     const tipoNormalizado = String(tipoCpe || '01').trim().padStart(2, '0');
     const serieLimpiada = String(serie || '').trim().toUpperCase();
@@ -707,7 +724,6 @@ class SunatDirectCpeService {
         try {
           res = await executeRequest(tokenInfo.token);
         } catch (err) {
-          // Si el token expiró (401 o 403), re-autenticamos inmediatamente
           if (err.response?.status === 401 || err.response?.status === 403) {
             tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
             res = await executeRequest(tokenInfo.token);
@@ -733,11 +749,11 @@ class SunatDirectCpeService {
         };
       } catch (error) {
         const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || '';
-        const isTransient = errMsg.includes('error processing') || error.response?.status === 500 || error.response?.status === 502 || error.response?.status === 503 || error.code === 'ECONNRESET';
+        const isTransient = errMsg.includes('error processing') || error.response?.status === 500 || error.response?.status === 502 || error.response?.status === 503 || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
 
         if (isTransient && attempt <= maxRetries) {
-          // Esperar backoff progresivo y reintentar con el mismo token (sin login redundante)
-          await new Promise(r => setTimeout(r, 200 * attempt));
+          const backoffTime = 200 + (attempt * 250); // 450ms, 700ms, 950ms
+          await new Promise(r => setTimeout(r, backoffTime));
           continue;
         }
 
@@ -790,50 +806,26 @@ class SunatDirectCpeService {
           }
         }
 
-        if (res.data && res.data.valArchivo) {
-          const nomArchivo = res.data.nomArchivo || `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.zip`;
-          const zipBase64 = res.data.valArchivo;
-          let xmlContent = '';
-          let xmlFileName = nomArchivo.replace(/\.zip$/i, '.xml');
-
-          // Extraer el XML del ZIP si adm-zip está disponible
-          try {
-            const AdmZip = require('adm-zip');
-            const zipBuffer = Buffer.from(zipBase64, 'base64');
-            const zip = new AdmZip(zipBuffer);
-            const zipEntries = zip.getEntries();
-            const xmlEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.xml'));
-
-            if (xmlEntry) {
-              xmlFileName = xmlEntry.entryName;
-              xmlContent = xmlEntry.getData().toString('utf8');
-            }
-          } catch (zipErr) {
-            console.warn('[CPE XML UNZIP] No se pudo descomprimir XML en memoria:', zipErr.message);
-          }
+        if (res.data && res.data.comprobante) {
+          const zipBase64 = res.data.comprobante;
+          const fileName = `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.xml`;
 
           return {
             success: true,
-            nomArchivo,
+            encontrado: true,
             zipBase64,
-            xmlFileName,
-            xmlContent,
-            xmlBase64: xmlContent ? Buffer.from(xmlContent, 'utf8').toString('base64') : null
+            fileName,
+            esZip: true
           };
-        }
-
-        if (attempt === 1) {
-          await new Promise(r => setTimeout(r, 300));
-          continue;
         }
 
         return {
           success: false,
-          error: res.data?.message || 'SUNAT no retornó el archivo ZIP/XML del comprobante'
+          error: 'XML no disponible para este comprobante en SUNAT'
         };
       } catch (error) {
         if (attempt === 1) {
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(r => setTimeout(r, 400));
           continue;
         }
         return {
@@ -847,17 +839,21 @@ class SunatDirectCpeService {
   /**
    * Consulta masiva de comprobantes con concurrencia controlada, delay regulable y auto-reintento
    */
-  async consultarLoteMasivo({ rucEmpresa, usuarioSol, claveSol, listaComprobantes, concurrencia = 2, delayMs = 150 }) {
+  async consultarLoteMasivo({ rucEmpresa, usuarioSol, claveSol, listaComprobantes, concurrencia = 2, delayMs = 180, onProgress }) {
     if (!Array.isArray(listaComprobantes) || listaComprobantes.length === 0) {
       throw new Error('La lista de comprobantes a consultar está vacía');
     }
+
+    const total = listaComprobantes.length;
+    const safeWorkers = Math.max(1, Math.min(concurrencia, total, 4));
+    console.log(`[CPE BATCH START] 🚀 Iniciando lote de ${total} comprobantes para RUC ${rucEmpresa} (Concurrencia: ${safeWorkers}x, Delay: ${delayMs}ms)`);
 
     // 1. Asegurar sesión y token antes de iniciar el lote
     await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol);
 
     const resultados = [];
     const queue = [...listaComprobantes.map((item, index) => ({ item, index }))];
-    const total = queue.length;
+    const startTime = Date.now();
 
     // Resumen estadístico
     const stats = {
@@ -888,7 +884,7 @@ class SunatDirectCpeService {
             serie: item.serie,
             correlativo: item.numero || item.correlativo || item.numCpe,
             procedencia: item.procedencia || '2',
-            maxRetries: 2
+            maxRetries: 3
           });
 
           if (res.success && res.encontrado && res.data) {
@@ -941,6 +937,22 @@ class SunatDirectCpeService {
           };
         } finally {
           stats.procesados++;
+          const lastRes = resultados[index]?.resultado;
+          const statusDesc = lastRes ? `${lastRes.serie}-${lastRes.numero} -> ${lastRes.estado} (S/ ${lastRes.montoTotal})` : `${item.serie}-${item.numero} -> ${resultados[index]?.estado || 'PROCESADO'}`;
+          
+          if (stats.procesados % 5 === 0 || stats.procesados === total) {
+            console.log(`[CPE BATCH PROGRESS] 📊 ${stats.procesados}/${total} (${Math.round(stats.procesados/total*100)}%) - Último: ${statusDesc}`);
+          }
+
+          if (typeof onProgress === 'function') {
+            onProgress({
+              total,
+              procesados: stats.procesados,
+              porcentaje: Math.round((stats.procesados / total) * 100),
+              ultimoProcesado: resultados[index]
+            });
+          }
+
           // Delay de pacing para evitar rate-limiting de SUNAT API Gateway
           if (delayMs > 0 && queue.length > 0) {
             await new Promise(r => setTimeout(r, delayMs));
@@ -951,12 +963,75 @@ class SunatDirectCpeService {
 
     // Ejecutar workers concurrentes seguros
     const workers = [];
-    const safeWorkers = Math.max(1, Math.min(concurrencia, total, 4));
     for (let i = 0; i < safeWorkers; i++) {
       workers.push(worker());
     }
 
     await Promise.all(workers);
+
+    // ═══ FASE DE BARRIDO AUTOMÁTICO (AUTOMATIC SWEEP PASS) ═══
+    // Si algún comprobante tuvo error transitorio por saturación de SUNAT, se reintenta automáticamente
+    for (let sweepPass = 1; sweepPass <= 2; sweepPass++) {
+      const pendingErrors = resultados.map((r, idx) => ({ r, idx })).filter(item => item.r && item.r.estado === 'ERROR');
+      if (pendingErrors.length === 0) break;
+
+      console.log(`[CPE AUTO-SWEEP] 🔄 Barrido #${sweepPass}: Reintentando automáticamente ${pendingErrors.length} comprobante(s)...`);
+      for (const { r, idx } of pendingErrors) {
+        const item = r.itemOriginal;
+        try {
+          await new Promise(res => setTimeout(res, 400 * sweepPass));
+
+          const retryRes = await this.consultarComprobante({
+            rucEmpresa,
+            usuarioSol,
+            claveSol,
+            rucEmisor: item.rucEmisor || item.ruc || item.doc_num,
+            tipoCpe: item.tipoCpe || item.tipo || item.tipo_doc || '01',
+            serie: item.serie,
+            correlativo: item.numero || item.correlativo || item.numCpe,
+            procedencia: item.procedencia || '2',
+            maxRetries: 4
+          });
+
+          if (retryRes.success && retryRes.encontrado && retryRes.data) {
+            const d = retryRes.data;
+            stats.errores = Math.max(0, stats.errores - 1);
+            if (d.estado === 'ACEPTADO') stats.aceptados++;
+            else if (d.estado === 'ANULADO') stats.anulados++;
+            else stats.aceptados++;
+
+            stats.montoTotalGravado += d.montoGravado || 0;
+            stats.montoTotalIgv += d.montoIgv || 0;
+            stats.montoTotalGeneral += d.montoTotal || 0;
+
+            resultados[idx] = {
+              index: idx,
+              itemOriginal: item,
+              success: true,
+              encontrado: true,
+              resultado: d
+            };
+            console.log(`[CPE AUTO-SWEEP] ✅ ${d.serie}-${d.numero} recuperado exitosamente en auto-barrido #${sweepPass}: ${d.estado}`);
+          } else if (retryRes.success && !retryRes.encontrado) {
+            stats.errores = Math.max(0, stats.errores - 1);
+            stats.noEncontrados++;
+            resultados[idx] = {
+              index: idx,
+              itemOriginal: item,
+              success: true,
+              encontrado: false,
+              estado: 'NO_EXISTE',
+              mensaje: retryRes.mensaje || 'Comprobante no existe en SUNAT'
+            };
+          }
+        } catch (e) {
+          // Mantener como error si persistió
+        }
+      }
+    }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[CPE BATCH COMPLETE] ✅ Lote finalizado en ${elapsed}ms: ${stats.procesados}/${total} procesados (${stats.aceptados} Aceptados, ${stats.anulados} Anulados, ${stats.noEncontrados} No Existen, ${stats.errores} Errores)`);
 
     return {
       success: true,

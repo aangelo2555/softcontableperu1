@@ -98,6 +98,8 @@ function createCpeDirectRouter(db) {
         });
       }
 
+      console.log(`[CPE API] 📥 Consulta Individual recibida: ${rucEmisor} ${tipoCpe || '01'} ${serie}-${correlativo} (RUC Solicitante: ${ruc})`);
+
       const result = await sunatDirectCpeService.consultarComprobante({
         rucEmpresa: ruc,
         usuarioSol: usuario,
@@ -222,6 +224,8 @@ function createCpeDirectRouter(db) {
           error: 'La lista de comprobantes está vacía o no tiene formato válido.'
         });
       }
+
+      console.log(`[CPE API] 📥 Petición de consulta masiva recibida: ${listaComprobantes.length} comprobantes para RUC ${ruc} (Origen: ${origen_consulta}, Concurrencia: ${concurrencia}x, Delay: ${delayMs}ms)`);
 
       const batchResult = await sunatDirectCpeService.consultarLoteMasivo({
         rucEmpresa: ruc,
