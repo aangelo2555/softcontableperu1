@@ -67,23 +67,48 @@ class SunatDirectCpeService {
 
   /**
    * Obtiene o renueva el Bearer Token JWT para el módulo de CPE
-   * Usa HTTPS nativo con manejo manual de cookies para evitar problemas con axios-cookiejar-support
+   * Reutiliza el mismo token durante 45 minutos para todas las consultas y descargas masivas.
+   * Cuenta con Mutex (Promise Lock) para evitar múltiples logins simultáneos.
    */
   async obtenerTokenCpe(ruc, usuario, clave, forceRefresh = false) {
     const session = this.getOrCreateSession(ruc);
 
+    // 1. Si ya tenemos un token vigente y no se forzó el refresco, reutilizarlo de inmediato
     if (!forceRefresh && session.cpeToken && session.tokenExpiry && Date.now() < session.tokenExpiry) {
-      return { success: true, token: session.cpeToken };
+      const minRestantes = Math.round((session.tokenExpiry - Date.now()) / 60000);
+      return { success: true, token: session.cpeToken, cached: true, minRestantes };
     }
 
-    try {
-      const token = await this._nativeFullFlow(ruc, usuario, clave);
-      if (token) {
-        session.cpeToken = token;
-        session.tokenExpiry = Date.now() + 45 * 60 * 1000;
-        return { success: true, token };
+    // 2. Si ya hay un login en progreso, esperar a que termine para reutilizar el mismo resultado
+    if (session._tokenPromise) {
+      try {
+        const token = await session._tokenPromise;
+        if (token) return { success: true, token, cached: true };
+      } catch (e) {
+        // Si falló la promesa previa, continuar para intentar de nuevo
       }
-      throw new Error('No se pudo extraer el token de autorización de comprobantes desde el menú SOL');
+    }
+
+    // 3. Crear el Mutex / Promise Lock para este RUC
+    session._tokenPromise = (async () => {
+      try {
+        console.log(`[SUNAT AUTH] 🔑 Generando nuevo Bearer Token para RUC ${ruc}...`);
+        const token = await this._nativeFullFlow(ruc, usuario, clave);
+        if (token) {
+          session.cpeToken = token;
+          session.tokenExpiry = Date.now() + 45 * 60 * 1000; // 45 minutos de vigencia
+          console.log(`[SUNAT AUTH] ✅ Bearer Token obtenido y almacenado en caché por 45 minutos`);
+          return token;
+        }
+        throw new Error('No se pudo extraer el token de autorización de comprobantes desde el menú SOL');
+      } finally {
+        session._tokenPromise = null;
+      }
+    })();
+
+    try {
+      const token = await session._tokenPromise;
+      return { success: true, token };
     } catch (error) {
       session.cpeToken = null;
       console.error(`[SUNAT DIRECT TOKEN ERROR]:`, error.message);
@@ -711,13 +736,8 @@ class SunatDirectCpeService {
         const isTransient = errMsg.includes('error processing') || error.response?.status === 500 || error.response?.status === 502 || error.response?.status === 503 || error.code === 'ECONNRESET';
 
         if (isTransient && attempt <= maxRetries) {
-          // Esperar backoff progresivo y reintentar
-          await new Promise(r => setTimeout(r, 250 * attempt));
-          if (attempt === maxRetries) {
-            try {
-              tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
-            } catch (tErr) {}
-          }
+          // Esperar backoff progresivo y reintentar con el mismo token (sin login redundante)
+          await new Promise(r => setTimeout(r, 200 * attempt));
           continue;
         }
 
