@@ -682,8 +682,43 @@ export const Login: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* Control Único Segmentado: Iniciar Sesión / Crear Cuenta (Eliminado doble encajonado) */}
-                    <div className="bg-slate-100/90 p-1 rounded-xl flex items-center mb-2 border border-slate-200/70 select-none">
+                    {/* Selector de Modo: Profesional vs Estudiante (En Recuadros) */}
+                    <div className="my-1.5 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsStudentModeActive(false);
+                                setErrorAlert(null);
+                            }}
+                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
+                                !isStudentModeActive 
+                                    ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
+                                    : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                            <span>Profesional</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsStudentModeActive(true);
+                                setErrorAlert(null);
+                            }}
+                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
+                                isStudentModeActive 
+                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                    : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                            <span>Estudiante</span>
+                        </button>
+                    </div>
+
+                    {/* Tabs: Iniciar Sesión / Registrarse */}
+                    <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
                         <button 
                             type="button"
                             onClick={() => {
@@ -691,10 +726,10 @@ export const Login: React.FC = () => {
                                 setErrorAlert(null);
                                 setLoginPassword('');
                             }}
-                            className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
+                            className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                 isLogin 
-                                    ? 'bg-white text-[#1d4ed8] shadow-xs font-black' 
-                                    : 'text-slate-500 hover:text-slate-800'
+                                    ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
+                                    : 'border-transparent text-slate-400 hover:text-slate-600'
                                 }`}
                         >
                             Iniciar Sesión
@@ -707,41 +742,14 @@ export const Login: React.FC = () => {
                                 setRegisterPassword('');
                                 setRegisterConfirmPassword('');
                             }}
-                            className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
+                            className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                 !isLogin 
-                                    ? 'bg-white text-[#1d4ed8] shadow-xs font-black' 
-                                    : 'text-slate-500 hover:text-slate-800'
+                                    ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
+                                    : 'border-transparent text-slate-400 hover:text-slate-600'
                             }`}
                         >
                             Crear Cuenta
                         </button>
-                    </div>
-
-                    {/* Selector Sutil de Modo: Profesional vs Estudiante */}
-                    <div className="flex items-center justify-center gap-4 mb-2.5 text-[11px] font-bold text-slate-600 select-none">
-                        <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-                            <input 
-                                type="radio" 
-                                name="account_mode" 
-                                checked={!isStudentModeActive} 
-                                onChange={() => { setIsStudentModeActive(false); setErrorAlert(null); }} 
-                                className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                            />
-                            <Building2 size={13} className={!isStudentModeActive ? "text-blue-600" : "text-slate-400"} />
-                            <span className={!isStudentModeActive ? "text-blue-900 font-black" : "text-slate-500"}>Modo Profesional</span>
-                        </label>
-                        <span className="text-slate-300 font-light">•</span>
-                        <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-                            <input 
-                                type="radio" 
-                                name="account_mode" 
-                                checked={isStudentModeActive} 
-                                onChange={() => { setIsStudentModeActive(true); setErrorAlert(null); }} 
-                                className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
-                            />
-                            <GraduationCap size={14} className={isStudentModeActive ? "text-indigo-600" : "text-slate-400"} />
-                            <span className={isStudentModeActive ? "text-indigo-900 font-black" : "text-slate-500"}>Modo Estudiante</span>
-                        </label>
                     </div>
 
                     {/* Botón Autenticación con Google (SOLO VISIBLE EN INICIAR SESIÓN) */}
