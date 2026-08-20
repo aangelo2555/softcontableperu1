@@ -770,7 +770,7 @@ class SunatDirectCpeService {
    * Descarga el archivo XML original (empaquetado en ZIP en base64) de SUNAT
    * Endpoint: /comprobantes/{ruc}-{tipo}-{serie}-{correlativo}-{procedencia}/02
    */
-  async descargarXmlComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia = '2', codOpcion = '02' }) {
+  async descargarXmlComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia, codOpcion = '02' }) {
     const rucLimpiado = String(rucEmisor || '').trim();
     const tipoNormalizado = String(tipoCpe || '01').trim().padStart(2, '0');
     const serieLimpiada = String(serie || '').trim().toUpperCase();
@@ -779,8 +779,12 @@ class SunatDirectCpeService {
     let tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol);
     const session = this.getOrCreateSession(rucEmpresa);
 
-    const executeRequest = async (token) => {
-      const endpoint = `https://api-cpe.sunat.gob.pe/v1/contribuyente/consultacpe/comprobantes/${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}-${procedencia}/${codOpcion}`;
+    // Determinar procedencias candidatas ('2' para SEE Contribuyente / '1' para SEE SOL)
+    const procPrimaria = procedencia || (serieLimpiada.startsWith('E') ? '1' : '2');
+    const procedencias = [procPrimaria, procPrimaria === '2' ? '1' : '2'];
+
+    const executeRequest = async (token, proc, opcion) => {
+      const endpoint = `https://api-cpe.sunat.gob.pe/v1/contribuyente/consultacpe/comprobantes/${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}-${proc}/${opcion}`;
       
       return await session.client.get(endpoint, {
         headers: {
@@ -792,48 +796,71 @@ class SunatDirectCpeService {
       });
     };
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        let res;
+    for (const proc of procedencias) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          res = await executeRequest(tokenInfo.token);
-        } catch (err) {
-          if (err.response?.status === 401 || err.response?.status === 403) {
-            tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
-            res = await executeRequest(tokenInfo.token);
-          } else {
-            throw err;
+          let res;
+          try {
+            res = await executeRequest(tokenInfo.token, proc, codOpcion);
+          } catch (err) {
+            if (err.response?.status === 401 || err.response?.status === 403) {
+              tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
+              res = await executeRequest(tokenInfo.token, proc, codOpcion);
+            } else {
+              throw err;
+            }
           }
-        }
 
-        if (res.data && res.data.comprobante) {
-          const zipBase64 = res.data.comprobante;
-          const fileName = `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.xml`;
+          if (res.data && (res.data.valArchivo || res.data.comprobante)) {
+            const zipBase64 = res.data.valArchivo || res.data.comprobante;
+            const nomArchivo = res.data.nomArchivo || `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.zip`;
+            let xmlContent = '';
+            let xmlFileName = nomArchivo.replace(/\.zip$/i, '');
+            if (!xmlFileName.toLowerCase().endsWith('.xml')) xmlFileName += '.xml';
 
-          return {
-            success: true,
-            encontrado: true,
-            zipBase64,
-            fileName,
-            esZip: true
-          };
-        }
+            // Descomprimir el archivo XML del ZIP en memoria
+            try {
+              const AdmZip = require('adm-zip');
+              const zipBuffer = Buffer.from(zipBase64, 'base64');
+              const zip = new AdmZip(zipBuffer);
+              const zipEntries = zip.getEntries();
+              const xmlEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.xml'));
 
-        return {
-          success: false,
-          error: 'XML no disponible para este comprobante en SUNAT'
-        };
-      } catch (error) {
-        if (attempt === 1) {
-          await new Promise(r => setTimeout(r, 400));
-          continue;
+              if (xmlEntry) {
+                xmlFileName = xmlEntry.entryName;
+                xmlContent = xmlEntry.getData().toString('utf8');
+              }
+            } catch (zipErr) {
+              console.warn('[CPE XML UNZIP] Descompresión en memoria no requerida o falló:', zipErr.message);
+            }
+
+            return {
+              success: true,
+              encontrado: true,
+              nomArchivo,
+              zipBase64,
+              xmlFileName,
+              xmlContent,
+              xmlBase64: xmlContent ? Buffer.from(xmlContent, 'utf8').toString('base64') : null,
+              esZip: true
+            };
+          }
+        } catch (error) {
+          const isTransient = error.response?.status === 500 || error.response?.status === 502 || error.response?.status === 503;
+          if (isTransient && attempt === 1) {
+            await new Promise(r => setTimeout(r, 450));
+            continue;
+          }
+          // Si falló con status 422 o 404, probar la siguiente procedencia candidata
+          break;
         }
-        return {
-          success: false,
-          error: error.response?.data?.message || error.response?.data?.error || error.message
-        };
       }
     }
+
+    return {
+      success: false,
+      error: 'XML no disponible para este comprobante en SUNAT'
+    };
   }
 
   /**

@@ -321,7 +321,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
         tipoCpe,
         serie,
         correlativo,
-        procedencia: '2'
+        procedencia: item.procedencia || (serie.toUpperCase().startsWith('E') ? '1' : '2')
       });
 
       if (res.success && (res.xmlContent || res.zipBase64)) {
