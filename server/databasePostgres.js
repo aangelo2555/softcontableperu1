@@ -229,9 +229,17 @@ const db = {
         const result = await query(sql, params);
         return result.rows;
     },
+    all: async (sql, params = []) => {
+        const result = await query(sql, params);
+        return result.rows || [];
+    },
     
     // Execute query and return first row
     queryOne: async (sql, params = []) => {
+        const result = await query(sql, params);
+        return result.rows[0] || null;
+    },
+    get: async (sql, params = []) => {
         const result = await query(sql, params);
         return result.rows[0] || null;
     },

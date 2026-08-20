@@ -6,6 +6,53 @@ function createCpeDirectRouter(db) {
   const router = express.Router();
 
   /**
+   * Helper unificado para consultas SELECT multiconector (Postgres / SQLite)
+   */
+  const executeQueryAll = async (sql, params = []) => {
+    try {
+      if (typeof db.queryAll === 'function') return await db.queryAll(sql, params);
+      if (typeof db.all === 'function') return await db.all(sql, params);
+      if (db.pool && typeof db.pool.query === 'function') {
+        let paramIndex = 1;
+        const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+        const res = await db.pool.query(pgSql, params);
+        return res.rows || [];
+      }
+      if (typeof db.prepare === 'function') {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).all(...params);
+      }
+    } catch (e) {
+      console.error('[CPE DIRECT DB QUERY ERROR]:', e.message);
+      throw e;
+    }
+    return [];
+  };
+
+  /**
+   * Helper unificado para INSERT / UPDATE / DELETE multiconector (Postgres / SQLite)
+   */
+  const executeRun = async (sql, params = []) => {
+    try {
+      if (typeof db.run === 'function') return await db.run(sql, params);
+      if (db.pool && typeof db.pool.query === 'function') {
+        let paramIndex = 1;
+        const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+        const res = await db.pool.query(pgSql, params);
+        return { changes: res.rowCount };
+      }
+      if (typeof db.prepare === 'function') {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).run(...params);
+      }
+    } catch (e) {
+      console.error('[CPE DIRECT DB RUN ERROR]:', e.message);
+      throw e;
+    }
+    return { changes: 0 };
+  };
+
+  /**
    * Helper para obtener credenciales Clave SOL del workspace si no se envían
    */
   async function resolveCredentials(req) {
@@ -84,11 +131,11 @@ function createCpeDirectRouter(db) {
             'COMPLETADO'
           ];
           
-          await db.run(insertLoteQuery, paramsLote);
+          await executeRun(insertLoteQuery, paramsLote);
 
           // Insertar item
           const insertItemQuery = `
-            INSERT INTO cpe_consultas_items
+            INSERT INTO cpe_consultas_items 
             (id, lote_id, workspace_id, ruc_emisor, razon_social_emisor, cod_cpe, num_serie, num_cpe, fecha_emision, moneda, mto_op_gravado, mto_igv, mto_total, estado_cpe, detalles_json)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
           `;
@@ -98,7 +145,7 @@ function createCpeDirectRouter(db) {
             d.montoGravado, d.montoIgv, d.montoTotal, d.estado,
             JSON.stringify(d)
           ];
-          await db.run(insertItemQuery, paramsItem);
+          await executeRun(insertItemQuery, paramsItem);
         } catch (dbErr) {
           console.warn('[CPE DIRECT] No se pudo persistir consulta unitaria en BD:', dbErr.message);
         }
@@ -201,14 +248,14 @@ function createCpeDirectRouter(db) {
           stats.montoTotalGravado, stats.montoTotalIgv, stats.montoTotalGeneral,
           'COMPLETADO'
         ];
-        await db.run(insertLoteQuery, paramsLote);
+        await executeRun(insertLoteQuery, paramsLote);
 
         // Guardar cada item procesado
         for (const itemRes of batchResult.resultados) {
           if (itemRes && itemRes.resultado) {
             const d = itemRes.resultado;
             const insertItemQuery = `
-              INSERT INTO cpe_consultas_items
+              INSERT INTO cpe_consultas_items 
               (id, lote_id, workspace_id, ruc_emisor, razon_social_emisor, cod_cpe, num_serie, num_cpe, fecha_emision, moneda, mto_op_gravado, mto_igv, mto_total, estado_cpe, detalles_json)
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             `;
@@ -218,7 +265,7 @@ function createCpeDirectRouter(db) {
               d.montoGravado, d.montoIgv, d.montoTotal, d.estado,
               JSON.stringify(d)
             ];
-            await db.run(insertItemQuery, paramsItem);
+            await executeRun(insertItemQuery, paramsItem);
           }
         }
       } catch (dbErr) {
@@ -291,7 +338,7 @@ function createCpeDirectRouter(db) {
         `;
 
         try {
-          await db.run(insertQuery, [
+          await executeRun(insertQuery, [
             id, wsId, fechaIso, fechaIso, tipoDoc, serie, numero,
             '6', rucEmisor, razonSocial, bi, igv, total, moneda,
             glosa, 'SUNAT_DIRECT', userId
@@ -331,7 +378,7 @@ function createCpeDirectRouter(db) {
         ORDER BY created_at DESC 
         LIMIT 50
       `;
-      const lotes = await db.all(query, [workspace_id]);
+      const lotes = await executeQueryAll(query, [workspace_id]);
 
       res.json({
         success: true,
@@ -355,7 +402,7 @@ function createCpeDirectRouter(db) {
         WHERE lote_id = $1 
         ORDER BY created_at ASC
       `;
-      const items = await db.all(query, [loteId]);
+      const items = await executeQueryAll(query, [loteId]);
 
       const parsedItems = (items || []).map(it => {
         let detalles = {};

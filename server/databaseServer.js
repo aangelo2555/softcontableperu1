@@ -1536,6 +1536,26 @@ try {
 }
 
 const dbManager = {
+    // --- Utilidades SQL Genéricas (Compatibilidad Postgres / SQLite) ---
+    all: (sql, params = []) => {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).all(...params);
+    },
+    get: (sql, params = []) => {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).get(...params);
+    },
+    run: (sql, params = []) => {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).run(...params);
+    },
+    queryAll: (sql, params = []) => {
+        const sqliteSql = sql.replace(/\$\d+/g, '?');
+        return db.prepare(sqliteSql).all(...params);
+    },
+    prepare: (sql) => db.prepare(sql),
+    rawDb: db,
+
     // --- Gestión de Usuarios ---
     createUser: (u) => {
         const normalizedEmail = u.email ? u.email.trim().toLowerCase() : '';
