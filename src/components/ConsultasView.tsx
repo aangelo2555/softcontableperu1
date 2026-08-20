@@ -1028,7 +1028,9 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUpOrLeave}
                   onMouseLeave={handleMouseUpOrLeave}
-                  className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar"
+                  className={`flex-1 overflow-x-auto overflow-y-auto custom-scrollbar select-none ${
+                    isDragging ? 'cursor-grabbing' : 'cursor-grab'
+                  }`}
                 >
                   {resultados.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-80 text-app-muted p-8 text-center">
@@ -1060,7 +1062,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                           <th className="py-2.5 px-3 font-mono text-right">TOTAL (S/)</th>
                           <th className="py-2.5 px-3">ITEMS DETALLE</th>
                           <th className="py-2.5 px-3">OBSERVACION</th>
-                          <th className="py-2.5 px-3 text-center">XML</th>
+                          <th className="py-2.5 px-3 text-center">ACCIONES</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
@@ -1184,20 +1186,32 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   </span>
                                 </td>
 
-                                {/* XML */}
+                                {/* ACCIONES (PDF + XML) */}
                                 <td className="py-2 px-3 text-center">
-                                  {isAceptado ? (
-                                    <button
-                                      onClick={() => handleDescargarXmlDirecto(res)}
-                                      className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
-                                      title="Descargar XML oficial de SUNAT"
-                                    >
-                                      <FileCode size={12} />
-                                      <span>XML</span>
-                                    </button>
-                                  ) : (
-                                    <span className="text-app-muted text-[10px]">—</span>
-                                  )}
+                                  <div className="flex items-center justify-center gap-1">
+                                    {isAceptado && (
+                                      <button
+                                        onClick={() => setSelectedDocForPreview(res)}
+                                        className="px-2 py-1 rounded-md text-[10px] font-black bg-purple-500/10 text-purple-400 hover:bg-purple-600 hover:text-white border border-purple-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                        title="Ver Representación Impresa (PDF / Voucher)"
+                                      >
+                                        <FileText size={12} />
+                                        <span>PDF</span>
+                                      </button>
+                                    )}
+                                    {isAceptado ? (
+                                      <button
+                                        onClick={() => handleDescargarXmlDirecto(res)}
+                                        className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                        title="Descargar XML oficial de SUNAT"
+                                      >
+                                        <FileCode size={12} />
+                                        <span>XML</span>
+                                      </button>
+                                    ) : (
+                                      <span className="text-app-muted text-[10px]">—</span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
 
@@ -1234,64 +1248,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     </table>
                   )}
                 </div>
-
-                {/* ═══ BARRA DE DESPLAZAMIENTO HORIZONTAL PERENNE / STICKY ═══ */}
-                {resultados.length > 0 && tableScrollInfo.scrollWidth > tableScrollInfo.clientWidth && (
-                  <div className="sticky bottom-0 z-20 bg-app-surface/95 backdrop-blur-md border-t border-app-border px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg select-none transition-all">
-                    {/* Botón Desplazar Izquierda */}
-                    <button
-                      type="button"
-                      onClick={() => scrollTableBy(-280)}
-                      disabled={!tableScrollInfo.canScrollLeft}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border hover:border-blue-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-2xs active:scale-95"
-                      title="Desplazar tabla hacia la izquierda"
-                    >
-                      <ArrowLeft size={13} />
-                      <span className="hidden sm:inline">Izquierda</span>
-                    </button>
-
-                    {/* Contenedor de Scrollbar Sincronizada */}
-                    <div className="flex-1 flex flex-col gap-1 min-w-0">
-                      <div className="flex items-center justify-between text-[9px] font-bold text-app-muted px-1">
-                        <span className="flex items-center gap-1.5 text-blue-500 font-black uppercase">
-                          <Layers size={11} />
-                          <span>Barra de Desplazamiento Horizontal</span>
-                        </span>
-                        <span className="font-mono text-[9px] text-app-muted hidden md:inline">
-                          {tableScrollInfo.canScrollLeft && tableScrollInfo.canScrollRight
-                            ? '◄ Desliza en la barra o arrastra la tabla ►'
-                            : !tableScrollInfo.canScrollLeft
-                            ? 'Desliza hacia la derecha para ver Descargas ►'
-                            : '◄ Desliza hacia la izquierda para ver Comprobante'}
-                        </span>
-                      </div>
-
-                      {/* Scrollbar sincronizada con diseño destacado y perenne */}
-                      <div
-                        ref={stickyScrollbarRef}
-                        onScroll={handleStickyScroll}
-                        className="w-full overflow-x-auto cpe-sticky-scrollbar h-3 bg-app-bg rounded-full border border-app-border/80 cursor-ew-resize p-0.5"
-                      >
-                        <div
-                          style={{ width: `${tableScrollInfo.scrollWidth}px`, height: '1px' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Botón Desplazar Derecha */}
-                    <button
-                      type="button"
-                      onClick={() => scrollTableBy(280)}
-                      disabled={!tableScrollInfo.canScrollRight}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border hover:border-blue-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-2xs active:scale-95"
-                      title="Desplazar tabla hacia la derecha (Ver Descargas y Acciones)"
-                    >
-                      <span className="hidden sm:inline">Derecha</span>
-                      <ArrowRight size={13} />
-                    </button>
-                    </div>
-                  )}
-                </div>
+              </div>
               </div>
             </div>
           )}

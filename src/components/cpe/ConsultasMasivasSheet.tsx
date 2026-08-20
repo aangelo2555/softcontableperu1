@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { webApiBridge } from '../../services/apiBridge';
 import { useStore } from '../../store';
 import { formatPEN } from '../ConsultasView';
+import CpeVoucherModal from './CpeVoucherModal';
 import {
   FileSpreadsheet,
   UploadCloud,
@@ -160,42 +161,39 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const [historialLotes, setHistorialLotes] = useState<any[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
 
+  // Visor modal de Voucher / PDF
+  const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const [tableScrollInfo, setTableScrollInfo] = useState({
-    scrollLeft: 0,
-    scrollWidth: 0,
-    clientWidth: 0,
-    canScrollLeft: false,
-    canScrollRight: false
-  });
 
-  const updateTableScrollInfo = () => {
+  // Arrastre horizontal con el mouse (Mouse Drag-to-Scroll estilo móvil / táctil)
+  const isDraggingMouse = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea')) return;
     if (!tableContainerRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
-    const maxScroll = Math.max(0, scrollWidth - clientWidth);
-    setTableScrollInfo({
-      scrollLeft,
-      scrollWidth,
-      clientWidth,
-      canScrollLeft: scrollLeft > 5,
-      canScrollRight: scrollLeft < maxScroll - 5
-    });
+    isDraggingMouse.current = true;
+    dragStartX.current = e.pageX - tableContainerRef.current.offsetLeft;
+    dragStartScrollLeft.current = tableContainerRef.current.scrollLeft;
+    setIsDragging(true);
   };
 
-  const scrollTableBy = (delta: number) => {
-    if (!tableContainerRef.current) return;
-    tableContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingMouse.current || !tableContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableContainerRef.current.offsetLeft;
+    const walk = (x - dragStartX.current) * 1.5;
+    tableContainerRef.current.scrollLeft = dragStartScrollLeft.current - walk;
   };
 
-  useEffect(() => {
-    const el = tableContainerRef.current;
-    if (!el) return;
-    updateTableScrollInfo();
-    const observer = new ResizeObserver(() => updateTableScrollInfo());
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [batchResults, expandedRows]);
+  const handleMouseUpOrLeave = () => {
+    isDraggingMouse.current = false;
+    setIsDragging(false);
+  };
 
   // Lista de comprobantes con error para reintento manual
   const errorResults = useMemo(() => {
@@ -1027,11 +1025,16 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </div>
           </div>
 
-          {/* Tabla de Registros Estilo Excel con Scroll Sincronizado */}
+          {/* Tabla de Registros Estilo Excel con Arrastre Táctil / Mouse Drag */}
           <div
             ref={tableContainerRef}
-            onScroll={updateTableScrollInfo}
-            className="overflow-x-auto custom-scrollbar"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            className={`overflow-x-auto select-none custom-scrollbar ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
           >
             <table className="w-full text-left border-collapse min-w-[1300px]">
               <thead>
@@ -1050,7 +1053,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                   <th className="py-2.5 px-3 font-mono text-right">TOTAL (S/)</th>
                   <th className="py-2.5 px-3">ITEMS DETALLE</th>
                   <th className="py-2.5 px-3">OBSERVACION</th>
-                  <th className="py-2.5 px-3 text-center">XML</th>
+                  <th className="py-2.5 px-3 text-center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-app-border/40 text-xs">
@@ -1177,20 +1180,32 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                           </span>
                         </td>
 
-                        {/* XML */}
+                        {/* ACCIONES (PDF + XML) */}
                         <td className="py-2 px-3 text-center">
-                          {isAceptado ? (
-                            <button
-                              onClick={() => handleDescargarXmlDirecto(res.rucEmisor ? res : orig)}
-                              className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
-                              title="Descargar XML oficial de SUNAT"
-                            >
-                              <FileCode size={12} />
-                              <span>XML</span>
-                            </button>
-                          ) : (
-                            <span className="text-app-muted text-[10px]">—</span>
-                          )}
+                          <div className="flex items-center justify-center gap-1">
+                            {isAceptado && (
+                              <button
+                                onClick={() => setSelectedDocForPreview(res.rucEmisor ? res : orig)}
+                                className="px-2 py-1 rounded-md text-[10px] font-black bg-purple-500/10 text-purple-400 hover:bg-purple-600 hover:text-white border border-purple-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                title="Ver Representación Impresa (PDF / Voucher)"
+                              >
+                                <FileText size={12} />
+                                <span>PDF</span>
+                              </button>
+                            )}
+                            {isAceptado ? (
+                              <button
+                                onClick={() => handleDescargarXmlDirecto(res.rucEmisor ? res : orig)}
+                                className="px-2 py-1 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                title="Descargar XML oficial de SUNAT"
+                              >
+                                <FileCode size={12} />
+                                <span>XML</span>
+                              </button>
+                            ) : (
+                              <span className="text-app-muted text-[10px]">—</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
 
@@ -1225,77 +1240,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                 })}
               </tbody>
             </table>
-          </div>
-
-          {/* ═══ BARRA DE DESPLAZAMIENTO LATERAL FLOTANTE PERENNE (STICKY) (Point 4) ═══ */}
-          <div className="sticky bottom-0 z-20 bg-app-surface/95 backdrop-blur-md border-t border-app-border px-4 py-2 flex items-center justify-between gap-3 shadow-lg rounded-b-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-app-muted flex items-center gap-1">
-                <ArrowLeftRight size={13} className="text-blue-500" />
-                <span className="hidden sm:inline">Desplazamiento Horizontal:</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => scrollTableBy(-280)}
-                className="px-2.5 py-1 rounded-lg bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border text-xs font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
-                title="Mover tabla a la izquierda"
-              >
-                <ArrowLeft size={12} />
-                <span>Izquierda</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollTableBy(280)}
-                className="px-2.5 py-1 rounded-lg bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border text-xs font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
-                title="Mover tabla a la derecha"
-              >
-                <span>Derecha</span>
-                <ArrowRight size={12} />
-              </button>
-            </div>
-
-            {/* Mini track deslizable interactivo */}
-            <div
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const pct = clickX / rect.width;
-                if (tableContainerRef.current) {
-                  const maxScroll = tableContainerRef.current.scrollWidth - tableContainerRef.current.clientWidth;
-                  tableContainerRef.current.scrollTo({ left: maxScroll * pct, behavior: 'smooth' });
-                }
-              }}
-              className="flex-1 max-w-xs h-2 bg-app-bg rounded-full border border-app-border overflow-hidden relative cursor-pointer hidden md:block"
-            >
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all pointer-events-none"
-                style={{
-                  width: `${Math.max(15, (tableScrollInfo.clientWidth / (tableScrollInfo.scrollWidth || 1)) * 100)}%`,
-                  marginLeft: `${Math.min(85, (tableScrollInfo.scrollLeft / Math.max(1, tableScrollInfo.scrollWidth - tableScrollInfo.clientWidth)) * 85)}%`
-                }}
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  if (tableContainerRef.current) tableContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-                }}
-                className="px-2 py-1 rounded-lg text-[10px] font-black uppercase text-app-muted hover:text-app-text cursor-pointer hover:bg-app-hover"
-              >
-                Inicio (N°)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (tableContainerRef.current) tableContainerRef.current.scrollTo({ left: 9999, behavior: 'smooth' });
-                }}
-                className="px-2 py-1 rounded-lg text-[10px] font-black uppercase text-blue-500 hover:text-blue-400 cursor-pointer hover:bg-blue-500/10"
-              >
-                Fin (XML)
-              </button>
-            </div>
           </div>
 
         </div>
@@ -1361,6 +1305,14 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </div>
           </div>
         </div>
+      )}
+
+      {/* ═══ MODAL VISOR DE VOUCHER / PDF OFICIAL DE SUNAT ═══ */}
+      {selectedDocForPreview && (
+        <CpeVoucherModal
+          doc={selectedDocForPreview}
+          onClose={() => setSelectedDocForPreview(null)}
+        />
       )}
 
     </div>

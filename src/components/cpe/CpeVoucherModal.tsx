@@ -19,13 +19,44 @@ interface CpeVoucherModalProps {
     id?: string;
     rucEmisor?: string;
     tipoDoc?: string;
+    tipoCpe?: string;
     serie?: string;
     numero?: string | number;
     estado?: string;
     mensaje?: string;
     razonSocial?: string;
+    razonSocialEmisor?: string;
+    direccionEmisor?: string;
+    ubigeoEmisor?: string;
+    docReceptorNum?: string;
+    docReceptorTipo?: string;
+    razonSocialReceptor?: string;
+    direccionReceptor?: string;
     fechaEmision?: string;
-    importeTotal?: string;
+    fechaRegistro?: string;
+    moneda?: string;
+    montoGravado?: number;
+    montoExonerado?: number;
+    montoInafecto?: number;
+    montoIgv?: number;
+    montoIsc?: number;
+    montoIcbper?: number;
+    montoOtrosTributos?: number;
+    montoTotal?: number;
+    total?: number | string;
+    importeTotal?: string | number;
+    desMontoLetras?: string;
+    observacion?: string;
+    items?: Array<{
+      id?: number;
+      cantidad?: number;
+      unidadMedida?: string;
+      codigo?: string;
+      descripcion?: string;
+      desItem?: string;
+      valorUnitario?: number;
+      montoTotal?: number;
+    }>;
     xmlContent?: string;
     xmlBase64?: string;
     xmlFileName?: string;
@@ -111,83 +142,123 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     return null;
   }, [xmlString, cdrXmlString]);
 
-  // Fallback con datos directos del documento si aún no hay XML parseado
+  // Lectura completa y fidedigna de los datos extraídos por la API HTTP directa
   const displayData = useMemo(() => {
     if (parsedData) return parsedData;
 
-    const totalNum = parseFloat(String(doc.importeTotal || '0').replace(/[^0-9.]/g, '')) || 0;
-    const gravadoNum = Number((totalNum / 1.18).toFixed(2));
-    const igvNum = Number((totalNum - gravadoNum).toFixed(2));
+    const totalNum = Number(doc.montoTotal ?? doc.total ?? parseFloat(String(doc.importeTotal || '0').replace(/[^0-9.]/g, '')) ?? 0);
+    const gravadoNum = Number(doc.montoGravado !== undefined ? doc.montoGravado : (totalNum / 1.18).toFixed(2));
+    const igvNum = Number(doc.montoIgv !== undefined ? doc.montoIgv : (totalNum - gravadoNum).toFixed(2));
+    const exoneradoNum = Number(doc.montoExonerado || 0);
+    const inafectoNum = Number(doc.montoInafecto || 0);
+    const iscNum = Number(doc.montoIsc || 0);
+    const icbperNum = Number(doc.montoIcbper || 0);
+    const otrosNum = Number(doc.montoOtrosTributos || 0);
+
+    // Mapear items reales de la extracción JSON directa de SUNAT
+    const rawItems = doc.items && Array.isArray(doc.items) && doc.items.length > 0 ? doc.items : [];
+    const mappedItems = rawItems.length > 0
+      ? rawItems.map((it: any, idx: number) => {
+          const cnt = Number(it.cantidad || 1);
+          const itemTotal = Number(it.montoTotal || it.mtoImpTotal || 0);
+          const unitVal = Number(it.valorUnitario || it.mtoValUnitario || (itemTotal / (cnt || 1)));
+          const desc = it.descripcion || it.desItem || 'CONCEPTO / PRODUCTO';
+
+          return {
+            id: idx + 1,
+            cantidad: cnt,
+            unidadMedida: it.unidadMedida || it.desUnidadMedida || 'NIU',
+            codigo: it.codigo || it.desCodigo || '-',
+            descripcion: desc,
+            valorUnitario: unitVal,
+            precioUnitario: itemTotal / (cnt || 1),
+            descuento: 0,
+            subtotal: unitVal * cnt,
+            igv: Number((itemTotal * 0.18 / 1.18).toFixed(2)),
+            icbper: 0,
+            afectacionIgv: '10'
+          };
+        })
+      : [
+          {
+            id: 1,
+            cantidad: 1,
+            unidadMedida: 'NIU',
+            codigo: '-',
+            descripcion: doc.observacion && doc.observacion !== 'OK' ? doc.observacion : 'COMPROBANTE ELECTRÓNICO CONSULTADO EN SUNAT',
+            valorUnitario: gravadoNum,
+            precioUnitario: totalNum,
+            descuento: 0,
+            subtotal: gravadoNum,
+            igv: igvNum,
+            icbper: 0,
+            afectacionIgv: '10'
+          }
+        ];
+
+    const tipoDocCode = String(doc.tipoDoc || doc.tipoCpe || '01').padStart(2, '0');
+    const tipoDocDesc = tipoDocCode === '03' 
+      ? 'BOLETA DE VENTA ELECTRÓNICA' 
+      : tipoDocCode === '07'
+      ? 'NOTA DE CRÉDITO ELECTRÓNICA'
+      : tipoDocCode === '08'
+      ? 'NOTA DE DÉBITO ELECTRÓNICA'
+      : 'FACTURA ELECTRÓNICA';
 
     return {
-      tipoDoc: doc.tipoDoc || '01',
-      tipoDocDescripcion: doc.tipoDoc === '03' ? 'BOLETA DE VENTA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA',
-      serie: doc.serie || 'E001',
+      tipoDoc: tipoDocCode,
+      tipoDocDescripcion: tipoDocDesc,
+      serie: (doc.serie || 'E001').toUpperCase(),
       numero: String(doc.numero || '1'),
       comprobanteCompleto: `${doc.serie || 'E001'}-${doc.numero || '1'}`,
       fechaEmision: doc.fechaEmision || new Date().toISOString().split('T')[0],
       fechaVencimiento: doc.fechaEmision || new Date().toISOString().split('T')[0],
-      moneda: 'PEN',
-      monedaSimbolo: 'S/',
+      moneda: doc.moneda || 'PEN',
+      monedaSimbolo: doc.moneda === 'USD' ? '$' : 'S/',
       formaPago: 'Contado',
-      observacion: 'CONTADO',
+      observacion: doc.observacion || 'CONTADO',
       cuotas: [],
       emisor: {
-        ruc: doc.rucEmisor || '20530708099',
-        razonSocial: doc.razonSocial || 'EMPRESA EMISORA S.A.C.',
-        nombreComercial: doc.razonSocial || '',
-        direccion: 'LIMA - PERÚ'
+        ruc: doc.rucEmisor || '',
+        razonSocial: doc.razonSocial || doc.razonSocialEmisor || 'EMPRESA EMISORA',
+        nombreComercial: doc.razonSocial || doc.razonSocialEmisor || '',
+        direccion: doc.direccionEmisor || 'LIMA - PERÚ'
       },
       receptor: {
-        tipoDoc: '6',
-        numDoc: '20612314579',
-        razonSocial: 'MINERIA ZARAN E.I.R.L.',
-        direccion: 'AV. AVIACION 2836 URB. SAN BORJA SUR LIMA-LIMA-SAN BORJA'
+        tipoDoc: doc.docReceptorTipo || '6',
+        numDoc: doc.docReceptorNum || '',
+        razonSocial: doc.razonSocialReceptor || '',
+        direccion: doc.direccionReceptor || ''
       },
-      items: [
-        {
-          id: 1,
-          cantidad: 1,
-          unidadMedida: 'UNIDAD',
-          codigo: '-',
-          descripcion: 'COMPROBANTE ELECTRÓNICO CONSULTADO EN SUNAT',
-          valorUnitario: gravadoNum,
-          precioUnitario: totalNum,
-          descuento: 0,
-          subtotal: gravadoNum,
-          igv: igvNum,
-          icbper: 0,
-          afectacionIgv: '10'
-        }
-      ],
+      items: mappedItems,
       totales: {
         subTotalVentas: gravadoNum,
         anticipos: 0,
         descuentos: 0,
         valorVenta: gravadoNum,
         gravado: gravadoNum,
-        exonerado: 0,
-        inafecto: 0,
+        exonerado: exoneradoNum,
+        inafecto: inafectoNum,
         gratuito: 0,
         exportacion: 0,
-        isc: 0,
+        isc: iscNum,
         igv: igvNum,
-        icbper: 0,
-        otrosCargos: 0,
+        icbper: icbperNum,
+        otrosCargos: otrosNum,
         otrosTributos: 0,
         redondeo: 0,
         total: totalNum,
-        montoEnLetras: `SON: ${totalNum.toFixed(2)} SOLES`
+        montoEnLetras: doc.desMontoLetras || `SON: ${totalNum.toFixed(2)} ${doc.moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES'}`
       },
       seguridad: {
-        hash: 'SUNAT-VALIDATED-DIGITAL-SIGNATURE',
+        hash: 'SUNAT-HTTP-DIRECT-VALIDATED',
         firma: ''
       },
       cdr: {
         codigoRespuesta: '0',
-        descripcionRespuesta: `La Factura numero ${doc.serie}-${doc.numero}, ha sido aceptada`,
+        descripcionRespuesta: `El comprobante ${doc.serie}-${doc.numero} ha sido ${doc.estado || 'ACEPTADO'} por SUNAT`,
         fechaRecepcion: doc.fechaEmision,
-        aceptado: true
+        aceptado: doc.estado === 'ACEPTADO' || doc.estado === 'AUTORIZADO'
       }
     } as CpeParsedData;
   }, [parsedData, doc]);
