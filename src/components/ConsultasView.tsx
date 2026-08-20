@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
 import CpeVoucherModal from './cpe/CpeVoucherModal';
+import ConsultasMasivasSheet from './cpe/ConsultasMasivasSheet';
 import {
   descargarXmlSeguro,
   base64ToUtf8,
@@ -85,7 +86,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'individual' | 'masiva'>('individual');
+  const [activeTab, setActiveTab] = useState<'individual' | 'masiva' | 'consultas_masivas'>('individual');
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [showRecentSelector, setShowRecentSelector] = useState(true);
@@ -455,10 +456,70 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     procesarFacturas([docToRetry]);
   };
 
-  const handleConsultarIndividual = () => {
+  const handleConsultarIndividual = async () => {
     if (!formData.rucEmisor || !formData.serie || !formData.numero) {
       toast.error('RUC Emisor, Serie y Número son obligatorios.');
       return;
+    }
+
+    if (!activeCompany?.ruc) {
+      toast.error('Debe seleccionar una empresa activa primero.');
+      return;
+    }
+
+    // Intentar primero con la API Directa de Alta Velocidad (Ingeniería Inversa HTTP)
+    if (activeCompany.sol_user && activeCompany.sol_pass) {
+      setLoading(true);
+      setLoadingMessage('Consultando comprobante en SUNAT (API Directa HTTP)...');
+      try {
+        const directRes = await webApiBridge.cpeDirectConsultarIndividual({
+          ruc: activeCompany.ruc,
+          usuario_sol: activeCompany.sol_user,
+          clave_sol: activeCompany.sol_pass,
+          rucEmisor: formData.rucEmisor,
+          tipoCpe: formData.tipoDoc,
+          serie: formData.serie,
+          correlativo: formData.numero,
+          procedencia: '2'
+        });
+
+        if (directRes.success && directRes.encontrado && directRes.data) {
+          const d = directRes.data;
+          const resultObj = {
+            id: `ind-${Date.now()}`,
+            rucEmisor: d.rucEmisor,
+            razonSocial: d.razonSocialEmisor,
+            tipoDoc: d.tipoCpe,
+            serie: d.serie,
+            numero: d.numero,
+            fechaEmision: d.fechaEmision,
+            total: d.montoTotal,
+            estado: d.estado,
+            montoGravado: d.montoGravado,
+            montoIgv: d.montoIgv,
+            items: d.items,
+            docReceptorNum: d.docReceptorNum,
+            razonSocialReceptor: d.razonSocialReceptor
+          };
+
+          updateResultados((prev: any[]) => [resultObj, ...prev.filter((r: any) => r.id !== resultObj.id)]);
+          setSelectedDocForPreview(resultObj);
+          toast.success(`Comprobante ${d.serie}-${d.numero} verificado: ${d.estado} (en ~250ms)`);
+          setLoading(false);
+          setLoadingMessage('');
+          return;
+        } else if (directRes.success && !directRes.encontrado) {
+          toast.error(directRes.mensaje || 'Comprobante no existe en SUNAT');
+          setLoading(false);
+          setLoadingMessage('');
+          return;
+        }
+      } catch (directErr: any) {
+        console.warn('Fallo en API directa, procediendo con método alternativo:', directErr.message);
+      } finally {
+        setLoading(false);
+        setLoadingMessage('');
+      }
     }
     
     procesarFacturas([{
@@ -807,8 +868,59 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             </div>
           )}
 
-          {/* ═══ Contenido: Formulario y Tabla de Resultados ═══ */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* ═══ SELECTOR PRINCIPAL DE HOJAS / MÓDULOS DE CONSULTA ═══ */}
+          <div className="flex items-center gap-2 p-1 bg-app-surface border border-app-border rounded-2xl shadow-xs flex-wrap sm:flex-nowrap">
+            <button
+              onClick={() => setActiveTab('individual')}
+              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'individual'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-app-muted hover:text-app-text hover:bg-app-hover'
+              }`}
+            >
+              <Search size={15} />
+              <span>1. Consulta Individual</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('masiva')}
+              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'masiva'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-app-muted hover:text-app-text hover:bg-app-hover'
+              }`}
+            >
+              <Layers size={15} />
+              <span>2. Lote Rápido (Texto)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('consultas_masivas')}
+              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer relative ${
+                activeTab === 'consultas_masivas'
+                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white shadow-md'
+                  : 'text-app-muted hover:text-app-text hover:bg-app-hover'
+              }`}
+            >
+              <Sparkles size={15} className={activeTab === 'consultas_masivas' ? 'text-amber-300 animate-pulse' : 'text-purple-400'} />
+              <span>3. Consultas Masivas</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-widest ${
+                activeTab === 'consultas_masivas' ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+              }`}>
+                NUEVO • API INVERSA
+              </span>
+            </button>
+          </div>
+
+          {/* ═══ VISTA DE CONSULTAS MASIVAS DEDICADA ═══ */}
+          {activeTab === 'consultas_masivas' ? (
+            <ConsultasMasivasSheet
+              activeCompany={activeCompany}
+              onRefreshWorkspace={syncCurrentWorkspace}
+            />
+          ) : (
+            /* ═══ Contenido: Formulario y Tabla de Resultados Tradicional ═══ */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             
             {/* Panel Izquierdo: Formulario */}
             <div className="col-span-1 lg:col-span-4 flex flex-col gap-4">
@@ -1451,12 +1563,12 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                       <span className="hidden sm:inline">Derecha</span>
                       <ArrowRight size={13} />
                     </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-          </div>
+          )}
 
         </div>
       </div>

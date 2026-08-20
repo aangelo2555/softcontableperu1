@@ -465,6 +465,46 @@ db.exec(`
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_ai_chat_user_ws ON ai_chat_sessions(user_id, workspace_id);
+
+    CREATE TABLE IF NOT EXISTS cpe_consultas_masivas (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        user_id TEXT,
+        origen_consulta TEXT DEFAULT 'MANUAL',
+        total_registros INTEGER DEFAULT 0,
+        total_aceptados INTEGER DEFAULT 0,
+        total_anulados INTEGER DEFAULT 0,
+        total_no_encontrados INTEGER DEFAULT 0,
+        total_errores INTEGER DEFAULT 0,
+        monto_total_gravado REAL DEFAULT 0,
+        monto_total_igv REAL DEFAULT 0,
+        monto_total_general REAL DEFAULT 0,
+        estado TEXT DEFAULT 'COMPLETADO',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_cpe_masivas_ws ON cpe_consultas_masivas(workspace_id);
+
+    CREATE TABLE IF NOT EXISTS cpe_consultas_items (
+        id TEXT PRIMARY KEY,
+        lote_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL,
+        ruc_emisor TEXT NOT NULL,
+        razon_social_emisor TEXT,
+        cod_cpe TEXT NOT NULL,
+        num_serie TEXT NOT NULL,
+        num_cpe TEXT NOT NULL,
+        fecha_emision TEXT,
+        moneda TEXT DEFAULT 'PEN',
+        mto_op_gravado REAL DEFAULT 0,
+        mto_igv REAL DEFAULT 0,
+        mto_total REAL DEFAULT 0,
+        estado_cpe TEXT,
+        detalles_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(lote_id) REFERENCES cpe_consultas_masivas(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_cpe_items_lote ON cpe_consultas_items(lote_id);
+    CREATE INDEX IF NOT EXISTS idx_cpe_items_doc ON cpe_consultas_items(workspace_id, ruc_emisor, cod_cpe, num_serie, num_cpe);
 `);
 
 // --- Semillar planes en SQLite ---

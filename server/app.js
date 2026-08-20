@@ -1993,6 +1993,12 @@ app.post('/api/cpe/descargar-archivo', async (req, res) => {
     }
 });
 
+// ==========================================
+// RUTAS DE CONSULTAS CPE DIRECTAS (INGENIERÍA INVERSA HTTP SUNAT)
+// ==========================================
+const createCpeDirectRouter = require('./routes/cpeDirectRouter');
+app.use('/api/cpe-direct', createCpeDirectRouter(db));
+
 app.post('/api/buzon/descargar-archivo-constancia', async (req, res) => {
     try {
         const { ruta } = req.body;

@@ -376,13 +376,83 @@ export const webApiBridge = {
         return res.data;
     },
 
-    // --- CPE API ---
+    // --- CPE API (LEGACY / PLAYWRIGHT) ---
     cpeDescargarLote: async (args: { ruc: string; usuario_sol?: string; clave_sol?: string; client_id?: string; client_secret?: string; facturas: any[] }) => {
         const res = await api.post('/api/cpe/descargar-xml', args);
         return res.data;
     },
     cpeDescargarArchivo: async (args: { ruta: string }) => {
         const res = await api.post('/api/cpe/descargar-archivo', args);
+        return res.data;
+    },
+
+    // --- CPE DIRECT API (INGENIERÍA INVERSA HTTP SUNAT) ---
+    cpeDirectConsultarIndividual: async (args: {
+        ruc: string;
+        usuario_sol?: string;
+        clave_sol?: string;
+        rucEmisor: string;
+        tipoCpe: string;
+        serie: string;
+        correlativo: string | number;
+        procedencia?: string;
+    }) => {
+        const res = await api.post('/api/cpe-direct/consultar-individual', args);
+        return res.data;
+    },
+
+    cpeDirectDescargarXml: async (args: {
+        ruc: string;
+        usuario_sol?: string;
+        clave_sol?: string;
+        rucEmisor: string;
+        tipoCpe: string;
+        serie: string;
+        correlativo: string | number;
+        procedencia?: string;
+    }) => {
+        const res = await api.post('/api/cpe-direct/descargar-xml', args);
+        return res.data;
+    },
+
+    cpeDirectConsultarMasivo: async (args: {
+        ruc: string;
+        usuario_sol?: string;
+        clave_sol?: string;
+        listaComprobantes: Array<{
+            rucEmisor?: string;
+            ruc?: string;
+            doc_num?: string;
+            tipoCpe?: string;
+            tipo?: string;
+            tipo_doc?: string;
+            serie: string;
+            numero?: string | number;
+            correlativo?: string | number;
+            procedencia?: string;
+        }>;
+        origen_consulta?: string;
+        concurrencia?: number;
+    }) => {
+        const res = await api.post('/api/cpe-direct/consultar-masivo', args);
+        return res.data;
+    },
+
+    cpeDirectGuardarEnCompras: async (args: {
+        workspace_id: string;
+        comprobantes: any[];
+    }) => {
+        const res = await api.post('/api/cpe-direct/guardar-en-compras', args);
+        return res.data;
+    },
+
+    cpeDirectObtenerHistorial: async (workspace_id: string) => {
+        const res = await api.get(`/api/cpe-direct/historial?workspace_id=${encodeURIComponent(workspace_id)}`);
+        return res.data;
+    },
+
+    cpeDirectObtenerItemsLote: async (loteId: string) => {
+        const res = await api.get(`/api/cpe-direct/historial/${encodeURIComponent(loteId)}/items`);
         return res.data;
     },
 
