@@ -641,12 +641,12 @@ export const Login: React.FC = () => {
             <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Scrollbars)   */}
+            {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Recortes)     */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[960px] xl:max-w-[1020px] h-auto lg:h-[90vh] lg:min-h-[580px] lg:max-h-[640px] xl:max-h-[660px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[960px] xl:max-w-[1020px] h-auto lg:h-[92vh] lg:min-h-[580px] lg:max-h-[660px] xl:max-h-[680px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación */}
-                <div className="w-full lg:w-[420px] xl:w-[450px] bg-white px-6 py-4 sm:px-7 sm:py-5 flex flex-col justify-center overflow-y-auto no-scrollbar shrink-0 relative">
+                {/* LADO IZQUIERDO: Formulario de Autenticación (Alineación natural al tope para evitar recortes) */}
+                <div className="w-full lg:w-[420px] xl:w-[460px] bg-white px-6 py-4 sm:px-7 sm:py-4 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative">
                     
                     {/* Pantalla de Carga de Transición Inmediata (Aparece en 0ms tras autenticación exitosa) */}
                     {isAuthSuccessLoading && (
@@ -671,120 +671,120 @@ export const Login: React.FC = () => {
 
                     {/* Header Marca Centrado y Prominente */}
                     <div className="text-center mb-2">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-sm flex items-center justify-center mx-auto mb-1.5">
-                            <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-sm" />
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-xs flex items-center justify-center mx-auto mb-1">
+                                <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-xs" />
+                            </div>
+                            <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
+                                SOFT CONTABLE
+                            </h1>
+                            <p className="text-slate-400 text-[8.5px] font-bold tracking-[0.2em] uppercase text-center notranslate" translate="no">
+                                SISTEMA CONTABLE EN LA NUBE V2.0
+                            </p>
                         </div>
-                        <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
-                            SOFT CONTABLE
-                        </h1>
-                        <p className="text-slate-400 text-[9px] font-bold tracking-[0.22em] uppercase text-center notranslate" translate="no">
-                            SISTEMA CONTABLE EN LA NUBE V2.0
-                        </p>
-                    </div>
 
-                    {/* Selector de Modo: Profesional vs Estudiante (Ambas opciones visibles y clickeables lado a lado) */}
-                    <div className="my-1.5 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsStudentModeActive(false);
-                                setErrorAlert(null);
-                            }}
-                            className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
-                                !isStudentModeActive 
-                                    ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
-                                    : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                        >
-                            <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                            <span>Profesional</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsStudentModeActive(true);
-                                setErrorAlert(null);
-                            }}
-                            className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
-                                isStudentModeActive 
-                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                                    : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                        >
-                            <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                            <span>Estudiante</span>
-                        </button>
-                    </div>
-
-                    {/* Tabs: Iniciar Sesión / Registrarse */}
-                    <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
-                        <button 
-                            type="button"
-                            onClick={() => {
-                                setIsLogin(true);
-                                setErrorAlert(null);
-                                setLoginPassword('');
-                            }}
-                            className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                isLogin 
-                                    ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                        {/* Selector de Modo: Profesional vs Estudiante (Ambas opciones visibles y clickeables lado a lado) */}
+                        <div className="my-1.5 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsStudentModeActive(false);
+                                    setErrorAlert(null);
+                                }}
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
+                                    !isStudentModeActive 
+                                        ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
+                                        : 'text-slate-500 hover:text-slate-800'
                                 }`}
-                        >
-                            Iniciar Sesión
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => {
-                                setIsLogin(false);
-                                setErrorAlert(null);
-                                setRegisterPassword('');
-                                setRegisterConfirmPassword('');
-                            }}
-                            className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                !isLogin 
-                                    ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                    : 'border-transparent text-slate-400 hover:text-slate-600'
-                            }`}
-                        >
-                            Crear Cuenta
-                        </button>
-                    </div>
+                            >
+                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <span>Profesional</span>
+                            </button>
 
-                    {/* Botón Autenticación con Google (Inmediatamente debajo de los tabs, con espacio natural y sin huecos) */}
-                    <div className="mb-2 space-y-1.5">
-                        <button
-                            type="button"
-                            onClick={handleTriggerGoogleLogin}
-                            disabled={isGoogleLoading || isLoading || isAuthSuccessLoading}
-                            className="w-full py-2 px-3 rounded-xl border border-slate-300/90 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-2.5 transition-all duration-200 shadow-xs hover:shadow hover:border-slate-400 cursor-pointer select-none active:scale-[0.99] disabled:opacity-50"
-                        >
-                            {isGoogleLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                            ) : (
-                                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                                </svg>
-                            )}
-                            <span>{isGoogleLoading ? 'Conectando con Google...' : 'Continuar con Google'}</span>
-                        </button>
-
-                        {/* Divisor Visual "o" */}
-                        <div className="relative flex items-center justify-center my-1">
-                            <div className="border-t border-slate-200/90 w-full"></div>
-                            <span className="bg-white px-2 text-[9px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
-                                o con correo
-                            </span>
-                            <div className="border-t border-slate-200/90 w-full"></div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsStudentModeActive(true);
+                                    setErrorAlert(null);
+                                }}
+                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
+                                    isStudentModeActive 
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                                        : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
+                                <span>Estudiante</span>
+                            </button>
                         </div>
-                    </div>
+
+                        {/* Tabs: Iniciar Sesión / Registrarse */}
+                        <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setIsLogin(true);
+                                    setErrorAlert(null);
+                                    setLoginPassword('');
+                                }}
+                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                    isLogin 
+                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
+                                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                Iniciar Sesión
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setIsLogin(false);
+                                    setErrorAlert(null);
+                                    setRegisterPassword('');
+                                    setRegisterConfirmPassword('');
+                                }}
+                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                    !isLogin 
+                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
+                                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                Crear Cuenta
+                            </button>
+                        </div>
+
+                        {/* Botón Autenticación con Google (Inmediatamente debajo de los tabs) */}
+                        <div className="mb-2 space-y-1.5">
+                            <button
+                                type="button"
+                                onClick={handleTriggerGoogleLogin}
+                                disabled={isGoogleLoading || isLoading || isAuthSuccessLoading}
+                                className="w-full py-2 px-3 rounded-xl border border-slate-300/90 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-2.5 transition-all duration-200 shadow-xs hover:shadow hover:border-slate-400 cursor-pointer select-none active:scale-[0.99] disabled:opacity-50"
+                            >
+                                {isGoogleLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                ) : (
+                                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                                    </svg>
+                                )}
+                                <span>{isGoogleLoading ? 'Conectando con Google...' : 'Continuar con Google'}</span>
+                            </button>
+
+                            {/* Divisor Visual "o" */}
+                            <div className="relative flex items-center justify-center my-1">
+                                <div className="border-t border-slate-200/90 w-full"></div>
+                                <span className="bg-white px-2 text-[9px] text-slate-400 font-bold uppercase tracking-wider shrink-0">
+                                    o con correo
+                                </span>
+                                <div className="border-t border-slate-200/90 w-full"></div>
+                            </div>
+                        </div>
 
                         {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-2" autoComplete="on">
+                        <form onSubmit={handleSubmit} className="space-y-1.5" autoComplete="on">
                             {errorAlert && (
                                 <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2.5 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
                                     <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
@@ -795,7 +795,7 @@ export const Login: React.FC = () => {
                             {!isLogin && (
                                 <div className="space-y-0.5">
                                     <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
                                         <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                         <input 
                                             type="text"
@@ -813,11 +813,11 @@ export const Login: React.FC = () => {
                             )}
 
                             {!isLogin && !isStudentModeActive && (
-                                <>
+                                <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Teléfono / WhatsApp (+51)</label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
-                                            <Phone className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Teléfono (+51)</label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
+                                            <Phone className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
                                             <input 
                                                 type="tel"
                                                 id="register_phone"
@@ -835,9 +835,9 @@ export const Login: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">RUC Estudio o DNI <span className="text-[8.5px] text-slate-400 font-normal">(Opcional)</span></label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
-                                            <Building2 className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">RUC / DNI <span className="text-[8px] text-slate-400 font-normal">(Opc.)</span></label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
+                                            <Building2 className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
                                             <input 
                                                 type="text"
                                                 id="register_document"
@@ -852,13 +852,13 @@ export const Login: React.FC = () => {
                                             />
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             )}
 
                             {/* Campo Correo Electrónico */}
                             <div className="space-y-0.5">
                                 <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
-                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
                                     <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
                                         type="email"
@@ -874,85 +874,105 @@ export const Login: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Campo Contraseña */}
-                            <div className="space-y-0.5">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
-                                    {!isLogin && checkPasswordStrength(registerPassword).isValid && (
-                                        <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
-                                            <CheckCircle2 size={11} /> Segura
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
-                                    <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-                                    <input 
-                                        type={showPassword ? "text" : "password"}
-                                        id={isLogin ? "login_password" : "register_password"}
-                                        name={isLogin ? "login_password" : "register_password"}
-                                        required
-                                        autoComplete={isLogin ? "current-password" : "new-password"}
-                                        placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
-                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
-                                        value={isLogin ? loginPassword : registerPassword}
-                                        onChange={e => isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
-                                    />
-                                    <div className="absolute right-2.5 flex items-center gap-1">
-                                        {!isLogin && checkPasswordStrength(registerPassword).isValid && (
-                                            <CheckCircle2 size={14} className="text-emerald-500" />
-                                        )}
-                                        <button 
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
-                                            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                                        >
-                                            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                                        </button>
+                            {/* Campos Contraseña y Confirmación */}
+                            {!isLogin && !isStudentModeActive ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {/* Contraseña */}
+                                    <div className="space-y-0.5">
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
+                                            <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                                            <input 
+                                                type={showPassword ? "text" : "password"}
+                                                id="register_password"
+                                                name="register_password"
+                                                required
+                                                autoComplete="new-password"
+                                                placeholder="••••••••"
+                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-5"
+                                                value={registerPassword}
+                                                onChange={e => setRegisterPassword(e.target.value)}
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                                title={showPassword ? "Ocultar" : "Mostrar"}
+                                            >
+                                                {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                {!isLogin && registerPassword.length > 0 && (
-                                    <PasswordStrengthChecker password={registerPassword} />
-                                )}
-                            </div>
 
-                            {!isLogin && !isStudentModeActive && (
-                                <div className="space-y-0.5">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Confirmar Contraseña</label>
-                                        {registerConfirmPassword.length > 0 && registerConfirmPassword === registerPassword && (
-                                            <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
-                                                <CheckCircle2 size={11} /> Coincide
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
-                                        <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-                                        <input 
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            id="register_confirm_password"
-                                            name="register_confirm_password"
-                                            required
-                                            autoComplete="new-password"
-                                            placeholder="Repite la contraseña"
-                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
-                                            value={registerConfirmPassword}
-                                            onChange={e => setRegisterConfirmPassword(e.target.value)}
-                                        />
-                                        <div className="absolute right-2.5 flex items-center gap-1">
-                                            {registerConfirmPassword.length > 0 && registerConfirmPassword === registerPassword && (
-                                                <CheckCircle2 size={14} className="text-emerald-500" />
-                                            )}
+                                    {/* Confirmar Contraseña */}
+                                    <div className="space-y-0.5">
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Confirmar</label>
+                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
+                                            <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                                            <input 
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                id="register_confirm_password"
+                                                name="register_confirm_password"
+                                                required
+                                                autoComplete="new-password"
+                                                placeholder="••••••••"
+                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-5"
+                                                value={registerConfirmPassword}
+                                                onChange={e => setRegisterConfirmPassword(e.target.value)}
+                                            />
                                             <button 
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
+                                                className="absolute right-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                                title={showConfirmPassword ? "Ocultar" : "Mostrar"}
                                             >
-                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
+                            ) : (
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                        {!isLogin && checkPasswordStrength(registerPassword).isValid && (
+                                            <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle2 size={11} /> Segura
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
+                                        <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                        <input 
+                                            type={showPassword ? "text" : "password"}
+                                            id={isLogin ? "login_password" : "register_password"}
+                                            name={isLogin ? "login_password" : "register_password"}
+                                            required
+                                            autoComplete={isLogin ? "current-password" : "new-password"}
+                                            placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
+                                            value={isLogin ? loginPassword : registerPassword}
+                                            onChange={e => isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
+                                        />
+                                        <div className="absolute right-2.5 flex items-center gap-1">
+                                            {!isLogin && checkPasswordStrength(registerPassword).isValid && (
+                                                <CheckCircle2 size={14} className="text-emerald-500" />
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
+                                                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                            >
+                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isLogin && registerPassword.length > 0 && (
+                                <PasswordStrengthChecker password={registerPassword} />
                             )}
 
                             {isLogin && (
