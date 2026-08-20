@@ -161,6 +161,8 @@ class SunatDirectCpeService {
 
       // 2. Disparar acción del menú para generar el token CPE
       console.log(`[SUNAT DIRECT TOKEN] Solicitando token CPE desde menú...`);
+
+      // ─── ESTRATEGIA A: Seguir redirects y leer URL final ───
       const menuActionUrls = [
         'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1',
         'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=ruteo&id=11.38.1.1.1',
@@ -169,62 +171,99 @@ class SunatDirectCpeService {
 
       for (const actionUrl of menuActionUrls) {
         try {
+          // Intentar con redirect seguido automáticamente
           const res = await session.client.get(actionUrl, {
             headers: {
               'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
-              'Upgrade-Insecure-Requests': '1'
+              'Upgrade-Insecure-Requests': '1',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Sec-Fetch-Dest': 'iframe',
+              'Sec-Fetch-Mode': 'navigate',
+              'Sec-Fetch-Site': 'same-origin'
             },
-            maxRedirects: 0,
+            maxRedirects: 5,
             validateStatus: status => status >= 200 && status < 400
           });
 
-          const location = res.headers['location'] || res.headers['Location'] || '';
-          console.log(`[SUNAT DIRECT TOKEN] Menu action Location: ${location}`);
+          // Extraer URL final del response (después de todos los redirects)
+          const finalUrl = res.request?.res?.responseUrl || res.request?.responseURL || '';
+          const resHeaders = res.headers || {};
+          const locationHeader = resHeaders['location'] || resHeaders['Location'] || '';
+          const bodyHtml = typeof res.data === 'string' ? res.data : '';
 
-          // Buscar token en Location
-          let tokenMatch = location.match(/token=([^&"'\s<>]+)/);
-          if (tokenMatch && tokenMatch[1]) {
-            session.cpeToken = tokenMatch[1];
+          console.log(`[SUNAT DIRECT TOKEN] Status: ${res.status}, Final URL: ${finalUrl ? finalUrl.substring(0, 120) + '...' : '(none)'}`);
+          console.log(`[SUNAT DIRECT TOKEN] Location header: ${locationHeader ? locationHeader.substring(0, 120) + '...' : '(none)'}`);
+
+          // Buscar token en la URL final (donde llegó después de seguir redirects)
+          let token = this._extractTokenFromUrl(finalUrl);
+          if (token) {
+            session.cpeToken = token;
+            session.tokenExpiry = Date.now() + 45 * 60 * 1000;
+            console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de URL final (follow-redirect)`);
+            return { success: true, token };
+          }
+
+          // Buscar token en Location header (por si no se siguió)
+          token = this._extractTokenFromUrl(locationHeader);
+          if (token) {
+            session.cpeToken = token;
             session.tokenExpiry = Date.now() + 45 * 60 * 1000;
             console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de Location header`);
-            return { success: true, token: session.cpeToken };
+            return { success: true, token };
           }
 
-          // Si vino un redirect hacia nuevaconsulta o similar, seguirlo
-          if (location) {
-            const pageRes = await session.client.get(location, {
-              headers: {
-                'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm'
-              },
-              maxRedirects: 2
-            });
+          // Buscar token en el body HTML
+          token = this._extractTokenFromHtml(bodyHtml);
+          if (token) {
+            session.cpeToken = token;
+            session.tokenExpiry = Date.now() + 45 * 60 * 1000;
+            console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de HTML body`);
+            return { success: true, token };
+          }
 
-            const pageUrl = pageRes.request?.res?.responseUrl || '';
-            const pageHtml = typeof pageRes.data === 'string' ? pageRes.data : '';
-
-            // Buscar en URL final
-            tokenMatch = pageUrl.match(/token=([^&"'\s<>]+)/);
-            if (tokenMatch && tokenMatch[1]) {
-              session.cpeToken = tokenMatch[1];
+        } catch (axiosErr) {
+          // Si axios lanzó error por redirect (302), capturar la Location del error
+          if (axiosErr.response) {
+            const errLocation = axiosErr.response.headers?.['location'] || '';
+            console.log(`[SUNAT DIRECT TOKEN] Error ${axiosErr.response.status}, Location en error: ${errLocation ? errLocation.substring(0, 120) + '...' : '(none)'}`);
+            const token = this._extractTokenFromUrl(errLocation);
+            if (token) {
+              session.cpeToken = token;
               session.tokenExpiry = Date.now() + 45 * 60 * 1000;
-              console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de pageUrl`);
-              return { success: true, token: session.cpeToken };
-            }
-
-            // Buscar en HTML body (variables js, meta, jwt)
-            const htmlTokenMatch = pageHtml.match(/token\s*[:=]\s*["']([^"']+)["']/i) || 
-                                   pageHtml.match(/token=([a-zA-Z0-9_\-\.]{50,})/i) ||
-                                   pageHtml.match(/(eyJ[a-zA-Z0-9_\-\.]{50,})/);
-            if (htmlTokenMatch && htmlTokenMatch[1]) {
-              session.cpeToken = htmlTokenMatch[1];
-              session.tokenExpiry = Date.now() + 45 * 60 * 1000;
-              console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de HTML body`);
-              return { success: true, token: session.cpeToken };
+              console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído de error-response Location`);
+              return { success: true, token };
             }
           }
-        } catch (stepErr) {
-          console.warn(`[SUNAT DIRECT TOKEN] Intento con ${actionUrl} falló:`, stepErr.message);
+          console.warn(`[SUNAT DIRECT TOKEN] Intento A con ${actionUrl.substring(0, 80)} falló:`, axiosErr.message);
         }
+      }
+
+      // ─── ESTRATEGIA B: HTTP nativo para capturar 302 raw ───
+      console.log(`[SUNAT DIRECT TOKEN] Intentando Estrategia B: HTTP nativo...`);
+      try {
+        const rawToken = await this._httpNativeGetToken(session);
+        if (rawToken) {
+          session.cpeToken = rawToken;
+          session.tokenExpiry = Date.now() + 45 * 60 * 1000;
+          console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído via HTTP nativo`);
+          return { success: true, token: rawToken };
+        }
+      } catch (nativeErr) {
+        console.warn(`[SUNAT DIRECT TOKEN] Estrategia B falló:`, nativeErr.message);
+      }
+
+      // ─── ESTRATEGIA C: Extraer token del JWT code en la URL de login ───
+      console.log(`[SUNAT DIRECT TOKEN] Intentando Estrategia C: Re-login y extraer del code JWT...`);
+      try {
+        const codeToken = await this._extractTokenFromLoginCode(ruc, usuario, clave, session);
+        if (codeToken) {
+          session.cpeToken = codeToken;
+          session.tokenExpiry = Date.now() + 45 * 60 * 1000;
+          console.log(`[SUNAT DIRECT TOKEN] ✅ Token extraído del code JWT de login`);
+          return { success: true, token: codeToken };
+        }
+      } catch (codeErr) {
+        console.warn(`[SUNAT DIRECT TOKEN] Estrategia C falló:`, codeErr.message);
       }
 
       throw new Error('No se pudo extraer el token de autorización de comprobantes desde el menú SOL');
@@ -233,6 +272,180 @@ class SunatDirectCpeService {
       console.error(`[SUNAT DIRECT TOKEN ERROR]:`, error.message);
       throw error;
     }
+  }
+
+  /**
+   * Extrae el token de una URL que contenga ?token=eyJ... o &token=eyJ...
+   */
+  _extractTokenFromUrl(url) {
+    if (!url) return null;
+    const match = url.match(/[?&]token=([^&"'\s<>]+)/);
+    if (match && match[1] && match[1].length > 50) return match[1];
+    return null;
+  }
+
+  /**
+   * Extrae el token de un body HTML buscando parámetros token, JWT patterns, etc.
+   */
+  _extractTokenFromHtml(html) {
+    if (!html) return null;
+    const patterns = [
+      /token\s*[:=]\s*["']([^"']{50,})["']/i,
+      /[?&]token=([a-zA-Z0-9_\-\.]{50,})/i,
+      /token["']\s*:\s*["'](eyJ[a-zA-Z0-9_\-\.]{50,})["']/i,
+      /(eyJ[a-zA-Z0-9_\-]{30,}\.[a-zA-Z0-9_\-]{30,}\.[a-zA-Z0-9_\-]{30,})/
+    ];
+    for (const pat of patterns) {
+      const m = html.match(pat);
+      if (m && m[1]) return m[1];
+    }
+    return null;
+  }
+
+  /**
+   * Estrategia B: usa http/https nativo de Node.js para capturar el header Location
+   * sin que axios-cookiejar-support interfiera
+   */
+  async _httpNativeGetToken(session) {
+    const https = require('https');
+    const { URL } = require('url');
+
+    // Obtener cookies del jar para el dominio e-menu
+    const cookieStr = await session.jar.getCookieString('https://e-menu.sunat.gob.pe');
+    const actionUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1';
+    const parsed = new URL(actionUrl);
+
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: parsed.hostname,
+        port: 443,
+        path: parsed.pathname + parsed.search,
+        method: 'GET',
+        headers: {
+          'Cookie': cookieStr,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Upgrade-Insecure-Requests': '1'
+        }
+      }, (res) => {
+        const location = res.headers['location'] || '';
+        console.log(`[SUNAT DIRECT TOKEN] HTTP nativo Status: ${res.statusCode}, Location: ${location ? location.substring(0, 120) + '...' : '(none)'}`);
+
+        const token = this._extractTokenFromUrl(location);
+        if (token) {
+          resolve(token);
+        } else if (res.statusCode >= 300 && res.statusCode < 400 && location) {
+          // Seguir el redirect manualmente y buscar en la URL/body final
+          const followReq = https.get(location, {
+            headers: {
+              'Cookie': cookieStr,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Referer': 'https://e-menu.sunat.gob.pe/'
+            }
+          }, (followRes) => {
+            let body = '';
+            followRes.on('data', (chunk) => body += chunk);
+            followRes.on('end', () => {
+              const fToken = this._extractTokenFromUrl(followRes.headers['location'] || '') ||
+                             this._extractTokenFromHtml(body);
+              resolve(fToken || null);
+            });
+          });
+          followReq.on('error', () => resolve(null));
+        } else {
+          // Leer body de respuesta 200 y buscar token
+          let body = '';
+          res.on('data', (chunk) => body += chunk);
+          res.on('end', () => {
+            const fToken = this._extractTokenFromHtml(body);
+            resolve(fToken || null);
+          });
+        }
+      });
+      req.on('error', reject);
+      req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout HTTP nativo')); });
+      req.end();
+    });
+  }
+
+  /**
+   * Estrategia C: El JWT code del login ya contiene un token que podría ser
+   * reutilizable para la API CPE. Lo extraemos del redirect de j_security_check.
+   */
+  async _extractTokenFromLoginCode(ruc, usuario, clave, session) {
+    // Re-iniciar login para capturar el code
+    const loginUrl = 'https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc857746a/oauth2/loginMenuSol?lang=es-PE&showDni=true&showLanguages=false&originalUrl=https://e-menu.sunat.gob.pe/cl-ti-itmenu/AutenticaMenuInternet.htm';
+
+    const initRes = await session.client.get(loginUrl, {
+      headers: { 'Referer': 'https://www.sunat.gob.pe/' }
+    });
+    const respUrl = initRes.request?.res?.responseUrl || '';
+    const dataStr = typeof initRes.data === 'string' ? initRes.data : '';
+    const stateMatch = respUrl.match(/state=([^&]+)/) || dataStr.match(/name="state"\s+value="([^"]+)"/i);
+    const state = stateMatch ? decodeURIComponent(stateMatch[1]) : '';
+
+    const form = new URLSearchParams({
+      tipo: '2', dni: '',
+      custom_ruc: ruc.trim(),
+      j_username: usuario.trim().toUpperCase(),
+      j_password: clave.trim(),
+      captcha: '',
+      originalUrl: 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/AutenticaMenuInternet.htm',
+      lang: 'es-PE', state
+    });
+
+    const authRes = await session.client.post(
+      'https://api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-d9d6-402a-b85d-6a0bc857746a/oauth2/j_security_check',
+      form.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Origin': 'https://api-seguridad.sunat.gob.pe',
+          'Referer': loginUrl
+        },
+        maxRedirects: 0,
+        validateStatus: status => status >= 200 && status < 400
+      }
+    );
+
+    const redirectUrl = authRes.headers['location'] || '';
+    // El code= en la URL es un JWT que contiene el token de acceso
+    const codeMatch = redirectUrl.match(/code=([^&]+)/);
+    if (codeMatch && codeMatch[1]) {
+      // Este code JWT es el mismo token que SUNAT usa internamente
+      console.log(`[SUNAT DIRECT TOKEN] Code JWT encontrado (longitud ${codeMatch[1].length})`);
+      // Primero, intentemos navegar a la acción del menú tras el re-login
+      await session.client.get(redirectUrl, { maxRedirects: 3, validateStatus: s => s >= 200 && s < 400 });
+      await session.client.get('https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm', { maxRedirects: 2, validateStatus: s => s >= 200 && s < 400 });
+
+      // Intentar acción del menú una vez más
+      const menuRes = await session.client.get(
+        'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?action=execute&code=11.38.1.1.1&s=ww1',
+        {
+          headers: {
+            'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          maxRedirects: 5,
+          validateStatus: s => s >= 200 && s < 400
+        }
+      );
+
+      const menuFinalUrl = menuRes.request?.res?.responseUrl || menuRes.request?.responseURL || '';
+      const menuLocation = menuRes.headers['location'] || '';
+      const menuBody = typeof menuRes.data === 'string' ? menuRes.data : '';
+
+      console.log(`[SUNAT DIRECT TOKEN] Post re-login menu Final URL: ${menuFinalUrl ? menuFinalUrl.substring(0, 120) : '(none)'}`);
+
+      let token = this._extractTokenFromUrl(menuFinalUrl) ||
+                  this._extractTokenFromUrl(menuLocation) ||
+                  this._extractTokenFromHtml(menuBody);
+
+      if (token) return token;
+    }
+
+    return null;
   }
 
   /**
