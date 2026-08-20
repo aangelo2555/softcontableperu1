@@ -108,50 +108,8 @@ function createCpeDirectRouter(db) {
         tipoCpe: tipoCpe || '01',
         serie,
         correlativo,
-        procedencia: procedencia || '2'
+        procedencia: procedencia || (serie?.startsWith('E') ? '1' : '2')
       });
-
-      // Guardar en historial si fue exitoso
-      if (result.success && result.encontrado && result.data) {
-        try {
-          const loteId = uuidv4();
-          const d = result.data;
-          const userId = req.user?.id || 'system';
-
-          // Insertar lote unitario
-          const insertLoteQuery = `
-            INSERT INTO cpe_consultas_masivas 
-            (id, workspace_id, user_id, origen_consulta, total_registros, total_aceptados, total_anulados, total_no_encontrados, total_errores, monto_total_gravado, monto_total_igv, monto_total_general, estado)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          `;
-          const paramsLote = [
-            loteId, ruc, userId, 'INDIVIDUAL', 1,
-            d.estado === 'ACEPTADO' ? 1 : 0,
-            d.estado === 'ANULADO' ? 1 : 0,
-            0, 0,
-            d.montoGravado || 0, d.montoIgv || 0, d.montoTotal || 0,
-            'COMPLETADO'
-          ];
-          
-          await executeRun(insertLoteQuery, paramsLote);
-
-          // Insertar item
-          const insertItemQuery = `
-            INSERT INTO cpe_consultas_items 
-            (id, lote_id, workspace_id, ruc_emisor, razon_social_emisor, cod_cpe, num_serie, num_cpe, fecha_emision, moneda, mto_op_gravado, mto_igv, mto_total, estado_cpe, detalles_json)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-          `;
-          const paramsItem = [
-            uuidv4(), loteId, ruc, d.rucEmisor, d.razonSocialEmisor,
-            d.tipoCpe, d.serie, d.numero, d.fechaEmision, d.moneda,
-            d.montoGravado, d.montoIgv, d.montoTotal, d.estado,
-            JSON.stringify(d)
-          ];
-          await executeRun(insertItemQuery, paramsItem);
-        } catch (dbErr) {
-          console.warn('[CPE DIRECT] No se pudo persistir consulta unitaria en BD:', dbErr.message);
-        }
-      }
 
       res.json(result);
     } catch (error) {
@@ -191,7 +149,7 @@ function createCpeDirectRouter(db) {
         tipoCpe: tipoCpe || '01',
         serie,
         correlativo,
-        procedencia: procedencia || '2',
+        procedencia: procedencia || (serie?.startsWith('E') ? '1' : '2'),
         codOpcion: '02'
       });
 
@@ -203,13 +161,127 @@ function createCpeDirectRouter(db) {
   });
 
   /**
+   * POST /api/cpe-direct/descargar-pdf
+   * Descarga el archivo PDF oficial de SUNAT (opción 01)
+   */
+  router.post('/descargar-pdf', async (req, res) => {
+    try {
+      const { ruc, usuario, clave } = await resolveCredentials(req);
+      const { rucEmisor, tipoCpe, serie, correlativo, procedencia } = req.body;
+
+      if (!ruc || !usuario || !clave) {
+        return res.status(400).json({
+          success: false,
+          error: 'Credenciales Clave SOL (RUC, Usuario y Clave) requeridas.'
+        });
+      }
+
+      if (!rucEmisor || !serie || !correlativo) {
+        return res.status(400).json({
+          success: false,
+          error: 'RUC Emisor, Serie y Número correlativo son obligatorios.'
+        });
+      }
+
+      const result = await sunatDirectCpeService.descargarXmlComprobante({
+        rucEmpresa: ruc,
+        usuarioSol: usuario,
+        claveSol: clave,
+        rucEmisor,
+        tipoCpe: tipoCpe || '01',
+        serie,
+        correlativo,
+        procedencia: procedencia || (serie?.startsWith('E') ? '1' : '2'),
+        codOpcion: '01'
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('[CPE DIRECT ERROR DESCARGA PDF]:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/cpe-direct/descargar-xml-masivo-zip
+   * Empaqueta todos los XMLs de los comprobantes consultados en un archivo ZIP
+   */
+  router.post('/descargar-xml-masivo-zip', async (req, res) => {
+    try {
+      const { ruc, usuario, clave } = await resolveCredentials(req);
+      const { listaComprobantes } = req.body;
+
+      if (!ruc || !usuario || !clave) {
+        return res.status(400).json({ success: false, error: 'Credenciales Clave SOL requeridas.' });
+      }
+
+      if (!Array.isArray(listaComprobantes) || listaComprobantes.length === 0) {
+        return res.status(400).json({ success: false, error: 'No hay comprobantes para exportar en ZIP.' });
+      }
+
+      console.log(`[CPE API] 📦 Petición de descarga masiva XML ZIP para ${listaComprobantes.length} comprobantes (RUC: ${ruc})`);
+
+      const zipBuffer = await sunatDirectCpeService.generarZipXmlLote({
+        rucEmpresa: ruc,
+        usuarioSol: usuario,
+        claveSol: clave,
+        listaComprobantes
+      });
+
+      const zipFilename = `COMPROBANTES_XML_${ruc}_${Date.now()}.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      res.send(zipBuffer);
+    } catch (error) {
+      console.error('[CPE DIRECT ERROR ZIP XML MASIVO]:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/cpe-direct/descargar-pdf-masivo-zip
+   * Empaqueta todos los PDFs de los comprobantes consultados en un archivo ZIP
+   */
+  router.post('/descargar-pdf-masivo-zip', async (req, res) => {
+    try {
+      const { ruc, usuario, clave } = await resolveCredentials(req);
+      const { listaComprobantes } = req.body;
+
+      if (!ruc || !usuario || !clave) {
+        return res.status(400).json({ success: false, error: 'Credenciales Clave SOL requeridas.' });
+      }
+
+      if (!Array.isArray(listaComprobantes) || listaComprobantes.length === 0) {
+        return res.status(400).json({ success: false, error: 'No hay comprobantes para exportar en ZIP.' });
+      }
+
+      console.log(`[CPE API] 📦 Petición de descarga masiva PDF ZIP para ${listaComprobantes.length} comprobantes (RUC: ${ruc})`);
+
+      const zipBuffer = await sunatDirectCpeService.generarZipPdfLote({
+        rucEmpresa: ruc,
+        usuarioSol: usuario,
+        claveSol: clave,
+        listaComprobantes
+      });
+
+      const zipFilename = `COMPROBANTES_PDF_${ruc}_${Date.now()}.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      res.send(zipBuffer);
+    } catch (error) {
+      console.error('[CPE DIRECT ERROR ZIP PDF MASIVO]:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * POST /api/cpe-direct/consultar-masivo
    * Consulta por lote masivo con procesamiento paralelo
    */
   router.post('/consultar-masivo', async (req, res) => {
     try {
       const { ruc, usuario, clave } = await resolveCredentials(req);
-      const { listaComprobantes, origen_consulta = 'EXCEL', concurrencia = 2, delayMs = 150 } = req.body;
+      const { listaComprobantes, origen_consulta = 'EXCEL', concurrencia = 2, delayMs = 180 } = req.body;
 
       if (!ruc || !usuario || !clave) {
         return res.status(400).json({
@@ -236,50 +308,8 @@ function createCpeDirectRouter(db) {
         delayMs: Math.max(0, Math.min(delayMs, 1000))
       });
 
-      // Persistir Lote y Detalle en Base de Datos
-      const loteId = uuidv4();
-      const userId = req.user?.id || 'system';
-      const stats = batchResult.stats;
-
-      try {
-        const insertLoteQuery = `
-          INSERT INTO cpe_consultas_masivas 
-          (id, workspace_id, user_id, origen_consulta, total_registros, total_aceptados, total_anulados, total_no_encontrados, total_errores, monto_total_gravado, monto_total_igv, monto_total_general, estado)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        `;
-        const paramsLote = [
-          loteId, ruc, userId, origen_consulta,
-          stats.total, stats.aceptados, stats.anulados, stats.noEncontrados, stats.errores,
-          stats.montoTotalGravado, stats.montoTotalIgv, stats.montoTotalGeneral,
-          'COMPLETADO'
-        ];
-        await executeRun(insertLoteQuery, paramsLote);
-
-        // Guardar cada item procesado
-        for (const itemRes of batchResult.resultados) {
-          if (itemRes && itemRes.resultado) {
-            const d = itemRes.resultado;
-            const insertItemQuery = `
-              INSERT INTO cpe_consultas_items 
-              (id, lote_id, workspace_id, ruc_emisor, razon_social_emisor, cod_cpe, num_serie, num_cpe, fecha_emision, moneda, mto_op_gravado, mto_igv, mto_total, estado_cpe, detalles_json)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            `;
-            const paramsItem = [
-              uuidv4(), loteId, ruc, d.rucEmisor, d.razonSocialEmisor,
-              d.tipoCpe, d.serie, d.numero, d.fechaEmision, d.moneda,
-              d.montoGravado, d.montoIgv, d.montoTotal, d.estado,
-              JSON.stringify(d)
-            ];
-            await executeRun(insertItemQuery, paramsItem);
-          }
-        }
-      } catch (dbErr) {
-        console.warn('[CPE DIRECT] Error al persistir lote masivo en BD:', dbErr.message);
-      }
-
       res.json({
         success: true,
-        loteId,
         stats: batchResult.stats,
         resultados: batchResult.resultados
       });

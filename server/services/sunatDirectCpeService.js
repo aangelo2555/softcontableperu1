@@ -1066,6 +1066,153 @@ class SunatDirectCpeService {
       resultados
     };
   }
+
+  /**
+   * Genera un archivo ZIP en memoria con todos los XMLs de los comprobantes indicados
+   */
+  async generarZipXmlLote({ rucEmpresa, usuarioSol, claveSol, listaComprobantes }) {
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip();
+
+    const validos = listaComprobantes.filter(item => {
+      const ruc = item.rucEmisor || item.doc_num || item.ruc;
+      return ruc && item.serie && (item.numero || item.correlativo);
+    });
+
+    console.log(`[ZIP XML BATCH] 📦 Generando ZIP para ${validos.length} comprobantes...`);
+    if (validos.length === 0) return zip.toBuffer();
+
+    // 1. Asegurar sesión y token antes de iniciar
+    await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol);
+
+    const queue = [...validos];
+    const safeWorkers = Math.max(1, Math.min(2, validos.length));
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const item = queue.shift();
+        if (!item) break;
+
+        const rucEmisor = String(item.rucEmisor || item.doc_num || item.ruc).trim();
+        const tipoCpe = String(item.tipoCpe || item.tipo || item.tipo_doc || '01').trim();
+        const serie = String(item.serie).trim().toUpperCase();
+        const correlativo = String(item.numero || item.correlativo).trim();
+        const filename = `${rucEmisor}-${tipoCpe}-${serie}-${correlativo}.xml`;
+
+        try {
+          const res = await this.descargarXmlComprobante({
+            rucEmpresa,
+            usuarioSol,
+            claveSol,
+            rucEmisor,
+            tipoCpe,
+            serie,
+            correlativo,
+            procedencia: item.procedencia || (serie.startsWith('E') ? '1' : '2'),
+            codOpcion: '02'
+          });
+
+          if (res.success && res.xmlContent) {
+            zip.addFile(filename, Buffer.from(res.xmlContent, 'utf8'));
+            console.log(`[ZIP XML BATCH] ➕ Añadido ${filename} (${res.xmlContent.length} bytes)`);
+          } else if (res.success && res.zipBase64) {
+            try {
+              const innerZip = new AdmZip(Buffer.from(res.zipBase64, 'base64'));
+              const entry = innerZip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.xml'));
+              if (entry) {
+                zip.addFile(filename, entry.getData());
+                console.log(`[ZIP XML BATCH] ➕ Extraído y añadido ${filename}`);
+              }
+            } catch (e) {
+              console.warn(`No se pudo extraer XML de ${filename}:`, e.message);
+            }
+          }
+        } catch (err) {
+          console.warn(`Error al descargar XML para ${filename}:`, err.message);
+        }
+
+        await new Promise(r => setTimeout(r, 120));
+      }
+    };
+
+    const workers = [];
+    for (let i = 0; i < safeWorkers; i++) workers.push(worker());
+    await Promise.all(workers);
+
+    return zip.toBuffer();
+  }
+
+  /**
+   * Genera un archivo ZIP en memoria con todos los PDFs oficiales de SUNAT de los comprobantes
+   */
+  async generarZipPdfLote({ rucEmpresa, usuarioSol, claveSol, listaComprobantes }) {
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip();
+
+    const validos = listaComprobantes.filter(item => {
+      const ruc = item.rucEmisor || item.doc_num || item.ruc;
+      return ruc && item.serie && (item.numero || item.correlativo);
+    });
+
+    console.log(`[ZIP PDF BATCH] 📦 Generando ZIP de PDFs para ${validos.length} comprobantes...`);
+    if (validos.length === 0) return zip.toBuffer();
+
+    // 1. Asegurar sesión y token antes de iniciar
+    await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol);
+
+    const queue = [...validos];
+    const safeWorkers = Math.max(1, Math.min(2, validos.length));
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const item = queue.shift();
+        if (!item) break;
+
+        const rucEmisor = String(item.rucEmisor || item.doc_num || item.ruc).trim();
+        const tipoCpe = String(item.tipoCpe || item.tipo || item.tipo_doc || '01').trim();
+        const serie = String(item.serie).trim().toUpperCase();
+        const correlativo = String(item.numero || item.correlativo).trim();
+        const filename = `${rucEmisor}-${tipoCpe}-${serie}-${correlativo}.pdf`;
+
+        try {
+          const res = await this.descargarXmlComprobante({
+            rucEmpresa,
+            usuarioSol,
+            claveSol,
+            rucEmisor,
+            tipoCpe,
+            serie,
+            correlativo,
+            procedencia: item.procedencia || (serie.startsWith('E') ? '1' : '2'),
+            codOpcion: '01' // 01 = PDF oficial en SUNAT
+          });
+
+          if (res.success && res.zipBase64) {
+            try {
+              const innerZip = new AdmZip(Buffer.from(res.zipBase64, 'base64'));
+              const entry = innerZip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.pdf'));
+              if (entry) {
+                zip.addFile(filename, entry.getData());
+                console.log(`[ZIP PDF BATCH] ➕ Extraído y añadido PDF ${filename}`);
+              }
+            } catch (e) {
+              console.warn(`No se pudo extraer PDF de ${filename}:`, e.message);
+            }
+          }
+        } catch (err) {
+          console.warn(`Error al descargar PDF para ${filename}:`, err.message);
+        }
+
+        await new Promise(r => setTimeout(r, 120));
+      }
+    };
+
+    const workers = [];
+    for (let i = 0; i < safeWorkers; i++) workers.push(worker());
+    await Promise.all(workers);
+
+    return zip.toBuffer();
+  }
 }
 
 module.exports = new SunatDirectCpeService();

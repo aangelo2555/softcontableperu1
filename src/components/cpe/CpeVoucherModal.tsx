@@ -1,16 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { parseCpeXml, base64ToUtf8, descargarXmlSeguro, generarCdrXmlOficial, type CpeParsedData } from '../../utils/cpeXmlParser';
+import { webApiBridge } from '../../services/apiBridge';
+import { useStore } from '../../store';
 import {
   X,
   Printer,
   Download,
-  FileCode,
   FileText,
   ShieldCheck,
-  CheckCircle2,
-  Copy,
-  Check
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -84,10 +83,11 @@ const formatUnitPrice = (val: number | string | undefined | null): string => {
 };
 
 export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) {
-  const [activeTab, setActiveTab] = useState<'comprobante' | 'cdr' | 'xml'>('comprobante');
-  const [copiedXml, setCopiedXml] = useState(false);
+  const [activeTab, setActiveTab] = useState<'comprobante' | 'cdr'>('comprobante');
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const currentCompany = useStore((state) => state.currentCompany);
+  const activeCompany = currentCompany;
 
   // Cerrar al presionar la tecla Escape
   useEffect(() => {
@@ -113,70 +113,63 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
     }
   };
 
-  // Decodificar XML de forma segura
-  const xmlString = useMemo(() => {
-    if (doc.xmlContent) return doc.xmlContent;
-    if (doc.xmlBase64) {
-      return base64ToUtf8(doc.xmlBase64);
-    }
-    return '';
-  }, [doc]);
+  // Manejo de Impresión aislada
+  const handleImprimir = () => {
+    window.print();
+  };
 
-  const cdrXmlString = useMemo(() => {
-    if (doc.cdrContent) return doc.cdrContent;
-    if (doc.cdrBase64) {
-      return base64ToUtf8(doc.cdrBase64);
-    }
-    return '';
-  }, [doc]);
+  // Parsear XML si viene adjunto
+  const { parsedData, xmlString, cdrXmlString } = useMemo(() => {
+    let p: CpeParsedData | null = null;
+    let xmlStr: string | null = null;
+    let cdrStr: string | null = null;
 
-  // Parsear datos con el motor UBL 2.1
-  const parsedData = useMemo<CpeParsedData | null>(() => {
-    if (xmlString) {
+    if (doc.xmlContent) {
+      xmlStr = doc.xmlContent;
+      p = parseCpeXml(doc.xmlContent);
+    } else if (doc.xmlBase64) {
       try {
-        return parseCpeXml(xmlString, cdrXmlString);
+        const decoded = base64ToUtf8(doc.xmlBase64);
+        xmlStr = decoded;
+        p = parseCpeXml(decoded);
       } catch (e) {
-        console.warn('Error parseando XML:', e);
+        console.warn('Error al decodificar base64 de XML:', e);
       }
     }
-    return null;
-  }, [xmlString, cdrXmlString]);
 
-  // Lectura completa y fidedigna de los datos extraídos por la API HTTP directa
+    if (doc.cdrContent) {
+      cdrStr = doc.cdrContent;
+    } else if (doc.cdrBase64) {
+      try {
+        cdrStr = base64ToUtf8(doc.cdrBase64);
+      } catch (e) {
+        console.warn('Error al decodificar base64 de CDR:', e);
+      }
+    }
+
+    return { parsedData: p, xmlString: xmlStr, cdrXmlString: cdrStr };
+  }, [doc]);
+
+  // Construir displayData consolidado
   const displayData = useMemo(() => {
     if (parsedData) return parsedData;
 
-    const totalNum = Number(doc.montoTotal ?? doc.total ?? parseFloat(String(doc.importeTotal || '0').replace(/[^0-9.]/g, '')) ?? 0);
-    const gravadoNum = Number(doc.montoGravado !== undefined ? doc.montoGravado : (totalNum / 1.18).toFixed(2));
-    const igvNum = Number(doc.montoIgv !== undefined ? doc.montoIgv : (totalNum - gravadoNum).toFixed(2));
-    const exoneradoNum = Number(doc.montoExonerado || 0);
-    const inafectoNum = Number(doc.montoInafecto || 0);
-    const iscNum = Number(doc.montoIsc || 0);
-    const icbperNum = Number(doc.montoIcbper || 0);
-    const otrosNum = Number(doc.montoOtrosTributos || 0);
-
-    // Mapear items reales de la extracción JSON directa de SUNAT
-    const rawItems = doc.items && Array.isArray(doc.items) && doc.items.length > 0 ? doc.items : [];
-    const mappedItems = rawItems.length > 0
+    // Normalizar items
+    const rawItems = doc.items && Array.isArray(doc.items) ? doc.items : [];
+    const mappedItems = rawItems.length > 0 
       ? rawItems.map((it: any, idx: number) => {
-          const cnt = Number(it.cantidad || 1);
-          const itemTotal = Number(it.montoTotal || it.mtoImpTotal || 0);
-          const unitVal = Number(it.valorUnitario || it.mtoValUnitario || (itemTotal / (cnt || 1)));
-          const desc = it.descripcion || it.desItem || 'CONCEPTO / PRODUCTO';
-
+          const cantidad = Number(it.cantidad || it.cntItems || 1);
+          const valUnit = Number(it.valorUnitario || it.mtoValUnitario || 0);
+          const totalItem = Number(it.montoTotal || it.mtoImpTotal || (cantidad * valUnit));
           return {
             id: idx + 1,
-            cantidad: cnt,
-            unidadMedida: it.unidadMedida || it.desUnidadMedida || 'NIU',
+            cantidad: cantidad,
+            unidadMedida: it.unidadMedida || it.desUnidadMedida || it.codUnidadMedida || 'NIU',
+            descripcionUnidad: it.descripcionUnidad || it.desUnidadMedida || 'UNIDAD',
             codigo: it.codigo || it.desCodigo || '-',
-            descripcion: desc,
-            valorUnitario: unitVal,
-            precioUnitario: itemTotal / (cnt || 1),
-            descuento: 0,
-            subtotal: unitVal * cnt,
-            igv: Number((itemTotal * 0.18 / 1.18).toFixed(2)),
-            icbper: 0,
-            afectacionIgv: '10'
+            descripcion: it.descripcion || it.desItem || 'PRODUCTO / SERVICIO GENERAL',
+            valorUnitario: valUnit > 0 ? valUnit : (totalItem / (cantidad || 1)),
+            montoTotal: totalItem
           };
         })
       : [
@@ -184,19 +177,24 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
             id: 1,
             cantidad: 1,
             unidadMedida: 'NIU',
+            descripcionUnidad: 'UNIDAD',
             codigo: '-',
-            descripcion: doc.observacion && doc.observacion !== 'OK' ? doc.observacion : 'COMPROBANTE ELECTRÓNICO CONSULTADO EN SUNAT',
-            valorUnitario: gravadoNum,
-            precioUnitario: totalNum,
-            descuento: 0,
-            subtotal: gravadoNum,
-            igv: igvNum,
-            icbper: 0,
-            afectacionIgv: '10'
+            descripcion: doc.observacion && doc.observacion !== 'OK' && doc.observacion !== 'CONTADO' ? doc.observacion : 'CONSUMO / SERVICIO SEGÚN COMPROBANTE',
+            valorUnitario: Number(doc.montoGravado || doc.montoTotal || doc.total || 0),
+            montoTotal: Number(doc.montoTotal || doc.total || 0)
           }
         ];
 
-    const tipoDocCode = String(doc.tipoDoc || doc.tipoCpe || '01').padStart(2, '0');
+    const gravadoNum = Number(doc.montoGravado || 0);
+    const exoneradoNum = Number(doc.montoExonerado || 0);
+    const inafectoNum = Number(doc.montoInafecto || 0);
+    const igvNum = Number(doc.montoIgv || 0);
+    const iscNum = Number(doc.montoIsc || 0);
+    const icbperNum = Number(doc.montoIcbper || 0);
+    const otrosNum = Number(doc.montoOtrosTributos || 0);
+    const totalNum = Number(doc.montoTotal || doc.total || doc.importeTotal || (gravadoNum + igvNum));
+
+    const tipoDocCode = doc.tipoDoc || doc.tipoCpe || (doc.serie?.toUpperCase().startsWith('B') ? '03' : '01');
     const tipoDocDesc = tipoDocCode === '03' 
       ? 'BOLETA DE VENTA ELECTRÓNICA' 
       : tipoDocCode === '07'
@@ -260,21 +258,61 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
         fechaRecepcion: doc.fechaEmision,
         aceptado: doc.estado === 'ACEPTADO' || doc.estado === 'AUTORIZADO'
       }
-    } as CpeParsedData;
+    } as unknown as CpeParsedData;
   }, [parsedData, doc]);
 
   // Manejo de Descarga de XML
-  const handleDescargarXml = () => {
+  const handleDescargarXml = async () => {
     const fn = doc.xmlFileName || `${displayData.emisor.ruc}-${displayData.tipoDoc}-${displayData.serie}-${displayData.numero}.xml`;
     if (xmlString) {
       descargarXmlSeguro(xmlString, fn);
       toast.success('XML descargado exitosamente.');
-    } else if (doc.xmlBase64) {
+      return;
+    }
+    if (doc.xmlBase64) {
       const decoded = base64ToUtf8(doc.xmlBase64);
       descargarXmlSeguro(decoded, fn);
       toast.success('XML descargado exitosamente.');
-    } else {
-      toast.error('Contenido XML no disponible para este comprobante.');
+      return;
+    }
+
+    try {
+      toast.loading(`Descargando XML de ${displayData.serie}-${displayData.numero}...`, { id: 'modal-xml' });
+      const res = await webApiBridge.cpeDirectDescargarXml({
+        ruc: (activeCompany?.ruc || doc.docReceptorNum || '') as string,
+        usuario_sol: activeCompany?.sol_user,
+        clave_sol: activeCompany?.sol_pass,
+        rucEmisor: displayData.emisor.ruc,
+        tipoCpe: displayData.tipoDoc,
+        serie: displayData.serie,
+        correlativo: displayData.numero,
+        procedencia: displayData.serie.startsWith('E') ? '1' : '2'
+      });
+
+      if (res.success && (res.xmlContent || res.zipBase64)) {
+        if (res.xmlContent) {
+          descargarXmlSeguro(res.xmlContent, res.xmlFileName || fn);
+        } else if (res.zipBase64) {
+          const byteCharacters = atob(res.zipBase64);
+          const byteArray = new Uint8Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteArray[i] = byteCharacters.charCodeAt(i);
+          }
+          const blob = new Blob([byteArray], { type: 'application/zip' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = res.nomArchivo || fn.replace('.xml', '.zip');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+        toast.success('XML descargado exitosamente.', { id: 'modal-xml' });
+      } else {
+        toast.error(res.error || 'XML no disponible para este comprobante en SUNAT', { id: 'modal-xml' });
+      }
+    } catch (e: any) {
+      toast.error('Error al descargar XML: ' + e.message, { id: 'modal-xml' });
     }
   };
 
@@ -293,19 +331,6 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
       descargarXmlSeguro(generatedCdr, fn);
       toast.success('Constancia CDR generada y descargada.');
     }
-  };
-
-  const handleCopiarXml = () => {
-    if (!xmlString) return;
-    navigator.clipboard.writeText(xmlString);
-    setCopiedXml(true);
-    toast.success('XML copiado al portapapeles.');
-    setTimeout(() => setCopiedXml(false), 2500);
-  };
-
-  // Impresión precisa y exclusiva del comprobante oficial
-  const handleImprimir = () => {
-    window.print();
   };
 
   const modalContent = (
@@ -433,18 +458,6 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
             >
               <ShieldCheck size={15} />
               <span>Constancia CDR (SUNAT)</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('xml')}
-              className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                activeTab === 'xml'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'bg-app-surface text-app-muted hover:text-app-text hover:bg-app-hover border border-app-border'
-              }`}
-            >
-              <FileCode size={15} />
-              <span>Código XML</span>
             </button>
           </div>
 
@@ -715,37 +728,6 @@ export default function CpeVoucherModal({ doc, onClose }: CpeVoucherModalProps) 
                     <span>Descargar Constancia CDR</span>
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* PESTAÑA 3: CÓDIGO XML */}
-            {activeTab === 'xml' && (
-              <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 w-full max-w-3xl flex flex-col gap-3 max-h-[70vh] mx-auto">
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-2 flex-wrap gap-2">
-                  <span className="text-xs font-mono font-bold text-emerald-400">
-                    {displayData.emisor.ruc}-{displayData.tipoDoc}-{displayData.serie}-{displayData.numero}.xml
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleCopiarXml}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 transition-all cursor-pointer"
-                    >
-                      {copiedXml ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                      <span>{copiedXml ? 'Copiado' : 'Copiar'}</span>
-                    </button>
-                    <button
-                      onClick={handleDescargarXml}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer"
-                    >
-                      <Download size={13} />
-                      <span>Descargar</span>
-                    </button>
-                  </div>
-                </div>
-
-                <pre className="text-[11px] font-mono text-neutral-300 overflow-x-auto overflow-y-auto custom-scrollbar p-3 bg-neutral-900/90 rounded-lg whitespace-pre leading-relaxed max-h-[50vh]">
-                  {xmlString || 'Contenido XML no disponible en texto plano.'}
-                </pre>
               </div>
             )}
 

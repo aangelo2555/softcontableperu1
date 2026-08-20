@@ -1157,19 +1157,20 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                   {formatPEN(res.total || res.importeTotal || 0)}
                                 </td>
 
-                                {/* ITEMS DETALLE */}
-                                <td className="py-2 px-3">
-                                  <div className="flex items-center gap-1 max-w-xs">
+                                {/* ITEMS DETALLE (CLIC EN TODA LA CELDA PARA DESPLEGAR) */}
+                                <td 
+                                  onClick={() => hasItems && toggleExpandRow(rowId)}
+                                  className={`py-2 px-3 transition-colors ${hasItems ? 'cursor-pointer hover:bg-blue-500/10 select-none' : ''}`}
+                                  title={hasItems ? 'Clic para desplegar / contraer el detalle de items' : ''}
+                                >
+                                  <div className="flex items-center gap-1.5 max-w-xs">
                                     <span className="text-[11px] text-app-text truncate" title={itemsPreview}>
                                       {itemsPreview}
                                     </span>
                                     {hasItems && (
-                                      <button
-                                        onClick={() => toggleExpandRow(rowId)}
-                                        className="p-0.5 rounded hover:bg-app-hover text-blue-500 cursor-pointer shrink-0"
-                                      >
+                                      <span className="p-0.5 rounded text-blue-500 shrink-0">
                                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                      </button>
+                                      </span>
                                     )}
                                   </div>
                                 </td>
@@ -1215,27 +1216,53 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                 </td>
                               </tr>
 
-                              {/* Fila Desplegable de Items */}
+                              {/* Fila Desplegable de Items Estructurada, Compacta y Alineada */}
                               {isExpanded && hasItems && (
                                 <tr className="bg-blue-500/5">
                                   <td colSpan={15} className="p-3">
-                                    <div className="bg-app-bg border border-app-border rounded-xl p-3 flex flex-col gap-2">
-                                      <h5 className="text-[10px] font-black uppercase tracking-wider text-blue-400">
-                                        Detalle de Items / Conceptos del Comprobante ({res.serie}-{res.numero}):
-                                      </h5>
-                                      <div className="divide-y divide-app-border text-xs">
-                                        {res.items.map((it: any, iIdx: number) => (
-                                          <div key={iIdx} className="py-1.5 flex items-center justify-between flex-wrap gap-2">
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-mono font-bold text-app-muted">{it.cantidad} {it.unidadMedida || 'UND'}</span>
-                                              <span className="text-app-text font-medium">{it.descripcion}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 font-mono font-bold">
-                                              <span className="text-app-muted text-[11px]">Unit: S/ {formatPEN(it.valorUnitario || it.montoTotal / (it.cantidad || 1))}</span>
-                                              <span className="text-emerald-400">Total: S/ {formatPEN(it.montoTotal)}</span>
-                                            </div>
-                                          </div>
-                                        ))}
+                                    <div className="sticky left-4 max-w-3xl bg-app-surface border border-app-border rounded-xl p-3 shadow-md">
+                                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-app-border">
+                                        <h5 className="text-[11px] font-black uppercase tracking-wider text-blue-500 flex items-center gap-1.5">
+                                          <Layers size={13} />
+                                          <span>Detalle de Items / Conceptos ({res.serie}-{res.numero}) • {res.items.length} item(s)</span>
+                                        </h5>
+                                        <span className="text-[10px] font-bold text-app-muted">
+                                          Emisor: {res.razonSocialEmisor || res.razonSocial || res.rucEmisor}
+                                        </span>
+                                      </div>
+                                      <div className="overflow-x-auto rounded-lg border border-app-border">
+                                        <table className="w-full text-left text-xs border-collapse">
+                                          <thead className="bg-app-bg text-[10px] font-black text-app-muted uppercase tracking-wider">
+                                            <tr>
+                                              <th className="py-1.5 px-3 w-10 text-center">#</th>
+                                              <th className="py-1.5 px-3 w-28 text-center">Cantidad / Und</th>
+                                              <th className="py-1.5 px-3">Descripción del Producto / Servicio</th>
+                                              <th className="py-1.5 px-3 w-28 text-right">V. Unitario</th>
+                                              <th className="py-1.5 px-3 w-28 text-right">Importe Total</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-app-border bg-app-surface">
+                                            {res.items.map((it: any, iIdx: number) => (
+                                              <tr key={iIdx} className="hover:bg-app-hover/50 transition-colors">
+                                                <td className="py-1.5 px-3 text-center font-mono text-[10px] text-app-muted">{iIdx + 1}</td>
+                                                <td className="py-1.5 px-3 text-center font-mono font-bold text-app-text">
+                                                  <span className="px-1.5 py-0.5 rounded bg-app-bg border border-app-border text-[10px]">
+                                                    {it.cantidad || 1} {it.unidadMedida || it.desUnidadMedida || 'NIU'}
+                                                  </span>
+                                                </td>
+                                                <td className="py-1.5 px-3 text-app-text font-medium text-xs">
+                                                  {it.descripcion || it.desItem || '—'}
+                                                </td>
+                                                <td className="py-1.5 px-3 text-right font-mono font-bold text-app-muted text-xs">
+                                                  S/ {formatPEN(it.valorUnitario || ((it.montoTotal || 0) / (it.cantidad || 1)))}
+                                                </td>
+                                                <td className="py-1.5 px-3 text-right font-mono font-black text-emerald-500 text-xs">
+                                                  S/ {formatPEN(it.montoTotal)}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
                                       </div>
                                     </div>
                                   </td>

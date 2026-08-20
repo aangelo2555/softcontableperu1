@@ -447,6 +447,30 @@ export const webApiBridge = {
         return res.data;
     },
 
+    cpeDirectDescargarXmlMasivoZip: async (args: {
+        ruc: string;
+        usuario_sol?: string;
+        clave_sol?: string;
+        listaComprobantes: any[];
+    }) => {
+        const res = await api.post('/api/cpe-direct/descargar-xml-masivo-zip', args, {
+            responseType: 'blob'
+        });
+        return res.data;
+    },
+
+    cpeDirectDescargarPdfMasivoZip: async (args: {
+        ruc: string;
+        usuario_sol?: string;
+        clave_sol?: string;
+        listaComprobantes: any[];
+    }) => {
+        const res = await api.post('/api/cpe-direct/descargar-pdf-masivo-zip', args, {
+            responseType: 'blob'
+        });
+        return res.data;
+    },
+
     cpeDirectObtenerHistorial: async (workspace_id: string) => {
         const res = await api.get(`/api/cpe-direct/historial?workspace_id=${encodeURIComponent(workspace_id)}`);
         return res.data;

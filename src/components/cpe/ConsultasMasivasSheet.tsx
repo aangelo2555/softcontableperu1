@@ -156,11 +156,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACEPTADO' | 'ANULADO' | 'NO_EXISTE' | 'ERROR'>('ALL');
   const [searchFilter, setSearchFilter] = useState('');
 
-  // Historial de lotes anteriores
-  const [showHistorialModal, setShowHistorialModal] = useState(false);
-  const [historialLotes, setHistorialLotes] = useState<any[]>([]);
-  const [loadingHistorial, setLoadingHistorial] = useState(false);
-
   // Visor modal de Voucher / PDF
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
 
@@ -199,22 +194,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const errorResults = useMemo(() => {
     return batchResults.filter(r => r.estado === 'ERROR' || (!r.encontrado && !r.success) || (r.error && r.error.length > 0));
   }, [batchResults]);
-
-  // Cargar historial al abrir
-  const loadHistorial = async () => {
-    if (!activeCompany?.ruc) return;
-    setLoadingHistorial(true);
-    try {
-      const res = await webApiBridge.cpeDirectObtenerHistorial(activeCompany.ruc);
-      if (res.success) {
-        setHistorialLotes(res.lotes || []);
-      }
-    } catch (e: any) {
-      toast.error('Error al cargar historial: ' + e.message);
-    } finally {
-      setLoadingHistorial(false);
-    }
-  };
 
   // ═══ DESCARGA DE PLANTILLA EXCEL ═══
   const descargarPlantilla = () => {
@@ -554,6 +533,76 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
   };
 
+  // ═══ DESCARGA MASIVA DE TODOS LOS XMLS EN UN ARCHIVO ZIP ═══
+  const handleDescargarXmlMasivo = async () => {
+    const validComps = batchResults
+      .filter(r => (r.resultado?.estado === 'ACEPTADO' || r.estado === 'ACEPTADO' || r.success) && (r.resultado?.rucEmisor || r.itemOriginal?.rucEmisor || (r.itemOriginal as any)?.doc_num))
+      .map(r => r.resultado || r.itemOriginal);
+
+    if (validComps.length === 0) {
+      toast.error('No hay comprobantes aceptados para descargar XML.');
+      return;
+    }
+
+    try {
+      toast.loading(`Generando archivo ZIP con ${validComps.length} XMLs oficiales...`, { id: 'zip-xml' });
+      const blob = await webApiBridge.cpeDirectDescargarXmlMasivoZip({
+        ruc: activeCompany.ruc,
+        usuario_sol: activeCompany.sol_user,
+        clave_sol: activeCompany.sol_pass,
+        listaComprobantes: validComps
+      });
+
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `COMPROBANTES_XML_${activeCompany.ruc}_${Date.now()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`¡ZIP con ${validComps.length} XMLs descargado exitosamente!`, { id: 'zip-xml' });
+    } catch (err: any) {
+      toast.error('Error al descargar ZIP de XMLs: ' + err.message, { id: 'zip-xml' });
+    }
+  };
+
+  // ═══ DESCARGA MASIVA DE TODOS LOS PDFS EN UN ARCHIVO ZIP ═══
+  const handleDescargarPdfMasivo = async () => {
+    const validComps = batchResults
+      .filter(r => (r.resultado?.estado === 'ACEPTADO' || r.estado === 'ACEPTADO' || r.success) && (r.resultado?.rucEmisor || r.itemOriginal?.rucEmisor || (r.itemOriginal as any)?.doc_num))
+      .map(r => r.resultado || r.itemOriginal);
+
+    if (validComps.length === 0) {
+      toast.error('No hay comprobantes aceptados para descargar PDF.');
+      return;
+    }
+
+    try {
+      toast.loading(`Generando archivo ZIP con ${validComps.length} PDFs oficiales...`, { id: 'zip-pdf' });
+      const blob = await webApiBridge.cpeDirectDescargarPdfMasivoZip({
+        ruc: activeCompany.ruc,
+        usuario_sol: activeCompany.sol_user,
+        clave_sol: activeCompany.sol_pass,
+        listaComprobantes: validComps
+      });
+
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `COMPROBANTES_PDF_${activeCompany.ruc}_${Date.now()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`¡ZIP con ${validComps.length} PDFs descargado exitosamente!`, { id: 'zip-pdf' });
+    } catch (err: any) {
+      toast.error('Error al descargar ZIP de PDFs: ' + err.message, { id: 'zip-pdf' });
+    }
+  };
+
   // ═══ EXPORTAR A EXCEL (ESTRUCTURA IDÉNTICA A LA IMAGEN) ═══
   const handleExportarExcel = () => {
     if (batchResults.length === 0) {
@@ -658,16 +707,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             >
               <Download size={13} className="text-blue-500" />
               <span>Plantilla Excel</span>
-            </button>
-            <button
-              onClick={() => {
-                loadHistorial();
-                setShowHistorialModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
-            >
-              <History size={13} className="text-purple-400" />
-              <span>Ver Historial de Lotes</span>
             </button>
           </div>
         </div>
@@ -1016,6 +1055,24 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               </button>
 
               <button
+                onClick={handleDescargarPdfMasivo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all cursor-pointer"
+                title="Descargar todos los PDFs oficiales en un archivo ZIP"
+              >
+                <FileText size={13} />
+                <span>PDF Masivo</span>
+              </button>
+
+              <button
+                onClick={handleDescargarXmlMasivo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm transition-all cursor-pointer"
+                title="Descargar todos los XMLs oficiales en un archivo ZIP"
+              >
+                <FileCode size={13} />
+                <span>XML Masivo</span>
+              </button>
+
+              <button
                 onClick={handleExportarExcel}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
               >
@@ -1060,7 +1117,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                 {filteredResults.map((r, idx) => {
                   const orig: any = r.itemOriginal || {};
                   const res: any = r.resultado || {};
-                  const isExpanded = !!expandedRows[`row-${idx}`];
+                  const rowId = `row-${idx}`;
+                  const isExpanded = !!expandedRows[rowId];
                   const hasItems = res.items && res.items.length > 0;
                   const itemsPreview = hasItems
                     ? res.items.map((it: any) => `${it.cantidad}x ${it.descripcion}`).join(', ')
@@ -1150,20 +1208,20 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                           {formatPEN(res.montoTotal || orig.monto || 0)}
                         </td>
 
-                        {/* ITEMS DETALLE */}
-                        <td className="py-2 px-3">
-                          <div className="flex items-center gap-1 max-w-xs">
-                            <span className="text-[11px] text-app-text truncate" title={itemsPreview}>
+                        {/* ITEMS DETALLE (CLIC EN TODA LA CELDA PARA DESPLEGAR) */}
+                        <td 
+                          onClick={() => hasItems && toggleRowExpand(rowId)}
+                          className={`py-2 px-3 transition-colors ${hasItems ? 'cursor-pointer hover:bg-blue-500/10 select-none' : ''}`}
+                          title={hasItems ? 'Clic para desplegar / contraer el detalle de items' : ''}
+                        >
+                          <div className="flex items-center gap-1.5 max-w-xs">
+                            <span className="text-[11px] text-app-text truncate">
                               {itemsPreview}
                             </span>
                             {hasItems && (
-                              <button
-                                onClick={() => toggleRowExpand(`row-${idx}`)}
-                                className="p-0.5 rounded hover:bg-app-hover text-blue-500 cursor-pointer shrink-0"
-                                title="Desplegar items"
-                              >
+                              <span className="p-0.5 rounded text-blue-500 shrink-0">
                                 {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                              </button>
+                              </span>
                             )}
                           </div>
                         </td>
@@ -1209,27 +1267,53 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                         </td>
                       </tr>
 
-                      {/* Fila Desplegable de Items */}
+                      {/* Fila Desplegable de Items Estructurada, Compacta y Alineada */}
                       {isExpanded && hasItems && (
                         <tr className="bg-blue-500/5">
                           <td colSpan={15} className="p-3">
-                            <div className="bg-app-bg border border-app-border rounded-xl p-3 flex flex-col gap-2">
-                              <h5 className="text-[10px] font-black uppercase tracking-wider text-blue-400">
-                                Detalle de Items / Conceptos del Comprobante ({res.serie}-{res.numero}):
-                              </h5>
-                              <div className="divide-y divide-app-border text-xs">
-                                {res.items.map((it: any, iIdx: number) => (
-                                  <div key={iIdx} className="py-1.5 flex items-center justify-between flex-wrap gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono font-bold text-app-muted">{it.cantidad} {it.unidadMedida || 'UND'}</span>
-                                      <span className="text-app-text font-medium">{it.descripcion}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 font-mono font-bold">
-                                      <span className="text-app-muted text-[11px]">Unit: S/ {formatPEN(it.valorUnitario || it.montoTotal / (it.cantidad || 1))}</span>
-                                      <span className="text-emerald-400">Total: S/ {formatPEN(it.montoTotal)}</span>
-                                    </div>
-                                  </div>
-                                ))}
+                            <div className="sticky left-4 max-w-3xl bg-app-surface border border-app-border rounded-xl p-3 shadow-md">
+                              <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-app-border">
+                                <h5 className="text-[11px] font-black uppercase tracking-wider text-blue-500 flex items-center gap-1.5">
+                                  <Layers size={13} />
+                                  <span>Detalle de Items / Conceptos ({res.serie || orig.serie}-{res.numero || orig.numero}) • {res.items.length} item(s)</span>
+                                </h5>
+                                <span className="text-[10px] font-bold text-app-muted">
+                                  Emisor: {res.razonSocialEmisor || orig.razonSocial || res.rucEmisor}
+                                </span>
+                              </div>
+                              <div className="overflow-x-auto rounded-lg border border-app-border">
+                                <table className="w-full text-left text-xs border-collapse">
+                                  <thead className="bg-app-bg text-[10px] font-black text-app-muted uppercase tracking-wider">
+                                    <tr>
+                                      <th className="py-1.5 px-3 w-10 text-center">#</th>
+                                      <th className="py-1.5 px-3 w-28 text-center">Cantidad / Und</th>
+                                      <th className="py-1.5 px-3">Descripción del Producto / Servicio</th>
+                                      <th className="py-1.5 px-3 w-28 text-right">V. Unitario</th>
+                                      <th className="py-1.5 px-3 w-28 text-right">Importe Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-app-border bg-app-surface">
+                                    {res.items.map((it: any, iIdx: number) => (
+                                      <tr key={iIdx} className="hover:bg-app-hover/50 transition-colors">
+                                        <td className="py-1.5 px-3 text-center font-mono text-[10px] text-app-muted">{iIdx + 1}</td>
+                                        <td className="py-1.5 px-3 text-center font-mono font-bold text-app-text">
+                                          <span className="px-1.5 py-0.5 rounded bg-app-bg border border-app-border text-[10px]">
+                                            {it.cantidad || 1} {it.unidadMedida || it.desUnidadMedida || 'NIU'}
+                                          </span>
+                                        </td>
+                                        <td className="py-1.5 px-3 text-app-text font-medium text-xs">
+                                          {it.descripcion || it.desItem || '—'}
+                                        </td>
+                                        <td className="py-1.5 px-3 text-right font-mono font-bold text-app-muted text-xs">
+                                          S/ {formatPEN(it.valorUnitario || ((it.montoTotal || 0) / (it.cantidad || 1)))}
+                                        </td>
+                                        <td className="py-1.5 px-3 text-right font-mono font-black text-emerald-500 text-xs">
+                                          S/ {formatPEN(it.montoTotal)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           </td>
@@ -1242,68 +1326,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </table>
           </div>
 
-        </div>
-      )}
-
-      {/* ═══ MODAL DE HISTORIAL DE LOTES ═══ */}
-      {showHistorialModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-app-surface border border-app-border rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-app-border pb-3">
-              <div className="flex items-center gap-2">
-                <History className="text-blue-500" size={18} />
-                <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
-                  Historial de Lotes Consultados (Base de Datos)
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowHistorialModal(false)}
-                className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {loadingHistorial ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="animate-spin text-blue-500" size={24} />
-                </div>
-              ) : historialLotes.length === 0 ? (
-                <div className="text-center py-10 text-app-muted text-xs">
-                  No hay lotes previos registrados en este workspace.
-                </div>
-              ) : (
-                historialLotes.map(lote => (
-                  <div
-                    key={lote.id}
-                    className="p-3 rounded-xl bg-app-bg border border-app-border flex items-center justify-between flex-wrap gap-2 hover:border-blue-500/40 transition-all"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black uppercase text-app-text">
-                        Lote {lote.origen_consulta || 'MANUAL'} • {new Date(lote.created_at).toLocaleString('es-PE')}
-                      </span>
-                      <span className="text-[11px] text-app-muted">
-                        Total: {lote.total_registros} • Aceptados: {lote.total_aceptados} • Anulados: {lote.total_anulados} • S/ {formatPEN(lote.monto_total_general)}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                      {lote.estado || 'COMPLETADO'}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex justify-end pt-3 border-t border-app-border">
-              <button
-                onClick={() => setShowHistorialModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
