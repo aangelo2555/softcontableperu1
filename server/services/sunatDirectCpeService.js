@@ -115,17 +115,19 @@ class SunatDirectCpeService {
         path: parsed.pathname + parsed.search,
         method: options.method || 'GET',
         headers: {
+          'Host': parsed.hostname,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'es-PE,es;q=0.9,en;q=0.8',
           'Accept-Encoding': 'identity',
+          'Connection': 'keep-alive',
           ...(options.headers || {})
         }
       };
 
-      // Agregar cookies manuales
+      // Agregar cookies manuales (unificadas para todo el dominio SUNAT)
       if (options.cookies) {
-        const cookieStr = this._buildCookieString(options.cookies, parsed.hostname);
+        const cookieStr = this._buildCookieString(options.cookies);
         if (cookieStr) reqOptions.headers['Cookie'] = cookieStr;
       }
 
@@ -155,9 +157,9 @@ class SunatDirectCpeService {
   }
 
   /**
-   * Almacena cookies de un response Set-Cookie header en el store manual
+   * Almacena cookies de un response Set-Cookie header en el store plano unificado
    */
-  _storeCookies(cookieStore, responseHeaders, hostname) {
+  _storeCookies(cookieStore, responseHeaders) {
     const setCookies = responseHeaders['set-cookie'];
     if (!setCookies) return;
 
@@ -170,49 +172,27 @@ class SunatDirectCpeService {
         const name = nameValue.substring(0, eqIdx).trim();
         const value = nameValue.substring(eqIdx + 1).trim();
 
-        // Determinar dominio
-        const domainMatch = raw.match(/domain=\.?([^;,\s]+)/i);
-        let domain = domainMatch ? domainMatch[1].toLowerCase() : hostname;
-        if (domain.startsWith('.')) domain = domain.substring(1);
-
-        if (!cookieStore[domain]) cookieStore[domain] = {};
-        cookieStore[domain][name] = value;
-
-        // También asignar al hostname original si el dominio es padre
-        if (hostname.endsWith(domain) && hostname !== domain) {
-          if (!cookieStore[hostname]) cookieStore[hostname] = {};
-          cookieStore[hostname][name] = value;
-        }
-      } catch (e) { /* ignorar cookies malformadas */ }
+        // Almacenar globalmente para todas las peticiones a SUNAT
+        cookieStore[name] = value;
+      } catch (e) { /* ignorar */ }
     }
   }
 
   /**
-   * Construye el header Cookie a partir del store para un hostname dado
+   * Construye el header Cookie a partir del store plano unificado
    */
-  _buildCookieString(cookieStore, hostname) {
+  _buildCookieString(cookieStore) {
     const parts = [];
-    // Buscar cookies exactas para este hostname
-    if (cookieStore[hostname]) {
-      for (const [k, v] of Object.entries(cookieStore[hostname])) {
+    for (const [k, v] of Object.entries(cookieStore)) {
+      if (k && v !== undefined && v !== null) {
         parts.push(`${k}=${v}`);
-      }
-    }
-    // Buscar cookies de dominios padre (e.g. sunat.gob.pe para e-menu.sunat.gob.pe)
-    for (const domain of Object.keys(cookieStore)) {
-      if (domain !== hostname && hostname.endsWith(domain)) {
-        for (const [k, v] of Object.entries(cookieStore[domain])) {
-          if (!parts.some(p => p.startsWith(`${k}=`))) {
-            parts.push(`${k}=${v}`);
-          }
-        }
       }
     }
     return parts.join('; ');
   }
 
   /**
-   * Ejecuta una petición HTTPS nativa con seguimiento automático de cookies y redirects opcionales
+   * Ejecuta una petición HTTPS nativa con almacenamiento automático de cookies y redirects opcionales
    */
   async _nativeRequest(url, cookieStore, options = {}) {
     const { URL } = require('url');
@@ -227,8 +207,8 @@ class SunatDirectCpeService {
         cookies: cookieStore
       });
 
-      // Almacenar cookies del response
-      this._storeCookies(cookieStore, res.headers, parsed.hostname);
+      // Almacenar cookies del response inmediatamente
+      this._storeCookies(cookieStore, res.headers);
 
       // ¿Es un redirect?
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -259,10 +239,15 @@ class SunatDirectCpeService {
 
   /**
    * ═══ FLUJO NATIVO COMPLETO: Login Clave SOL ═══
-   * Hace todo el proceso de login usando HTTPS nativo con cookies manuales
+   * Hace todo el proceso de login usando HTTPS nativo con cookies unificadas
    */
   async _nativeFullLogin(ruc, usuario, clave, session) {
+    const userSolKey = `${ruc.trim()}${usuario.trim().toUpperCase()}`;
     const cookieStore = session.manualCookies || {};
+
+    // Pre-establecer cookies requeridas de usuario y balanceador
+    cookieStore[userSolKey] = '1';
+    cookieStore['f5_cspm'] = '1234';
 
     // ── FASE 1: Obtener formulario de login y extraer state ──
     console.log(`[FASE 1] Solicitando formulario login SOL para RUC: ${ruc}...`);
@@ -270,10 +255,15 @@ class SunatDirectCpeService {
 
     const loginPageRes = await this._nativeRequest(loginUrl, cookieStore, {
       maxRedirects: 3,
-      headers: { 'Referer': 'https://www.sunat.gob.pe/' }
+      headers: { 
+        'Referer': 'https://www.sunat.gob.pe/',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site'
+      }
     });
 
-    console.log(`[FASE 1] ✅ Status: ${loginPageRes.statusCode}, Body length: ${loginPageRes.body.length}, URL final: ${loginPageRes.finalUrl?.substring(0, 80)}`);
+    console.log(`[FASE 1] ✅ Status: ${loginPageRes.statusCode}, Body length: ${loginPageRes.body.length}`);
 
     // Extraer state del HTML o URL
     const stateMatch = (loginPageRes.finalUrl || '').match(/state=([^&]+)/) ||
@@ -305,62 +295,81 @@ class SunatDirectCpeService {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Origin': 'https://api-seguridad.sunat.gob.pe',
-          'Referer': loginUrl
+          'Referer': loginUrl,
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin'
         }
       }
     );
 
     const authLocation = authRes.headers.location || '';
     console.log(`[FASE 2] ✅ Status: ${authRes.statusCode}, Location: ${authLocation ? authLocation.substring(0, 100) + '...' : '(ninguna)'}`);
-    console.log(`[FASE 2] Cookies almacenadas: ${JSON.stringify(Object.keys(cookieStore))}`);
 
     if (!authLocation || authLocation.includes('error=') || authLocation.includes('loginMenuSol')) {
       throw new Error('Credenciales Clave SOL inválidas o acceso denegado por SUNAT');
     }
 
-    // Extraer el JWT code de la URL de redirect (lo guardamos para posible uso como token)
+    // Extraer el JWT code de la URL de redirect
     const codeMatch = authLocation.match(/code=([^&]+)/);
     if (codeMatch) {
       session._loginCode = codeMatch[1];
       console.log(`[FASE 2] JWT code extraído (longitud ${codeMatch[1].length})`);
     }
 
-    // ── FASE 3: Navegar a AutenticaMenuInternet.htm (establecer sesión en e-menu) ──
+    // ── FASE 3: Navegar a AutenticaMenuInternet.htm (Paso a paso con maxRedirects: 0) ──
     let autenticaUrl = authLocation;
     if (autenticaUrl.startsWith('/')) {
       autenticaUrl = `https://e-menu.sunat.gob.pe${autenticaUrl}`;
     }
-    console.log(`[FASE 3] Estableciendo sesión en e-menu.sunat.gob.pe...`);
+    console.log(`[FASE 3] Estableciendo sesión en e-menu.sunat.gob.pe vía AutenticaMenuInternet.htm...`);
 
     const autenticaRes = await this._nativeRequest(autenticaUrl, cookieStore, {
-      maxRedirects: 5,
-      headers: { 'Referer': 'https://api-seguridad.sunat.gob.pe/' }
+      maxRedirects: 0, // NO seguir redirect automático para inspeccionar Set-Cookie de e-menu
+      headers: {
+        'Referer': 'https://api-seguridad.sunat.gob.pe/',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Upgrade-Insecure-Requests': '1'
+      }
     });
 
-    console.log(`[FASE 3] ✅ Status: ${autenticaRes.statusCode}, URL final: ${autenticaRes.finalUrl?.substring(0, 80)}`);
-    console.log(`[FASE 3] Cookies e-menu: ${this._buildCookieString(cookieStore, 'e-menu.sunat.gob.pe').substring(0, 200)}`);
+    const autenticaLocation = autenticaRes.headers.location || '';
+    console.log(`[FASE 3] ✅ Autentica Status: ${autenticaRes.statusCode}, Location: ${autenticaLocation ? autenticaLocation.substring(0, 100) : '(ninguna)'}`);
+    console.log(`[FASE 3] Cookies en store tras Autentica: ${Object.keys(cookieStore).join(', ')}`);
 
-    // ── FASE 4: Cargar MenuInternet.htm principal ──
-    console.log(`[FASE 4] Cargando MenuInternet.htm principal...`);
+    // ── FASE 4: Cargar MenuInternet.htm con parámetros reales ──
+    let menuUrl = 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*';
+    if (autenticaLocation) {
+      if (autenticaLocation.startsWith('http')) menuUrl = autenticaLocation;
+      else if (autenticaLocation.startsWith('/')) menuUrl = `https://e-menu.sunat.gob.pe${autenticaLocation}`;
+      else menuUrl = `https://e-menu.sunat.gob.pe/cl-ti-itmenu/${autenticaLocation}`;
+    }
+
+    console.log(`[FASE 4] Cargando MenuInternet.htm (${menuUrl.substring(0, 80)})...`);
     const menuRes = await this._nativeRequest(
-      'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
+      menuUrl,
       cookieStore,
       {
         maxRedirects: 3,
-        headers: { 'Referer': autenticaUrl }
+        headers: {
+          'Referer': autenticaUrl,
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Upgrade-Insecure-Requests': '1'
+        }
       }
     );
 
     console.log(`[FASE 4] ✅ Status: ${menuRes.statusCode}, Body length: ${menuRes.body.length}`);
-    const menuBodyPreview = menuRes.body.substring(0, 300).replace(/\s+/g, ' ');
-    console.log(`[FASE 4] Body preview: ${menuBodyPreview}`);
-
-    // Verificar que la sesión está activa buscando indicadores en el HTML del menú
     const isMenuLoaded = menuRes.body.includes('MenuInternet') || menuRes.body.includes('pestana') || menuRes.body.includes('menu');
     console.log(`[FASE 4] ¿Menú cargado correctamente? ${isMenuLoaded ? 'SÍ' : 'NO'}`);
 
     // Guardar cookies en la session para uso posterior
     session.manualCookies = cookieStore;
+    session.menuUrl = menuUrl;
     return cookieStore;
   }
 
@@ -373,6 +382,7 @@ class SunatDirectCpeService {
 
     // Ejecutar login completo
     const cookieStore = await this._nativeFullLogin(ruc, usuario, clave, session);
+    const menuReferer = session.menuUrl || 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*';
 
     // ── FASE 5: Disparar acción del menú para obtener token CPE ──
     console.log(`[FASE 5] Solicitando token CPE desde menú (acción 11.38.1.1.1)...`);
@@ -385,68 +395,51 @@ class SunatDirectCpeService {
 
     for (const actionUrl of actionUrls) {
       try {
-        // Primero SIN seguir redirects para capturar el 302 raw
+        // Enviar con headers idénticos al iframe del navegador
         const res302 = await this._nativeRequest(actionUrl, cookieStore, {
           maxRedirects: 0,
           headers: {
-            'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
-            'Upgrade-Insecure-Requests': '1',
+            'Referer': menuReferer,
             'Sec-Fetch-Dest': 'iframe',
             'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'same-origin'
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1'
           }
         });
 
         const location302 = res302.headers.location || '';
         console.log(`[FASE 5] Status: ${res302.statusCode}, Location: ${location302 ? location302.substring(0, 120) + '...' : '(vacía)'}`);
-        
-        if (res302.statusCode === 200) {
-          const bodyPreview = res302.body.substring(0, 300).replace(/\s+/g, ' ');
-          console.log(`[FASE 5] Body (200): ${bodyPreview}`);
-          console.log(`[FASE 5] Cookies enviadas: ${this._buildCookieString(cookieStore, 'e-menu.sunat.gob.pe').substring(0, 200)}`);
-        }
 
-        // Buscar token en Location del 302
+        // 1. Buscar token directamente en Location del 302
         let token = this._extractTokenFromUrl(location302);
         if (token) {
-          console.log(`[FASE 5] ✅ Token extraído de Location header (302)`);
+          console.log(`[FASE 5] ✅ Token extraído exitosamente de Location header (302)`);
           return token;
         }
 
-        // Si hay Location pero no tiene token directo, seguir el redirect
+        // 2. Si hay Location pero no tiene token explícito, seguir el redirect
         if (location302) {
           console.log(`[FASE 5] Siguiendo redirect a: ${location302.substring(0, 120)}...`);
           const followRes = await this._nativeRequest(location302, cookieStore, {
             maxRedirects: 3,
-            headers: { 'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm' }
-          });
-
-          token = this._extractTokenFromUrl(followRes.finalUrl) || this._extractTokenFromHtml(followRes.body);
-          if (token) {
-            console.log(`[FASE 5] ✅ Token extraído de URL/body final después de seguir redirect`);
-            return token;
-          }
-        }
-
-        // Si vino 200, intentar CON seguir redirects
-        if (res302.statusCode === 200) {
-          const resFollow = await this._nativeRequest(actionUrl, cookieStore, {
-            maxRedirects: 5,
-            headers: {
-              'Referer': 'https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm',
-              'Upgrade-Insecure-Requests': '1'
+            headers: { 
+              'Referer': menuReferer,
+              'Sec-Fetch-Dest': 'iframe',
+              'Sec-Fetch-Mode': 'navigate'
             }
           });
 
-          console.log(`[FASE 5] Con redirects - Status: ${resFollow.statusCode}, Final URL: ${resFollow.finalUrl?.substring(0, 120)}`);
-          token = this._extractTokenFromUrl(resFollow.finalUrl) || this._extractTokenFromHtml(resFollow.body);
+          token = this._extractTokenFromUrl(followRes.finalUrl) || 
+                  this._extractTokenFromUrl(followRes.headers.location || '') ||
+                  this._extractTokenFromHtml(followRes.body);
           if (token) {
-            console.log(`[FASE 5] ✅ Token extraído con follow-redirects`);
+            console.log(`[FASE 5] ✅ Token extraído de URL/body final tras seguir redirect`);
             return token;
           }
         }
 
-        // Buscar token en el body HTML
+        // 3. Buscar token en el body HTML si vino 200
         token = this._extractTokenFromHtml(res302.body);
         if (token) {
           console.log(`[FASE 5] ✅ Token extraído del body HTML`);
@@ -459,9 +452,8 @@ class SunatDirectCpeService {
     }
 
     // ── FASE 6 (FALLBACK): Usar el code JWT del login como token ──
-    console.log(`[FASE 6] Intentando usar JWT code del login directamente como Bearer token...`);
     if (session._loginCode) {
-      // Probar si el code JWT funciona directamente como Bearer token en la API CPE
+      console.log(`[FASE 6] Probando si el code JWT del login tiene acceso directo a API CPE...`);
       try {
         const testRes = await this._httpsRequest(
           'https://api-cpe.sunat.gob.pe/v1/contribuyente/consultacpe/comprobantes?numRuc=20609936224&codCpe=01&numSerie=E001&numCpe=1&procedencia=2',
@@ -473,27 +465,14 @@ class SunatDirectCpeService {
             }
           }
         );
-        console.log(`[FASE 6] Test con code JWT - Status: ${testRes.statusCode}`);
+        console.log(`[FASE 6] Test status: ${testRes.statusCode}`);
         if (testRes.statusCode === 200 || testRes.statusCode === 404) {
-          // Si no devuelve 401/403, el token es válido
-          console.log(`[FASE 6] ✅ Code JWT funciona como Bearer token`);
+          console.log(`[FASE 6] ✅ Code JWT aceptado por API CPE`);
           return session._loginCode;
         }
       } catch (testErr) {
-        console.warn(`[FASE 6] Test de code JWT falló: ${testErr.message}`);
+        console.warn(`[FASE 6] Test falló: ${testErr.message}`);
       }
-    }
-
-    // ── FASE 7 (ÚLTIMO RECURSO): Re-autenticar con axios y tough-cookie ──
-    console.log(`[FASE 7] Último recurso: re-autenticación con axios-cookiejar...`);
-    try {
-      const token = await this._axiosFallbackGetToken(ruc, usuario, clave, session);
-      if (token) {
-        console.log(`[FASE 7] ✅ Token extraído via axios fallback`);
-        return token;
-      }
-    } catch (fallErr) {
-      console.warn(`[FASE 7] Axios fallback falló: ${fallErr.message}`);
     }
 
     return null;
