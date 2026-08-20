@@ -707,6 +707,16 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         </span>
                       </div>
                     </div>
+
+                    {monthPurchases.length > 0 && (
+                      <button
+                        onClick={() => setActiveTab('consultas_masivas')}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
+                      >
+                        <Sparkles size={13} className="text-amber-300" />
+                        <span>Cargar este Mes en Consultas Masivas ({monthPurchases.length})</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Grid de comprobantes de este mes */}

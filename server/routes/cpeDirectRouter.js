@@ -207,7 +207,7 @@ function createCpeDirectRouter(db) {
   router.post('/consultar-masivo', async (req, res) => {
     try {
       const { ruc, usuario, clave } = await resolveCredentials(req);
-      const { listaComprobantes, origen_consulta = 'EXCEL', concurrencia = 4 } = req.body;
+      const { listaComprobantes, origen_consulta = 'EXCEL', concurrencia = 2, delayMs = 150 } = req.body;
 
       if (!ruc || !usuario || !clave) {
         return res.status(400).json({
@@ -228,7 +228,8 @@ function createCpeDirectRouter(db) {
         usuarioSol: usuario,
         claveSol: clave,
         listaComprobantes,
-        concurrencia: Math.min(concurrencia, 8)
+        concurrencia: Math.max(1, Math.min(concurrencia, 4)),
+        delayMs: Math.max(0, Math.min(delayMs, 1000))
       });
 
       // Persistir Lote y Detalle en Base de Datos

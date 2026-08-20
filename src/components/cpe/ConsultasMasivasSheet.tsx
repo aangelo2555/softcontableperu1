@@ -32,7 +32,11 @@ import {
   FileText,
   AlertCircle,
   FileCode,
-  X
+  X,
+  RotateCcw,
+  ArrowLeft,
+  ArrowRight,
+  ArrowLeftRight
 } from 'lucide-react';
 
 interface ConsultasMasivasSheetProps {
@@ -96,6 +100,9 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const [stagedList, setStagedList] = useState<CpeRowInput[]>([]);
   const [fileNameLoaded, setFileNameLoaded] = useState<string>('');
 
+  // Modo de velocidad / latencia
+  const [speedMode, setSpeedMode] = useState<'safe' | 'fast' | 'ultra_stable'>('safe');
+
   // Estados de SIRE por Año y Mes
   const availableYears = useMemo(() => {
     if (!purchases || purchases.length === 0) return [new Date().getFullYear().toString()];
@@ -138,7 +145,6 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStatusText, setCurrentStatusText] = useState('');
-  const [concurrency, setConcurrency] = useState<number>(4);
 
   // Estados de resultados
   const [batchResults, setBatchResults] = useState<CpeProcessedResult[]>([]);
@@ -155,6 +161,46 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [tableScrollInfo, setTableScrollInfo] = useState({
+    scrollLeft: 0,
+    scrollWidth: 0,
+    clientWidth: 0,
+    canScrollLeft: false,
+    canScrollRight: false
+  });
+
+  const updateTableScrollInfo = () => {
+    if (!tableContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
+    const maxScroll = Math.max(0, scrollWidth - clientWidth);
+    setTableScrollInfo({
+      scrollLeft,
+      scrollWidth,
+      clientWidth,
+      canScrollLeft: scrollLeft > 5,
+      canScrollRight: scrollLeft < maxScroll - 5
+    });
+  };
+
+  const scrollTableBy = (delta: number) => {
+    if (!tableContainerRef.current) return;
+    tableContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateTableScrollInfo();
+    const observer = new ResizeObserver(() => updateTableScrollInfo());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [batchResults, expandedRows]);
+
+  // Lista de comprobantes con error para reintento manual
+  const errorResults = useMemo(() => {
+    return batchResults.filter(r => r.estado === 'ERROR' || (!r.encontrado && !r.success) || (r.error && r.error.length > 0));
+  }, [batchResults]);
 
   // Cargar historial al abrir
   const loadHistorial = async () => {
@@ -289,7 +335,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     toast.success(`Se cargaron ${parsed.length} comprobantes de ${mesObj?.nombre} ${selectedSireYear} listos para consultar.`);
   };
 
-  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA DIRECTA ═══
+  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA DIRECTA (LATENCIA SEGURA) ═══
   const handleEjecutarConsultaMasiva = async () => {
     if (!activeCompany?.ruc) {
       toast.error('Seleccione una empresa activa.');
@@ -306,9 +352,15 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
       return;
     }
 
+    const speedConfig = {
+      safe: { concurrencia: 2, delayMs: 180 },
+      fast: { concurrencia: 3, delayMs: 80 },
+      ultra_stable: { concurrencia: 1, delayMs: 300 }
+    }[speedMode];
+
     setProcessing(true);
     setProgress(15);
-    setCurrentStatusText(`Consultando ${stagedList.length} comprobantes en SUNAT API...`);
+    setCurrentStatusText(`Consultando ${stagedList.length} comprobantes en SUNAT API (${speedMode === 'safe' ? 'Modo Seguro' : speedMode === 'fast' ? 'Modo Rápido' : 'Modo Ultra Estable'})...`);
 
     try {
       const res = await webApiBridge.cpeDirectConsultarMasivo({
@@ -317,7 +369,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         clave_sol: activeCompany.sol_pass,
         listaComprobantes: stagedList,
         origen_consulta: inputMode.toUpperCase(),
-        concurrencia: concurrency
+        concurrencia: speedConfig.concurrencia,
+        delayMs: speedConfig.delayMs
       });
 
       if (!res.success) {
@@ -330,11 +383,83 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
       const aceptados = res.stats?.aceptados || 0;
       const total = res.stats?.total || 0;
+      const errores = res.stats?.errores || 0;
 
-      toast.success(`¡Consulta masiva completada! ${aceptados} de ${total} comprobantes aceptados.`);
+      if (errores > 0) {
+        toast(`Consulta finalizada: ${aceptados} de ${total} aceptados (${errores} con error transitorio). Puedes usar el botón "Refrescar Errores".`, { icon: '⚠️', duration: 5000 });
+      } else {
+        toast.success(`¡Consulta masiva completada! ${aceptados} de ${total} comprobantes aceptados.`);
+      }
     } catch (err: any) {
       console.error(err);
       toast.error('Error en consulta masiva: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setProcessing(false);
+      setProgress(0);
+      setCurrentStatusText('');
+    }
+  };
+
+  // ═══ BOTÓN GENERAL: REINTENTAR / REFRESCAR SOLO LOS COMPROBANTES CON ERROR ═══
+  const handleReintentarErrores = async () => {
+    if (errorResults.length === 0) {
+      toast.success('No hay comprobantes con error para reintentar.');
+      return;
+    }
+
+    setProcessing(true);
+    setProgress(20);
+    setCurrentStatusText(`Reintentando ${errorResults.length} comprobante(s) con error en SUNAT (Modo Ultra Seguro)...`);
+
+    try {
+      const itemsToRetry = errorResults.map(r => r.itemOriginal);
+      const res = await webApiBridge.cpeDirectConsultarMasivo({
+        ruc: activeCompany.ruc,
+        usuario_sol: activeCompany.sol_user,
+        clave_sol: activeCompany.sol_pass,
+        listaComprobantes: itemsToRetry,
+        origen_consulta: 'REINTENTO_ERRORES',
+        concurrencia: 1,
+        delayMs: 250
+      });
+
+      if (res.success && Array.isArray(res.resultados)) {
+        setBatchResults(prev => {
+          const copy = [...prev];
+          res.resultados.forEach((newItem: any) => {
+            const idx = copy.findIndex(c => 
+              c.itemOriginal.serie === newItem.itemOriginal.serie && 
+              String(c.itemOriginal.numero) === String(newItem.itemOriginal.numero) && 
+              c.itemOriginal.rucEmisor === newItem.itemOriginal.rucEmisor
+            );
+            if (idx !== -1) {
+              copy[idx] = { ...newItem, index: idx };
+            }
+          });
+          return copy;
+        });
+
+        // Recalcular estadísticas
+        const total = batchResults.length;
+        const aceptados = batchResults.filter(r => r.estado === 'ACEPTADO' || (r.success && r.encontrado)).length;
+        const anulados = batchResults.filter(r => r.estado === 'ANULADO').length;
+        const noEncontrados = batchResults.filter(r => r.estado === 'NO_EXISTE').length;
+        const errores = total - aceptados - anulados - noEncontrados;
+
+        setLastStats((prev: any) => ({
+          ...(prev || {}),
+          aceptados,
+          anulados,
+          noEncontrados,
+          errores
+        }));
+
+        toast.success(`Se reintentaron los ${errorResults.length} comprobantes con éxito.`);
+      } else {
+        toast.error(res.error || 'No se pudieron recuperar los comprobantes fallidos.');
+      }
+    } catch (err: any) {
+      toast.error('Error al reintentar fallidos: ' + err.message);
     } finally {
       setProcessing(false);
       setProgress(0);
@@ -374,10 +499,10 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
   // ═══ DESCARGA DIRECTA DE XML OFICIAL SUNAT VÍA API INVERSA (/02) ═══
   const handleDescargarXmlDirecto = async (item: any) => {
-    const rucEmisor = item.rucEmisor || item.doc_num;
-    const tipoCpe = item.tipoCpe || item.tipo || '01';
+    const rucEmisor = item.rucEmisor || item.doc_num || item.ruc;
+    const tipoCpe = item.tipoCpe || item.tipo || item.tipo_doc || item.tipoDoc || '01';
     const serie = item.serie;
-    const correlativo = item.numero || item.correlativo;
+    const correlativo = item.numero || item.correlativo || item.numCpe;
 
     if (!rucEmisor || !serie || !correlativo) {
       toast.error('Datos incompletos para descargar XML.');
@@ -424,31 +549,34 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         }
         toast.success(`XML de ${serie}-${correlativo} descargado.`, { id: 'down-xml' });
       } else {
-        toast.error(res.error || 'No se pudo obtener el XML.', { id: 'down-xml' });
+        toast.error(res.error || 'No se pudo obtener el XML desde SUNAT.', { id: 'down-xml' });
       }
     } catch (err: any) {
       toast.error('Error al descargar XML: ' + err.message, { id: 'down-xml' });
     }
   };
 
-  // ═══ EXPORTAR RESULTADOS A EXCEL (ESTRUCTURA EXACTA) ═══
+  // ═══ EXPORTAR A EXCEL (ESTRUCTURA IDÉNTICA A LA IMAGEN) ═══
   const handleExportarExcel = () => {
     if (batchResults.length === 0) {
       toast.error('No hay resultados para exportar.');
       return;
     }
 
-    const exportData = batchResults.map((r, idx) => {
+    const dataToExport = batchResults.map((r, idx) => {
       const orig: any = r.itemOriginal || {};
       const res: any = r.resultado || {};
-      const itemsStr = (res.items || []).map((it: any) => `${it.cantidad}x ${it.descripcion}`).join(', ');
+      const hasItems = res.items && res.items.length > 0;
+      const itemsText = hasItems
+        ? res.items.map((it: any) => `${it.cantidad}x ${it.descripcion} (S/ ${formatPEN(it.montoTotal)})`).join(' | ')
+        : '';
 
       return {
         'N°': idx + 1,
-        'ESTADO SUNAT': r.estado || (r.encontrado ? 'ACEPTADO' : 'NO EXISTE'),
+        'ESTADO SUNAT': res.estado || r.estado || 'ACEPTADO',
         'RUC EMISOR': res.rucEmisor || orig.rucEmisor,
         'RAZON SOCIAL': res.razonSocialEmisor || orig.razonSocial || '',
-        'TIPO DOC': res.tipoCpe || orig.tipoCpe,
+        'TIPO DOC': res.tipoCpe || orig.tipoCpe || '01',
         'SERIE': res.serie || orig.serie,
         'NUMERO': res.numero || orig.numero,
         'FECHA EMISION': res.fechaEmision || orig.fechaEmision || '',
@@ -456,45 +584,49 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         'MONTO GRAVADO': res.montoGravado || 0,
         'IGV (S/)': res.montoIgv || 0,
         'TOTAL (S/)': res.montoTotal || orig.monto || 0,
-        'ITEMS DETALLE': itemsStr || '—',
+        'ITEMS DETALLE': itemsText,
         'OBSERVACION': r.error || r.mensaje || 'OK'
       };
     });
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Resultados_CPE');
-    XLSX.writeFile(wb, `Reporte_CPE_SUNAT_${activeCompany?.ruc || 'masivo'}_${Date.now()}.xlsx`);
-    toast.success('Reporte Excel generado exitosamente.');
+    XLSX.utils.book_append_sheet(wb, ws, 'Consultas CPE');
+    XLSX.writeFile(wb, `Reporte_Consultas_CPE_SUNAT_${Date.now()}.xlsx`);
+    toast.success('Reporte Excel generado y descargado.');
   };
 
-  // Filtrar resultados por estado y texto
+  const toggleRowExpand = (id: string) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Filtrado
   const filteredResults = useMemo(() => {
     return batchResults.filter(r => {
+      const orig: any = r.itemOriginal || {};
+      const res: any = r.resultado || {};
+      const currentStatus = res.estado || r.estado;
+
       if (filterStatus !== 'ALL') {
-        if (filterStatus === 'ACEPTADO' && r.estado !== 'ACEPTADO') return false;
-        if (filterStatus === 'ANULADO' && r.estado !== 'ANULADO') return false;
-        if (filterStatus === 'NO_EXISTE' && r.estado !== 'NO_EXISTE') return false;
-        if (filterStatus === 'ERROR' && r.estado !== 'ERROR') return false;
+        if (filterStatus === 'ACEPTADO' && currentStatus !== 'ACEPTADO') return false;
+        if (filterStatus === 'ANULADO' && currentStatus !== 'ANULADO') return false;
+        if (filterStatus === 'NO_EXISTE' && currentStatus !== 'NO_EXISTE') return false;
+        if (filterStatus === 'ERROR' && currentStatus !== 'ERROR') return false;
       }
 
       if (searchFilter.trim()) {
-        const query = searchFilter.toLowerCase();
-        const orig: any = r.itemOriginal || {};
-        const res: any = r.resultado || {};
-        const matchRuc = (res.rucEmisor || orig.rucEmisor || '').toLowerCase().includes(query);
-        const matchRazon = (res.razonSocialEmisor || orig.razonSocial || '').toLowerCase().includes(query);
-        const matchDoc = `${res.serie || orig.serie}-${res.numero || orig.numero}`.toLowerCase().includes(query);
-        if (!matchRuc && !matchRazon && !matchDoc) return false;
+        const q = searchFilter.toLowerCase();
+        const ruc = (res.rucEmisor || orig.rucEmisor || '').toLowerCase();
+        const razon = (res.razonSocialEmisor || orig.razonSocial || '').toLowerCase();
+        const serie = (res.serie || orig.serie || '').toLowerCase();
+        const numero = String(res.numero || orig.numero || '').toLowerCase();
+
+        return ruc.includes(q) || razon.includes(q) || serie.includes(q) || numero.includes(q);
       }
 
       return true;
     });
   }, [batchResults, filterStatus, searchFilter]);
-
-  const toggleRowExpand = (rowId: string) => {
-    setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
-  };
 
   return (
     <div className="flex flex-col gap-5 w-full animate-fade-in">
@@ -512,11 +644,11 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2">
                 <span>CONSULTAS MASIVAS DE CPE</span>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
-                  HTTP DIRECTO • 200MS / CPE
+                  HTTP DIRECTO • MICROSERVICIOS SUNAT
                 </span>
               </h2>
               <p className="text-[11px] text-app-muted">
-                Valida decenas de comprobantes por segundo directamente contra los microservicios de SUNAT SOL.
+                Valida decenas de comprobantes directamente contra los microservicios de SUNAT SOL.
               </p>
             </div>
           </div>
@@ -604,23 +736,19 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           </div>
         )}
 
-        {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE POR MESES ═══ */}
+        {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE (SIN CALENDARIO DUPLICADO) ═══ */}
         {inputMode === 'sire' && (
           <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/50 border border-app-border p-4 rounded-2xl animate-fade-in">
-            {/* Cabecera del SIRE con Selector de Año */}
             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-app-border">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                 <span className="text-xs font-black uppercase tracking-wider text-app-text">
-                  COMPROBANTES REGISTRADOS EN SIRE
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase font-mono">
-                  {sireYearPurchases.length} comprobantes en {selectedSireYear}
+                  IMPORTACIÓN DESDE COMPRAS REGISTRADAS (SIRE)
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Ejercicio / Año:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Ejercicio:</span>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-app-surface border border-app-border rounded-xl">
                   <Calendar size={13} className="text-blue-500" />
                   <select
@@ -639,84 +767,123 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                     ))}
                   </select>
                 </div>
+
+                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Mes:</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-app-surface border border-app-border rounded-xl">
+                  <select
+                    value={selectedSireMonth || ''}
+                    onChange={(e) => {
+                      if (e.target.value) handleSeleccionarMesSire(e.target.value);
+                    }}
+                    className="bg-transparent text-xs font-black font-mono text-app-text outline-none cursor-pointer border-none py-0"
+                  >
+                    <option value="" className="bg-app-surface text-app-text">-- Seleccionar Mes --</option>
+                    {MESES_INFO.map(m => {
+                      const count = sireYearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-${m.key}`)).length;
+                      return (
+                        <option key={m.key} value={m.key} className="bg-app-surface text-app-text font-mono">
+                          {m.nombre} ({count} compras)
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allParsed: CpeRowInput[] = sireYearPurchases.map((p: any, idx: number) => ({
+                      id: `sire-all-${p.id || idx}-${Date.now()}`,
+                      rucEmisor: String(p.doc_num || '').trim(),
+                      razonSocial: p.nombre || '',
+                      tipoCpe: String(p.tipo_doc || '01').trim().padStart(2, '0'),
+                      serie: String(p.serie || '').trim().toUpperCase(),
+                      numero: String(p.numero || '').trim(),
+                      fechaEmision: p.fecha || '',
+                      monto: p.total || 0
+                    })).filter((item: CpeRowInput) => item.rucEmisor && item.serie && item.numero);
+
+                    setStagedList(allParsed);
+                    toast.success(`Se cargaron todos los ${allParsed.length} comprobantes del ejercicio ${selectedSireYear}.`);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs"
+                >
+                  Cargar Todo el Año ({sireYearPurchases.length})
+                </button>
               </div>
             </div>
 
-            {/* Grid de 12 Meses interactivos */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {MESES_INFO.map(m => {
-                const mPurchases = sireYearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-${m.key}`));
-                const count = mPurchases.length;
-                const totalSum = mPurchases.reduce((s: number, p: any) => s + (Number(p.total) || 0), 0);
-                const hasItems = count > 0;
-                const isSelected = selectedSireMonth === m.key;
-
-                return (
-                  <div
-                    key={m.key}
-                    onClick={() => {
-                      if (hasItems) handleSeleccionarMesSire(m.key);
-                    }}
-                    className={`p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 transition-all select-none ${
-                      isSelected
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm cursor-pointer'
-                        : hasItems
-                        ? 'bg-app-surface hover:bg-blue-500/10 border-app-border hover:border-blue-500/40 cursor-pointer shadow-2xs group'
-                        : 'bg-app-surface/40 border-app-border/40 opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[11px] font-black uppercase ${isSelected ? 'text-white' : hasItems ? 'text-app-text group-hover:text-blue-500' : 'text-app-muted'}`}>
-                        {m.nombre}
-                      </span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-md ${
-                        isSelected ? 'bg-white/20 text-white' : hasItems ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-app-bg text-app-muted'
-                      }`}>
-                        {count}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <span className={`text-[8px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/70' : 'text-app-muted'}`}>Total</span>
-                      <span className={`text-[10px] font-mono font-black ${isSelected ? 'text-white' : 'text-app-text'}`}>
-                        S/ {formatPEN(totalSum)}
-                      </span>
-                    </div>
-
-                    {hasItems ? (
-                      <div className={`text-[8px] font-bold flex items-center gap-1 mt-0.5 ${isSelected ? 'text-white' : 'text-blue-500'}`}>
-                        <span>{isSelected ? 'Cargado ✓' : 'Cargar compras →'}</span>
-                      </div>
-                    ) : (
-                      <div className="text-[8px] text-app-muted italic mt-0.5">
-                        Sin registros
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-[11px] text-app-muted">
+              💡 Puedes seleccionar el mes en el cajón superior de SIRE o en el selector desplegable de arriba para arrastrar automáticamente todos los comprobantes listos para consultar.
+            </p>
           </div>
         )}
 
-        {/* Resumen de Comprobantes Preparados para Consulta */}
+        {/* Resumen de Comprobantes Preparados para Consulta + Selector de Latencia */}
         {stagedList.length > 0 && (
-          <div className="mt-4 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-center justify-between flex-wrap gap-3 animate-fade-in">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                <CheckCircle2 size={20} />
+          <div className="mt-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-3 animate-fade-in">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider text-app-text block">
+                    {stagedList.length} Comprobantes Listos para Consultar
+                  </span>
+                  <span className="text-[11px] text-app-muted">
+                    Origen: {inputMode === 'excel' ? `Excel (${fileNameLoaded || 'cargado'})` : `SIRE Compras (${selectedSireMonth ? MESES_INFO.find(m => m.key === selectedSireMonth)?.nombre : 'Ejercicio'} ${selectedSireYear})`}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-black uppercase tracking-wider text-app-text block">
-                  {stagedList.length} Comprobantes Listos para Consultar
-                </span>
-                <span className="text-[11px] text-app-muted">
-                  Origen: {inputMode === 'excel' ? `Excel (${fileNameLoaded || 'cargado'})` : `SIRE Compras (${selectedSireMonth ? MESES_INFO.find(m => m.key === selectedSireMonth)?.nombre : ''} ${selectedSireYear})`}
-                </span>
+
+              {/* Selector de Modo de Latencia / Velocidad */}
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Latencia:</span>
+                <div className="flex bg-app-bg border border-app-border rounded-xl p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setSpeedMode('safe')}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                      speedMode === 'safe'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-app-muted hover:text-app-text'
+                    }`}
+                    title="2 concurrentes con 180ms delay y auto-reintento. Máxima estabilidad."
+                  >
+                    <ShieldCheck size={12} />
+                    <span>🛡️ Seguro (Recomendado)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpeedMode('fast')}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                      speedMode === 'fast'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-app-muted hover:text-app-text'
+                    }`}
+                    title="3 concurrentes con 80ms delay. Para lotes pequeños."
+                  >
+                    <Sparkles size={12} />
+                    <span>⚡ Rápido</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpeedMode('ultra_stable')}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 ${
+                      speedMode === 'ultra_stable'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-app-muted hover:text-app-text'
+                    }`}
+                    title="1 concurrente con 300ms delay. Ideal para lotes masivos de >100 comprobantes."
+                  >
+                    <span>🐢 Ultra Estable</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-emerald-500/10">
               <button
                 onClick={() => setStagedList([])}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
@@ -780,8 +947,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           </div>
 
           <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
-            <span className="text-[9px] font-black uppercase tracking-wider text-purple-500">Total IGV (S/)</span>
-            <span className="text-xs font-black font-mono text-purple-400 mt-0.5">S/ {formatPEN(lastStats.montoTotalIgv)}</span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-purple-400">Errores / Obs</span>
+            <span className="text-lg font-black font-mono text-purple-400 mt-0.5">{lastStats.errores}</span>
           </div>
 
           <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-3 flex flex-col justify-between shadow-2xs">
@@ -793,7 +960,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
       {/* ═══ TABLA DE RESULTADOS (ESTRUCTURA EXACTA DE LA PRIMERA IMAGEN / EXCEL) ═══ */}
       {batchResults.length > 0 && (
-        <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
+        <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm flex flex-col relative">
           
           {/* Cabecera y Filtros de la Tabla */}
           <div className="p-3.5 border-b border-app-border bg-app-bg/50 flex items-center justify-between flex-wrap gap-3">
@@ -826,8 +993,21 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               </div>
             </div>
 
-            {/* Acciones Masivas */}
-            <div className="flex items-center gap-2">
+            {/* Acciones Masivas y Botón de Reintento de Errores (Point 3) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Botón Reintentar Errores si existen fallidos */}
+              {errorResults.length > 0 && (
+                <button
+                  onClick={handleReintentarErrores}
+                  disabled={processing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white shadow-md transition-all cursor-pointer animate-pulse disabled:opacity-50"
+                  title="Reintentar comprobantes que tuvieron error de procesamiento en SUNAT"
+                >
+                  <RotateCcw size={13} className={processing ? 'animate-spin' : ''} />
+                  <span>Refrescar / Reintentar Errores ({errorResults.length})</span>
+                </button>
+              )}
+
               <button
                 onClick={handleIncorporarACompras}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer"
@@ -847,11 +1027,15 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </div>
           </div>
 
-          {/* Tabla de Registros Estilo Excel */}
-          <div className="overflow-x-auto custom-scrollbar">
+          {/* Tabla de Registros Estilo Excel con Scroll Sincronizado */}
+          <div
+            ref={tableContainerRef}
+            onScroll={updateTableScrollInfo}
+            className="overflow-x-auto custom-scrollbar"
+          >
             <table className="w-full text-left border-collapse min-w-[1300px]">
               <thead>
-                <tr className="border-b border-app-border bg-app-bg/80 text-[10px] font-black uppercase tracking-wider text-app-muted">
+                <tr className="border-b border-app-border bg-app-bg/80 text-[10px] font-black uppercase tracking-wider text-app-muted sticky top-0 z-10 shadow-2xs">
                   <th className="py-2.5 px-3 w-10 text-center">N°</th>
                   <th className="py-2.5 px-3">ESTADO SUNAT</th>
                   <th className="py-2.5 px-3 font-mono">RUC EMISOR</th>
@@ -1042,6 +1226,78 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               </tbody>
             </table>
           </div>
+
+          {/* ═══ BARRA DE DESPLAZAMIENTO LATERAL FLOTANTE PERENNE (STICKY) (Point 4) ═══ */}
+          <div className="sticky bottom-0 z-20 bg-app-surface/95 backdrop-blur-md border-t border-app-border px-4 py-2 flex items-center justify-between gap-3 shadow-lg rounded-b-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-app-muted flex items-center gap-1">
+                <ArrowLeftRight size={13} className="text-blue-500" />
+                <span className="hidden sm:inline">Desplazamiento Horizontal:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => scrollTableBy(-280)}
+                className="px-2.5 py-1 rounded-lg bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border text-xs font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                title="Mover tabla a la izquierda"
+              >
+                <ArrowLeft size={12} />
+                <span>Izquierda</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTableBy(280)}
+                className="px-2.5 py-1 rounded-lg bg-app-bg hover:bg-blue-500/10 text-app-text hover:text-blue-500 border border-app-border text-xs font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                title="Mover tabla a la derecha"
+              >
+                <span>Derecha</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+
+            {/* Mini track deslizable interactivo */}
+            <div
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const pct = clickX / rect.width;
+                if (tableContainerRef.current) {
+                  const maxScroll = tableContainerRef.current.scrollWidth - tableContainerRef.current.clientWidth;
+                  tableContainerRef.current.scrollTo({ left: maxScroll * pct, behavior: 'smooth' });
+                }
+              }}
+              className="flex-1 max-w-xs h-2 bg-app-bg rounded-full border border-app-border overflow-hidden relative cursor-pointer hidden md:block"
+            >
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all pointer-events-none"
+                style={{
+                  width: `${Math.max(15, (tableScrollInfo.clientWidth / (tableScrollInfo.scrollWidth || 1)) * 100)}%`,
+                  marginLeft: `${Math.min(85, (tableScrollInfo.scrollLeft / Math.max(1, tableScrollInfo.scrollWidth - tableScrollInfo.clientWidth)) * 85)}%`
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (tableContainerRef.current) tableContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+                }}
+                className="px-2 py-1 rounded-lg text-[10px] font-black uppercase text-app-muted hover:text-app-text cursor-pointer hover:bg-app-hover"
+              >
+                Inicio (N°)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (tableContainerRef.current) tableContainerRef.current.scrollTo({ left: 9999, behavior: 'smooth' });
+                }}
+                className="px-2 py-1 rounded-lg text-[10px] font-black uppercase text-blue-500 hover:text-blue-400 cursor-pointer hover:bg-blue-500/10"
+              >
+                Fin (XML)
+              </button>
+            </div>
+          </div>
+
         </div>
       )}
 

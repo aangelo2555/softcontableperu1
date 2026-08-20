@@ -433,6 +433,7 @@ export const webApiBridge = {
         }>;
         origen_consulta?: string;
         concurrencia?: number;
+        delayMs?: number;
     }) => {
         const res = await api.post('/api/cpe-direct/consultar-masivo', args);
         return res.data;

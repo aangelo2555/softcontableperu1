@@ -646,9 +646,9 @@ class SunatDirectCpeService {
   }
 
   /**
-   * Consulta individual de un comprobante electrónico en SUNAT
+   * Consulta individual de un comprobante electrónico en SUNAT con auto-reintento
    */
-  async consultarComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia = '2' }) {
+  async consultarComprobante({ rucEmpresa, usuarioSol, claveSol, rucEmisor, tipoCpe, serie, correlativo, procedencia = '2', maxRetries = 2 }) {
     const rucLimpiado = String(rucEmisor || '').trim();
     const tipoNormalizado = String(tipoCpe || '01').trim().padStart(2, '0');
     const serieLimpiada = String(serie || '').trim().toUpperCase();
@@ -674,41 +674,59 @@ class SunatDirectCpeService {
       });
     };
 
-    try {
-      let res;
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+      attempt++;
       try {
-        res = await executeRequest(tokenInfo.token);
-      } catch (err) {
-        // Si el token expiró (401 o 403), re-autenticamos una vez
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
+        let res;
+        try {
           res = await executeRequest(tokenInfo.token);
-        } else {
-          throw err;
+        } catch (err) {
+          // Si el token expiró (401 o 403), re-autenticamos inmediatamente
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
+            res = await executeRequest(tokenInfo.token);
+          } else {
+            throw err;
+          }
         }
-      }
 
-      if (res.data && Array.isArray(res.data.comprobantes) && res.data.comprobantes.length > 0) {
-        const item = res.data.comprobantes[0];
-        const normalizado = this.normalizarRespuestaCpe(item);
+        if (res.data && Array.isArray(res.data.comprobantes) && res.data.comprobantes.length > 0) {
+          const item = res.data.comprobantes[0];
+          const normalizado = this.normalizarRespuestaCpe(item);
+          return {
+            success: true,
+            encontrado: true,
+            data: normalizado
+          };
+        }
+
         return {
           success: true,
-          encontrado: true,
-          data: normalizado
+          encontrado: false,
+          mensaje: 'Comprobante no existe en los registros de SUNAT o no corresponde a los parámetros indicados.'
+        };
+      } catch (error) {
+        const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || '';
+        const isTransient = errMsg.includes('error processing') || error.response?.status === 500 || error.response?.status === 502 || error.response?.status === 503 || error.code === 'ECONNRESET';
+
+        if (isTransient && attempt <= maxRetries) {
+          // Esperar backoff progresivo y reintentar
+          await new Promise(r => setTimeout(r, 250 * attempt));
+          if (attempt === maxRetries) {
+            try {
+              tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
+            } catch (tErr) {}
+          }
+          continue;
+        }
+
+        return {
+          success: false,
+          encontrado: false,
+          error: errMsg || 'Error en microservicio SUNAT'
         };
       }
-
-      return {
-        success: true,
-        encontrado: false,
-        mensaje: 'Comprobante no existe en los registros de SUNAT o no corresponde a los parámetros indicados.'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        encontrado: false,
-        error: error.response?.data?.message || error.response?.data?.error || error.message
-      };
     }
   }
 
@@ -738,67 +756,78 @@ class SunatDirectCpeService {
       });
     };
 
-    try {
-      let res;
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        res = await executeRequest(tokenInfo.token);
-      } catch (err) {
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
-          res = await executeRequest(tokenInfo.token);
-        } else {
-          throw err;
-        }
-      }
-
-      if (res.data && res.data.valArchivo) {
-        const nomArchivo = res.data.nomArchivo || `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.zip`;
-        const zipBase64 = res.data.valArchivo;
-        let xmlContent = '';
-        let xmlFileName = nomArchivo.replace(/\.zip$/i, '.xml');
-
-        // Extraer el XML del ZIP si adm-zip está disponible
+        let res;
         try {
-          const AdmZip = require('adm-zip');
-          const zipBuffer = Buffer.from(zipBase64, 'base64');
-          const zip = new AdmZip(zipBuffer);
-          const zipEntries = zip.getEntries();
-          const xmlEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.xml'));
-
-          if (xmlEntry) {
-            xmlFileName = xmlEntry.entryName;
-            xmlContent = xmlEntry.getData().toString('utf8');
+          res = await executeRequest(tokenInfo.token);
+        } catch (err) {
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            tokenInfo = await this.obtenerTokenCpe(rucEmpresa, usuarioSol, claveSol, true);
+            res = await executeRequest(tokenInfo.token);
+          } else {
+            throw err;
           }
-        } catch (zipErr) {
-          console.warn('[CPE XML UNZIP] No se pudo descomprimir XML en memoria:', zipErr.message);
+        }
+
+        if (res.data && res.data.valArchivo) {
+          const nomArchivo = res.data.nomArchivo || `${rucLimpiado}-${tipoNormalizado}-${serieLimpiada}-${correlativoLimpiado}.zip`;
+          const zipBase64 = res.data.valArchivo;
+          let xmlContent = '';
+          let xmlFileName = nomArchivo.replace(/\.zip$/i, '.xml');
+
+          // Extraer el XML del ZIP si adm-zip está disponible
+          try {
+            const AdmZip = require('adm-zip');
+            const zipBuffer = Buffer.from(zipBase64, 'base64');
+            const zip = new AdmZip(zipBuffer);
+            const zipEntries = zip.getEntries();
+            const xmlEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith('.xml'));
+
+            if (xmlEntry) {
+              xmlFileName = xmlEntry.entryName;
+              xmlContent = xmlEntry.getData().toString('utf8');
+            }
+          } catch (zipErr) {
+            console.warn('[CPE XML UNZIP] No se pudo descomprimir XML en memoria:', zipErr.message);
+          }
+
+          return {
+            success: true,
+            nomArchivo,
+            zipBase64,
+            xmlFileName,
+            xmlContent,
+            xmlBase64: xmlContent ? Buffer.from(xmlContent, 'utf8').toString('base64') : null
+          };
+        }
+
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 300));
+          continue;
         }
 
         return {
-          success: true,
-          nomArchivo,
-          zipBase64,
-          xmlFileName,
-          xmlContent,
-          xmlBase64: xmlContent ? Buffer.from(xmlContent, 'utf8').toString('base64') : null
+          success: false,
+          error: res.data?.message || 'SUNAT no retornó el archivo ZIP/XML del comprobante'
+        };
+      } catch (error) {
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
+        return {
+          success: false,
+          error: error.response?.data?.message || error.response?.data?.error || error.message
         };
       }
-
-      return {
-        success: false,
-        error: 'SUNAT no retornó el archivo ZIP/XML del comprobante'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || error.response?.data?.error || error.message
-      };
     }
   }
 
   /**
-   * Consulta masiva de comprobantes con concurrencia controlada (pool)
+   * Consulta masiva de comprobantes con concurrencia controlada, delay regulable y auto-reintento
    */
-  async consultarLoteMasivo({ rucEmpresa, usuarioSol, claveSol, listaComprobantes, concurrencia = 4 }) {
+  async consultarLoteMasivo({ rucEmpresa, usuarioSol, claveSol, listaComprobantes, concurrencia = 2, delayMs = 150 }) {
     if (!Array.isArray(listaComprobantes) || listaComprobantes.length === 0) {
       throw new Error('La lista de comprobantes a consultar está vacía');
     }
@@ -838,7 +867,8 @@ class SunatDirectCpeService {
             tipoCpe: item.tipoCpe || item.tipo || item.tipo_doc || '01',
             serie: item.serie,
             correlativo: item.numero || item.correlativo || item.numCpe,
-            procedencia: item.procedencia || '2'
+            procedencia: item.procedencia || '2',
+            maxRetries: 2
           });
 
           if (res.success && res.encontrado && res.data) {
@@ -891,14 +921,18 @@ class SunatDirectCpeService {
           };
         } finally {
           stats.procesados++;
+          // Delay de pacing para evitar rate-limiting de SUNAT API Gateway
+          if (delayMs > 0 && queue.length > 0) {
+            await new Promise(r => setTimeout(r, delayMs));
+          }
         }
       }
     };
 
-    // Ejecutar workers concurrentes
+    // Ejecutar workers concurrentes seguros
     const workers = [];
-    const activeWorkers = Math.min(concurrencia, total);
-    for (let i = 0; i < activeWorkers; i++) {
+    const safeWorkers = Math.max(1, Math.min(concurrencia, total, 4));
+    for (let i = 0; i < safeWorkers; i++) {
       workers.push(worker());
     }
 
