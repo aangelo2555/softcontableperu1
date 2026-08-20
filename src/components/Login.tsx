@@ -643,10 +643,10 @@ export const Login: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════════════ */}
             {/* TARJETA MAESTRA UNIFICADA (Lienzo Continuo & Cero Recortes)     */}
             {/* ═══════════════════════════════════════════════════════════════ */}
-            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[960px] xl:max-w-[1020px] h-auto lg:h-[92vh] lg:min-h-[580px] lg:max-h-[660px] xl:max-h-[680px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
+            <div className="relative z-10 w-full max-w-[480px] lg:max-w-[1000px] xl:max-w-[1060px] h-auto lg:h-[92vh] lg:min-h-[580px] lg:max-h-[660px] xl:max-h-[680px] bg-white rounded-[28px] lg:rounded-[36px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.7)_inset] border border-white/60 overflow-hidden flex flex-col lg:flex-row items-stretch my-auto animate-fade-in">
                 
-                {/* LADO IZQUIERDO: Formulario de Autenticación (Alineación natural al tope para evitar recortes) */}
-                <div className="w-full lg:w-[420px] xl:w-[460px] bg-white px-6 py-4 sm:px-7 sm:py-4 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative">
+                {/* LADO IZQUIERDO: Formulario de Autenticación */}
+                <div className="w-full lg:w-[450px] xl:w-[480px] bg-white px-6 py-4 sm:px-8 sm:py-5 flex flex-col justify-between overflow-y-auto login-scroll shrink-0 relative">
                     
                     {/* Pantalla de Carga de Transición Inmediata (Aparece en 0ms tras autenticación exitosa) */}
                     {isAuthSuccessLoading && (
@@ -671,88 +671,81 @@ export const Login: React.FC = () => {
 
                     {/* Header Marca Centrado y Prominente */}
                     <div className="text-center mb-2">
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-xs flex items-center justify-center mx-auto mb-1">
-                                <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-xs" />
-                            </div>
-                            <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
-                                SOFT CONTABLE
-                            </h1>
-                            <p className="text-slate-400 text-[8.5px] font-bold tracking-[0.2em] uppercase text-center notranslate" translate="no">
-                                SISTEMA CONTABLE EN LA NUBE V2.0
-                            </p>
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200/90 border border-slate-200/90 shadow-xs flex items-center justify-center mx-auto mb-1">
+                            <img src="/assets/logo.png" alt="Softcontable" className="w-7 h-7 object-contain drop-shadow-xs" />
                         </div>
+                        <h1 className="text-base font-black tracking-widest text-[#1e3a8a] uppercase flex items-center justify-center gap-2 notranslate" translate="no">
+                            SOFT CONTABLE
+                        </h1>
+                        <p className="text-slate-400 text-[8.5px] font-bold tracking-[0.2em] uppercase text-center notranslate" translate="no">
+                            SISTEMA CONTABLE EN LA NUBE V2.0
+                        </p>
+                    </div>
 
-                        {/* Selector de Modo: Profesional vs Estudiante (Ambas opciones visibles y clickeables lado a lado) */}
-                        <div className="my-1.5 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/70 flex items-center gap-1 select-none">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsStudentModeActive(false);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
-                                    !isStudentModeActive 
-                                        ? 'bg-[#1d4ed8] text-white shadow-md shadow-blue-600/30' 
-                                        : 'text-slate-500 hover:text-slate-800'
+                    {/* Control Único Segmentado: Iniciar Sesión / Crear Cuenta (Eliminado doble encajonado) */}
+                    <div className="bg-slate-100/90 p-1 rounded-xl flex items-center mb-2 border border-slate-200/70 select-none">
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setIsLogin(true);
+                                setErrorAlert(null);
+                                setLoginPassword('');
+                            }}
+                            className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
+                                isLogin 
+                                    ? 'bg-white text-[#1d4ed8] shadow-xs font-black' 
+                                    : 'text-slate-500 hover:text-slate-800'
                                 }`}
-                            >
-                                <Building2 size={13} className={!isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Profesional</span>
-                            </button>
+                        >
+                            Iniciar Sesión
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setIsLogin(false);
+                                setErrorAlert(null);
+                                setRegisterPassword('');
+                                setRegisterConfirmPassword('');
+                            }}
+                            className={`flex-1 py-1.5 text-center text-xs font-bold transition-all rounded-lg cursor-pointer ${
+                                !isLogin 
+                                    ? 'bg-white text-[#1d4ed8] shadow-xs font-black' 
+                                    : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            Crear Cuenta
+                        </button>
+                    </div>
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsStudentModeActive(true);
-                                    setErrorAlert(null);
-                                }}
-                                className={`flex-1 py-1.5 px-2.5 rounded-lg text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer outline-none ${
-                                    isStudentModeActive 
-                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                                        : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                            >
-                                <GraduationCap size={14} className={isStudentModeActive ? 'text-white' : 'text-slate-400'} />
-                                <span>Estudiante</span>
-                            </button>
-                        </div>
+                    {/* Selector Sutil de Modo: Profesional vs Estudiante */}
+                    <div className="flex items-center justify-center gap-4 mb-2.5 text-[11px] font-bold text-slate-600 select-none">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
+                            <input 
+                                type="radio" 
+                                name="account_mode" 
+                                checked={!isStudentModeActive} 
+                                onChange={() => { setIsStudentModeActive(false); setErrorAlert(null); }} 
+                                className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                            />
+                            <Building2 size={13} className={!isStudentModeActive ? "text-blue-600" : "text-slate-400"} />
+                            <span className={!isStudentModeActive ? "text-blue-900 font-black" : "text-slate-500"}>Modo Profesional</span>
+                        </label>
+                        <span className="text-slate-300 font-light">•</span>
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
+                            <input 
+                                type="radio" 
+                                name="account_mode" 
+                                checked={isStudentModeActive} 
+                                onChange={() => { setIsStudentModeActive(true); setErrorAlert(null); }} 
+                                className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
+                            />
+                            <GraduationCap size={14} className={isStudentModeActive ? "text-indigo-600" : "text-slate-400"} />
+                            <span className={isStudentModeActive ? "text-indigo-900 font-black" : "text-slate-500"}>Modo Estudiante</span>
+                        </label>
+                    </div>
 
-                        {/* Tabs: Iniciar Sesión / Registrarse */}
-                        <div className="flex mb-2 border-b border-slate-200/80 pb-0.5">
-                            <button 
-                                type="button"
-                                onClick={() => {
-                                    setIsLogin(true);
-                                    setErrorAlert(null);
-                                    setLoginPassword('');
-                                }}
-                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                    isLogin 
-                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                                    }`}
-                            >
-                                Iniciar Sesión
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={() => {
-                                    setIsLogin(false);
-                                    setErrorAlert(null);
-                                    setRegisterPassword('');
-                                    setRegisterConfirmPassword('');
-                                }}
-                                className={`flex-1 py-1 text-center text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                    !isLogin 
-                                        ? 'text-[#1d4ed8] border-b-2 border-[#1d4ed8] -mb-[2px]' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                                    }`}
-                            >
-                                Crear Cuenta
-                            </button>
-                        </div>
-
-                        {/* Botón Autenticación con Google (Inmediatamente debajo de los tabs) */}
+                    {/* Botón Autenticación con Google (SOLO VISIBLE EN INICIAR SESIÓN) */}
+                    {isLogin && (
                         <div className="mb-2 space-y-1.5">
                             <button
                                 type="button"
@@ -782,244 +775,245 @@ export const Login: React.FC = () => {
                                 <div className="border-t border-slate-200/90 w-full"></div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Formulario */}
-                        <form onSubmit={handleSubmit} className="space-y-1.5" autoComplete="on">
-                            {errorAlert && (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2.5 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
-                                    <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
-                                    <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
-                                </div>
-                            )}
+                    {/* Formulario */}
+                    <form onSubmit={handleSubmit} className="space-y-1.5" autoComplete="on">
+                        {errorAlert && (
+                            <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs py-1.5 px-2.5 rounded-xl flex items-start gap-1.5 animate-in fade-in duration-200">
+                                <span className="text-rose-600 mt-0.5 text-xs shrink-0">⚠️</span>
+                                <div className="flex-1 font-medium leading-tight text-[11px]">{errorAlert}</div>
+                            </div>
+                        )}
 
-                            {!isLogin && (
-                                <div className="space-y-0.5">
-                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                        <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-                                        <input 
-                                            type="text"
-                                            id="register_name"
-                                            name="register_name"
-                                            required
-                                            autoComplete="name"
-                                            placeholder="Ej. Juan Pérez"
-                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
-                                            value={registerName}
-                                            onChange={e => setRegisterName(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {!isLogin && !isStudentModeActive && (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Teléfono (+51)</label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                            <Phone className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                                            <input 
-                                                type="tel"
-                                                id="register_phone"
-                                                name="register_phone"
-                                                required
-                                                maxLength={9}
-                                                inputMode="numeric"
-                                                autoComplete="tel"
-                                                placeholder="923 887 478"
-                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                value={registerPhone}
-                                                onChange={e => setRegisterPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">RUC / DNI <span className="text-[8px] text-slate-400 font-normal">(Opc.)</span></label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                            <Building2 className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                                            <input 
-                                                type="text"
-                                                id="register_document"
-                                                name="register_document"
-                                                maxLength={11}
-                                                inputMode="numeric"
-                                                autoComplete="off"
-                                                placeholder="2060... o DNI"
-                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
-                                                value={registerDocumentNumber}
-                                                onChange={e => setRegisterDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Campo Correo Electrónico */}
+                        {!isLogin && (
                             <div className="space-y-0.5">
-                                <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
-                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                    <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Nombre Completo</label>
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                    <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                                     <input 
-                                        type="email"
-                                        id={isLogin ? "login_email" : "register_email"}
-                                        name={isLogin ? "login_email" : "register_email"}
+                                        type="text"
+                                        id="register_name"
+                                        name="register_name"
                                         required
-                                        autoComplete="email"
-                                        placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
+                                        autoComplete="name"
+                                        placeholder="Ej. Juan Pérez"
                                         className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
-                                        value={isLogin ? loginEmail : registerEmail}
-                                        onChange={e => isLogin ? setLoginEmail(e.target.value) : setRegisterEmail(e.target.value)}
+                                        value={registerName}
+                                        onChange={e => setRegisterName(e.target.value)}
                                     />
                                 </div>
                             </div>
+                        )}
 
-                            {/* Campos Contraseña y Confirmación */}
-                            {!isLogin && !isStudentModeActive ? (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {/* Contraseña */}
-                                    <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                            <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                                            <input 
-                                                type={showPassword ? "text" : "password"}
-                                                id="register_password"
-                                                name="register_password"
-                                                required
-                                                autoComplete="new-password"
-                                                placeholder="••••••••"
-                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-5"
-                                                value={registerPassword}
-                                                onChange={e => setRegisterPassword(e.target.value)}
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                                                title={showPassword ? "Ocultar" : "Mostrar"}
-                                            >
-                                                {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Confirmar Contraseña */}
-                                    <div className="space-y-0.5">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Confirmar</label>
-                                        <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                            <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                                            <input 
-                                                type={showConfirmPassword ? "text" : "password"}
-                                                id="register_confirm_password"
-                                                name="register_confirm_password"
-                                                required
-                                                autoComplete="new-password"
-                                                placeholder="••••••••"
-                                                className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-5"
-                                                value={registerConfirmPassword}
-                                                onChange={e => setRegisterConfirmPassword(e.target.value)}
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                                                title={showConfirmPassword ? "Ocultar" : "Mostrar"}
-                                            >
-                                                {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                                            </button>
-                                        </div>
+                        {!isLogin && !isStudentModeActive && (
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-0.5">
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Teléfono (+51)</label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                        <Phone className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                                        <input 
+                                            type="tel"
+                                            id="register_phone"
+                                            name="register_phone"
+                                            required
+                                            maxLength={9}
+                                            inputMode="numeric"
+                                            autoComplete="tel"
+                                            placeholder="923 887 478"
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
+                                            value={registerPhone}
+                                            onChange={e => setRegisterPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                        />
                                     </div>
                                 </div>
-                            ) : (
+
                                 <div className="space-y-0.5">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
-                                        {!isLogin && checkPasswordStrength(registerPassword).isValid && (
-                                            <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
-                                                <CheckCircle2 size={11} /> Segura
-                                            </span>
-                                        )}
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">RUC / DNI <span className="text-[8px] text-slate-400 font-normal">(Opc.)</span></label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                        <Building2 className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                                        <input 
+                                            type="text"
+                                            id="register_document"
+                                            name="register_document"
+                                            maxLength={11}
+                                            inputMode="numeric"
+                                            autoComplete="off"
+                                            placeholder="2060... o DNI"
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-mono"
+                                            value={registerDocumentNumber}
+                                            onChange={e => setRegisterDocumentNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                                        />
                                     </div>
-                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-2.5 py-1.5 shadow-2xs">
-                                        <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Campo Correo Electrónico */}
+                        <div className="space-y-0.5">
+                            <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Correo Electrónico</label>
+                            <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                <input 
+                                    type="email"
+                                    id={isLogin ? "login_email" : "register_email"}
+                                    name={isLogin ? "login_email" : "register_email"}
+                                    required
+                                    autoComplete="email"
+                                    placeholder={isStudentModeActive ? "estudiante@universidad.edu.pe" : "usuario@empresa.com"}
+                                    className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium"
+                                    value={isLogin ? loginEmail : registerEmail}
+                                    onChange={e => isLogin ? setLoginEmail(e.target.value) : setRegisterEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Campos Contraseña y Confirmación */}
+                        {!isLogin && !isStudentModeActive ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                {/* Contraseña */}
+                                <div className="space-y-0.5">
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                        <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
                                         <input 
                                             type={showPassword ? "text" : "password"}
-                                            id={isLogin ? "login_password" : "register_password"}
-                                            name={isLogin ? "login_password" : "register_password"}
+                                            id="register_password"
+                                            name="register_password"
                                             required
-                                            autoComplete={isLogin ? "current-password" : "new-password"}
-                                            placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
+                                            autoComplete="new-password"
+                                            placeholder="••••••••"
                                             className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
-                                            value={isLogin ? loginPassword : registerPassword}
-                                            onChange={e => isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
+                                            value={registerPassword}
+                                            onChange={e => setRegisterPassword(e.target.value)}
                                         />
-                                        <div className="absolute right-2.5 flex items-center gap-1">
-                                            {!isLogin && checkPasswordStrength(registerPassword).isValid && (
-                                                <CheckCircle2 size={14} className="text-emerald-500" />
-                                            )}
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5"
-                                                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                                            >
-                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                                            </button>
-                                        </div>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5 flex items-center justify-center"
+                                            title={showPassword ? "Ocultar" : "Mostrar"}
+                                        >
+                                            {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                                        </button>
                                     </div>
                                 </div>
-                            )}
 
-                            {!isLogin && registerPassword.length > 0 && (
-                                <PasswordStrengthChecker password={registerPassword} />
-                            )}
-
-                            {isLogin && (
-                                <div className="flex items-center justify-end px-1">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => {
-                                            setForgotEmail(loginEmail);
-                                            setShowForgotPasswordModal(true);
-                                            setForgotStep(1);
-                                            setForgotOtpCode('');
-                                            setForgotNewPassword('');
-                                            setForgotConfirmPassword('');
-                                            setForgotError(null);
-                                            setForgotMessage(null);
-                                            setDevCodeNotice(null);
-                                            setResendCooldown(0);
-                                        }} 
-                                        className="text-[#1d4ed8] hover:underline transition-colors font-bold cursor-pointer text-[11px]"
-                                    >
-                                        ¿Olvidaste tu clave?
-                                    </button>
+                                {/* Confirmar Contraseña */}
+                                <div className="space-y-0.5">
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Confirmar</label>
+                                    <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                        <Lock className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                                        <input 
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            id="register_confirm_password"
+                                            name="register_confirm_password"
+                                            required
+                                            autoComplete="new-password"
+                                            placeholder="••••••••"
+                                            className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-7"
+                                            value={registerConfirmPassword}
+                                            onChange={e => setRegisterConfirmPassword(e.target.value)}
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5 flex items-center justify-center"
+                                            title={showConfirmPassword ? "Ocultar" : "Mostrar"}
+                                        >
+                                            {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
+                        ) : (
+                            <div className="space-y-0.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-bold text-slate-600 ml-1 uppercase tracking-wider block">Contraseña</label>
+                                    {!isLogin && checkPasswordStrength(registerPassword).isValid && (
+                                        <span className="text-[8.5px] font-bold uppercase text-emerald-600 flex items-center gap-1">
+                                            <CheckCircle2 size={11} /> Segura
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="relative flex items-center rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-3 focus-within:ring-blue-500/10 transition-all px-3 py-2 shadow-2xs">
+                                    <Lock className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                                    <input 
+                                        type={showPassword ? "text" : "password"}
+                                        id={isLogin ? "login_password" : "register_password"}
+                                        name={isLogin ? "login_password" : "register_password"}
+                                        required
+                                        autoComplete={isLogin ? "current-password" : "new-password"}
+                                        placeholder={!isLogin ? "Mín. 8 caracteres, mayúscula, núm y símbolo" : "••••••••"}
+                                        className="w-full bg-transparent placeholder:text-slate-400 text-xs text-slate-900 focus:outline-none font-medium pr-8"
+                                        value={isLogin ? loginPassword : registerPassword}
+                                        onChange={e => isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
+                                    />
+                                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                        {!isLogin && checkPasswordStrength(registerPassword).isValid && (
+                                            <CheckCircle2 size={14} className="text-emerald-500" />
+                                        )}
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-0.5 flex items-center justify-center"
+                                            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                        >
+                                            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                            <button 
-                                type="submit"
-                                disabled={isLoading || isAuthSuccessLoading}
-                                className={`w-full font-bold py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
-                                    isStudentModeActive
-                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/20'
-                                        : 'bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] hover:from-[#1e40af] hover:to-[#1d4ed8] text-white shadow-blue-600/25'
-                                } active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none`}
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <>
-                                        {isLogin 
-                                            ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
-                                            : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
-                                        }
-                                        <ArrowRight className="w-4 h-4" />
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                        {!isLogin && registerPassword.length > 0 && (
+                            <PasswordStrengthChecker password={registerPassword} />
+                        )}
+
+                        {isLogin && (
+                            <div className="flex items-center justify-end px-1">
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        setForgotEmail(loginEmail);
+                                        setShowForgotPasswordModal(true);
+                                        setForgotStep(1);
+                                        setForgotOtpCode('');
+                                        setForgotNewPassword('');
+                                        setForgotConfirmPassword('');
+                                        setForgotError(null);
+                                        setForgotMessage(null);
+                                        setDevCodeNotice(null);
+                                        setResendCooldown(0);
+                                    }} 
+                                    className="text-[#1d4ed8] hover:underline transition-colors font-bold cursor-pointer text-[11px]"
+                                >
+                                    ¿Olvidaste tu clave?
+                                </button>
+                            </div>
+                        )}
+
+                        <button 
+                            type="submit"
+                            disabled={isLoading || isAuthSuccessLoading}
+                            className={`w-full font-bold py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer text-xs uppercase tracking-wider ${
+                                isStudentModeActive
+                                    ? 'bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-indigo-600/20'
+                                    : 'bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] hover:from-[#1e40af] hover:to-[#1d4ed8] text-white shadow-blue-600/25'
+                            } active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none`}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <>
+                                    {isLogin 
+                                        ? isStudentModeActive ? 'Entrar como Estudiante' : 'Entrar al Sistema' 
+                                        : isStudentModeActive ? 'Registrarse como Estudiante' : 'Crear Cuenta Profesional'
+                                    }
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
+                        </button>
+                    </form>
 
                     {/* Avisos Legales y Derechos */}
                     <div className="mt-2 text-center space-y-0.5">
