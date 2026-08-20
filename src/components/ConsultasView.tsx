@@ -3,6 +3,7 @@ import { webApiBridge } from '../services/apiBridge';
 import { useStore } from '../store';
 import { toast } from 'react-hot-toast';
 import PageHeader from './ui/PageHeader';
+import ModernSelect from './ui/ModernSelect';
 import CpeVoucherModal from './cpe/CpeVoucherModal';
 import ConsultasMasivasSheet from './cpe/ConsultasMasivasSheet';
 import {
@@ -48,7 +49,10 @@ import {
   Sparkles,
   RotateCcw,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Hash,
+  Clock,
+  Filter
 } from 'lucide-react';
 
 interface ConsultasViewProps {
@@ -92,6 +96,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [showRecentSelector, setShowRecentSelector] = useState(true);
+  const [tableSearch, setTableSearch] = useState('');
 
   // ═══ Control de Scroll Horizontal Perenne y Sincronizado ═══
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -136,24 +141,6 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     });
   };
 
-  const handleStickyScroll = () => {
-    if (isSyncingScroll.current) return;
-    isSyncingScroll.current = true;
-    if (tableContainerRef.current && stickyScrollbarRef.current) {
-      tableContainerRef.current.scrollLeft = stickyScrollbarRef.current.scrollLeft;
-    }
-    updateScrollInfo();
-    requestAnimationFrame(() => {
-      isSyncingScroll.current = false;
-    });
-  };
-
-  const scrollTableBy = (delta: number) => {
-    if (!tableContainerRef.current) return;
-    tableContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
-  };
-
-  // Observador de dimensiones para mantener la barra sincronizada
   useEffect(() => {
     const el = tableContainerRef.current;
     if (!el) return;
@@ -443,7 +430,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
         updateResultados((prev: any[]) => [resultObj, ...prev.filter((r: any) => r.id !== resultObj.id)]);
         setSelectedDocForPreview(resultObj);
-        toast.success(`Comprobante ${d.serie}-${d.numero} verificado: ${d.estado} en 250ms`);
+        toast.success(`Comprobante ${d.serie}-${d.numero} verificado: ${d.estado}`);
       } else {
         const errorObj = {
           id: `ind-err-${Date.now()}`,
@@ -511,6 +498,20 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
     return { total, aceptados, anulados, otros };
   }, [resultados]);
 
+  // Filtrado en tabla individual
+  const filteredResultados = useMemo(() => {
+    if (!tableSearch.trim()) return resultados;
+    const q = tableSearch.toLowerCase().trim();
+    return resultados.filter((r: any) => {
+      const ruc = (r.rucEmisor || '').toLowerCase();
+      const razon = (r.razonSocial || '').toLowerCase();
+      const serie = (r.serie || '').toLowerCase();
+      const numero = String(r.numero || '').toLowerCase();
+      const estado = (r.estado || '').toLowerCase();
+      return ruc.includes(q) || razon.includes(q) || serie.includes(q) || numero.includes(q) || estado.includes(q);
+    });
+  }, [resultados, tableSearch]);
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative overflow-hidden">
       {/* ═══ Header Oficial con Estándar SoftContable ═══ */}
@@ -518,22 +519,22 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
         icon={<FileSearch size={18} />}
         title="Consultas y Descarga CPE"
         badge={
-          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black tracking-widest uppercase">
+          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
             SUNAT CLAVE SOL
           </span>
         }
         subtitle={
           activeCompany ? (
-            <span className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-2 flex-wrap text-xs">
               <span className="text-app-text font-bold">{activeCompany.name}</span>
-              <span>• RUC: {activeCompany.ruc}</span>
+              <span className="text-app-muted">• RUC: {activeCompany.ruc}</span>
               {(activeCompany.sol_user && activeCompany.sol_pass) ? (
-                <span className="inline-flex items-center gap-1 text-[9px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  <ShieldCheck size={11} /> Clave SOL Conectada
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                  <ShieldCheck size={12} /> Clave SOL Conectada
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[9px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                  <AlertCircle size={11} /> Requiere Usuario / Clave SOL
+                <span className="inline-flex items-center gap-1 text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                  <AlertCircle size={12} /> Requiere Usuario / Clave SOL
                 </span>
               )}
             </span>
@@ -542,11 +543,11 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
           )
         }
         actions={
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {resultados.length > 0 && (
               <button
                 onClick={handleLimpiarHistorial}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer shadow-2xs"
                 title="Limpiar resultados de esta sesión"
               >
                 <Trash2 size={13} />
@@ -555,7 +556,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             )}
             <button
               onClick={() => setShowRecentSelector(!showRecentSelector)}
-              className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+              className={`flex items-center gap-1.5 h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
                 showRecentSelector
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : 'bg-app-surface text-app-muted hover:text-app-text border-app-border'
@@ -569,10 +570,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       />
 
       {/* ═══ Contenedor Principal con Scrollbar Fluido y 100% de Ancho ═══ */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
-        <div className="max-w-[1600px] mx-auto flex flex-col gap-5 w-full">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-5 md:p-6">
+        <div className="max-w-[1600px] mx-auto flex flex-col gap-4 sm:gap-5 w-full">
 
-          {/* ═══ BARRA DE CARGA Y PROGRESO RESPONSIVE (SIN BLOQUEAR EL HEADER) ═══ */}
+          {/* ═══ BARRA DE CARGA Y PROGRESO RESPONSIVE ═══ */}
           {loading && (
             <div className="card-elevated p-3.5 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-500/5 border border-blue-500/30 rounded-2xl flex flex-col gap-2 animate-fade-in shadow-md">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -595,41 +596,41 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
           {/* ═══ MÓDULO: COMPROBANTES REGISTRADOS EN SIRE (AÑOS Y MESES) ═══ */}
           {showRecentSelector && (
-            <div className="card-elevated p-4 flex flex-col gap-3.5 animate-fade-in bg-app-surface/60 border border-app-border rounded-2xl">
+            <div className="card-elevated p-4 sm:p-5 flex flex-col gap-3.5 animate-fade-in bg-app-surface/80 border border-app-border rounded-2xl shadow-sm">
               
-              {/* Cabecera del SIRE con Selector de Años Estilizado */}
-              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-app-border/60 pb-2.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-app-text">
-                    COMPROBANTES REGISTRADOS EN SIRE
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase tracking-wider">
-                    {yearPurchases.length} comprobantes en {selectedYear}
-                  </span>
+              {/* Cabecera del SIRE con Selector de Años con ModernSelect */}
+              <div className="flex items-center justify-between flex-wrap gap-3 border-b border-app-border/60 pb-3">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                    <Layers size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                      <span>COMPROBANTES REGISTRADOS EN SIRE</span>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black uppercase font-mono">
+                        {yearPurchases.length} en {selectedYear}
+                      </span>
+                    </h3>
+                  </div>
                 </div>
 
-                {/* Selector de Año con Contenedor Estilizado y Separación Limpia */}
+                {/* Selector de Año con ModernSelect (Requerimiento 2) */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black tracking-wider text-app-muted uppercase">Ejercicio / Año:</span>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-app-bg hover:bg-app-hover border border-app-border hover:border-blue-500/40 rounded-xl transition-all shadow-2xs">
-                    <Calendar size={14} className="text-blue-500 shrink-0" />
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => {
-                        setSelectedYear(e.target.value);
-                        setSelectedSireMonth(null);
-                      }}
-                      className="bg-transparent text-xs font-black font-mono tracking-wider text-app-text outline-none cursor-pointer py-0.5 pr-1 border-none focus:ring-0"
-                    >
-                      {availableYears.map(y => (
-                        <option key={y} value={y} className="bg-app-surface text-app-text font-mono font-bold">
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="text-app-muted shrink-0 pointer-events-none" />
-                  </div>
+                  <ModernSelect
+                    value={selectedYear}
+                    options={availableYears.map(y => ({
+                      value: y,
+                      label: y
+                    }))}
+                    onChange={(val) => {
+                      setSelectedYear(String(val));
+                      setSelectedSireMonth(null);
+                    }}
+                    icon={<Calendar size={13} />}
+                    size="sm"
+                    variant="compact"
+                  />
                 </div>
               </div>
 
@@ -648,10 +649,10 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         onClick={() => {
                           if (hasItems) setSelectedSireMonth(m.key);
                         }}
-                        className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all select-none ${
+                        className={`p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all select-none ${
                           hasItems
-                            ? 'bg-app-bg hover:bg-blue-500/10 border-app-border hover:border-blue-500/40 cursor-pointer shadow-2xs group'
-                            : 'bg-app-bg/40 border-app-border/40 opacity-60 cursor-not-allowed'
+                            ? 'bg-app-bg hover:bg-blue-500/10 border-app-border hover:border-blue-500/40 cursor-pointer shadow-2xs group hover:-translate-y-0.5'
+                            : 'bg-app-bg/40 border-app-border/40 opacity-50 cursor-not-allowed'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -675,7 +676,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         {hasItems ? (
                           <div className="text-[9px] font-bold text-blue-500 flex items-center gap-1 mt-0.5">
                             <span>Ver facturas</span>
-                            <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                            <ArrowRight size={10} className="group-hover:translate-x-1 transition-transform" />
                           </div>
                         ) : (
                           <div className="text-[9px] text-app-muted italic mt-0.5">
@@ -687,13 +688,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                   })}
                 </div>
               ) : (
-                /* VISTA 2: DRILL-DOWN DE COMPROBANTES DEL MES SELECCIONADO */
+                /* VISTA 2: DRILL-DOWN DE COMPROBANTES DEL MES SELECCIONADO (Sin botón eliminado) */
                 <div className="flex flex-col gap-3 animate-fade-in">
-                  <div className="flex items-center justify-between bg-blue-500/5 border border-blue-500/20 p-2.5 rounded-xl flex-wrap gap-2">
+                  <div className="flex items-center justify-between bg-blue-500/5 border border-blue-500/20 p-3 rounded-xl flex-wrap gap-2">
                     <div className="flex items-center gap-2.5">
                       <button
                         onClick={() => setSelectedSireMonth(null)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-app-surface hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs active:scale-98"
                       >
                         <ArrowLeft size={13} />
                         <span>Volver a los meses</span>
@@ -707,16 +708,6 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         </span>
                       </div>
                     </div>
-
-                    {monthPurchases.length > 0 && (
-                      <button
-                        onClick={() => setActiveTab('consultas_masivas')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
-                      >
-                        <Sparkles size={13} className="text-amber-300" />
-                        <span>Cargar este Mes en Consultas Masivas ({monthPurchases.length})</span>
-                      </button>
-                    )}
                   </div>
 
                   {/* Grid de comprobantes de este mes */}
@@ -724,7 +715,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     {monthPurchases.map((p: any) => (
                       <div
                         key={p.id}
-                        className="flex items-center justify-between p-2.5 bg-app-bg hover:bg-blue-500/5 border border-app-border hover:border-blue-500/30 rounded-xl transition-all group"
+                        className="flex items-center justify-between p-2.5 bg-app-bg hover:bg-blue-500/5 border border-app-border hover:border-blue-500/30 rounded-xl transition-all group shadow-2xs"
                       >
                         <div className="flex flex-col min-w-0 pr-2">
                           <span className="text-[11px] font-black text-app-text tracking-tight truncate">
@@ -766,69 +757,77 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
           {/* ═══ Resumen de Estadísticas (Compactas y Proporcionadas) ═══ */}
           {resultados.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-blue-500 uppercase tracking-wider">Total Consultadas</span>
-                  <span className="text-base font-black font-mono text-app-text leading-tight mt-0.5">{stats.total}</span>
+                  <span className="text-base sm:text-lg font-black font-mono text-app-text leading-tight mt-0.5">{stats.total}</span>
                 </div>
-                <Layers className="text-blue-500/40" size={18} />
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                  <Layers size={16} />
+                </div>
               </div>
 
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">Aceptadas (Válidas)</span>
-                  <span className="text-base font-black font-mono text-emerald-500 leading-tight mt-0.5">{stats.aceptados}</span>
+                  <span className="text-base sm:text-lg font-black font-mono text-emerald-500 leading-tight mt-0.5">{stats.aceptados}</span>
                 </div>
-                <CheckCircle2 className="text-emerald-500/40" size={18} />
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <CheckCircle2 size={16} />
+                </div>
               </div>
 
-              <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+              <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider">Anuladas / Rechazadas</span>
-                  <span className="text-base font-black font-mono text-rose-500 leading-tight mt-0.5">{stats.anulados}</span>
+                  <span className="text-base sm:text-lg font-black font-mono text-rose-500 leading-tight mt-0.5">{stats.anulados}</span>
                 </div>
-                <AlertCircle className="text-rose-500/40" size={18} />
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
+                  <AlertCircle size={16} />
+                </div>
               </div>
 
-              <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+              <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
                 <div className="flex flex-col">
                   <span className="text-[9px] font-black text-purple-500 uppercase tracking-wider">Otros / Observados</span>
-                  <span className="text-base font-black font-mono text-purple-500 leading-tight mt-0.5">{stats.otros}</span>
+                  <span className="text-base sm:text-lg font-black font-mono text-purple-500 leading-tight mt-0.5">{stats.otros}</span>
                 </div>
-                <FileCheck className="text-purple-500/40" size={18} />
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                  <FileCheck size={16} />
+                </div>
               </div>
             </div>
           )}
 
-          {/* ═══ SELECTOR PRINCIPAL DE HOJAS: SOLO 2 PESTAÑAS ═══ */}
-          <div className="flex items-center gap-2 p-1 bg-app-surface border border-app-border rounded-2xl shadow-xs">
+          {/* ═══ SELECTOR PRINCIPAL DE HOJAS: 2 PESTAÑAS MODERNAS Y RESPONSIVAS ═══ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-app-surface border border-app-border rounded-2xl shadow-xs">
             <button
               onClick={() => setActiveTab('individual')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 activeTab === 'individual'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-md'
                   : 'text-app-muted hover:text-app-text hover:bg-app-hover'
               }`}
             >
-              <Search size={15} />
+              <Search size={16} />
               <span>1. CONSULTA INDIVIDUAL</span>
             </button>
 
             <button
               onClick={() => setActiveTab('consultas_masivas')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer relative ${
+              className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer relative ${
                 activeTab === 'consultas_masivas'
                   ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white shadow-md'
                   : 'text-app-muted hover:text-app-text hover:bg-app-hover'
               }`}
             >
-              <Sparkles size={15} className={activeTab === 'consultas_masivas' ? 'text-amber-300 animate-pulse' : 'text-purple-400'} />
+              <Sparkles size={16} className={activeTab === 'consultas_masivas' ? 'text-amber-300 animate-pulse' : 'text-purple-400'} />
               <span>2. CONSULTAS MASIVAS</span>
-              <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${
+              <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest font-mono ${
                 activeTab === 'consultas_masivas' ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
               }`}>
-                API INVERSA • HTTP DIRECTO
+                API INVERSA
               </span>
             </button>
           </div>
@@ -875,7 +874,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     </div>
 
                     {isTipoDocOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
                         {TIPO_DOC_OPTIONS.map((opt) => {
                           const isSelected = opt.value === formData.tipoDoc;
                           return (
@@ -938,7 +937,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         onChange={handleInputChange}
                         placeholder="F001"
                         maxLength={4}
-                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text uppercase outline-none focus:border-blue-500 transition-all shadow-2xs"
                       />
                     </div>
                     <div>
@@ -950,7 +949,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         value={formData.numero}
                         onChange={handleInputChange}
                         placeholder="84"
-                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all shadow-2xs"
                       />
                     </div>
                   </div>
@@ -965,7 +964,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         name="fechaEmision"
                         value={formData.fechaEmision}
                         onChange={handleInputChange}
-                        className="w-full px-2.5 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                        className="w-full px-2.5 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-bold text-app-text outline-none focus:border-blue-500 transition-all shadow-2xs"
                       />
                     </div>
                     <div>
@@ -979,7 +978,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         value={formData.total}
                         onChange={handleInputChange}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 bg-app-bg border border-app-border rounded-xl text-xs font-mono font-bold text-app-text outline-none focus:border-blue-500 transition-all shadow-2xs"
                       />
                     </div>
                   </div>
@@ -1004,7 +1003,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
             <div className="col-span-1 lg:col-span-8 flex flex-col">
               <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm min-h-[480px] flex flex-col relative">
                 
-                {/* Cabecera del Historial */}
+                {/* Cabecera del Historial con Buscador */}
                 <div className="px-4 py-3 border-b border-app-border bg-app-bg/40 flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={15} className="text-blue-500 shrink-0" />
@@ -1013,9 +1012,21 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-mono shrink-0">
-                      {resultados.length} registros
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {resultados.length > 0 && (
+                      <div className="flex items-center gap-1 px-2.5 py-1 bg-app-bg border border-app-border rounded-xl focus-within:border-blue-500 shadow-2xs">
+                        <Search size={12} className="text-app-muted" />
+                        <input
+                          type="text"
+                          value={tableSearch}
+                          onChange={(e) => setTableSearch(e.target.value)}
+                          placeholder="Filtrar..."
+                          className="bg-transparent text-xs text-app-text outline-none w-28 sm:w-36 border-none focus:ring-0 p-0"
+                        />
+                      </div>
+                    )}
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl font-mono shrink-0">
+                      {filteredResultados.length} {filteredResultados.length === 1 ? 'registro' : 'registros'}
                     </span>
                   </div>
                 </div>
@@ -1032,13 +1043,13 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     isDragging ? 'cursor-grabbing' : 'cursor-grab'
                   }`}
                 >
-                  {resultados.length === 0 ? (
+                  {filteredResultados.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-80 text-app-muted p-8 text-center">
                       <div className="p-4 rounded-2xl bg-app-bg border border-app-border mb-3">
                         <FileSearch size={36} className="text-app-muted/50" />
                       </div>
                       <p className="text-xs font-black uppercase tracking-wider text-app-text">
-                        No hay consultas registradas en esta sesión
+                        {resultados.length === 0 ? 'No hay consultas registradas en esta sesión' : 'No se encontraron resultados para el filtro'}
                       </p>
                       <p className="text-[11px] text-app-muted max-w-sm mt-1">
                         Utiliza el formulario de la izquierda o selecciona comprobantes de SIRE para consultar la validez contra SUNAT.
@@ -1066,7 +1077,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-app-border/40 text-xs">
-                        {resultados.map((res: any, idx: number) => {
+                        {filteredResultados.map((res: any, idx: number) => {
                           const isAceptado = res.estado === 'ACEPTADO';
                           const isAnulado = res.estado?.includes('ANULADO');
                           const isError = res.estado === 'ERROR' || res.estado === 'NO_EXISTE';
@@ -1216,7 +1227,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                                 </td>
                               </tr>
 
-                              {/* Fila Desplegable de Items Estructurada, Compacta y Alineada */}
+                              {/* Fila Desplegable de Items Estructurada */}
                               {isExpanded && hasItems && (
                                 <tr className="bg-blue-500/5">
                                   <td colSpan={15} className="p-3">
@@ -1283,7 +1294,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
         </div>
       </div>
 
-      {/* ═══ Modal Visor Oficial de PDF / Comprobante SUNAT (Diseño Propio Vectorial) ═══ */}
+      {/* ═══ Modal Visor Oficial de PDF / Comprobante SUNAT ═══ */}
       {selectedDocForPreview && (
         <CpeVoucherModal
           doc={selectedDocForPreview}

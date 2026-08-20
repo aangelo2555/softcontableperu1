@@ -5,6 +5,7 @@ import { webApiBridge } from '../../services/apiBridge';
 import { useStore } from '../../store';
 import { formatPEN } from '../ConsultasView';
 import CpeVoucherModal from './CpeVoucherModal';
+import ModernSelect from '../ui/ModernSelect';
 import {
   FileSpreadsheet,
   UploadCloud,
@@ -37,7 +38,9 @@ import {
   RotateCcw,
   ArrowLeft,
   ArrowRight,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Zap,
+  Clock
 } from 'lucide-react';
 
 interface ConsultasMasivasSheetProps {
@@ -312,7 +315,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     toast.success(`Se cargaron ${parsed.length} comprobantes de ${mesObj?.nombre} ${selectedSireYear} listos para consultar.`);
   };
 
-  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA DIRECTA (LATENCIA SEGURA) ═══
+  // ═══ EJECUCIÓN DE CONSULTA MASIVA CON API INVERSA DIRECTA ═══
   const handleEjecutarConsultaMasiva = async () => {
     if (!activeCompany?.ruc) {
       toast.error('Seleccione una empresa activa.');
@@ -363,7 +366,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
       const errores = res.stats?.errores || 0;
 
       if (errores > 0) {
-        toast(`Consulta finalizada: ${aceptados} de ${total} aceptados (${errores} con error transitorio). Puedes usar el botón "Refrescar Errores".`, { icon: '⚠️', duration: 5000 });
+        toast(`Consulta finalizada: ${aceptados} de ${total} aceptados (${errores} con error transitorio). Puedes usar "Refrescar Errores".`, { icon: '⚠️', duration: 5000 });
       } else {
         toast.success(`¡Consulta masiva completada! ${aceptados} de ${total} comprobantes aceptados.`);
       }
@@ -474,7 +477,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
   };
 
-  // ═══ DESCARGA DIRECTA DE XML OFICIAL SUNAT VÍA API INVERSA (/02) ═══
+  // ═══ DESCARGA DIRECTA DE XML OFICIAL SUNAT VÍA API INVERSA ═══
   const handleDescargarXmlDirecto = async (item: any) => {
     const rucEmisor = item.rucEmisor || item.doc_num || item.ruc;
     const tipoCpe = item.tipoCpe || item.tipo || item.tipo_doc || item.tipoDoc || '01';
@@ -603,7 +606,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
     }
   };
 
-  // ═══ EXPORTAR A EXCEL (ESTRUCTURA IDÉNTICA A LA IMAGEN) ═══
+  // ═══ EXPORTAR A EXCEL ═══
   const handleExportarExcel = () => {
     if (batchResults.length === 0) {
       toast.error('No hay resultados para exportar.');
@@ -676,7 +679,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
   }, [batchResults, filterStatus, searchFilter]);
 
   return (
-    <div className="flex flex-col gap-5 w-full animate-fade-in">
+    <div className="flex flex-col gap-4 sm:gap-5 w-full animate-fade-in">
       
       {/* ═══ PANEL DE ENTRADA Y FUENTES DE DATOS ═══ */}
       <div className="card-elevated bg-app-surface border border-app-border rounded-2xl p-4 sm:p-5 shadow-sm">
@@ -688,7 +691,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+              <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2 flex-wrap">
                 <span>CONSULTAS MASIVAS DE CPE</span>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
                   HTTP DIRECTO • MICROSERVICIOS SUNAT
@@ -703,7 +706,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           <div className="flex items-center gap-2">
             <button
               onClick={descargarPlantilla}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-app-bg hover:bg-app-hover border border-app-border text-app-text transition-all cursor-pointer shadow-2xs active:scale-98"
             >
               <Download size={13} className="text-blue-500" />
               <span>Plantilla Excel</span>
@@ -711,11 +714,11 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           </div>
         </div>
 
-        {/* SELECTOR DE 2 SUB-PESTAÑAS PRINCIPALES: EXCEL Y COMPRAS SIRE */}
-        <div className="grid grid-cols-2 gap-2 mt-4">
+        {/* SELECTOR DE 2 SUB-PESTAÑAS: EXCEL Y COMPRAS SIRE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
           <button
             onClick={() => setInputMode('excel')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+            className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
               inputMode === 'excel'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-app-bg text-app-muted hover:text-app-text border-app-border hover:border-blue-500/30'
@@ -727,7 +730,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
           <button
             onClick={() => setInputMode('sire')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+            className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
               inputMode === 'sire'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-app-bg text-app-muted hover:text-app-text border-app-border hover:border-blue-500/30'
@@ -740,10 +743,10 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
         {/* ═══ CONTENIDO SUB-PESTAÑA 1: CARGA DE ARCHIVO EXCEL ═══ */}
         {inputMode === 'excel' && (
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="mt-4 flex flex-col gap-3 animate-fade-in">
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-app-border hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer bg-app-bg/50 hover:bg-blue-500/5 transition-all flex flex-col items-center justify-center gap-2"
+              className="border-2 border-dashed border-app-border hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer bg-app-bg/50 hover:bg-blue-500/5 transition-all flex flex-col items-center justify-center gap-2 group shadow-2xs"
             >
               <input
                 ref={fileInputRef}
@@ -752,7 +755,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                 onChange={handleFileUpload}
                 className="hidden"
               />
-              <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
+              <div className="p-3.5 rounded-2xl bg-blue-500/10 text-blue-500 group-hover:scale-105 transition-transform">
                 <UploadCloud size={28} />
               </div>
               <div>
@@ -765,7 +768,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               </div>
               <button
                 type="button"
-                className="mt-1 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-xs transition-all"
+                className="mt-1 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-xs transition-all pointer-events-none"
               >
                 Seleccionar Archivo Excel
               </button>
@@ -773,10 +776,10 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
           </div>
         )}
 
-        {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE (SIN CALENDARIO DUPLICADO) ═══ */}
+        {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE (CON SELECTORES MODERNOS) ═══ */}
         {inputMode === 'sire' && (
-          <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/50 border border-app-border p-4 rounded-2xl animate-fade-in">
-            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-app-border">
+          <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/60 border border-app-border p-4 rounded-2xl animate-fade-in shadow-2xs">
+            <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-app-border/80">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                 <span className="text-xs font-black uppercase tracking-wider text-app-text">
@@ -784,46 +787,56 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Ejercicio:</span>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-app-surface border border-app-border rounded-xl">
-                  <Calendar size={13} className="text-blue-500" />
-                  <select
+              {/* Controles de selección con ModernSelect (Requerimiento 2 e Imagen 2 y 3) */}
+              <div className="flex items-center gap-3 flex-wrap">
+                
+                {/* Selector de Ejercicio con ModernSelect */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Ejercicio:</span>
+                  <ModernSelect
                     value={selectedSireYear}
-                    onChange={(e) => {
-                      setSelectedSireYear(e.target.value);
+                    options={availableYears.map(y => ({
+                      value: y,
+                      label: y
+                    }))}
+                    onChange={(val) => {
+                      setSelectedSireYear(String(val));
                       setSelectedSireMonth(null);
                       setStagedList([]);
                     }}
-                    className="bg-transparent text-xs font-black font-mono text-app-text outline-none cursor-pointer border-none py-0"
-                  >
-                    {availableYears.map(y => (
-                      <option key={y} value={y} className="bg-app-surface text-app-text font-mono">
-                        {y}
-                      </option>
-                    ))}
-                  </select>
+                    icon={<Calendar size={13} />}
+                    size="sm"
+                    variant="compact"
+                  />
                 </div>
 
-                <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Mes:</span>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-app-surface border border-app-border rounded-xl">
-                  <select
+                {/* Selector de Mes con ModernSelect (badges y conteo) */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-app-muted tracking-wider">Mes:</span>
+                  <ModernSelect
                     value={selectedSireMonth || ''}
-                    onChange={(e) => {
-                      if (e.target.value) handleSeleccionarMesSire(e.target.value);
-                    }}
-                    className="bg-transparent text-xs font-black font-mono text-app-text outline-none cursor-pointer border-none py-0"
-                  >
-                    <option value="" className="bg-app-surface text-app-text">-- Seleccionar Mes --</option>
-                    {MESES_INFO.map(m => {
+                    options={MESES_INFO.map(m => {
                       const count = sireYearPurchases.filter((p: any) => p.fecha?.startsWith(`${selectedSireYear}-${m.key}`)).length;
-                      return (
-                        <option key={m.key} value={m.key} className="bg-app-surface text-app-text font-mono">
-                          {m.nombre} ({count} compras)
-                        </option>
-                      );
+                      return {
+                        value: m.key,
+                        label: `${m.nombre}`,
+                        count: count,
+                        badge: 'compras',
+                        disabled: false
+                      };
                     })}
-                  </select>
+                    emptyLabel="-- Seleccionar Mes --"
+                    onChange={(val) => {
+                      if (val) {
+                        handleSeleccionarMesSire(String(val));
+                      } else {
+                        setSelectedSireMonth(null);
+                        setStagedList([]);
+                      }
+                    }}
+                    size="sm"
+                    variant="compact"
+                  />
                 </div>
 
                 <button
@@ -843,7 +856,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                     setStagedList(allParsed);
                     toast.success(`Se cargaron todos los ${allParsed.length} comprobantes del ejercicio ${selectedSireYear}.`);
                   }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white border border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-98"
                 >
                   Cargar Todo el Año ({sireYearPurchases.length})
                 </button>
@@ -851,14 +864,14 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             </div>
 
             <p className="text-[11px] text-app-muted">
-              💡 Puedes seleccionar el mes en el cajón superior de SIRE o en el selector desplegable de arriba para arrastrar automáticamente todos los comprobantes listos para consultar.
+              💡 Puedes seleccionar el mes en el selector desplegable de arriba para cargar automáticamente todos los comprobantes listos para consultar.
             </p>
           </div>
         )}
 
         {/* Resumen de Comprobantes Preparados para Consulta + Selector de Latencia */}
         {stagedList.length > 0 && (
-          <div className="mt-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-3 animate-fade-in">
+          <div className="mt-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-3 animate-fade-in shadow-2xs">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
@@ -901,7 +914,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                     }`}
                     title="3 concurrentes con 80ms delay. Para lotes pequeños."
                   >
-                    <Sparkles size={12} />
+                    <Zap size={12} />
                     <span>⚡ Rápido</span>
                   </button>
                   <button
@@ -914,6 +927,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                     }`}
                     title="1 concurrente con 300ms delay. Ideal para lotes masivos de >100 comprobantes."
                   >
+                    <Clock size={12} />
                     <span>🐢 Ultra Estable</span>
                   </button>
                 </div>
@@ -923,7 +937,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-emerald-500/10">
               <button
                 onClick={() => setStagedList([])}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer shadow-2xs active:scale-98"
               >
                 Descartar
               </button>
@@ -942,7 +956,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
         {/* Barra de Progreso en Vivo */}
         {processing && (
-          <div className="mt-4 p-3.5 bg-gradient-to-r from-blue-600/10 to-emerald-600/10 rounded-2xl border border-blue-500/30 flex flex-col gap-2 animate-pulse">
+          <div className="mt-4 p-3.5 bg-gradient-to-r from-blue-600/10 to-emerald-600/10 rounded-2xl border border-blue-500/30 flex flex-col gap-2 animate-pulse shadow-sm">
             <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-app-text">
               <span className="flex items-center gap-2">
                 <Loader2 size={14} className="animate-spin text-blue-500" />
@@ -995,14 +1009,14 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
         </div>
       )}
 
-      {/* ═══ TABLA DE RESULTADOS (ESTRUCTURA EXACTA DE LA PRIMERA IMAGEN / EXCEL) ═══ */}
+      {/* ═══ TABLA DE RESULTADOS MASIVOS ═══ */}
       {batchResults.length > 0 && (
         <div className="card-elevated bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm flex flex-col relative">
           
           {/* Cabecera y Filtros de la Tabla */}
           <div className="p-3.5 border-b border-app-border bg-app-bg/50 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex bg-app-bg border border-app-border rounded-xl p-0.5">
+              <div className="flex bg-app-bg border border-app-border rounded-xl p-0.5 shadow-2xs">
                 {(['ALL', 'ACEPTADO', 'ANULADO', 'NO_EXISTE', 'ERROR'] as const).map(st => (
                   <button
                     key={st}
@@ -1019,25 +1033,25 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               </div>
 
               {/* Input de Búsqueda */}
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-app-bg border border-app-border rounded-xl focus-within:border-blue-500">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-app-bg border border-app-border rounded-xl focus-within:border-blue-500 shadow-2xs">
                 <Search size={13} className="text-app-muted" />
                 <input
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
                   placeholder="Buscar RUC, serie o razón social..."
-                  className="bg-transparent text-xs text-app-text outline-none w-48 border-none focus:ring-0"
+                  className="bg-transparent text-xs text-app-text outline-none w-44 sm:w-56 border-none focus:ring-0"
                 />
               </div>
             </div>
 
-            {/* Acciones Masivas y Botón de Reintento de Errores (Point 3) */}
+            {/* Acciones Masivas y Botón de Reintento de Errores */}
             <div className="flex items-center gap-2 flex-wrap">
               {/* Botón Reintentar Errores si existen fallidos */}
               {errorResults.length > 0 && (
                 <button
                   onClick={handleReintentarErrores}
                   disabled={processing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white shadow-md transition-all cursor-pointer animate-pulse disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white shadow-md transition-all cursor-pointer animate-pulse disabled:opacity-50 active:scale-98"
                   title="Reintentar comprobantes que tuvieron error de procesamiento en SUNAT"
                 >
                   <RotateCcw size={13} className={processing ? 'animate-spin' : ''} />
@@ -1047,7 +1061,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
               <button
                 onClick={handleIncorporarACompras}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer active:scale-98"
                 title="Incorporar todos los comprobantes aceptados al registro de compras"
               >
                 <ArrowDownToLine size={13} />
@@ -1056,7 +1070,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
               <button
                 onClick={handleDescargarPdfMasivo}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all cursor-pointer active:scale-98"
                 title="Descargar todos los PDFs oficiales en un archivo ZIP"
               >
                 <FileText size={13} />
@@ -1065,7 +1079,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
               <button
                 onClick={handleDescargarXmlMasivo}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm transition-all cursor-pointer active:scale-98"
                 title="Descargar todos los XMLs oficiales en un archivo ZIP"
               >
                 <FileCode size={13} />
@@ -1074,7 +1088,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
               <button
                 onClick={handleExportarExcel}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer active:scale-98"
               >
                 <FileSpreadsheet size={13} />
                 <span>Exportar Excel</span>
@@ -1208,7 +1222,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                           {formatPEN(res.montoTotal || orig.monto || 0)}
                         </td>
 
-                        {/* ITEMS DETALLE (CLIC EN TODA LA CELDA PARA DESPLEGAR) */}
+                        {/* ITEMS DETALLE */}
                         <td 
                           onClick={() => hasItems && toggleRowExpand(rowId)}
                           className={`py-2 px-3 transition-colors ${hasItems ? 'cursor-pointer hover:bg-blue-500/10 select-none' : ''}`}
@@ -1267,7 +1281,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
                         </td>
                       </tr>
 
-                      {/* Fila Desplegable de Items Estructurada, Compacta y Alineada */}
+                      {/* Fila Desplegable de Items */}
                       {isExpanded && hasItems && (
                         <tr className="bg-blue-500/5">
                           <td colSpan={15} className="p-3">
