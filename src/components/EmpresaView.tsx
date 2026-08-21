@@ -13,7 +13,6 @@ import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
 import { evaluateRegime } from '../engine/regimeEngine';
-import PageHeader from './ui/PageHeader';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -164,40 +163,46 @@ const EmpresaView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
-      {/* ═══ TOP PAGE HEADER ═══ */}
-      <PageHeader
-        icon={<img src="assets/logo.png" alt="Logo" className="w-6 h-6 object-contain" />}
-        title="Panel de Control"
-        subtitle={`${currentCompany.name || 'Empresa'} — Periodo ${currentCompany.period || new Date().getFullYear()}`}
-        actions={
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveTab('COMPRAS')}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 shadow-2xs cursor-pointer active:scale-95"
-            >
-              <ShoppingCart size={15} />
-              <span>+ Compra</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('VENTAS')}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 shadow-2xs cursor-pointer active:scale-95"
-            >
-              <Tag size={15} />
-              <span>+ Venta</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('ASIENTOS')}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 shadow-2xs cursor-pointer active:scale-95"
-            >
-              <BookText size={15} />
-              <span>+ Asiento</span>
-            </button>
-          </div>
-        }
-      />
-
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
         <div className="max-w-7xl mx-auto p-4 sm:p-6 flex flex-col gap-6">
+
+          {/* ═══ HEADER ROW: TÍTULO Y ACCIONES RÁPIDAS ═══ */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-app-text">
+                PANEL DE CONTROL
+              </h1>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-app-muted mt-0.5">
+                <span>{currentCompany.name || 'EMPRESA REGISTRADA'} — Periodo {currentCompany.period || new Date().getFullYear()}</span>
+                <ChevronDown size={14} className="text-app-muted cursor-pointer hover:text-app-text" />
+              </div>
+            </div>
+
+            {/* Quick Action Pill Buttons */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={() => setActiveTab('COMPRAS')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <ShoppingCart size={15} />
+                <span>+ COMPRA</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('VENTAS')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <Tag size={15} />
+                <span>+ VENTA</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('ASIENTOS')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-2xs cursor-pointer active:scale-95"
+              >
+                <BookText size={15} />
+                <span>+ ASIENTO</span>
+              </button>
+            </div>
+          </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               FILA 1: TARJETAS KPI CON ONDAS SPARKLINES SVG
@@ -950,22 +955,6 @@ const EmpresaView: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* ═══════════════════════════════════════════════════════════════
-              FOOTER CORPORATIVO
-             ═══════════════════════════════════════════════════════════════ */}
-          <footer className="mt-8 pt-6 border-t border-app-border flex flex-col sm:flex-row items-center justify-between gap-4 text-[10.5px] text-app-muted font-semibold tracking-wider uppercase">
-            <p>© 2026 ANGELO THOMAS SERNA SIMEON - SOFTCONTABLE SAAS</p>
-            <div className="flex items-center gap-4 text-[10px]">
-              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Términos</span>
-              <span>•</span>
-              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Privacidad</span>
-              <span>•</span>
-              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Seguridad</span>
-              <span>•</span>
-              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Legal</span>
-            </div>
-          </footer>
 
         </div>
       </div>

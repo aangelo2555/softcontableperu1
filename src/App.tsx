@@ -73,6 +73,7 @@ import {
   Sun,
   Moon,
   ChevronDown,
+  ChevronRight,
   ChevronsLeft,
   FileText,
   PieChart,
@@ -862,9 +863,9 @@ const App: React.FC = () => {
         )}
 
         {/* ═══ SIDEBAR ═══ */}
-        <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
+        <aside className={`fixed md:relative flex flex-col bg-[#0b101d] border-r border-slate-800/80 shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
           {/* Brand Header */}
-          <div className="h-16 flex items-center justify-between px-4 bg-app-surface shrink-0 border-b border-app-border overflow-hidden">
+          <div className="h-16 flex items-center justify-between px-4 bg-[#0b101d] shrink-0 border-b border-slate-800/80 overflow-hidden">
             <div className="flex items-center gap-3 min-w-0">
               <img
                 src="assets/logo.png"
@@ -872,7 +873,7 @@ const App: React.FC = () => {
                 className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-9 h-9 mx-auto' : 'w-8 h-8'} object-contain shrink-0`}
               />
               {!isSidebarCollapsed && (
-                <span className="font-black tracking-[0.1em] text-[15px] uppercase text-app-text leading-tight whitespace-nowrap animate-fade-in">
+                <span className="font-black tracking-[0.12em] text-[15px] uppercase text-white leading-tight whitespace-nowrap animate-fade-in">
                   Softcontable
                 </span>
               )}
@@ -886,7 +887,7 @@ const App: React.FC = () => {
                     setIsSidebarCollapsed(true);
                   }
                 }}
-                className="hidden md:flex p-1.5 text-app-muted hover:text-blue-600 hover:bg-app-hover rounded-lg transition-colors cursor-pointer"
+                className="hidden md:flex p-1.5 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer"
                 title="Colapsar menú lateral"
               >
                 <ChevronsLeft size={16} />
@@ -895,7 +896,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 custom-scrollbar flex flex-col gap-1 w-full px-2 bg-app-surface">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 custom-scrollbar flex flex-col gap-1 w-full px-2.5 bg-[#0b101d]">
             {computedSidebarGroups.map((group) => {
               const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
               const isActiveGroup = groupHasActiveTab(group);
@@ -911,16 +912,12 @@ const App: React.FC = () => {
                       title={isSidebarCollapsed ? tab.label : ''}
                       className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
                         } ${isActive
-                          ? isStudentMode()
-                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
-                            : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                          : isStudentMode()
-                            ? 'text-app-muted hover:bg-app-hover hover:text-indigo-500'
-                            : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
+                          ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/25 font-black'
+                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                         }`}
                     >
                       <div className="flex items-center gap-3">
-                        <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-app-muted'} />
+                        <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-slate-400'} />
                         {!isSidebarCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
                       </div>
                     </button>
@@ -933,28 +930,24 @@ const App: React.FC = () => {
                   <button
                     onClick={() => toggleGroup(group.groupLabel)}
                     title={isSidebarCollapsed ? group.groupLabel : ''}
-                    className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
+                    className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase group ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
                       } ${isActiveGroup && !isExpanded
-                        ? isStudentMode()
-                          ? 'text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
-                          : 'text-blue-600 bg-blue-50/50'
-                        : isStudentMode()
-                          ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
-                          : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
+                        ? 'text-blue-400 bg-slate-800/80 font-black'
+                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
+                      <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'} />
                       {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
                     </div>
                     {!isSidebarCollapsed && (
-                      <ChevronDown size={14} className={`text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                      <ChevronRight size={14} className={`text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-slate-300' : ''}`} />
                     )}
                   </button>
 
                   <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'
                     }`}>
-                    <div className="flex flex-col gap-1 border-l-2 border-app-border ml-[20px] pl-3">
+                    <div className="flex flex-col gap-1 border-l border-slate-800 ml-[20px] pl-3">
                       {group.items.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
@@ -962,15 +955,11 @@ const App: React.FC = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${isActive
-                                ? isStudentMode()
-                                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
-                                  : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                                : isStudentMode()
-                                  ? 'text-app-muted hover:bg-app-hover hover:text-indigo-600'
-                                  : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
+                                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-blue-500/25'
+                                : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                               }`}
                           >
-                            <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
+                            <tab.icon size={15} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap">{tab.label === 'Honorarios' ? '+ HONORARIOS' : tab.label}</span>
                           </button>
                         );
@@ -982,44 +971,45 @@ const App: React.FC = () => {
             })}
           </nav>
 
-          {/* Compact Bottom Sidebar (Expanded) */}
-          <div className={`p-2.5 border-t border-app-border flex-col gap-2.5 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
-            <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
+          {/* User Widget (Expanded Sidebar) */}
+          <div className={`p-3 border-t border-slate-800/80 flex-col gap-2.5 shrink-0 bg-[#0b101d] ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+            <div className="flex items-center justify-between gap-2 bg-[#121829] p-2 rounded-2xl border border-slate-800/90 shadow-sm relative group">
               {/* User Avatar + Info */}
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-sm notranslate`} translate="no">
                   {userInitial}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-                  <p className={`text-[8px] ${isSuperAdmin ? 'text-indigo-600 dark:text-indigo-400' : isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>
+                  <p className="text-[11px] font-black uppercase text-white leading-tight truncate notranslate" translate="no">{userName}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-0.5">
                     {isSuperAdmin ? 'SuperAdmin' : isAdmin ? 'Administrador' : isStudentMode() ? 'Estudiante' : 'Usuario'}
                   </p>
                 </div>
               </div>
 
-              {/* Quick Actions: Password, Theme & Logout */}
-              <div className="flex items-center gap-1 shrink-0">
+              {/* Status Dot + Quick Actions */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-400/50 shadow-[0_0_8px_rgba(16,185,129,0.8)]" title="En línea" />
                 <button
                   onClick={() => setShowChangePasswordModal(true)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   title="Cambiar Contraseña"
                 >
-                  <KeyRound size={13} />
+                  <KeyRound size={12} />
                 </button>
                 <button
                   onClick={toggleTheme}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
                 >
-                  {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+                  {theme === 'dark' ? <Sun size={12} className="text-amber-400" /> : <Moon size={12} className="text-blue-400" />}
                 </button>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
+                  className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                   title="Cerrar Sesión"
                 >
-                  <LogOut size={13} />
+                  <LogOut size={12} />
                 </button>
               </div>
             </div>
@@ -1032,7 +1022,7 @@ const App: React.FC = () => {
                   window.history.pushState({}, '', '/premium');
                 }
               }}
-              className="relative overflow-hidden rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white shadow-lg shadow-blue-600/25 border border-white/20 cursor-pointer group hover:scale-[1.01] transition-all select-none"
+              className="relative overflow-hidden rounded-2xl p-3.5 bg-gradient-to-br from-[#122454] via-[#1a3375] to-[#0f1733] text-white shadow-xl shadow-blue-900/30 border border-blue-500/25 cursor-pointer group hover:scale-[1.01] transition-all select-none"
             >
               {/* Resplandores decorativos */}
               <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
@@ -1043,14 +1033,14 @@ const App: React.FC = () => {
                 <h4 className="text-xs font-black uppercase tracking-wider text-white drop-shadow-xs flex items-center gap-1">
                   <span>SOFTPREMIUM IA</span>
                 </h4>
-                <p className="text-[10px] text-blue-100 font-semibold leading-snug mt-1">
+                <p className="text-[10px] text-blue-200/90 font-medium leading-snug mt-1">
                   Inteligencia que impulsa tu contabilidad
                 </p>
 
                 <div className="flex items-center gap-2 mt-2.5">
                   <button
                     type="button"
-                    className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-black text-[10px] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+                    className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-800 font-black text-[10px] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
                   >
                     Conocer más
                   </button>
@@ -1093,7 +1083,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Compact Bottom Sidebar (Collapsed Desktop) */}
-          <div className={`p-2 border-t border-app-border flex-col items-center justify-center shrink-0 bg-app-surface relative ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`} ref={collapsedUserMenuRef}>
+          <div className={`p-2 border-t border-slate-800/80 flex-col items-center justify-center shrink-0 bg-[#0b101d] relative ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`} ref={collapsedUserMenuRef}>
             <button
               onClick={() => setIsCollapsedUserMenuOpen(!isCollapsedUserMenuOpen)}
               className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate hover:scale-105 transition-all cursor-pointer relative group`}
@@ -1101,20 +1091,20 @@ const App: React.FC = () => {
               title={userName}
             >
               {userInitial}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-app-surface shadow-xs" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0b101d] shadow-xs" />
             </button>
 
             {/* Menú Desplegable Flotante para Barra Colapsada */}
             {isCollapsedUserMenuOpen && (
-              <div className="absolute bottom-2 left-full ml-3 w-60 bg-app-surface border border-app-border rounded-2xl shadow-2xl p-3 flex flex-col gap-2 z-[100] animate-scale-in">
+              <div className="absolute bottom-2 left-full ml-3 w-60 bg-[#121829] border border-slate-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2 z-[100] animate-scale-in text-white">
                 {/* Cabecera del Usuario */}
-                <div className="flex items-center gap-2.5 pb-2 border-b border-app-border">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-xs`} translate="no">
                     {userInitial}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black uppercase text-app-text truncate notranslate" translate="no">{userName}</p>
-                    <p className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">
+                    <p className="text-xs font-black uppercase text-white truncate notranslate" translate="no">{userName}</p>
+                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">
                       {isSuperAdmin ? 'SuperAdmin' : isAdmin ? 'Administrador' : isStudentMode() ? 'Estudiante' : 'Usuario'}
                     </p>
                   </div>
@@ -1128,7 +1118,7 @@ const App: React.FC = () => {
                       setIsCollapsedUserMenuOpen(false);
                       if (window.history && window.history.pushState) window.history.pushState({}, '', '/premium');
                     }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-left cursor-pointer"
                   >
                     <Sparkles size={14} className="text-amber-400 shrink-0" />
                     <span>SoftPremium IA</span>
@@ -1139,9 +1129,9 @@ const App: React.FC = () => {
                       toggleTheme();
                       setIsCollapsedUserMenuOpen(false);
                     }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-app-text hover:bg-app-hover transition-all text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all text-left cursor-pointer"
                   >
-                    {theme === 'dark' ? <Sun size={14} className="text-amber-400 shrink-0" /> : <Moon size={14} className="text-blue-500 shrink-0" />}
+                    {theme === 'dark' ? <Sun size={14} className="text-amber-400 shrink-0" /> : <Moon size={14} className="text-blue-400 shrink-0" />}
                     <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
                   </button>
 
@@ -1150,9 +1140,9 @@ const App: React.FC = () => {
                       setShowChangePasswordModal(true);
                       setIsCollapsedUserMenuOpen(false);
                     }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-app-text hover:bg-app-hover transition-all text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 transition-all text-left cursor-pointer"
                   >
-                    <KeyRound size={14} className="text-app-muted shrink-0" />
+                    <KeyRound size={14} className="text-slate-400 shrink-0" />
                     <span>Cambiar Contraseña</span>
                   </button>
 
@@ -1162,21 +1152,21 @@ const App: React.FC = () => {
                         handleInstallApp();
                         setIsCollapsedUserMenuOpen(false);
                       }}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-500/10 transition-all text-left cursor-pointer"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-blue-500/10 transition-all text-left cursor-pointer"
                     >
-                      <CloudDownload size={14} className="text-blue-500 shrink-0" />
+                      <CloudDownload size={14} className="text-blue-400 shrink-0" />
                       <span>Instalar Aplicación</span>
                     </button>
                   )}
 
-                  <div className="border-t border-app-border my-1" />
+                  <div className="border-t border-slate-800 my-1" />
 
                   <button
                     onClick={() => {
                       setShowLogoutConfirm(true);
                       setIsCollapsedUserMenuOpen(false);
                     }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-all text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-all text-left cursor-pointer"
                   >
                     <LogOut size={14} className="shrink-0" />
                     <span>Cerrar Sesión</span>
