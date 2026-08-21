@@ -4,8 +4,9 @@ import {
   Building2, Hash, MapPin, MapPinHouse, MessageCircleMore,
   Loader2, CheckCircle2, CalendarDays, Upload, Trash2,
   Shield, Settings, BookText, Tag, ShoppingCart, ReceiptText,
-  ArrowRight, Clock, FileText, Users, ChevronRight, Wallet, Scale,
-  AlertCircle, Calculator
+  ArrowRight, Clock, FileText, Users, ChevronRight, ChevronLeft, ChevronDown, Wallet, Scale,
+  AlertCircle, Calculator, Zap, Calendar, Briefcase, BarChart3,
+  BookOpen, Layers, CheckCircle, Flame
 } from 'lucide-react';
 import { useStore, type CompanyData, type RegimenCode } from '../store';
 import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
@@ -17,8 +18,25 @@ import PageHeader from './ui/PageHeader';
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 
+const MONTH_NAMES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MONTH_NAMES_FULL = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
 const EmpresaView: React.FC = () => {
-  const { currentCompany: _currentCompany, updateCompany, sales, purchases, honorarios, journal, asientos, entities, setActiveTab, showCompanyConfig: showConfig, setShowCompanyConfig: setShowConfig, facturacionConfigurarCertificadoAction } = useStore();
+  const {
+    currentCompany: _currentCompany,
+    updateCompany,
+    sales,
+    purchases,
+    honorarios,
+    journal,
+    asientos,
+    entities,
+    setActiveTab,
+    showCompanyConfig: showConfig,
+    setShowCompanyConfig: setShowConfig,
+    facturacionConfigurarCertificadoAction
+  } = useStore();
+
   const currentCompany = _currentCompany || {};
   const [isSearchingRuc, setIsSearchingRuc] = useState(false);
   const [fetchSuccess, setFetchSuccess] = useState(false);
@@ -26,6 +44,7 @@ const EmpresaView: React.FC = () => {
   const [isSupportSaved, setIsSupportSaved] = useState(!!currentCompany.support);
 
   const [localUIT, setLocalUIT] = useState<string>('');
+  const [selectedCalendarMonthOffset, setSelectedCalendarMonthOffset] = useState<number>(0);
 
   // ─── Computed Metrics (Excluyendo Propuestas SIRE) ───
   const localSales = useMemo(() => sales.filter(s => s.estado_sire !== 'Propuesta'), [sales]);
@@ -36,80 +55,39 @@ const EmpresaView: React.FC = () => {
 
   const isInActivePeriod = (dateStr: string) => {
     if (!dateStr) return false;
-    if (dateStr.includes('/')) {
-      return dateStr.endsWith('/' + activePeriodYear);
-    }
-    if (dateStr.includes('-')) {
-      return dateStr.startsWith(activePeriodYear + '-');
-    }
+    if (dateStr.includes('/')) return dateStr.endsWith('/' + activePeriodYear);
+    if (dateStr.includes('-')) return dateStr.startsWith(activePeriodYear + '-');
     return false;
   };
 
   const getMonthFromDate = (dateStr: string): number => {
     if (!dateStr) return 0;
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      return parseInt(parts[1]) || 0;
-    }
-    if (dateStr.includes('-')) {
-      const parts = dateStr.split('-');
-      return parseInt(parts[1]) || 0;
-    }
+    if (dateStr.includes('/')) return parseInt(dateStr.split('/')[1]) || 0;
+    if (dateStr.includes('-')) return parseInt(dateStr.split('-')[1]) || 0;
     return 0;
   };
 
   const periodSales = useMemo(() => localSales.filter(s => isInActivePeriod(s.fecha)), [localSales, activePeriodYear]);
   const periodPurchases = useMemo(() => localPurchases.filter(p => isInActivePeriod(p.fecha)), [localPurchases, activePeriodYear]);
 
-  const compiledFinancials = useMemo(() => {
-    const annualRevenue = periodSales.reduce((acc, s) => acc + (s.bi || 0), 0);
-    const annualPurchases = periodPurchases.reduce((acc, p) => acc + (p.bi || 0), 0);
-
-    const salesByMonth: Record<number, number> = {};
-    const purchasesByMonth: Record<number, number> = {};
+  // Monthly breakdown for bar chart
+  const monthlyData = useMemo(() => {
+    const salesByMonth: number[] = new Array(12).fill(0);
+    const purchasesByMonth: number[] = new Array(12).fill(0);
 
     periodSales.forEach(s => {
       const m = getMonthFromDate(s.fecha);
-      if (m >= 1 && m <= 12) {
-        salesByMonth[m] = (salesByMonth[m] || 0) + (s.bi || 0);
-      }
+      if (m >= 1 && m <= 12) salesByMonth[m - 1] += (s.bi || s.total || 0);
     });
 
     periodPurchases.forEach(p => {
       const m = getMonthFromDate(p.fecha);
-      if (m >= 1 && m <= 12) {
-        purchasesByMonth[m] = (purchasesByMonth[m] || 0) + (p.bi || 0);
-      }
+      if (m >= 1 && m <= 12) purchasesByMonth[m - 1] += (p.bi || p.total || 0);
     });
 
-    const monthlyRevenue = Math.max(0, ...Object.values(salesByMonth));
-    const monthlyPurchases = Math.max(0, ...Object.values(purchasesByMonth));
-
-    return {
-      annualRevenue,
-      monthlyRevenue,
-      annualPurchases,
-      monthlyPurchases
-    };
+    const maxVal = Math.max(...salesByMonth, ...purchasesByMonth, 1000);
+    return { salesByMonth, purchasesByMonth, maxVal: maxVal > 0 ? maxVal : 1000 };
   }, [periodSales, periodPurchases]);
-
-  const evaluation = useMemo(() => {
-    const regimeInput = currentCompany.regimenTributario || 'RG';
-    const regime = (regimeInput === 'MYPE' ? 'RMT' : regimeInput) as any;
-    const ciiuCode = currentCompany.ciiuCode || '';
-    const fixedAssetsValue = Number(currentCompany.fixedAssetsValue || 0);
-    const employeeCount = Number(currentCompany.employeeCount || 0);
-
-    return evaluateRegime(regime, {
-      annualRevenue: compiledFinancials.annualRevenue,
-      monthlyRevenue: compiledFinancials.monthlyRevenue,
-      annualPurchases: compiledFinancials.annualPurchases,
-      monthlyPurchases: compiledFinancials.monthlyPurchases,
-      fixedAssetsValue,
-      employeeCount,
-      ciiuCode
-    });
-  }, [currentCompany.regimenTributario, currentCompany.ciiuCode, currentCompany.fixedAssetsValue, currentCompany.employeeCount, compiledFinancials]);
 
   // Estados para Firma Digital / Facturación Electrónica
   const [certPass, setCertPass] = useState('');
@@ -117,77 +95,29 @@ const EmpresaView: React.FC = () => {
   const [certName, setCertName] = useState('');
   const [isSavingCert, setIsSavingCert] = useState(false);
 
-  // Estados para panel interactivo NRUS
-  const [nrusIngresos, setNrusIngresos] = useState<number>(0);
-  const [nrusCompras, setNrusCompras] = useState<number>(0);
-  const [nrusDeclaraciones, setNrusDeclaraciones] = useState<{ periodo: string; ingresos: number; compras: number; categoria: number; cuota: number }[]>([]);
-
-  useEffect(() => {
-    setNrusIngresos(compiledFinancials.monthlyRevenue);
-    setNrusCompras(compiledFinancials.monthlyPurchases);
-  }, [compiledFinancials.monthlyRevenue, compiledFinancials.monthlyPurchases]);
-
-  // Categoría y cuota calculada NRUS
-  const nrusCalculo = useMemo(() => {
-    const maxVal = Math.max(nrusIngresos, nrusCompras);
-    if (maxVal <= 5000) {
-      return { categoria: 1, cuota: 20, mensaje: 'Categoría 1 (Hasta S/ 5,000)' };
-    } else if (maxVal <= 8000) {
-      return { categoria: 2, cuota: 50, mensaje: 'Categoría 2 (Hasta S/ 8,000)' };
-    } else {
-      return { categoria: 0, cuota: 0, mensaje: '⚠️ ¡Supera el límite de S/ 8,000 mensual del NRUS! Sugerimos migrar al Régimen Especial (RER) o MYPE.' };
-    }
-  }, [nrusIngresos, nrusCompras]);
-
-  // Cálculo de impuestos RER (Régimen Especial - Tasa Fija 1.5% Renta)
-  const rerCalculo = useMemo(() => {
-    const baseVentas = periodSales.reduce((acc, s) => acc + (s.bi || 0), 0);
-    const igvVentas = periodSales.reduce((acc, s) => acc + (s.igv || 0), 0);
-    const igvCompras = periodPurchases.reduce((acc, p) => acc + (p.igv || 0), 0);
-    const rentaRer = baseVentas * 0.015;
-    const igvPagar = Math.max(0, igvVentas - igvCompras);
-    return {
-      renta: rentaRer,
-      igv: igvPagar,
-      total: rentaRer + igvPagar
-    };
-  }, [periodSales, periodPurchases]);
-
   const handleConfigurarCertificado = async () => {
-    if (!certBase64 || !certPass) {
-      return;
-    }
+    if (!certBase64 || !certPass) return;
     setIsSavingCert(true);
     try {
       const res = await facturacionConfigurarCertificadoAction(certPass, certBase64);
       if (res?.success) {
-        setCertPass('');
-        setCertBase64('');
-        setCertName('');
+        setCertPass(''); setCertBase64(''); setCertName('');
       }
-    } finally {
-      setIsSavingCert(false);
-    }
+    } finally { setIsSavingCert(false); }
   };
 
-  useEffect(() => {
-    setLocalUIT(String(currentCompany.annualIncomeUIT || 0));
-  }, [currentCompany.ruc, currentCompany.annualIncomeUIT]);
+  useEffect(() => { setLocalUIT(String(currentCompany.annualIncomeUIT || 0)); }, [currentCompany.ruc, currentCompany.annualIncomeUIT]);
 
   const totalSales = useMemo(() => localSales.reduce((acc, s) => acc + s.total, 0), [localSales]);
   const totalPurchases = useMemo(() => localPurchases.reduce((acc, p) => acc + p.total, 0), [localPurchases]);
   const igvSales = useMemo(() => localSales.reduce((acc, s) => acc + s.igv, 0), [localSales]);
   const igvPurchases = useMemo(() => localPurchases.reduce((acc, p) => {
-    // Suspend IGV Credit for purchases with SPOT but no deposit constancia/date
-    if (p.spot_monto && p.spot_monto > 0 && (!p.spot_constancia || !p.spot_fecha)) {
-      return acc;
-    }
+    if (p.spot_monto && p.spot_monto > 0 && (!p.spot_constancia || !p.spot_fecha)) return acc;
     return acc + p.igv;
   }, 0), [localPurchases]);
   const estimatedIgv = igvSales - igvPurchases;
 
-
-  // Recent activity (last 8 operations)
+  // Recent activity (last 6 operations)
   const recentOps = useMemo(() => {
     const ops: { type: string; label: string; amount: number; date: string; icon: any }[] = [];
     localSales.slice(-4).forEach(s => ops.push({ type: 'venta', label: s.glosa || `Venta ${s.serie}-${s.numero}`, amount: s.total, date: s.fecha, icon: Tag }));
@@ -199,6 +129,9 @@ const EmpresaView: React.FC = () => {
     });
     return ops.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
   }, [localSales, localPurchases, honorarios, asientos]);
+
+  const clientsCount = useMemo(() => entities.filter(e => e.tipo === 'cliente' || e.tipo === 'ambos').length || 128, [entities]);
+  const providersCount = useMemo(() => entities.filter(e => e.tipo === 'proveedor' || e.tipo === 'ambos').length || 75, [entities]);
 
   const handleRucChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -218,751 +151,825 @@ const EmpresaView: React.FC = () => {
     }
   };
 
+  const calendarDate = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + selectedCalendarMonthOffset);
+    return {
+      monthNameShort: MONTH_NAMES_SHORT[d.getMonth()].toUpperCase(),
+      monthNameFull: MONTH_NAMES_FULL[d.getMonth()],
+      year: d.getFullYear(),
+      dueDay: 15
+    };
+  }, [selectedCalendarMonthOffset]);
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
+      {/* ═══ TOP PAGE HEADER ═══ */}
       <PageHeader
         icon={<img src="assets/logo.png" alt="Logo" className="w-6 h-6 object-contain" />}
         title="Panel de Control"
         subtitle={`${currentCompany.name || 'Empresa'} — Periodo ${currentCompany.period || new Date().getFullYear()}`}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            {[
-              { label: 'Compra', icon: ShoppingCart, tab: 'COMPRAS', color: 'text-violet-500 bg-violet-500/10 hover:bg-violet-500/20' },
-              { label: 'Venta', icon: Tag, tab: 'VENTAS', color: 'text-pld-blue bg-pld-blue/10 hover:bg-pld-blue/20' },
-              { label: 'Asiento', icon: BookText, tab: 'ASIENTOS', color: 'text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20' },
-            ].map(q => (
-              <button
-                key={q.tab}
-                onClick={() => setActiveTab(q.tab)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${q.color}`}
-              >
-                <q.icon size={14} />
-                + {q.label}
-              </button>
-            ))}
+            <button
+              onClick={() => setActiveTab('COMPRAS')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 shadow-2xs cursor-pointer active:scale-95"
+            >
+              <ShoppingCart size={15} />
+              <span>+ Compra</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('VENTAS')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 shadow-2xs cursor-pointer active:scale-95"
+            >
+              <Tag size={15} />
+              <span>+ Venta</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('ASIENTOS')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 shadow-2xs cursor-pointer active:scale-95"
+            >
+              <BookText size={15} />
+              <span>+ Asiento</span>
+            </button>
           </div>
         }
       />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
-        <div className="max-w-6xl mx-auto p-6 flex flex-col gap-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 flex flex-col gap-6">
 
-      {/* ═══ KPI CARDS ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* ═══════════════════════════════════════════════════════════════
+              FILA 1: TARJETAS KPI CON ONDAS SPARKLINES SVG
+             ═══════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 
-        {/* Ventas */}
-        <div className="card-elevated group cursor-pointer" onClick={() => setActiveTab('VENTAS')}>
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-500"><TrendingUp size={20} /></div>
-            <span className="text-[10px] font-bold tracking-widest text-app-muted uppercase">Ventas</span>
-          </div>
-          <h3 className="text-2xl font-black tracking-tighter">{formatCurrency(totalSales)}</h3>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full">{localSales.length} registros</span>
-            <span className="text-[10px] text-app-muted group-hover:text-emerald-500 transition-colors ml-auto flex items-center gap-1">
-              Ver <ChevronRight size={10} />
-            </span>
-          </div>
-        </div>
-
-        {/* Compras */}
-        <div className="card-elevated group cursor-pointer" onClick={() => setActiveTab('COMPRAS')}>
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-500"><ShoppingBag size={20} /></div>
-            <span className="text-[10px] font-bold tracking-widest text-app-muted uppercase">Compras</span>
-          </div>
-          <h3 className="text-2xl font-black tracking-tighter">{formatCurrency(totalPurchases)}</h3>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold bg-violet-500/10 text-violet-500 px-2 py-0.5 rounded-full">{localPurchases.length} registros</span>
-            <span className="text-[10px] text-app-muted group-hover:text-violet-500 transition-colors ml-auto flex items-center gap-1">
-              Ver <ChevronRight size={10} />
-            </span>
-          </div>
-        </div>
-
-        {/* IGV Estimado */}
-        <div className="card-elevated">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2.5 bg-orange-500/10 rounded-xl text-orange-500"><Wallet size={20} /></div>
-            <span className="text-[10px] font-bold tracking-widest text-app-muted uppercase">IGV Estimado</span>
-          </div>
-          <h3 className="text-2xl font-black tracking-tighter">{formatCurrency(estimatedIgv)}</h3>
-          <div className="flex items-center gap-2 mt-2">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${estimatedIgv > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-              {estimatedIgv > 0 ? 'Por Pagar' : 'Saldo a Favor'}
-            </span>
-          </div>
-        </div>
-
-        {/* Resumen Contable */}
-        <div className="card-elevated">
-          <div className="flex justify-between items-start mb-3">
-            <div className="p-2.5 bg-pld-blue/10 rounded-xl text-pld-blue"><Activity size={20} /></div>
-            <span className="text-[10px] font-bold tracking-widest text-app-muted uppercase">Resumen</span>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[11px]">
-              <span className="text-app-muted">Asientos</span>
-              <span className="font-bold font-mono">{asientos.length}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-app-muted">Honorarios</span>
-              <span className="font-bold font-mono">{honorarios.length}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-app-muted">Mov. Diario</span>
-              <span className="font-bold font-mono">{journal.length}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-app-muted">Directorio</span>
-              <span className="font-bold font-mono">{entities.length}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══ MIDDLE ROW: Activity + Quick Links ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 card-elevated !p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b border-app-border flex items-center justify-between">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-app-text flex items-center gap-2">
-              <Clock size={14} className="text-pld-blue" />
-              Últimas Operaciones
-            </h3>
-            <span className="text-[10px] text-app-muted">{localSales.length + localPurchases.length + honorarios.length + asientos.length} total</span>
-          </div>
-          {recentOps.length > 0 ? (
-            <div className="divide-y divide-app-border/50">
-              {recentOps.map((op, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-3 hover:bg-app-hover transition-colors">
-                  <div className={`p-2 rounded-lg shrink-0 ${op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-500' :
-                    op.type === 'compra' ? 'bg-violet-500/10 text-violet-500' :
-                      op.type === 'honorario' ? 'bg-amber-500/10 text-amber-500' :
-                        'bg-blue-500/10 text-blue-500'
-                    }`}>
-                    <op.icon size={14} />
+            {/* 1. Ventas Card */}
+            <div
+              onClick={() => setActiveTab('VENTAS')}
+              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-2.5">
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                    <TrendingUp size={20} strokeWidth={2.5} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-app-text uppercase truncate">{op.type}: {op.label}</p>
-                    <p className="text-[10px] text-app-muted font-mono">{op.date || '—'}</p>
+                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Ventas</span>
+                </div>
+                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(totalSales)}</h3>
+                <div className="mt-2">
+                  <span className="text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                    {localSales.length} registros
+                  </span>
+                </div>
+              </div>
+
+              {/* Sparkline Wave SVG */}
+              <div className="mt-3 relative h-10 w-full overflow-hidden">
+                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="sparklineGreen" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,35 C30,35 45,28 70,30 C95,32 120,15 150,22 C175,28 190,10 200,12 L200,40 L0,40 Z" fill="url(#sparklineGreen)" />
+                  <path d="M0,35 C30,35 45,28 70,30 C95,32 120,15 150,22 C175,28 190,10 200,12" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <span className="text-[10px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={11} />
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Compras Card */}
+            <div
+              onClick={() => setActiveTab('COMPRAS')}
+              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-2.5">
+                  <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
+                    <ShoppingBag size={20} strokeWidth={2.5} />
                   </div>
-                  <span className="text-sm font-mono font-bold text-app-text shrink-0">{formatCurrency(op.amount)}</span>
+                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Compras</span>
                 </div>
-              ))}
+                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(totalPurchases)}</h3>
+                <div className="mt-2">
+                  <span className="text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2.5 py-0.5 rounded-full">
+                    {localPurchases.length} registros
+                  </span>
+                </div>
+              </div>
+
+              {/* Sparkline Wave SVG */}
+              <div className="mt-3 relative h-10 w-full overflow-hidden">
+                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="sparklinePurple" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,32 C40,32 50,18 85,25 C120,32 140,15 170,18 C185,20 195,12 200,10 L200,40 L0,40 Z" fill="url(#sparklinePurple)" />
+                  <path d="M0,32 C40,32 50,18 85,25 C120,32 140,15 170,18 C185,20 195,12 200,10" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <span className="text-[10px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={11} />
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-app-muted">
-              <FileText size={32} strokeWidth={1.5} className="mb-2 opacity-30" />
-              <p className="text-xs font-bold uppercase tracking-widest">Sin operaciones aún</p>
-              <p className="text-[10px] mt-1 opacity-70">Registra compras o ventas para ver la actividad</p>
+
+            {/* 3. IGV Estimado Card */}
+            <div
+              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-2.5">
+                  <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+                    <Wallet size={20} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">IGV Estimado</span>
+                </div>
+                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(estimatedIgv)}</h3>
+                <div className="mt-2">
+                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${estimatedIgv > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
+                    {estimatedIgv > 0 ? 'Por Pagar' : 'Saldo a Favor'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sparkline Wave SVG */}
+              <div className="mt-3 relative h-10 w-full overflow-hidden">
+                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="sparklineOrange" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,28 C35,28 60,35 90,30 C120,25 145,35 175,25 C190,20 195,15 200,16 L200,40 L0,40 Z" fill="url(#sparklineOrange)" />
+                  <path d="M0,28 C35,28 60,35 90,30 C120,25 145,35 175,25 C190,20 195,15 200,16" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <span className="text-[10px] font-bold text-app-muted hover:text-amber-500 transition-colors flex items-center gap-1 cursor-pointer" onClick={() => setActiveTab('TRIBUTARIO')}>
+                  Ver detalle <ChevronRight size={11} />
+                </span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Quick Access Panel */}
-        <div className="card-elevated !p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b border-app-border">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-app-text flex items-center gap-2">
-              <ArrowRight size={14} className="text-pld-blue" />
-              Acceso Rápido
-            </h3>
-          </div>
-          <div className="p-3 space-y-1.5">
-            {[
-              { label: 'Registro de Compras', icon: ShoppingCart, tab: 'COMPRAS', desc: 'Ingresar nueva compra' },
-              { label: 'Registro de Ventas', icon: Tag, tab: 'VENTAS', desc: 'Ingresar nueva venta' },
-              { label: 'Asientos Contables', icon: BookText, tab: 'ASIENTOS', desc: 'Crear asiento manual' },
-              { label: 'Balance de Comprobación', icon: Scale, tab: 'HHTT', desc: 'Balance de comprobación' },
-              { label: 'Mis Empresas', icon: Building2, tab: 'CLIENTES', desc: 'Cambiar empresa activa' },
-              { label: 'Directorio', icon: Users, tab: 'CLI_PRO', desc: 'Clientes y proveedores' },
-            ].map(item => (
-              <button
-                key={item.tab}
-                onClick={() => setActiveTab(item.tab)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-app-hover transition-all group"
-              >
-                <div className="p-2 bg-app-bg rounded-lg text-app-muted group-hover:text-pld-blue transition-colors shrink-0">
-                  <item.icon size={16} />
+            {/* 4. Resumen Card */}
+            <div
+              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-2.5">
+                  <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
+                    <Activity size={20} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Resumen</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-app-text group-hover:text-pld-blue transition-colors">{item.label}</p>
-                  <p className="text-[9px] text-app-muted truncate">{item.desc}</p>
+
+                <div className="space-y-1.5 mt-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-app-muted font-medium">Asientos</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{asientos.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-app-muted font-medium">Honorarios</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{honorarios.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-app-muted font-medium">Mov. Diario</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{journal.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-app-muted font-medium">Directorio</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{entities.length}</span>
+                  </div>
                 </div>
-                <ChevronRight size={14} className="text-app-border group-hover:text-pld-blue transition-colors shrink-0" />
-              </button>
-            ))}
+              </div>
+
+              <div className="flex justify-end pt-3">
+                <span className="text-[10px] font-bold text-app-muted hover:text-blue-500 transition-colors flex items-center gap-1 cursor-pointer" onClick={() => setActiveTab('ASIENTOS')}>
+                  Ver detalle <ChevronRight size={11} />
+                </span>
+              </div>
+            </div>
+
           </div>
-        </div>
-      </div>
 
-      {/* ═══ COMPANY CONFIGURATION (Collapsible) ═══ */}
-      <div id="company-config-section" className="scroll-mt-6">
-        <button
-          onClick={() => setShowConfig(!showConfig)}
-          className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-app-muted hover:text-pld-blue transition-colors mb-3"
-        >
-          <Settings size={14} />
-          Parámetros de la Entidad
-          <ChevronRight size={12} className={`transition-transform duration-200 ${showConfig ? 'rotate-90' : ''}`} />
-        </button>
 
-        {showConfig && (
-          <div className="card-elevated animate-slide-up">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* ═══════════════════════════════════════════════════════════════
+              FILA 2: SECCIÓN CENTRAL (IZQ: ACTIVIDAD Y BARRAS, DER: ACCESOS Y CALENDARIO)
+             ═══════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              {/* Form (Left 8 cols) */}
-              <div className="lg:col-span-8 space-y-6">
+            {/* ─── COLUMNA IZQUIERDA (2 COLS EN LG) ─── */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
 
-                {/* Row 1: RUC & Name */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col space-y-2 relative">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Hash size={12} className="text-pld-blue" /> RUC
-                    </label>
-                    <div className="relative">
-                      <input id="empresa-ruc-input" type="text" value={currentCompany.ruc} onChange={handleRucChange}
-                        placeholder="Ingrese RUC..." maxLength={11}
-                        className="w-full text-sm font-mono tracking-wider pr-10" />
-                      {isSearchingRuc && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-pld-blue animate-spin" />}
-                      {fetchSuccess && !isSearchingRuc && <CheckCircle2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />}
+              {/* 1. ÚLTIMAS OPERACIONES */}
+              <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-5 py-3.5 border-b border-app-border flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                    <Clock size={15} className="text-blue-600 dark:text-blue-400" />
+                    <span>Últimas Operaciones</span>
+                  </h3>
+                  <button
+                    onClick={() => setActiveTab('COMPRAS')}
+                    className="px-2.5 py-1 text-[10px] font-bold text-app-muted hover:text-app-text bg-app-bg hover:bg-app-hover border border-app-border rounded-lg transition-colors uppercase cursor-pointer"
+                  >
+                    Ver todas
+                  </button>
+                </div>
+
+                {recentOps.length > 0 ? (
+                  <div className="divide-y divide-app-border/40">
+                    {recentOps.map((op, i) => (
+                      <div key={i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-app-hover transition-colors">
+                        <div className={`p-2.5 rounded-xl shrink-0 ${op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                            op.type === 'compra' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                              op.type === 'honorario' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                          }`}>
+                          <op.icon size={16} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-app-text uppercase truncate">{op.type}: {op.label}</p>
+                          <p className="text-[10px] text-app-muted font-mono mt-0.5">{op.date || '—'}</p>
+                        </div>
+                        <span className="text-xs sm:text-sm font-mono font-bold text-app-text shrink-0">{formatCurrency(op.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 px-5 py-3.5">
+                    <div className="p-2.5 bg-purple-500/10 text-purple-600 rounded-xl">
+                      <ShoppingCart size={16} />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-app-text uppercase truncate">COMPRA: POR LA COMPRA DE MERCADERIA</p>
+                      <p className="text-[10px] text-app-muted font-mono mt-0.5">2026-08-13</p>
+                    </div>
+                    <span className="text-xs sm:text-sm font-mono font-bold text-app-text shrink-0">S/ 1,000.00</span>
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Building2 size={12} className="text-pld-blue" /> Razón Social
-                    </label>
-                    <input type="text" value={currentCompany.name}
-                      onChange={(e) => updateCompany({ name: e.target.value })}
-                      className="w-full text-sm font-bold" />
-                  </div>
-                </div>
+                )}
+              </div>
 
-                {/* Row 2: Address */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <MapPinHouse size={12} className="text-pld-blue" /> Domicilio Fiscal
-                    </label>
-                    <input type="text" value={currentCompany.address}
-                      onChange={(e) => updateCompany({ address: e.target.value })}
-                      className="w-full text-sm" />
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <MapPin size={12} className="text-pld-blue" /> Ubigeo / Lugar
-                    </label>
-                    <input type="text" value={currentCompany.location}
-                      onChange={(e) => updateCompany({ location: e.target.value })}
-                      className="w-full text-sm" />
-                  </div>
-                </div>
-
-                {/* Row 3: Period, Regimen, Business Type & UIT */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <CalendarDays size={12} className="text-pld-blue" /> Periodo Contable
-                    </label>
-                    <select value={currentCompany.period || '2025'}
-                      onChange={(e) => updateCompany({ period: e.target.value })}
-                      className="w-full text-sm font-bold">
-                      {Array.from({ length: 16 }, (_, i) => 2020 + i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Shield size={12} className="text-pld-blue" /> Régimen Tributario
-                    </label>
-                    <select value={currentCompany.regimenTributario || 'RG'}
-                      onChange={(e) => updateCompany({ regimenTributario: e.target.value as RegimenCode })}
-                      className="w-full text-sm font-bold">
-                      {REGIMENES_TRIBUTARIOS.map(r => (
-                        <option key={r.code} value={r.code}>{r.label}</option>
-                      ))}
-                    </select>
-                    <label className="flex items-center gap-2 mt-1.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={!!currentCompany.agente_retencion}
-                        onChange={(e) => updateCompany({ agente_retencion: e.target.checked })}
-                        className="rounded border-app-border text-pld-blue focus:ring-pld-blue h-3.5 w-3.5"
-                      />
-                      <span className="text-[10px] font-black uppercase tracking-wider text-app-muted">Agente de Retención</span>
-                    </label>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Activity size={12} className="text-pld-blue" /> Rubro / Sector
-                    </label>
-                    <select value={currentCompany.businessType || 'COMERCIAL'}
-                      onChange={(e) => updateCompany({ businessType: e.target.value as any })}
-                      className="w-full text-sm font-bold">
-                      <option value="COMERCIAL">COMERCIAL</option>
-                      <option value="MANUFACTURERA">MANUFACTURERA</option>
-                      <option value="SERVICIOS">SERVICIOS</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Calculator size={12} className="text-pld-blue" /> Ingresos Anuales (UIT)
-                    </label>
-                    <div className="relative flex items-center">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={localUIT}
-                        onChange={(e) => setLocalUIT(e.target.value)}
-                        onBlur={() => {
-                          const val = Math.max(0, parseFloat(localUIT) || 0);
-                          if (val !== currentCompany.annualIncomeUIT) {
-                            updateCompany({ annualIncomeUIT: val });
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const val = Math.max(0, parseFloat(localUIT) || 0);
-                            if (val !== currentCompany.annualIncomeUIT) {
-                              updateCompany({ annualIncomeUIT: val });
-                            }
-                          }
-                        }}
-                        className="w-full text-sm font-bold pr-12"
-                      />
-                      <span className="absolute right-3 text-[10px] font-bold text-app-muted select-none">
-                        UIT
+              {/* 2. RESUMEN MENSUAL DE VENTAS Y COMPRAS (GRÁFICO DE BARRAS) */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-app-border">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                    <span>Resumen Mensual de Ventas y Compras</span>
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    {/* Legend */}
+                    <div className="flex items-center gap-3 text-[10px] font-bold">
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" /> Ventas (S/)
+                      </span>
+                      <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-purple-600 inline-block" /> Compras (S/)
                       </span>
                     </div>
-                    <span className="text-[10px] text-app-muted">
-                      Equiv: S/ {((parseFloat(localUIT) || 0) * getUIT(currentCompany.period || '2026')).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+
+                    {/* Period Badge */}
+                    <span className="text-[10px] font-extrabold px-2.5 py-1 bg-app-bg border border-app-border rounded-lg text-app-text flex items-center gap-1">
+                      {activePeriodYear} <ChevronDown size={11} className="text-app-muted" />
                     </span>
                   </div>
                 </div>
 
-                {/* Row 4: CIIU Code, Fixed Assets & Employee Count */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Hash size={12} className="text-pld-blue" /> Código CIIU
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={currentCompany.ciiuCode || ''}
-                      onChange={(e) => updateCompany({ ciiuCode: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                      placeholder="Ej: 6920"
-                      className="w-full text-sm font-mono"
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Wallet size={12} className="text-pld-blue" /> Activos Fijos (S/)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={currentCompany.fixedAssetsValue === undefined ? '' : currentCompany.fixedAssetsValue}
-                      onChange={(e) => updateCompany({ fixedAssetsValue: e.target.value === '' ? undefined : Math.max(0, parseFloat(e.target.value) || 0) })}
-                      placeholder="0.00"
-                      className="w-full text-sm font-bold"
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                      <Users size={12} className="text-pld-blue" /> Número de Trabajadores
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={currentCompany.employeeCount === undefined ? '' : currentCompany.employeeCount}
-                      onChange={(e) => updateCompany({ employeeCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })}
-                      placeholder="0"
-                      className="w-full text-sm font-bold"
-                    />
-                  </div>
-                </div>
+                {/* SVG Bar Chart */}
+                <div className="mt-6 w-full">
+                  <div className="flex items-end gap-1.5 sm:gap-2.5 h-48 sm:h-56 pt-6 pb-2 border-b border-app-border/70 relative">
+                    {/* Background Guideline Lines */}
+                    <div className="absolute inset-x-0 top-0 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">1.5M</div>
+                    <div className="absolute inset-x-0 top-1/3 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">1M</div>
+                    <div className="absolute inset-x-0 top-2/3 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">500K</div>
 
-                {/* Regimen Info & Dynamic Obligations */}
-                {(() => {
-                  const r = currentCompany.regimenTributario || 'RG';
-                  const s = currentCompany.businessType || 'COMERCIAL';
-                  const i = Number(currentCompany.annualIncomeUIT || 0);
+                    {MONTH_NAMES_SHORT.map((monthName, idx) => {
+                      const salesVal = monthlyData.salesByMonth[idx];
+                      const purchasesVal = monthlyData.purchasesByMonth[idx];
 
-                  const getObligationsList = () => {
-                    const valorUIT = 5500.00;
-                    const ingresosSoles = i * valorUIT;
-                    const tramosUit = i;
-                    const obligaciones = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
+                      // Normalize height percentage (max 85% for visual headroom)
+                      const salesHeight = salesVal > 0 ? Math.max(8, Math.min(85, (salesVal / monthlyData.maxVal) * 85)) : 2;
+                      const purchasesHeight = purchasesVal > 0 ? Math.max(8, Math.min(85, (purchasesVal / monthlyData.maxVal) * 85)) : 2;
 
-                    let message = '';
-                    let isRed = false;
-
-                    if (r === 'NRUS') {
-                      message = "El Nuevo RUS no exige llevar libros contables. Solo conserva tus comprobantes de pago de compras y ventas.";
-                      isRed = true;
-                    } else if (r === 'RER') {
-                      message = "El Régimen Especial de Renta (RER) solo exige llevar 2 registros obligatorios (Ventas y Compras), sin distinción de ingresos.";
-                    } else if (r === 'MYPE') {
-                      if (tramosUit <= 300) message = "Régimen MYPE (≤ 300 UIT - Tramo 1): Pago a cuenta del Impuesto a la Renta de 1.0% sobre Ingresos Netos. Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
-                      else if (tramosUit <= 500) message = "Régimen MYPE (> 300 a ≤ 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Obligado a llevar Libro Diario Completo y Libro Mayor.";
-                      else message = "Régimen MYPE (> 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Contabilidad Completa (hasta 1,700 UIT).";
-                    } else if (r === 'RG') {
-                      if (tramosUit <= 300) message = "Régimen General (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
-                      else if (tramosUit <= 500) message = "Régimen General (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
-                      else if (tramosUit <= 1700) message = "Régimen General (> 500 a ≤ 1,700 UIT): Contabilidad Completa Básica.";
-                      else message = "Régimen General (> 1,700 UIT): Contabilidad Completa Integral (Incluye Caja y Bancos).";
-                    }
-
-                    return {
-                      message,
-                      isRed,
-                      books: [
-                        { name: 'Registro de Ventas e Ingresos', required: obligaciones.registroVentas },
-                        { name: 'Registro de Compras', required: obligaciones.registroCompras },
-                        { name: 'Libro Diario (Simplificado)', required: obligaciones.libroDiarioSimplificado, note: 'Hasta 300 UIT' },
-                        { name: 'Libro Diario (Completo)', required: obligaciones.libroDiarioCompleto },
-                        { name: 'Libro Mayor', required: obligaciones.libroMayor },
-                        { name: 'Libro Caja y Bancos', required: obligaciones.libroCajaBancos, note: 'Exclusivo > 1,700 UIT' },
-                        { name: 'Libro de Inventarios y Balances', required: obligaciones.libroInventariosBalances },
-                        { name: 'Registro de Activos Fijos', required: obligaciones.libroInventariosBalances, note: 'Anexo de Balances' },
-                        { name: 'Balance de Comprobación (Hoja de Trabajo)', required: obligaciones.libroInventariosBalances, note: 'Inventarios y Balances' },
-                        { name: 'Estado de Situación Financiera', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
-                        { name: 'Estado de Resultados', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
-                        { name: 'Estado de Flujo de Efectivo', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
-                        { name: 'Estado de Cambios en el Patrimonio', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
-                        { name: 'Notas a los Estados Financieros', required: obligaciones.libroInventariosBalances, note: 'Revelaciones' },
-                        { name: 'Impuesto a la Renta Diferido (NIC 12)', required: obligaciones.libroInventariosBalances, note: 'IFRS / NIC' },
-                        { name: 'Inventario Permanente Unidades', required: obligaciones.kardexFisico, note: 'Comercio/Manuf > 500 UIT' },
-                        { name: 'Inventario Permanente Valorizado', required: obligaciones.kardexValorizado, note: 'Comercio/Manuf > 1500 UIT' },
-                        { name: 'Registro de Costos', required: obligaciones.registroCostos, note: 'Solo Manuf > 1500 UIT' }
-                      ]
-                    };
-                  };
-
-                  const currentRules = getObligationsList();
-
-                  return (
-                    <div className="flex flex-col gap-4">
-                      {/* Banner de Mensaje de Obligación */}
-                      <div className={`flex items-start gap-3 p-4 rounded-xl border ${currentRules.isRed
-                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
-                        : 'bg-pld-blue/5 border-pld-blue/15 text-app-text'
-                        }`}>
-                        <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-semibold leading-relaxed">{currentRules.message}</p>
-                        </div>
-                      </div>
-
-                      {/* Alerts from Regime Evaluation Engine */}
-                      {evaluation.alerts.length > 0 && (
-                        <div className="flex flex-col gap-2.5">
-                          {evaluation.alerts.map((alert, idx) => (
-                            <div key={idx} className={`flex items-start gap-3 p-4 rounded-xl border ${alert.level === 'CRITICAL'
-                              ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
-                              : alert.level === 'WARNING'
-                                ? 'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400'
-                                : 'bg-blue-500/10 border-blue-500/25 text-blue-700 dark:text-blue-400'
-                              }`}>
-                              <AlertCircle size={18} className="shrink-0 mt-0.5 text-current" />
-                              <div>
-                                <p className="text-xs font-bold leading-relaxed">{alert.message}</p>
-                                {alert.recommendation && (
-                                  <p className="text-[10px] font-medium opacity-85 mt-1">Recomendación: {alert.recommendation}</p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Lista Detallada de Libros y Estados */}
-                      <div className="bg-app-bg border border-app-border rounded-xl p-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted mb-3">
-                          Estado de Obligación de Libros y Registros
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-                          {currentRules.books.map((b, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-app-border/40 last:border-0">
-                              <span className="font-medium text-app-text">{b.name}</span>
-                              <div className="flex items-center gap-2">
-                                {b.note && (
-                                  <span className="text-[8px] uppercase tracking-wider font-bold text-app-muted bg-app-hover px-1.5 py-0.5 rounded border border-app-border">
-                                    {b.note}
-                                  </span>
-                                )}
-                                {b.required ? (
-                                  <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                    ✓ Activo
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-0.5 bg-rose-500/10 text-rose-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                    ✗ Omitido
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Panel Interactivo NRUS */}
-                      {r === 'NRUS' && (
-                        <div className="bg-app-bg border border-app-border rounded-xl p-4 space-y-4 animate-fade-in">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-pld-blue flex items-center gap-2">
-                            <Calculator size={14} /> Calculadora de Cuota Fija NRUS
-                          </h4>
-                          <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
-                            El Nuevo RUS tributa mediante una cuota fija mensual determinada por el mayor valor entre tus ingresos brutos y compras mensuales.
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="flex flex-col space-y-1.5">
-                              <label className="text-[10px] uppercase font-bold text-app-muted">Ingresos Brutos del Mes (S/)</label>
-                              <input
-                                type="number"
-                                className="w-full text-sm font-mono font-bold bg-app-bg border border-app-border rounded-xl px-3 outline-none"
-                                value={nrusIngresos || ''}
-                                onChange={e => setNrusIngresos(Math.max(0, parseFloat(e.target.value) || 0))}
-                                placeholder="0.00"
-                              />
-                            </div>
-                            <div className="flex flex-col space-y-1.5">
-                              <label className="text-[10px] uppercase font-bold text-app-muted">Compras del Mes (S/)</label>
-                              <input
-                                type="number"
-                                className="w-full text-sm font-mono font-bold bg-app-bg border border-app-border rounded-xl px-3 outline-none"
-                                value={nrusCompras || ''}
-                                onChange={e => setNrusCompras(Math.max(0, parseFloat(e.target.value) || 0))}
-                                placeholder="0.00"
-                              />
-                            </div>
+                      return (
+                        <div key={monthName} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                          {/* Tooltip on Hover */}
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-mono py-1 px-2 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                            V: {formatCurrency(salesVal)} | C: {formatCurrency(purchasesVal)}
                           </div>
 
-                          <div className="flex justify-between items-center bg-pld-blue/10 border border-pld-blue/20 p-3 rounded-lg">
-                            <div>
-                              <p className="text-[10px] text-app-muted uppercase font-bold">Cuota a Pagar</p>
-                              <p className="text-xs font-black text-app-text">{nrusCalculo.mensaje}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xl font-mono font-black text-pld-blue">S/ {nrusCalculo.cuota.toFixed(2)}</span>
-                            </div>
+                          {/* Dual Bar Container */}
+                          <div className="w-full flex items-end justify-center gap-1 h-full">
+                            {/* Ventas Bar */}
+                            <div
+                              style={{ height: `${salesHeight}%` }}
+                              className={`w-2 sm:w-3.5 rounded-t-xs transition-all duration-500 ${salesVal > 0 ? 'bg-emerald-500 group-hover:brightness-110 shadow-2xs' : 'bg-emerald-500/20'}`}
+                            />
+                            {/* Compras Bar */}
+                            <div
+                              style={{ height: `${purchasesHeight}%` }}
+                              className={`w-2 sm:w-3.5 rounded-t-xs transition-all duration-500 ${purchasesVal > 0 ? 'bg-purple-600 group-hover:brightness-110 shadow-2xs' : 'bg-purple-600/20'}`}
+                            />
                           </div>
                         </div>
-                      )}
-
-                      {/* Panel Interactivo RER */}
-                      {r === 'RER' && (
-                        <div className="bg-app-bg border border-app-border rounded-xl p-4 space-y-4 animate-fade-in">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-pld-blue flex items-center gap-2">
-                            <Calculator size={14} /> Panel de Obligaciones RER (Simplificado)
-                          </h4>
-                          <p className="text-[10px] text-app-muted leading-tight uppercase font-medium">
-                            El Régimen Especial (RER) determina un impuesto a la renta de tasa única fija de 1.5% sobre la Base Imponible de las ventas, más el IGV del periodo.
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                            <div className="bg-app-surface border border-app-border p-3 rounded-lg">
-                              <p className="text-[9px] text-app-muted uppercase font-bold">Renta RER (1.5%)</p>
-                              <p className="text-base font-mono font-black text-pld-blue">S/ {rerCalculo.renta.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-app-surface border border-app-border p-3 rounded-lg">
-                              <p className="text-[9px] text-app-muted uppercase font-bold">IGV a Pagar</p>
-                              <p className="text-base font-mono font-black text-pld-magenta">S/ {rerCalculo.igv.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-gradient-to-br from-pld-blue to-pld-magenta p-3 rounded-lg text-white">
-                              <p className="text-[9px] uppercase font-bold opacity-80">Total Tributo</p>
-                              <p className="text-base font-mono font-black">S/ {rerCalculo.total.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                <div className="h-px w-full bg-app-border" />
-
-                {/* SOL Credentials */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-pld-blue uppercase tracking-widest flex items-center gap-2">
-                    Integración API (SUNAT SOL)
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
-                    <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-2">
-                        Usuario SOL
-                        <span className="text-[9px] bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full border border-blue-500/20">Auto Buzón</span>
-                      </label>
-                      <input type="text" value={currentCompany.sol_user || ''}
-                        onChange={(e) => updateCompany({ sol_user: e.target.value })} placeholder="Ej: JSANTOS1" />
-                      <span className="text-[9px] text-app-muted italic">Al configurar las credenciales SOL, el buzón se consultará automáticamente</span>
-                    </div>
-                    <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
-                      <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sol_pass || ''}
-                        onChange={(e) => updateCompany({ sol_pass: e.target.value })} placeholder="••••••••••••" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
-                    <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-2">
-                        Client ID (SIRE)
-                        <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-500/20">Auto SIRE</span>
-                      </label>
-                      <input type="text" value={currentCompany.sunatClientId || ''}
-                        onChange={(e) => updateCompany({ sunatClientId: e.target.value })} placeholder="Ingrese Client ID..." />
-                      <span className="text-[9px] text-app-muted italic">Al configurar las credenciales SIRE, se descargará desde enero hasta el mes actual</span>
-                    </div>
-                    <div className="flex flex-col space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Client Secret (SIRE)</label>
-                      <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sunatClientSecret || ''}
-                        onChange={(e) => updateCompany({ sunatClientSecret: e.target.value })} placeholder="••••••••••••" />
-                    </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Facturación Electrónica UBL 2.1 */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-pld-blue uppercase tracking-widest flex items-center gap-2">
-                      Facturación Electrónica (UBL 2.1)
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
-                      <div className="flex flex-col space-y-1.5">
-                        <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Certificado Digital (.pfx)</label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById('cert-upload-input')?.click()}
-                            className="px-3 py-2 bg-app-bg border border-app-border rounded-xl text-[10px] font-bold uppercase hover:border-pld-blue/50 transition-colors"
-                          >
-                            Seleccionar Certificado
-                          </button>
-                          <input
-                            id="cert-upload-input"
-                            type="file"
-                            accept=".pfx"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  const base64 = (ev.target?.result as string).split(',')[1];
-                                  setCertBase64(base64);
-                                  setCertName(file.name);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                          {certName && <span className="text-[10px] text-emerald-500 font-mono truncate max-w-[150px]">{certName}</span>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col space-y-1.5">
-                        <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            style={{ WebkitTextSecurity: 'disc' } as any}
-                            autoComplete="new-password"
-                            value={certPass}
-                            onChange={(e) => setCertPass(e.target.value)}
-                            placeholder="Contraseña del PFX..."
-                            className="flex-1 text-xs bg-app-bg border border-app-border rounded-xl px-3 outline-none"
-                          />
-                          <button
-                            type="button"
-                            disabled={!certBase64 || !certPass || isSavingCert}
-                            onClick={handleConfigurarCertificado}
-                            className="px-4 py-2 bg-pld-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-pld-blue/90 transition-colors"
-                          >
-                            {isSavingCert ? 'Guardando...' : 'Cargar'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  {/* X Axis Month Labels */}
+                  <div className="flex justify-between items-center pt-2">
+                    {MONTH_NAMES_SHORT.map((monthName) => (
+                      <span key={monthName} className="flex-1 text-center text-[9px] sm:text-[10px] font-bold text-app-muted uppercase">
+                        {monthName}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Right Column (4 cols) */}
-              <div className="lg:col-span-4 flex flex-col gap-5">
-                {/* Logo Upload */}
-                <div
-                  className="flex flex-col items-center justify-center p-6 bg-app-bg rounded-2xl border border-dashed border-app-border hover:border-pld-blue/40 transition-colors relative group cursor-pointer overflow-hidden min-h-[200px]"
-                  onClick={() => document.getElementById('logo-upload')?.click()}
-                >
-                  <input id="logo-upload" type="file" accept="image/png, image/jpeg" className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => updateCompany({ logoBase64: ev.target?.result as string });
-                        reader.readAsDataURL(file);
-                      }
-                    }} />
-                  {currentCompany.logoBase64 ? (
-                    <div className="relative w-full h-full flex flex-col items-center justify-center p-2">
-                      <img src={currentCompany.logoBase64} alt="Logo" className="max-w-full max-h-[140px] object-contain" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                        <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2"><Upload size={14} /> Cambiar</span>
+            </div>
+
+
+            {/* ─── COLUMNA DERECHA (1 COL EN LG) ─── */}
+            <div className="flex flex-col gap-6">
+
+              {/* 1. ACCESO RÁPIDO */}
+              <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-5 py-3.5 border-b border-app-border">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                    <Zap size={15} className="text-blue-600 dark:text-blue-400" />
+                    <span>Acceso Rápido</span>
+                  </h3>
+                </div>
+                <div className="p-3 space-y-1.5">
+                  {[
+                    { label: 'Registro de Compras', icon: ShoppingCart, tab: 'COMPRAS', desc: 'Ingresar nueva compra' },
+                    { label: 'Registro de Ventas', icon: Tag, tab: 'VENTAS', desc: 'Ingresar nueva venta' },
+                    { label: 'Asientos Contables', icon: BookText, tab: 'ASIENTOS', desc: 'Crear asiento manual' },
+                    { label: 'Libro Diario', icon: BookOpen, tab: 'DIARIO', desc: 'Ver movimientos registrados' },
+                  ].map(item => (
+                    <button
+                      key={item.tab}
+                      onClick={() => setActiveTab(item.tab)}
+                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left hover:bg-app-hover transition-all group cursor-pointer"
+                    >
+                      <div className="p-2 bg-app-bg rounded-xl text-app-muted group-hover:text-blue-600 dark:group-hover:text-blue-400 border border-app-border/60 transition-colors shrink-0">
+                        <item.icon size={16} />
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); updateCompany({ logoBase64: undefined }); }}
-                        className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-lg z-10">
-                        <Trash2 size={12} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-app-text group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</p>
+                        <p className="text-[10px] text-app-muted truncate mt-0.5">{item.desc}</p>
+                      </div>
+                      <ChevronRight size={14} className="text-app-border group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. CALENDARIO TRIBUTARIO */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-app-border">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
+                      <Calendar size={15} className="text-blue-600 dark:text-blue-400" />
+                      <span>Calendario Tributario</span>
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSelectedCalendarMonthOffset(selectedCalendarMonthOffset - 1)}
+                        className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-colors cursor-pointer"
+                        title="Mes anterior"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        onClick={() => setSelectedCalendarMonthOffset(selectedCalendarMonthOffset + 1)}
+                        className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-colors cursor-pointer"
+                        title="Mes siguiente"
+                      >
+                        <ChevronRight size={14} />
                       </button>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-app-muted group-hover:text-pld-blue transition-colors">
-                      <Building2 size={40} strokeWidth={1} />
-                      <p className="text-xs font-bold uppercase tracking-widest">Subir Logotipo</p>
-                      <p className="text-[10px] opacity-60">PNG o JPG</p>
+                  </div>
+
+                  <div className="mt-3">
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                      {calendarDate.monthNameFull} {calendarDate.year}
+                    </p>
+
+                    <div className="mt-3 flex items-center gap-3.5 bg-app-bg/50 border border-app-border p-3 rounded-xl">
+                      {/* Date Badge */}
+                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <span className="text-base font-black leading-none">{calendarDate.dueDay}</span>
+                        <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">{calendarDate.monthNameShort}</span>
+                      </div>
+
+                      {/* Info & Badges */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black text-app-text uppercase truncate">IGV - OPERACIONES MENSUALES</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] text-app-muted font-bold">Formulario 621</span>
+                          <span className="text-[8.5px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                            Por vencer
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Support Link */}
-                <div className="bg-gradient-to-br from-pld-blue to-pld-magenta rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col gap-2.5">
-                    <div className="flex items-center gap-2">
-                      <MessageCircleMore size={18} />
-                      <h3 className="font-bold tracking-widest text-[10px] uppercase">Soporte</h3>
-                    </div>
-                    <p className="text-[10px] opacity-80 leading-tight">Enlace rápido de soporte técnico.</p>
-                    {isSupportSaved && currentCompany.support ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <a href={currentCompany.support} target="_blank" rel="noopener noreferrer"
-                          className="flex-1 text-center py-2 bg-white text-pld-blue text-[10px] font-black uppercase tracking-wider rounded-lg hover:bg-white/90 transition-colors">
-                          Abrir Portal
-                        </a>
-                        <button onClick={() => { setSupportLinkDraft(currentCompany.support || ''); setIsSupportSaved(false); }}
-                          className="p-2 bg-white/15 hover:bg-white/25 rounded-lg transition-colors"><Settings size={12} /></button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 mt-1">
-                        <input type="text" className="text-xs p-2 rounded-lg bg-black/20 border-white/10 text-white placeholder-white/40"
-                          placeholder="URL del portal..." value={!isSupportSaved ? supportLinkDraft : (currentCompany.support || '')}
-                          onChange={(e) => { setSupportLinkDraft(e.target.value); setIsSupportSaved(false); }} />
-                        <button disabled={!supportLinkDraft.trim()}
-                          onClick={() => { if (supportLinkDraft.trim()) { updateCompany({ support: supportLinkDraft.trim() }); setIsSupportSaved(true); } }}
-                          className="py-2 bg-white text-pld-magenta text-[10px] font-black uppercase tracking-widest rounded-lg disabled:opacity-40">
-                          Guardar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/10 blur-2xl rounded-full" />
+                <div className="mt-4 pt-3 border-t border-app-border flex justify-end">
+                  <span className="text-[10px] font-bold text-app-muted">
+                    Faltan 10 días
+                  </span>
                 </div>
               </div>
+
             </div>
+
           </div>
-        )}
+
+
+          {/* ═══════════════════════════════════════════════════════════════
+              FILA 3: TARJETAS DE RESUMEN INFERIOR (CLIENTES, PROVEEDORES, LIBROS, COMPROBANTES)
+             ═══════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+            {/* 1. Clientes Activos */}
+            <div
+              onClick={() => setActiveTab('CLI_PRO')}
+              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
+                  <Users size={22} strokeWidth={2} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Clientes Activos</span>
+                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">{clientsCount}</h4>
+                </div>
+              </div>
+              <div className="flex justify-end pt-3">
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-blue-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={10} />
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Proveedores */}
+            <div
+              onClick={() => setActiveTab('CLI_PRO')}
+              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
+                  <Briefcase size={22} strokeWidth={2} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Proveedores</span>
+                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">{providersCount}</h4>
+                </div>
+              </div>
+              <div className="flex justify-end pt-3">
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={10} />
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Libros Electrónicos */}
+            <div
+              onClick={() => setActiveTab('SIRE')}
+              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl shrink-0">
+                  <FileText size={22} strokeWidth={2} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Libros Electrónicos</span>
+                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">12</h4>
+                </div>
+              </div>
+              <div className="flex justify-end pt-3">
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={10} />
+                </span>
+              </div>
+            </div>
+
+            {/* 4. Comprobantes Emitidos */}
+            <div
+              onClick={() => setActiveTab('VENTAS')}
+              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
+                  <ReceiptText size={22} strokeWidth={2} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Comprobantes Emitidos</span>
+                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">
+                    {localSales.length > 0 ? localSales.length.toLocaleString('es-PE') : '2,456'}
+                  </h4>
+                </div>
+              </div>
+              <div className="flex justify-end pt-3">
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-amber-500 transition-colors flex items-center gap-1">
+                  Ver detalle <ChevronRight size={10} />
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+
+          {/* ═══════════════════════════════════════════════════════════════
+              PARÁMETROS DE LA ENTIDAD (COLLAPSIBLE)
+             ═══════════════════════════════════════════════════════════════ */}
+          <div id="company-config-section" className="scroll-mt-6 pt-2">
+            <button
+              onClick={() => setShowConfig(!showConfig)}
+              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-app-muted hover:text-blue-600 transition-colors mb-3 cursor-pointer"
+            >
+              <Settings size={15} />
+              <span>Parámetros de la Entidad y Configuración</span>
+              <ChevronRight size={14} className={`transition-transform duration-200 ${showConfig ? 'rotate-90' : ''}`} />
+            </button>
+
+            {showConfig && (
+              <div className="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm animate-slide-up">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                  {/* Formulario (Left 8 cols) */}
+                  <div className="lg:col-span-8 space-y-6">
+
+                    {/* Fila 1: RUC & Name */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex flex-col space-y-2 relative">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <Hash size={12} className="text-blue-600" /> RUC
+                        </label>
+                        <div className="relative">
+                          <input id="empresa-ruc-input" type="text" value={currentCompany.ruc} onChange={handleRucChange}
+                            placeholder="Ingrese RUC..." maxLength={11}
+                            className="w-full text-sm font-mono tracking-wider pr-10 p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                          {isSearchingRuc && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 animate-spin" />}
+                          {fetchSuccess && !isSearchingRuc && <CheckCircle2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />}
+                        </div>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <Building2 size={12} className="text-blue-600" /> Razón Social
+                        </label>
+                        <input type="text" value={currentCompany.name}
+                          onChange={(e) => updateCompany({ name: e.target.value })}
+                          className="w-full text-sm font-bold p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Dirección y Ubicación */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <MapPinHouse size={12} className="text-blue-600" /> Domicilio Fiscal
+                        </label>
+                        <input type="text" value={currentCompany.address}
+                          onChange={(e) => updateCompany({ address: e.target.value })}
+                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <MapPin size={12} className="text-blue-600" /> Ubicación (Dep - Prov - Dist)
+                        </label>
+                        <input type="text" value={currentCompany.location}
+                          onChange={(e) => updateCompany({ location: e.target.value })}
+                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                      </div>
+                    </div>
+
+                    {/* Fila 3: Régimen y Periodo */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <Shield size={12} className="text-blue-600" /> Régimen Tributario
+                        </label>
+                        <select
+                          value={currentCompany.regimenTributario || 'RG'}
+                          onChange={(e) => updateCompany({ regimenTributario: e.target.value as RegimenCode })}
+                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500 cursor-pointer font-bold"
+                        >
+                          <option value="RG">Régimen General (RG)</option>
+                          <option value="MYPE">Régimen MYPE Tributario (RMT)</option>
+                          <option value="RER">Régimen Especial de Renta (RER)</option>
+                          <option value="NRUS">Nuevo RUS (NRUS)</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
+                          <CalendarDays size={12} className="text-blue-600" /> Periodo Activo
+                        </label>
+                        <input
+                          type="text"
+                          value={currentCompany.period || new Date().getFullYear().toString()}
+                          onChange={(e) => updateCompany({ period: e.target.value })}
+                          className="w-full text-sm font-mono p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Credenciales SOL */}
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                        Credenciales SUNAT Clave SOL & SIRE
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Usuario SOL</label>
+                          <input type="text" value={currentCompany.sol_user || ''}
+                            onChange={(e) => updateCompany({ sol_user: e.target.value })} placeholder="Ej: MODDATOS"
+                            className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
+                          <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sol_pass || ''}
+                            onChange={(e) => updateCompany({ sol_pass: e.target.value })} placeholder="••••••••••••"
+                            className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Facturación Electrónica UBL 2.1 */}
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                        Facturación Electrónica (UBL 2.1)
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Certificado Digital (.pfx)</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('cert-upload-input')?.click()}
+                              className="px-3 py-2 bg-app-bg border border-app-border rounded-xl text-[10px] font-bold uppercase hover:border-blue-500/50 transition-colors cursor-pointer"
+                            >
+                              Seleccionar Certificado
+                            </button>
+                            <input
+                              id="cert-upload-input"
+                              type="file"
+                              accept=".pfx"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (ev) => {
+                                    const base64 = (ev.target?.result as string).split(',')[1];
+                                    setCertBase64(base64);
+                                    setCertName(file.name);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                            {certName && <span className="text-[10px] text-emerald-500 font-mono truncate max-w-[150px]">{certName}</span>}
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              style={{ WebkitTextSecurity: 'disc' } as any}
+                              autoComplete="new-password"
+                              value={certPass}
+                              onChange={(e) => setCertPass(e.target.value)}
+                              placeholder="Contraseña del PFX..."
+                              className="flex-1 text-xs bg-app-bg border border-app-border rounded-xl px-3 outline-none"
+                            />
+                            <button
+                              type="button"
+                              disabled={!certBase64 || !certPass || isSavingCert}
+                              onClick={handleConfigurarCertificado}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-blue-700 transition-colors cursor-pointer"
+                            >
+                              {isSavingCert ? 'Guardando...' : 'Cargar'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Logo Upload & Soporte (Right 4 cols) */}
+                  <div className="lg:col-span-4 flex flex-col gap-5">
+                    {/* Logo Upload */}
+                    <div
+                      className="flex flex-col items-center justify-center p-6 bg-app-bg rounded-2xl border border-dashed border-app-border hover:border-blue-500/40 transition-colors relative group cursor-pointer overflow-hidden min-h-[200px]"
+                      onClick={() => document.getElementById('logo-upload')?.click()}
+                    >
+                      <input id="logo-upload" type="file" accept="image/png, image/jpeg" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => updateCompany({ logoBase64: ev.target?.result as string });
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      {currentCompany.logoBase64 ? (
+                        <div className="relative w-full h-full flex flex-col items-center justify-center p-2">
+                          <img src={currentCompany.logoBase64} alt="Logo" className="max-w-full max-h-[140px] object-contain" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                            <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2"><Upload size={14} /> Cambiar</span>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); updateCompany({ logoBase64: undefined }); }}
+                            className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-lg z-10 cursor-pointer">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-app-muted group-hover:text-blue-600 transition-colors">
+                          <Building2 size={40} strokeWidth={1} />
+                          <p className="text-xs font-bold uppercase tracking-widest">Subir Logotipo</p>
+                          <p className="text-[10px] opacity-60">PNG o JPG</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Soporte */}
+                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <MessageCircleMore size={18} />
+                          <h3 className="font-bold tracking-widest text-[10px] uppercase">Soporte Técnico</h3>
+                        </div>
+                        <p className="text-[10px] opacity-90 leading-tight">Enlace directo a atención y soporte contable.</p>
+                        {isSupportSaved && currentCompany.support ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <a href={currentCompany.support} target="_blank" rel="noopener noreferrer"
+                              className="flex-1 text-center py-2 bg-white text-blue-600 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/90 transition-colors shadow-sm">
+                              Abrir Portal
+                            </a>
+                            <button onClick={() => { setSupportLinkDraft(currentCompany.support || ''); setIsSupportSaved(false); }}
+                              className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors cursor-pointer"><Settings size={14} /></button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2 mt-1">
+                            <input type="text" className="text-xs p-2 rounded-xl bg-black/20 border border-white/15 text-white placeholder-white/50 outline-none"
+                              placeholder="URL del portal..." value={!isSupportSaved ? supportLinkDraft : (currentCompany.support || '')}
+                              onChange={(e) => { setSupportLinkDraft(e.target.value); setIsSupportSaved(false); }} />
+                            <button disabled={!supportLinkDraft.trim()}
+                              onClick={() => { if (supportLinkDraft.trim()) { updateCompany({ support: supportLinkDraft.trim() }); setIsSupportSaved(true); } }}
+                              className="py-2 bg-white text-blue-700 text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-40 cursor-pointer shadow-sm">
+                              Guardar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/10 blur-2xl rounded-full" />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════
+              FOOTER CORPORATIVO
+             ═══════════════════════════════════════════════════════════════ */}
+          <footer className="mt-8 pt-6 border-t border-app-border flex flex-col sm:flex-row items-center justify-between gap-4 text-[10.5px] text-app-muted font-semibold tracking-wider uppercase">
+            <p>© 2026 ANGELO THOMAS SERNA SIMEON - SOFTCONTABLE SAAS</p>
+            <div className="flex items-center gap-4 text-[10px]">
+              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Términos</span>
+              <span>•</span>
+              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Privacidad</span>
+              <span>•</span>
+              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Seguridad</span>
+              <span>•</span>
+              <span className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setActiveTab('ADMIN')}>Legal</span>
+            </div>
+          </footer>
+
+        </div>
       </div>
     </div>
-  </div>
-</div>
   );
 };
 

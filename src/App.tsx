@@ -73,6 +73,7 @@ import {
   Sun,
   Moon,
   ChevronDown,
+  ChevronsLeft,
   FileText,
   PieChart,
   Wrench,
@@ -863,12 +864,12 @@ const App: React.FC = () => {
         {/* ═══ SIDEBAR ═══ */}
         <aside className={`fixed md:relative flex flex-col bg-app-surface border-r border-app-border shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
           {/* Brand Header */}
-          <div className="h-16 flex items-center px-5 bg-app-surface shrink-0 border-b border-app-border overflow-hidden" style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start' }}>
-            <div className="flex items-center gap-3 w-full">
+          <div className="h-16 flex items-center justify-between px-4 bg-app-surface shrink-0 border-b border-app-border overflow-hidden">
+            <div className="flex items-center gap-3 min-w-0">
               <img
                 src="assets/logo.png"
                 alt="Logo"
-                className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10' : 'w-8 h-8'} object-contain shrink-0`}
+                className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-9 h-9 mx-auto' : 'w-8 h-8'} object-contain shrink-0`}
               />
               {!isSidebarCollapsed && (
                 <span className="font-black tracking-[0.1em] text-[15px] uppercase text-app-text leading-tight whitespace-nowrap animate-fade-in">
@@ -876,6 +877,21 @@ const App: React.FC = () => {
                 </span>
               )}
             </div>
+            {!isSidebarCollapsed && (
+              <button
+                onClick={() => {
+                  if (window.innerWidth <= 768) {
+                    setIsMobileSidebarOpen(false);
+                  } else {
+                    setIsSidebarCollapsed(true);
+                  }
+                }}
+                className="hidden md:flex p-1.5 text-app-muted hover:text-blue-600 hover:bg-app-hover rounded-lg transition-colors cursor-pointer"
+                title="Colapsar menú lateral"
+              >
+                <ChevronsLeft size={16} />
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
@@ -1218,7 +1234,7 @@ const App: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ paddingLeft: '2.4rem' }}
                   className="w-full pr-2.5 py-1.5 sm:py-2 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
-                  placeholder="Buscar..."
+                  placeholder="Buscar en SOFTCONTABLE..."
                 />
 
                 {/* Search Results Dropdown */}
