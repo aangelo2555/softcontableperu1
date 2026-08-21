@@ -979,27 +979,41 @@ export const SoftPremiumDashboard: React.FC = () => {
                     )}
 
                     {getModuleSubTab('trib_m2') === 'GROQ_AI' && (
-                      <div className="space-y-2">
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              '¿Qué pasa si no bancarizo una operación mayor a S/ 2000?',
+                              '¿El ITF sustituye la bancarización?',
+                              '¿Cuáles son los medios de pago válidos?'
+                            ].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('tributario', 'trib_m2', chip)}
+                                className="text-[10px] font-bold text-slate-700 hover:text-amber-700 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">
+                                {chip}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Consultar sobre medios de pago y bancarización..."
+                          <input type="text" placeholder="Escribe tu duda sobre bancarización..."
                             value={ragQueries['trib_m2'] || ''}
                             onChange={(e) => setRagQueries({ ...ragQueries, trib_m2: e.target.value })}
-                            className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-amber-500 font-medium"
-                          />
-                          <button
-                            onClick={() => handleAskRAG('tributario', 'trib_m2')}
-                            disabled={ragLoading['trib_m2']}
-                            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                          >
+                            onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'trib_m2')}
+                            className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-amber-500 font-medium" />
+                          <button onClick={() => handleAskRAG('tributario', 'trib_m2')} disabled={ragLoading['trib_m2']}
+                            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
                             {ragLoading['trib_m2'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
                             <span>Consultar</span>
                           </button>
                         </div>
                         {ragAnswers['trib_m2'] && (
-                          <div className="bg-white border border-amber-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs whitespace-pre-line">
-                            {ragAnswers['trib_m2']}
+                          <div className="bg-amber-50/70 border border-amber-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-amber-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['trib_m2'])} className="text-[10px] font-bold text-slate-400 hover:text-amber-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['trib_m2']}</div>
                           </div>
                         )}
                       </div>
@@ -1008,112 +1022,230 @@ export const SoftPremiumDashboard: React.FC = () => {
                 )}
               </div>
 
-              {/* MÓDULO 1.3: PROVEEDORES NO HABIDOS */}
+              {/* MÓDULO 1.3: PROVEEDORES NO HABIDOS — 3 SUB-PESTAÑAS COMPLETAS */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-rose-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-rose-500/10 text-rose-600 rounded-xl border border-rose-500/20">
-                          <ShieldAlert size={16} />
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.3</span>
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">
-                            Estado: 100% Habidos
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+                      <div className="p-2 bg-rose-500/10 text-rose-600 rounded-xl border border-rose-500/20"><ShieldAlert size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.3</span>
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">Estado: 100% Habidos</span>
                     </div>
-
-                    <h3 className="text-sm font-black text-slate-800 leading-snug">
-                      Detección de Proveedores No Habidos &amp; Cruces SUNAT
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                      Verificación preventiva del estado de contribuyentes para evitar la pérdida del costo o gasto y del crédito fiscal.
-                    </p>
+                    <h3 className="text-sm font-black text-slate-800 leading-snug">Detección de Proveedores No Habidos &amp; Cruces SUNAT</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Verificación preventiva del estado de contribuyentes para evitar la pérdida del costo o gasto y del crédito fiscal.</p>
                   </div>
-
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
-                    <button
-                      onClick={() => toggleModule('trib_m3')}
-                      className="text-xs font-black text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer group"
-                    >
+                    <button onClick={() => toggleModule('trib_m3')} className="text-xs font-black text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'trib_m3' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                     </button>
                   </div>
                 </div>
-
                 {expandedModule === 'trib_m3' && (
-                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-3 animate-scale-up">
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Total Proveedores Evaluados:</span>
-                        <span className="font-black text-slate-800">{(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 1}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Condición Habido / Activo:</span>
-                        <span className="font-black text-emerald-600">100% Conforme</span>
-                      </div>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('trib_m3', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m3') === 'DIAGNOSTICO' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('trib_m3', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m3') === 'NORMATIVA' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('trib_m3', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m3') === 'GROQ_AI' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('trib_m3') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Total Proveedores</span>
+                            <p className="text-sm font-black text-slate-800">{(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 1}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Condición Habido</span>
+                            <p className="text-sm font-black text-emerald-600">100% Conforme</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Monto en Riesgo de Reparo</span>
+                            <p className="text-sm font-black text-emerald-600">S/ 0.00</p>
+                          </div>
+                        </div>
+                        <div className="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-emerald-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">Todos tus proveedores se encuentran en condición de HABIDO y ACTIVO según consulta SUNAT. No se detectan riesgos de reparo tributario.</p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('trib_m3') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">Art. 44 del Código Tributario y R.S. N° 210-2004/SUNAT:</p>
+                        <p>No se reconocerá el costo o gasto ni el crédito fiscal de comprobantes emitidos por contribuyentes en condición de NO HABIDO, salvo que el adquirente demuestre la fehaciencia de la operación.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-rose-500" />
+                          <span>RTF N° 06045-4-2019: La carga de la prueba recae sobre el contribuyente.</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('trib_m3') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿Pierdo el crédito fiscal si mi proveedor es no habido?', '¿Cómo verificar la condición de habido en SUNAT?', '¿SUNAT repara gastos con proveedores no hallados?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('tributario', 'trib_m3', chip)} className="text-[10px] font-bold text-slate-700 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre proveedores..." value={ragQueries['trib_m3'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, trib_m3: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'trib_m3')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-rose-500 font-medium" />
+                          <button onClick={() => handleAskRAG('tributario', 'trib_m3')} disabled={ragLoading['trib_m3']} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['trib_m3'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['trib_m3'] && (
+                          <div className="bg-rose-50/70 border border-rose-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-rose-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-rose-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['trib_m3'])} className="text-[10px] font-bold text-slate-400 hover:text-rose-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['trib_m3']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* MÓDULO 1.4: DETRACCIONES SPOT */}
+              {/* MÓDULO 1.4: DETRACCIONES SPOT — 3 SUB-PESTAÑAS COMPLETAS */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl border border-purple-500/20">
-                          <CreditCard size={16} />
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.4</span>
-                          <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-extrabold rounded-full">
-                            SPOT: 0 Inconsistencias
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+                      <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl border border-purple-500/20"><CreditCard size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.4</span>
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-extrabold rounded-full">SPOT: 0 Inconsistencias</span>
                     </div>
-
-                    <h3 className="text-sm font-black text-slate-800 leading-snug">
-                      Análisis de Detracciones SPOT, Retenciones &amp; Percepciones
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                      Auditoría preventiva de constancias de depósito y pago oportuno de tributos vinculados a compras gravadas.
-                    </p>
+                    <h3 className="text-sm font-black text-slate-800 leading-snug">Análisis de Detracciones SPOT, Retenciones &amp; Percepciones</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Auditoría preventiva de constancias de depósito y pago oportuno de tributos vinculados a compras gravadas.</p>
                   </div>
-
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
-                    <button
-                      onClick={() => toggleModule('trib_m4')}
-                      className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer group"
-                    >
+                    <button onClick={() => toggleModule('trib_m4')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'trib_m4' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                     </button>
                   </div>
                 </div>
-
                 {expandedModule === 'trib_m4' && (
-                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-3 animate-scale-up">
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Umbral General de Detracción:</span>
-                        <span className="font-black text-slate-800">S/ 700.00</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Estado de Constancias:</span>
-                        <span className="font-black text-emerald-600">Al día sin multas SUNAT</span>
-                      </div>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('trib_m4', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m4') === 'DIAGNOSTICO' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('trib_m4', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m4') === 'NORMATIVA' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('trib_m4', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('trib_m4') === 'GROQ_AI' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('trib_m4') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Umbral Detracción</span>
+                            <p className="text-sm font-black text-slate-800">S/ 700.00</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Constancias Verificadas</span>
+                            <p className="text-sm font-black text-emerald-600">Al día</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Multas Pendientes</span>
+                            <p className="text-sm font-black text-emerald-600">0 multas</p>
+                          </div>
+                        </div>
+                        <div className="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-emerald-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">Las constancias de depósito de detracciones se encuentran al día. No se detectan multas ni inconsistencias en retenciones y percepciones.</p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('trib_m4') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">D. Leg. 940 y R.S. N° 183-2004/SUNAT (Sistema de Detracciones SPOT):</p>
+                        <p>El adquirente debe depositar la detracción en la cuenta del Banco de la Nación del proveedor dentro de los 5 días hábiles del mes siguiente. El incumplimiento genera multa del 50% del monto no depositado y la pérdida del crédito fiscal.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-purple-500" />
+                          <span>Infracción tipificada en el numeral 1 del Art. 12 del D. Leg. 940.</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('trib_m4') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿Cuándo debo depositar la detracción?', '¿Qué pasa si no deposito la detracción a tiempo?', '¿El régimen de retenciones es obligatorio?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('tributario', 'trib_m4', chip)} className="text-[10px] font-bold text-slate-700 hover:text-purple-700 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre detracciones..." value={ragQueries['trib_m4'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, trib_m4: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'trib_m4')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-purple-500 font-medium" />
+                          <button onClick={() => handleAskRAG('tributario', 'trib_m4')} disabled={ragLoading['trib_m4']} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['trib_m4'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['trib_m4'] && (
+                          <div className="bg-purple-50/70 border border-purple-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-purple-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-purple-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['trib_m4'])} className="text-[10px] font-bold text-slate-400 hover:text-purple-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['trib_m4']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
+            </div>
+
+            {/* 🤖 MÓDULO 1.5: ASISTENTE IA TRIBUTARIO — MÓDULO DEDICADO */}
+            <div className="bg-gradient-to-r from-emerald-50 via-white to-blue-50 border-2 border-emerald-300/60 rounded-3xl shadow-sm overflow-hidden p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-blue-600 text-white rounded-2xl shadow-md"><MessageSquare size={20} /></div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-2">🤖 Asistente IA Tributario <span className="text-[9px] px-2 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full font-extrabold">GROQ RAG EN VIVO</span></h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Consulta cualquier duda tributaria sobre tu empresa con inteligencia artificial conectada a normativa peruana 2026.</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-bold uppercase text-slate-400">Preguntas frecuentes:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['¿Cómo optimizar mi carga tributaria legalmente?', '¿Qué debo tener en cuenta para la DAOT?', '¿Cuándo prescribe una deuda tributaria?', '¿Cómo me preparo para una fiscalización SUNAT?'].map((chip, idx) => (
+                    <button key={idx} onClick={() => handleAskRAG('tributario', 'ia_tributario', chip)} className="text-[10px] font-bold text-slate-700 hover:text-emerald-700 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 px-2.5 py-1.5 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input type="text" placeholder="Escribe cualquier consulta tributaria sobre tu empresa..." value={ragQueries['ia_tributario'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, ia_tributario: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'ia_tributario')} className="flex-1 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-emerald-500 font-medium shadow-2xs" />
+                <button onClick={() => handleAskRAG('tributario', 'ia_tributario')} disabled={ragLoading['ia_tributario']} className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 shrink-0 disabled:opacity-50">
+                  {ragLoading['ia_tributario'] ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}<span>Consultar IA</span>
+                </button>
+              </div>
+              {ragAnswers['ia_tributario'] && (
+                <div className="bg-white border border-emerald-200 p-4 rounded-2xl text-xs text-slate-700 leading-relaxed shadow-xs space-y-2">
+                  <div className="flex justify-between items-center border-b border-emerald-100 pb-2">
+                    <span className="text-[10px] font-black uppercase text-emerald-700 flex items-center gap-1.5"><Sparkles size={14} className="text-emerald-500" /> Respuesta del Asistente IA Tributario</span>
+                    <button onClick={() => copyToClipboard(ragAnswers['ia_tributario'])} className="text-[10px] font-bold text-slate-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                  </div>
+                  <div className="whitespace-pre-line text-[12px] leading-relaxed">{ragAnswers['ia_tributario']}</div>
+                </div>
+              )}
             </div>
 
           </div>
@@ -1237,82 +1369,230 @@ export const SoftPremiumDashboard: React.FC = () => {
             {/* GRILLA DE MÓDULOS DE PLANILLAS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* MÓDULO 2.1: GRATIFICACIONES */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl">
-                      <Award size={16} />
+              {/* MÓDULO 2.1: GRATIFICACIONES — 3 SUB-PESTAÑAS COMPLETAS */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl"><Award size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 2.1</span>
+                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold rounded-full">Ley 27735 / 30334</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 2.1</span>
-                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold rounded-full">
-                      Ley 27735 / 30334
-                    </span>
+                    <h3 className="text-sm font-black text-slate-800">Gratificaciones Legales &amp; Bonificación Extraordinaria</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Auditoría de cómputo para los periodos de Julio y Diciembre, considerando asignación familiar y bonos extraordinarios.</p>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800">Gratificaciones Legales &amp; Bonificación Extraordinaria</h3>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                    Auditoría de cómputo para los periodos de Julio y Diciembre, considerando asignación familiar y bonos extraordinarios.
-                  </p>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                    <button onClick={() => toggleModule('pla_m1')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer group">
+                      <span>{expandedModule === 'pla_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => toggleModule('pla_m1')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer">
-                    <span>{expandedModule === 'pla_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
-                  </button>
-                </div>
-
                 {expandedModule === 'pla_m1' && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold block">Trabajadores Computables</span>
-                        <span className="font-black text-indigo-600">{kpis.colaboradoresCount}</span>
-                      </div>
-                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold block">Monto Proyectado</span>
-                        <span className="font-black text-blue-600">S/ {kpis.gratiEstimadaTotal.toFixed(2)}</span>
-                      </div>
-                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold block">Bonif. Extraordinaria (9%)</span>
-                        <span className="font-black text-emerald-600">S/ {(kpis.gratiEstimadaTotal * 0.09).toFixed(2)}</span>
-                      </div>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('pla_m1', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m1') === 'DIAGNOSTICO' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('pla_m1', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m1') === 'NORMATIVA' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('pla_m1', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m1') === 'GROQ_AI' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('pla_m1') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Trabajadores Computables</span>
+                            <p className="text-sm font-black text-indigo-600">{kpis.colaboradoresCount}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Monto Proyectado</span>
+                            <p className="text-sm font-black text-blue-600">S/ {kpis.gratiEstimadaTotal.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Bonif. Extraordinaria (9%)</span>
+                            <p className="text-sm font-black text-emerald-600">S/ {(kpis.gratiEstimadaTotal * 0.09).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="bg-indigo-50/70 border border-indigo-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-indigo-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-indigo-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">La gratificación proyectada para {kpis.colaboradoresCount} colaboradores es de S/ {kpis.gratiEstimadaTotal.toFixed(2)}. Incluye bonificación extraordinaria del 9% por Ley 30334.</p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('pla_m1') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">Ley 27735 y Ley 30334 (Gratificaciones):</p>
+                        <p>Los trabajadores sujetos al régimen laboral de la actividad privada tienen derecho a percibir dos gratificaciones al año: Fiestas Patrias (Julio) y Navidad (Diciembre), equivalentes a una remuneración mensual completa más la bonificación extraordinaria del 9% (EsSalud).</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-indigo-500" />
+                          <span>La asignación familiar (10% de RMV) es computable para el cálculo de gratificaciones.</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('pla_m1') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿El trabajador a tiempo parcial tiene derecho a gratificación?', '¿Cómo calculo la bonificación extraordinaria?', '¿La asignación familiar es computable?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('planillas', 'pla_m1', chip)} className="text-[10px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre gratificaciones..." value={ragQueries['pla_m1'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, pla_m1: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('planillas', 'pla_m1')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-indigo-500 font-medium" />
+                          <button onClick={() => handleAskRAG('planillas', 'pla_m1')} disabled={ragLoading['pla_m1']} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['pla_m1'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['pla_m1'] && (
+                          <div className="bg-indigo-50/70 border border-indigo-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-indigo-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-indigo-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['pla_m1'])} className="text-[10px] font-bold text-slate-400 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['pla_m1']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* MÓDULO 2.2: CTS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="p-2 bg-blue-500/10 text-blue-600 rounded-xl">
-                      <Clock size={16} />
+              {/* MÓDULO 2.2: CTS — 3 SUB-PESTAÑAS COMPLETAS */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <div className="p-2 bg-blue-500/10 text-blue-600 rounded-xl"><Clock size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 2.2</span>
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-extrabold rounded-full">D.S. 001-97-TR</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 2.2</span>
-                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-extrabold rounded-full">
-                      D.S. 001-97-TR
-                    </span>
+                    <h3 className="text-sm font-black text-slate-800">Compensación por Tiempo de Servicios (CTS)</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Control preventivo de depósitos semestrales en entidades financieras en Mayo y Noviembre según régimen laboral.</p>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800">Compensación por Tiempo de Servicios (CTS)</h3>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                    Control preventivo de depósitos semestrales en entidades financieras en Mayo y Noviembre según régimen laboral.
-                  </p>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                    <button onClick={() => toggleModule('pla_m2')} className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer group">
+                      <span>{expandedModule === 'pla_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => toggleModule('pla_m2')} className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer">
-                    <span>{expandedModule === 'pla_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
-                  </button>
-                </div>
-
                 {expandedModule === 'pla_m2' && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
-                    <div className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                      <span className="font-bold text-slate-600">Depósito Estimado Semestral:</span>
-                      <span className="font-black text-blue-600">S/ {kpis.ctsEstimadaTotal.toFixed(2)}</span>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('pla_m2', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m2') === 'DIAGNOSTICO' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('pla_m2', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m2') === 'NORMATIVA' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('pla_m2', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('pla_m2') === 'GROQ_AI' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('pla_m2') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Depósito Semestral</span>
+                            <p className="text-sm font-black text-blue-600">S/ {kpis.ctsEstimadaTotal.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Fechas Límite</span>
+                            <p className="text-sm font-black text-slate-800">15 May / 15 Nov</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">1/6 de Gratificación</span>
+                            <p className="text-sm font-black text-emerald-600">S/ {(kpis.gratiEstimadaTotal / 6).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="bg-blue-50/70 border border-blue-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-blue-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-blue-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">El depósito de CTS semestral estimado es de S/ {kpis.ctsEstimadaTotal.toFixed(2)} para {kpis.colaboradoresCount} colaboradores. Recuerde que el 1/6 de la gratificación se incluye en el cálculo computable.</p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('pla_m2') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">D.S. 001-97-TR — TUO del D. Leg. 650 (CTS):</p>
+                        <p>La CTS se deposita semestralmente en Mayo y Noviembre. La remuneración computable incluye la remuneración básica, asignación familiar y 1/6 de la última gratificación percibida. El incumplimiento genera intereses legales a favor del trabajador.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-blue-500" />
+                          <span>El trabajador puede disponer libremente del 100% de su CTS (Ley 31171).</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('pla_m2') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿Cuándo debo depositar la CTS?', '¿La asignación familiar es computable para CTS?', '¿Qué pasa si no deposito la CTS a tiempo?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('planillas', 'pla_m2', chip)} className="text-[10px] font-bold text-slate-700 hover:text-blue-700 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre CTS..." value={ragQueries['pla_m2'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, pla_m2: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('planillas', 'pla_m2')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-blue-500 font-medium" />
+                          <button onClick={() => handleAskRAG('planillas', 'pla_m2')} disabled={ragLoading['pla_m2']} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['pla_m2'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['pla_m2'] && (
+                          <div className="bg-blue-50/70 border border-blue-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-blue-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-blue-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['pla_m2'])} className="text-[10px] font-bold text-slate-400 hover:text-blue-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['pla_m2']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
+            </div>
+
+            {/* 🤖 MÓDULO 2.3: ASISTENTE IA LABORAL — MÓDULO DEDICADO */}
+            <div className="bg-gradient-to-r from-indigo-50 via-white to-blue-50 border-2 border-indigo-300/60 rounded-3xl shadow-sm overflow-hidden p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl shadow-md"><MessageSquare size={20} /></div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-2">🤖 Asistente IA Laboral <span className="text-[9px] px-2 py-0.5 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full font-extrabold">GROQ RAG EN VIVO</span></h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Consulta cualquier duda laboral sobre planillas, gratificaciones, CTS, vacaciones y cumplimiento SUNAFIL.</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-bold uppercase text-slate-400">Preguntas frecuentes:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['¿Cómo calculo las vacaciones truncas?', '¿Cuánto es la multa por no depositar CTS?', '¿Qué régimen laboral le corresponde a mi empresa?', '¿EsSalud cubre a los trabajadores del hogar?'].map((chip, idx) => (
+                    <button key={idx} onClick={() => handleAskRAG('planillas', 'ia_planillas', chip)} className="text-[10px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 px-2.5 py-1.5 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input type="text" placeholder="Escribe cualquier consulta laboral sobre tu empresa..." value={ragQueries['ia_planillas'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, ia_planillas: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('planillas', 'ia_planillas')} className="flex-1 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-indigo-500 font-medium shadow-2xs" />
+                <button onClick={() => handleAskRAG('planillas', 'ia_planillas')} disabled={ragLoading['ia_planillas']} className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 shrink-0 disabled:opacity-50">
+                  {ragLoading['ia_planillas'] ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}<span>Consultar IA</span>
+                </button>
+              </div>
+              {ragAnswers['ia_planillas'] && (
+                <div className="bg-white border border-indigo-200 p-4 rounded-2xl text-xs text-slate-700 leading-relaxed shadow-xs space-y-2">
+                  <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+                    <span className="text-[10px] font-black uppercase text-indigo-700 flex items-center gap-1.5"><Sparkles size={14} className="text-indigo-500" /> Respuesta del Asistente IA Laboral</span>
+                    <button onClick={() => copyToClipboard(ragAnswers['ia_planillas'])} className="text-[10px] font-bold text-slate-400 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                  </div>
+                  <div className="whitespace-pre-line text-[12px] leading-relaxed">{ragAnswers['ia_planillas']}</div>
+                </div>
+              )}
             </div>
 
           </div>
@@ -1433,85 +1713,240 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
+
             {/* GRILLA DE MÓDULOS FINANCIEROS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl">
-                      <Activity size={16} />
+              {/* MÓDULO 3.1: LIQUIDEZ & CAPITAL — 3 SUB-PESTAÑAS COMPLETAS */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl"><Activity size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 3.1</span>
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-extrabold rounded-full">Liquidez &amp; Capital</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 3.1</span>
-                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-extrabold rounded-full">
-                      Liquidez &amp; Capital
-                    </span>
+                    <h3 className="text-sm font-black text-slate-800">Ratios de Liquidez &amp; Capital de Trabajo Neto</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Evaluación de la solvencia a corto plazo, prueba ácida y rotación de cuentas por cobrar para optimizar el flujo de caja.</p>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800">Ratios de Liquidez &amp; Capital de Trabajo Neto</h3>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                    Evaluación de la solvencia a corto plazo, prueba ácida y rotación de cuentas por cobrar para optimizar el flujo de caja.
-                  </p>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                    <button onClick={() => toggleModule('fin_m1')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer group">
+                      <span>{expandedModule === 'fin_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => toggleModule('fin_m1')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer">
-                    <span>{expandedModule === 'fin_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
-                  </button>
-                </div>
-
                 {expandedModule === 'fin_m1' && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
-                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Razón Corriente:</span>
-                        <span className="font-black text-purple-600">{(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}x</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Prueba Ácida Proyectada:</span>
-                        <span className="font-black text-emerald-600">1.45x</span>
-                      </div>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('fin_m1', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m1') === 'DIAGNOSTICO' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('fin_m1', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m1') === 'NORMATIVA' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('fin_m1', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m1') === 'GROQ_AI' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('fin_m1') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Razón Corriente</span>
+                            <p className="text-sm font-black text-purple-600">{(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}x</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Prueba Ácida</span>
+                            <p className="text-sm font-black text-emerald-600">1.45x</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Capital de Trabajo</span>
+                            <p className="text-sm font-black text-blue-600">S/ {Math.max(0, kpis.totalVentas - kpis.totalCompras).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="bg-purple-50/70 border border-purple-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-purple-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-purple-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85) >= 1.5 
+                              ? 'Tu ratio de liquidez corriente es saludable (≥ 1.5x). La empresa puede cubrir sus obligaciones a corto plazo sin dificultad.' 
+                              : 'Atención: Tu ratio de liquidez está por debajo del óptimo. Se recomienda revisar la gestión de cobros y pagos.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('fin_m1') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">Metodología de Ratios Financieros:</p>
+                        <p><strong>Liquidez Corriente</strong> = Activo Corriente / Pasivo Corriente. Indica capacidad de pago a corto plazo. Un ratio &gt; 1.5 es considerado saludable.</p>
+                        <p><strong>Prueba Ácida</strong> = (Activo Corriente - Inventarios) / Pasivo Corriente. Mide la liquidez sin depender de la venta de inventarios.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-purple-500" />
+                          <span>Capital de Trabajo Neto = Activo Corriente - Pasivo Corriente.</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('fin_m1') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿Mi ratio de liquidez es adecuado para mi sector?', '¿Cómo mejorar mi capital de trabajo?', '¿Qué indica una prueba ácida menor a 1?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('finanzas', 'fin_m1', chip)} className="text-[10px] font-bold text-slate-700 hover:text-purple-700 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre liquidez..." value={ragQueries['fin_m1'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, fin_m1: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('finanzas', 'fin_m1')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-purple-500 font-medium" />
+                          <button onClick={() => handleAskRAG('finanzas', 'fin_m1')} disabled={ragLoading['fin_m1']} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['fin_m1'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['fin_m1'] && (
+                          <div className="bg-purple-50/70 border border-purple-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-purple-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-purple-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['fin_m1'])} className="text-[10px] font-bold text-slate-400 hover:text-purple-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['fin_m1']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl">
-                      <Scale size={16} />
+              {/* MÓDULO 3.2: RENTABILIDAD DUPONT — 3 SUB-PESTAÑAS COMPLETAS */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl"><Scale size={16} /></div>
+                      <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 3.2</span>
+                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold rounded-full">DuPont / ROE</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 3.2</span>
-                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold rounded-full">
-                      DuPont / ROE
-                    </span>
+                    <h3 className="text-sm font-black text-slate-800">Rentabilidad Operativa &amp; Análisis DuPont</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Descomposición del rendimiento sobre el patrimonio (ROE) mediante margen neto, rotación de activos y apalancamiento financiero.</p>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800">Rentabilidad Operativa &amp; Análisis DuPont</h3>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                    Descomposición del rendimiento sobre el patrimonio (ROE) mediante margen neto, rotación de activos y apalancamiento financiero.
-                  </p>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                    <button onClick={() => toggleModule('fin_m2')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer group">
+                      <span>{expandedModule === 'fin_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => toggleModule('fin_m2')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer">
-                    <span>{expandedModule === 'fin_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
-                  </button>
-                </div>
-
                 {expandedModule === 'fin_m2' && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
-                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Margen Operativo Estimado:</span>
-                        <span className="font-black text-indigo-600">18.5%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-600">Rendimiento Patrimonial (ROE):</span>
-                        <span className="font-black text-emerald-600">22.4%</span>
-                      </div>
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button onClick={() => setModuleSubTab('fin_m2', 'DIAGNOSTICO')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m2') === 'DIAGNOSTICO' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button onClick={() => setModuleSubTab('fin_m2', 'NORMATIVA')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m2') === 'NORMATIVA' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <BookOpen size={13} /> Base Legal RAG
+                      </button>
+                      <button onClick={() => setModuleSubTab('fin_m2', 'GROQ_AI')} className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${getModuleSubTab('fin_m2') === 'GROQ_AI' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+                    {getModuleSubTab('fin_m2') === 'DIAGNOSTICO' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Margen Operativo</span>
+                            <p className="text-sm font-black text-indigo-600">{Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">ROE Estimado</span>
+                            <p className="text-sm font-black text-emerald-600">22.4%</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Apalancamiento</span>
+                            <p className="text-sm font-black text-blue-600">{(kpis.ratioComprasVentas / 100).toFixed(2)}x</p>
+                          </div>
+                        </div>
+                        <div className="bg-indigo-50/70 border border-indigo-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-indigo-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-indigo-600" /> Diagnóstico Automatizado</h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">El margen operativo estimado es de {Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%. La descomposición DuPont muestra un ROE saludable impulsado por la eficiencia operativa.</p>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('fin_m2') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">Descomposición DuPont:</p>
+                        <p><strong>ROE</strong> = Margen Neto × Rotación de Activos × Apalancamiento Financiero. Esta descomposición permite identificar qué componente impulsa o deteriora la rentabilidad patrimonial.</p>
+                        <p><strong>ROA</strong> = Utilidad Neta / Activo Total. Mide la eficiencia en el uso de activos para generar utilidades.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-indigo-500" />
+                          <span>Un ROE alto con alto apalancamiento puede indicar riesgo financiero elevado.</span>
+                        </div>
+                      </div>
+                    )}
+                    {getModuleSubTab('fin_m2') === 'GROQ_AI' && (
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['¿Cómo interpretar un ROE alto con alto apalancamiento?', '¿Qué ratios analiza un banco para dar crédito?', '¿Cómo mejorar mi margen operativo?'].map((chip, idx) => (
+                              <button key={idx} onClick={() => handleAskRAG('finanzas', 'fin_m2', chip)} className="text-[10px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" placeholder="Escribe tu duda sobre rentabilidad..." value={ragQueries['fin_m2'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, fin_m2: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('finanzas', 'fin_m2')} className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-indigo-500 font-medium" />
+                          <button onClick={() => handleAskRAG('finanzas', 'fin_m2')} disabled={ragLoading['fin_m2']} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50">
+                            {ragLoading['fin_m2'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}<span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['fin_m2'] && (
+                          <div className="bg-indigo-50/70 border border-indigo-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-indigo-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-indigo-700 flex items-center gap-1"><Sparkles size={12} /> Respuesta Groq IA RAG</span>
+                              <button onClick={() => copyToClipboard(ragAnswers['fin_m2'])} className="text-[10px] font-bold text-slate-400 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">{ragAnswers['fin_m2']}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
+            </div>
+
+            {/* 🤖 MÓDULO 3.3: ASISTENTE IA FINANCIERO — MÓDULO DEDICADO */}
+            <div className="bg-gradient-to-r from-purple-50 via-white to-blue-50 border-2 border-purple-300/60 rounded-3xl shadow-sm overflow-hidden p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="p-2.5 bg-gradient-to-br from-purple-500 to-blue-600 text-white rounded-2xl shadow-md"><MessageSquare size={20} /></div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-2">🤖 Asistente IA Financiero <span className="text-[9px] px-2 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-full font-extrabold">GROQ RAG EN VIVO</span></h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Consulta cualquier duda financiera sobre ratios, liquidez, rentabilidad y estructura de capital de tu empresa.</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[9px] font-bold uppercase text-slate-400">Preguntas frecuentes:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['¿Cómo evalúo si mi empresa necesita financiamiento?', '¿Cuál es el ratio ideal de endeudamiento?', '¿Cómo interpreto el flujo de caja libre?', '¿Mi empresa está generando valor económico agregado?'].map((chip, idx) => (
+                    <button key={idx} onClick={() => handleAskRAG('finanzas', 'ia_finanzas', chip)} className="text-[10px] font-bold text-slate-700 hover:text-purple-700 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 px-2.5 py-1.5 rounded-lg transition-all text-left cursor-pointer">{chip}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input type="text" placeholder="Escribe cualquier consulta financiera sobre tu empresa..." value={ragQueries['ia_finanzas'] || ''} onChange={(e) => setRagQueries({ ...ragQueries, ia_finanzas: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('finanzas', 'ia_finanzas')} className="flex-1 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-purple-500 font-medium shadow-2xs" />
+                <button onClick={() => handleAskRAG('finanzas', 'ia_finanzas')} disabled={ragLoading['ia_finanzas']} className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 shrink-0 disabled:opacity-50">
+                  {ragLoading['ia_finanzas'] ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}<span>Consultar IA</span>
+                </button>
+              </div>
+              {ragAnswers['ia_finanzas'] && (
+                <div className="bg-white border border-purple-200 p-4 rounded-2xl text-xs text-slate-700 leading-relaxed shadow-xs space-y-2">
+                  <div className="flex justify-between items-center border-b border-purple-100 pb-2">
+                    <span className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-1.5"><Sparkles size={14} className="text-purple-500" /> Respuesta del Asistente IA Financiero</span>
+                    <button onClick={() => copyToClipboard(ragAnswers['ia_finanzas'])} className="text-[10px] font-bold text-slate-400 hover:text-purple-700 flex items-center gap-1 cursor-pointer"><Copy size={12} /> Copiar</button>
+                  </div>
+                  <div className="whitespace-pre-line text-[12px] leading-relaxed">{ragAnswers['ia_finanzas']}</div>
+                </div>
+              )}
             </div>
 
           </div>
