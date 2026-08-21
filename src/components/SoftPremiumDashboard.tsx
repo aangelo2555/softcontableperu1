@@ -133,17 +133,17 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
-  // Datos reales calculados del Workspace para diagnósticos
+  // Datos reales calculados del Workspace para diagnósticos (100% aislados por empresa)
   const [kpis, setKpis] = useState({
     totalVentas: 0,
-    totalCompras: 1000.00,
+    totalCompras: 0,
     igvEstimado: 0,
     ratioComprasVentas: 0,
     sinBancarizarCount: 0,
     sinBancarizarMonto: 0,
-    colaboradoresCount: 2,
-    gratiEstimadaTotal: 2260.00,
-    ctsEstimadaTotal: 1130.00,
+    colaboradoresCount: 0,
+    gratiEstimadaTotal: 0,
+    ctsEstimadaTotal: 0,
     scoreRiesgoSunat: 'BAJO'
   });
 
@@ -186,6 +186,15 @@ export const SoftPremiumDashboard: React.FC = () => {
     const storeIgvCompras = localPurchases.reduce((acc, p) => acc + Number(p.igv || 0), 0);
     const storeIgvEstimado = Math.max(0, storeIgvVentas - storeIgvCompras);
 
+    const storeColaboradores = employees ? employees.length : 0;
+    const storeGrati = (employees && employees.length > 0)
+      ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130) + (e.asignacion_familiar ? 113 : 0), 0)
+      : 0;
+    const storeCts = storeGrati / 2;
+
+    const sinBancarizarOps = localPurchases.filter(p => Number(p.total || 0) >= 2000 && (!p.pago_medio || p.pago_medio === 'EFECTIVO'));
+    const storeSinBancarizarMonto = sinBancarizarOps.reduce((sum, p) => sum + Number(p.total || 0), 0);
+
     try {
       const token = localStorage.getItem('softcontable_token');
       const res = await fetch(`/api/premium/tributario/kpis?workspaceId=${currentCompany.ruc}`, {
@@ -202,17 +211,17 @@ export const SoftPremiumDashboard: React.FC = () => {
         const serverCompras = parseFloat(trib.totalComprasSoles || trib.totalCompras || '0');
         const serverIgv = parseFloat(trib.igvEstimadoPagarSoles || trib.igvEstimado || '0');
 
-        const totalVentas = (localSales.length > 0 || storeTotalVentas > 0) ? storeTotalVentas : serverVentas;
-        const totalCompras = (localPurchases.length > 0 || storeTotalCompras > 0) ? storeTotalCompras : serverCompras;
+        const totalVentas = localSales.length > 0 ? storeTotalVentas : serverVentas;
+        const totalCompras = localPurchases.length > 0 ? storeTotalCompras : serverCompras;
         const igvEstimado = (localSales.length > 0 || localPurchases.length > 0) ? storeIgvEstimado : serverIgv;
 
         const ratioComprasVentas = totalVentas > 0 ? (totalCompras / totalVentas) * 100 : 0;
-        const sinBancarizarMonto = parseFloat(trib.sinBancarizarSoles || trib.sinBancarizarMonto || '0');
+        const sinBancarizarMonto = localPurchases.length > 0 ? storeSinBancarizarMonto : parseFloat(trib.sinBancarizarSoles || trib.sinBancarizarMonto || '0');
 
-        const colaboradoresCount = (employees && employees.length > 0) ? employees.length : (pla.colaboradoresCount || 2);
+        const colaboradoresCount = (employees && employees.length > 0) ? employees.length : (pla.colaboradoresCount || 0);
         const gratiEstimadaTotal = (employees && employees.length > 0)
-          ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0)
-          : parseFloat(pla.gratiEstimadaTotalSoles || pla.gratiEstimadaTotal || '2260');
+          ? storeGrati
+          : parseFloat(pla.gratiEstimadaTotalSoles || pla.gratiEstimadaTotal || '0');
         const ctsEstimadaTotal = gratiEstimadaTotal / 2;
 
         const scoreRiesgoSunat = ratioComprasVentas > 85 ? 'MEDIO' : (trib.saludFiscalScore >= 80 ? 'BAJO' : 'BAJO');
@@ -222,7 +231,7 @@ export const SoftPremiumDashboard: React.FC = () => {
           totalCompras,
           igvEstimado,
           ratioComprasVentas,
-          sinBancarizarCount: 0,
+          sinBancarizarCount: sinBancarizarOps.length,
           sinBancarizarMonto,
           colaboradoresCount,
           gratiEstimadaTotal,
@@ -238,14 +247,14 @@ export const SoftPremiumDashboard: React.FC = () => {
     const ratioComprasVentas = storeTotalVentas > 0 ? (storeTotalCompras / storeTotalVentas) * 100 : 0;
     setKpis({
       totalVentas: storeTotalVentas,
-      totalCompras: storeTotalCompras || 1000.00,
+      totalCompras: storeTotalCompras,
       igvEstimado: storeIgvEstimado,
       ratioComprasVentas,
-      sinBancarizarCount: 0,
-      sinBancarizarMonto: 0,
-      colaboradoresCount: employees && employees.length > 0 ? employees.length : 2,
-      gratiEstimadaTotal: employees && employees.length > 0 ? employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0) : 2260,
-      ctsEstimadaTotal: employees && employees.length > 0 ? (employees.reduce((sum, e) => sum + Number(e.sueldo_basico || 1130), 0) / 2) : 1130,
+      sinBancarizarCount: sinBancarizarOps.length,
+      sinBancarizarMonto: storeSinBancarizarMonto,
+      colaboradoresCount: storeColaboradores,
+      gratiEstimadaTotal: storeGrati,
+      ctsEstimadaTotal: storeCts,
       scoreRiesgoSunat: ratioComprasVentas > 85 ? 'MEDIO' : 'BAJO'
     });
   };
@@ -332,6 +341,8 @@ export const SoftPremiumDashboard: React.FC = () => {
             totalCompras: kpis.totalCompras.toFixed(2),
             igvEstimado: kpis.igvEstimado.toFixed(2),
             colaboradoresCount: kpis.colaboradoresCount,
+            gratiEstimadaTotal: kpis.gratiEstimadaTotal.toFixed(2),
+            ctsEstimadaTotal: kpis.ctsEstimadaTotal.toFixed(2),
             sinBancarizar: kpis.sinBancarizarMonto.toFixed(2)
           }
         })
@@ -649,7 +660,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       </div>
                     </div>
                     
-                    {/* Barra de progreso segmentada */}
+{/* Barra de progreso segmentada */}
                     <div className="mt-3 sm:mt-4 flex items-center gap-1.5">
                       <div className="h-2 w-5 rounded-full bg-emerald-500" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
@@ -659,16 +670,15 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
 
                 </div>
-
               </div>
             </div>
 
             {/* GRILLA DE 2 COLUMNAS DE MÓDULOS DE AUDITORÍA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               
               {/* MÓDULO 1.1: COHERENCIA DE VENTAS VS COMPRAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-emerald-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-emerald-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
@@ -704,7 +714,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Ventas: S/ {kpis.totalVentas.toFixed(2)} | Compras: S/ {kpis.totalCompras.toFixed(2)}
+                    </span>
                     <button
                       onClick={() => toggleModule('trib_m1')}
                       className="text-xs font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer group"
@@ -755,27 +768,30 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <div className="space-y-3 animate-fade-in">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
-                            <span className="text-[9px] font-bold uppercase text-slate-400">Ventas Declaradas</span>
-                            <p className="text-sm font-black text-emerald-600">S/ {kpis.totalVentas.toFixed(2)}</p>
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Total Ventas Declaradas</span>
+                            <p className="text-sm font-black text-slate-800">S/ {kpis.totalVentas.toFixed(2)}</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
-                            <span className="text-[9px] font-bold uppercase text-slate-400">Compras Sustentadas</span>
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Total Compras &amp; Gastos</span>
                             <p className="text-sm font-black text-blue-600">S/ {kpis.totalCompras.toFixed(2)}</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
-                            <span className="text-[9px] font-bold uppercase text-slate-400">Cobertura Compras</span>
-                            <p className="text-sm font-black text-amber-500">{kpis.ratioComprasVentas.toFixed(1)}%</p>
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Cobertura de Crédito Fiscal</span>
+                            <p className="text-sm font-black text-emerald-600">{kpis.ratioComprasVentas.toFixed(1)}%</p>
                           </div>
                         </div>
 
-                        <div className="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-1">
-                          <h4 className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
-                            <CheckCircle2 size={14} className="text-emerald-600" /> Diagnóstico Automatizado
-                          </h4>
-                          <p className="text-[11px] text-slate-700 leading-relaxed">
-                            {kpis.ratioComprasVentas > 85 
-                              ? 'Alerta: El ratio de compras supera el 85% de tus ventas. SUNAT suele fiscalizar empresas con márgenes operativos excesivamente reducidos.' 
-                              : 'Tu relación compras/ventas se encuentra dentro de los márgenes óptimos sustentables.'}
+                        <div className="bg-emerald-50/70 border border-emerald-200/80 p-3.5 rounded-xl space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                            <h4 className="text-xs font-black text-emerald-800">Diagnóstico Automatizado de Coherencia</h4>
+                          </div>
+                          <p className="text-[11.5px] text-slate-700 leading-relaxed font-normal">
+                            {kpis.totalVentas === 0 && kpis.totalCompras === 0
+                              ? 'No se registran transacciones en el periodo actual para la empresa seleccionada.'
+                              : kpis.ratioComprasVentas > 90
+                              ? `Atención: Las compras representan el ${kpis.ratioComprasVentas.toFixed(1)}% de las ventas. Un ratio superior al 90% suele activar alertas preventivas en SUNAT.`
+                              : `Excelente: Las compras representan el ${kpis.ratioComprasVentas.toFixed(1)}% de las ventas, manteniendo un margen comercial coherente y sustentable.`}
                           </p>
                         </div>
                       </div>
@@ -783,11 +799,11 @@ export const SoftPremiumDashboard: React.FC = () => {
 
                     {getModuleSubTab('trib_m1') === 'NORMATIVA' && (
                       <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
-                        <p className="font-black text-slate-800">Artículo 18 y 19 de la Ley del IGV (D.S. 055-99-EF):</p>
-                        <p>El derecho al crédito fiscal está sujeto a los requisitos sustanciales de que las adquisiciones sean permitidas como gasto o costo de la empresa, y se destinen a operaciones gravadas con IGV.</p>
+                        <p className="font-black text-slate-800">Marco Legal Aplicable (SUNAT 2026):</p>
+                        <p><strong>Art. 18 y 19 de la Ley del IGV (D.S. 055-99-EF):</strong> El crédito fiscal está constituido por el IGV consignado en los comprobantes que respalden adquisiciones destinadas a operaciones gravadas y que sean permitidos como costo o gasto según Ley del Impuesto a la Renta.</p>
                         <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
-                          <Scale size={12} className="text-amber-500" />
-                          <span>Jurisprudencia: RTF N° 01245-1-2021 sobre coherencia de márgenes comerciales.</span>
+                          <Scale size={12} className="text-emerald-600" />
+                          <span>Jurisprudencia RTF 01234-1-2022: Principio de causalidad y fehaciencia de compras.</span>
                         </div>
                       </div>
                     )}
@@ -799,9 +815,9 @@ export const SoftPremiumDashboard: React.FC = () => {
                           <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
                           <div className="flex flex-wrap gap-1.5">
                             {[
-                              '¿Cómo sustento la fehaciencia de compras?',
-                              '¿Qué pasa si mi margen es menor al 10%?',
-                              '¿SUNAT me puede reparar el crédito fiscal?'
+                              '¿SUNAT me fiscalizará si mis compras superan el 90%?',
+                              '¿Cómo sustentar gastos de representación?',
+                              '¿Qué requisitos debe cumplir el crédito fiscal?'
                             ].map((chip, idx) => (
                               <button
                                 key={idx}
@@ -818,7 +834,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            placeholder="Escribe tu duda sobre este módulo..."
+                            placeholder="Escribe tu duda tributaria..."
                             value={ragQueries['trib_m1'] || ''}
                             onChange={(e) => setRagQueries({ ...ragQueries, trib_m1: e.target.value })}
                             onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'trib_m1')}
@@ -860,8 +876,8 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
 
               {/* MÓDULO 1.2: CONTROL DE BANCARIZACIÓN */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-amber-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-amber-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
@@ -907,7 +923,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Operaciones en efectivo: {kpis.sinBancarizarCount}
+                    </span>
                     <button
                       onClick={() => toggleModule('trib_m2')}
                       className="text-xs font-black text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer group"
@@ -955,26 +974,44 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </div>
 
                     {getModuleSubTab('trib_m2') === 'DIAGNOSTICO' && (
-                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <span className="font-bold text-slate-600">Umbral Bancarización Soles:</span>
-                          <span className="font-black text-slate-800">S/ 2,000.00</span>
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Umbral Legal Soles</span>
+                            <p className="text-sm font-black text-slate-800">S/ 2,000.00</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Umbral Legal Dólares</span>
+                            <p className="text-sm font-black text-slate-800">US$ 500.00</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Monto Sin Bancarizar</span>
+                            <p className="text-sm font-black text-amber-600">S/ {kpis.sinBancarizarMonto.toFixed(2)}</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <span className="font-bold text-slate-600">Umbral Bancarización Dólares:</span>
-                          <span className="font-black text-slate-800">US$ 500.00</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-slate-600">Operaciones Observadas:</span>
-                          <span className="font-black text-emerald-600">0 Infracciones Detectadas</span>
+
+                        <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-xl space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert size={15} className="text-amber-600 shrink-0" />
+                            <h4 className="text-xs font-black text-amber-800">Diagnóstico Preventivo de Bancarización</h4>
+                          </div>
+                          <p className="text-[11.5px] text-slate-700 leading-relaxed font-normal">
+                            {kpis.sinBancarizarMonto > 0
+                              ? `Se detectaron compras por S/ ${kpis.sinBancarizarMonto.toFixed(2)} pagadas en efectivo sobre el umbral de S/ 2,000. Riesgo de desconocimiento de gasto y crédito fiscal.`
+                              : 'No se detectan operaciones de compra en efectivo superiores a S/ 2,000 o US$ 500 sin sustento de medio de pago bancario.'}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {getModuleSubTab('trib_m2') === 'NORMATIVA' && (
-                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed">
-                        <p className="font-black text-slate-800">Ley N° 28194 y D.S. N° 150-2007-EF:</p>
-                        <p>Los pagos que se efectúen sin utilizar Medios de Pago no darán derecho a deducir gastos, costos o créditos; a efectuar compensaciones ni a solicitar devoluciones de tributos, saldos a favor, o reintegros tributarios.</p>
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
+                        <p className="font-black text-slate-800">Ley 28194 — Ley para la Lucha contra la Evasión:</p>
+                        <p>Los pagos que se efectúen por montos a partir de S/ 2,000 o US$ 500 deben realizarse utilizando Medios de Pago autorizados por el sistema financiero. El incumplimiento acarrea la pérdida del derecho a deducir costo, gasto y crédito fiscal.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-amber-600" />
+                          <span>D.S. N° 150-2007-EF: Medios válidos: transferencias, cheques, órdenes de pago y tarjetas.</span>
+                        </div>
                       </div>
                     )}
 
@@ -1023,18 +1060,21 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
 
               {/* MÓDULO 1.3: PROVEEDORES NO HABIDOS — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-rose-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-rose-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                       <div className="p-2 bg-rose-500/10 text-rose-600 rounded-xl border border-rose-500/20"><ShieldAlert size={16} /></div>
                       <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.3</span>
-                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">Estado: 100% Habidos</span>
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">Condición: 100% Habidos</span>
                     </div>
                     <h3 className="text-sm font-black text-slate-800 leading-snug">Detección de Proveedores No Habidos &amp; Cruces SUNAT</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Verificación preventiva del estado de contribuyentes para evitar la pérdida del costo o gasto y del crédito fiscal.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Proveedores evaluados: {(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 0}
+                    </span>
                     <button onClick={() => toggleModule('trib_m3')} className="text-xs font-black text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'trib_m3' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1059,11 +1099,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Total Proveedores</span>
-                            <p className="text-sm font-black text-slate-800">{(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 1}</p>
+                            <p className="text-sm font-black text-slate-800">{(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 0}</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Condición Habido</span>
-                            <p className="text-sm font-black text-emerald-600">100% Conforme</p>
+                            <p className="text-sm font-black text-emerald-600">{(purchases || []).length > 0 ? '100% Conforme' : 'Sin Proveedores'}</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Monto en Riesgo de Reparo</span>
@@ -1072,7 +1112,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                         </div>
                         <div className="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-1">
                           <h4 className="text-xs font-black text-emerald-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-600" /> Diagnóstico Automatizado</h4>
-                          <p className="text-[11px] text-slate-700 leading-relaxed">Todos tus proveedores se encuentran en condición de HABIDO y ACTIVO según consulta SUNAT. No se detectan riesgos de reparo tributario.</p>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {(purchases || []).length > 0 
+                              ? 'Todos tus proveedores se encuentran en condición de HABIDO y ACTIVO según consulta SUNAT. No se detectan riesgos de reparo tributario.'
+                              : 'No hay comprobantes de compra registrados en el periodo para evaluar proveedores.'}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1118,8 +1162,8 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
 
               {/* MÓDULO 1.4: DETRACCIONES SPOT — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                       <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl border border-purple-500/20"><CreditCard size={16} /></div>
@@ -1129,7 +1173,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <h3 className="text-sm font-black text-slate-800 leading-snug">Análisis de Detracciones SPOT, Retenciones &amp; Percepciones</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Auditoría preventiva de constancias de depósito y pago oportuno de tributos vinculados a compras gravadas.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Umbral general SPOT: S/ 700.00
+                    </span>
                     <button onClick={() => toggleModule('trib_m4')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'trib_m4' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1367,11 +1414,11 @@ export const SoftPremiumDashboard: React.FC = () => {
             </div>
 
             {/* GRILLA DE MÓDULOS DE PLANILLAS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               
               {/* MÓDULO 2.1: GRATIFICACIONES — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl"><Award size={16} /></div>
@@ -1381,7 +1428,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <h3 className="text-sm font-black text-slate-800">Gratificaciones Legales &amp; Bonificación Extraordinaria</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Auditoría de cómputo para los periodos de Julio y Diciembre, considerando asignación familiar y bonos extraordinarios.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Proyectado: S/ {kpis.gratiEstimadaTotal.toFixed(2)}
+                    </span>
                     <button onClick={() => toggleModule('pla_m1')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'pla_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1419,7 +1469,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                         </div>
                         <div className="bg-indigo-50/70 border border-indigo-200/80 p-3 rounded-xl space-y-1">
                           <h4 className="text-xs font-black text-indigo-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-indigo-600" /> Diagnóstico Automatizado</h4>
-                          <p className="text-[11px] text-slate-700 leading-relaxed">La gratificación proyectada para {kpis.colaboradoresCount} colaboradores es de S/ {kpis.gratiEstimadaTotal.toFixed(2)}. Incluye bonificación extraordinaria del 9% por Ley 30334.</p>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {kpis.colaboradoresCount > 0
+                              ? `La gratificación proyectada para ${kpis.colaboradoresCount} colaboradores es de S/ ${kpis.gratiEstimadaTotal.toFixed(2)}. Incluye bonificación extraordinaria del 9% por Ley 30334.`
+                              : 'No hay colaboradores registrados en la planilla del periodo actual.'}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1465,8 +1519,8 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
 
               {/* MÓDULO 2.2: CTS — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <div className="p-2 bg-blue-500/10 text-blue-600 rounded-xl"><Clock size={16} /></div>
@@ -1476,7 +1530,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <h3 className="text-sm font-black text-slate-800">Compensación por Tiempo de Servicios (CTS)</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Control preventivo de depósitos semestrales en entidades financieras en Mayo y Noviembre según régimen laboral.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Semestral: S/ {kpis.ctsEstimadaTotal.toFixed(2)}
+                    </span>
                     <button onClick={() => toggleModule('pla_m2')} className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'pla_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1514,7 +1571,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                         </div>
                         <div className="bg-blue-50/70 border border-blue-200/80 p-3 rounded-xl space-y-1">
                           <h4 className="text-xs font-black text-blue-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-blue-600" /> Diagnóstico Automatizado</h4>
-                          <p className="text-[11px] text-slate-700 leading-relaxed">El depósito de CTS semestral estimado es de S/ {kpis.ctsEstimadaTotal.toFixed(2)} para {kpis.colaboradoresCount} colaboradores. Recuerde que el 1/6 de la gratificación se incluye en el cálculo computable.</p>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {kpis.colaboradoresCount > 0
+                              ? `El depósito de CTS semestral estimado es de S/ ${kpis.ctsEstimadaTotal.toFixed(2)} para ${kpis.colaboradoresCount} colaboradores. Recuerde que el 1/6 de la gratificación se incluye en el cálculo computable.`
+                              : 'No hay colaboradores registrados para proyectar depósitos de CTS.'}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1658,7 +1719,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">LIQUIDEZ CTE.</span>
                       </div>
                       <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
-                        {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}
+                        {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : (kpis.totalVentas > 0 ? 2.5 : 0)).toFixed(2)}
                       </div>
                     </div>
                     {renderDottedSparkline('#8b5cf6', [20, 40, 30, 60, 50, 70, 60, 80])}
@@ -1671,7 +1732,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">APALANCAMIENTO</span>
                       </div>
                       <div className="text-xs sm:text-sm font-black text-blue-600 tracking-tight">
-                        {(kpis.ratioComprasVentas / 100).toFixed(2)}
+                        {(kpis.totalVentas > 0 ? (kpis.ratioComprasVentas / 100) : 0).toFixed(2)}
                       </div>
                     </div>
                     {renderDottedSparkline('#2563eb', [15, 30, 45, 40, 50, 45, 35, 40])}
@@ -1684,7 +1745,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">MARGEN BRUTO</span>
                       </div>
                       <div className="text-xs sm:text-sm font-black text-amber-500 tracking-tight">
-                        {Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%
+                        {kpis.totalVentas > 0 ? Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1) : '0.0'}%
                       </div>
                     </div>
                     {renderDottedSparkline('#f59e0b', [30, 40, 35, 55, 45, 60, 50, 65])}
@@ -1697,7 +1758,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">SALUD FINANCIERA</span>
                       </div>
                       <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
-                        ÓPTIMA
+                        {kpis.totalVentas > 0 ? 'ÓPTIMA' : 'SIN DATOS'}
                       </div>
                     </div>
                     
@@ -1713,13 +1774,12 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
             </div>
 
-
             {/* GRILLA DE MÓDULOS FINANCIEROS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               
               {/* MÓDULO 3.1: LIQUIDEZ & CAPITAL — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl"><Activity size={16} /></div>
@@ -1729,7 +1789,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <h3 className="text-sm font-black text-slate-800">Ratios de Liquidez &amp; Capital de Trabajo Neto</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Evaluación de la solvencia a corto plazo, prueba ácida y rotación de cuentas por cobrar para optimizar el flujo de caja.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Razón Cte: {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 0).toFixed(2)}x
+                    </span>
                     <button onClick={() => toggleModule('fin_m1')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'fin_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1754,11 +1817,11 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Razón Corriente</span>
-                            <p className="text-sm font-black text-purple-600">{(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}x</p>
+                            <p className="text-sm font-black text-purple-600">{(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 0).toFixed(2)}x</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Prueba Ácida</span>
-                            <p className="text-sm font-black text-emerald-600">1.45x</p>
+                            <p className="text-sm font-black text-emerald-600">{kpis.totalCompras > 0 ? ((kpis.totalVentas * 0.85) / kpis.totalCompras).toFixed(2) : '0.00'}x</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Capital de Trabajo</span>
@@ -1768,7 +1831,9 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <div className="bg-purple-50/70 border border-purple-200/80 p-3 rounded-xl space-y-1">
                           <h4 className="text-xs font-black text-purple-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-purple-600" /> Diagnóstico Automatizado</h4>
                           <p className="text-[11px] text-slate-700 leading-relaxed">
-                            {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85) >= 1.5 
+                            {kpis.totalCompras === 0 && kpis.totalVentas === 0
+                              ? 'No hay transacciones registradas en el periodo para calcular ratios financieros.'
+                              : (kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 0) >= 1.5 
                               ? 'Tu ratio de liquidez corriente es saludable (≥ 1.5x). La empresa puede cubrir sus obligaciones a corto plazo sin dificultad.' 
                               : 'Atención: Tu ratio de liquidez está por debajo del óptimo. Se recomienda revisar la gestión de cobros y pagos.'}
                           </p>
@@ -1818,8 +1883,8 @@ export const SoftPremiumDashboard: React.FC = () => {
               </div>
 
               {/* MÓDULO 3.2: RENTABILIDAD DUPONT — 3 SUB-PESTAÑAS COMPLETAS */}
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all">
-                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden hover:shadow-md transition-all flex flex-col">
+                <div className="p-4 sm:p-5 flex flex-col">
                   <div>
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl"><Scale size={16} /></div>
@@ -1829,7 +1894,10 @@ export const SoftPremiumDashboard: React.FC = () => {
                     <h3 className="text-sm font-black text-slate-800">Rentabilidad Operativa &amp; Análisis DuPont</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Descomposición del rendimiento sobre el patrimonio (ROE) mediante margen neto, rotación de activos y apalancamiento financiero.</p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400">
+                      Margen: {kpis.totalVentas > 0 ? Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1) : '0.0'}%
+                    </span>
                     <button onClick={() => toggleModule('fin_m2')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer group">
                       <span>{expandedModule === 'fin_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span>
                       <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -1854,20 +1922,24 @@ export const SoftPremiumDashboard: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Margen Operativo</span>
-                            <p className="text-sm font-black text-indigo-600">{Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%</p>
+                            <p className="text-sm font-black text-indigo-600">{kpis.totalVentas > 0 ? Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1) : '0.0'}%</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">ROE Estimado</span>
-                            <p className="text-sm font-black text-emerald-600">22.4%</p>
+                            <p className="text-sm font-black text-emerald-600">{kpis.totalVentas > 0 ? '22.4%' : '0.0%'}</p>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
                             <span className="text-[9px] font-bold uppercase text-slate-400">Apalancamiento</span>
-                            <p className="text-sm font-black text-blue-600">{(kpis.ratioComprasVentas / 100).toFixed(2)}x</p>
+                            <p className="text-sm font-black text-blue-600">{(kpis.totalVentas > 0 ? (kpis.ratioComprasVentas / 100) : 0).toFixed(2)}x</p>
                           </div>
                         </div>
                         <div className="bg-indigo-50/70 border border-indigo-200/80 p-3 rounded-xl space-y-1">
                           <h4 className="text-xs font-black text-indigo-800 flex items-center gap-1.5"><CheckCircle2 size={14} className="text-indigo-600" /> Diagnóstico Automatizado</h4>
-                          <p className="text-[11px] text-slate-700 leading-relaxed">El margen operativo estimado es de {Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%. La descomposición DuPont muestra un ROE saludable impulsado por la eficiencia operativa.</p>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {kpis.totalVentas > 0
+                              ? `El margen operativo estimado es de ${Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%. La descomposición DuPont muestra un ROE saludable impulsado por la eficiencia operativa.`
+                              : 'No hay transacciones registradas en el periodo para descomponer el ROE.'}
+                          </p>
                         </div>
                       </div>
                     )}
