@@ -778,7 +778,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
         {/* ═══ CONTENIDO SUB-PESTAÑA 2: DESDE COMPRAS SIRE (CON SELECTORES MODERNOS) ═══ */}
         {inputMode === 'sire' && (
-          <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/60 border border-app-border p-4 rounded-2xl animate-fade-in shadow-2xs">
+          <div className="mt-4 flex flex-col gap-3.5 bg-app-bg/60 border border-app-border p-4 rounded-2xl animate-fade-in shadow-2xs relative z-30">
             <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-app-border/80">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
@@ -871,7 +871,7 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
 
         {/* Resumen de Comprobantes Preparados para Consulta + Selector de Latencia */}
         {stagedList.length > 0 && (
-          <div className="mt-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-3 animate-fade-in shadow-2xs">
+          <div className="mt-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col gap-3 animate-fade-in shadow-2xs relative z-10">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">

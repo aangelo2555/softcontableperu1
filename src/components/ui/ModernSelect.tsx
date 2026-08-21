@@ -79,8 +79,8 @@ export default function ModernSelect({
 
   // Tamaños y paddings
   const sizeClasses = {
-    sm: 'px-2.5 py-1 text-[11px] h-7 min-w-[100px]',
-    md: 'px-3 py-1.5 text-xs h-8 min-w-[120px]',
+    sm: 'px-2.5 py-1 text-[11px] h-8 min-w-[100px]',
+    md: 'px-3 py-1.5 text-xs h-8.5 min-w-[120px]',
     lg: 'px-3.5 py-2 text-xs sm:text-sm h-10 min-w-[150px]'
   }[size];
 
@@ -93,7 +93,10 @@ export default function ModernSelect({
   }[variant];
 
   return (
-    <div className={`relative inline-flex flex-col select-none ${className}`} ref={containerRef}>
+    <div
+      className={`relative inline-flex flex-col select-none ${isOpen ? 'z-50' : 'z-20'} ${className}`}
+      ref={containerRef}
+    >
       {label && (
         <span className="text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
           {label}
@@ -106,7 +109,7 @@ export default function ModernSelect({
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`flex items-center justify-between gap-2 transition-all cursor-pointer outline-none font-bold text-app-text ${sizeClasses} ${variantClasses} ${
-          isOpen ? 'ring-2 ring-blue-500/30 border-blue-500' : ''
+          isOpen ? 'ring-2 ring-blue-500/30 border-blue-500 bg-app-surface' : ''
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -122,7 +125,7 @@ export default function ModernSelect({
                   className={`text-[9px] font-black px-1.5 py-0.2 rounded-md shrink-0 ${
                     selectedOption.count > 0
                       ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                      : 'bg-app-surface text-app-muted'
+                      : 'bg-app-bg text-app-muted'
                   }`}
                 >
                   {selectedOption.count}
@@ -142,10 +145,10 @@ export default function ModernSelect({
         />
       </button>
 
-      {/* Popover / Menú Desplegable con Estilo Moderno */}
+      {/* Popover / Menú Desplegable Sólido y con Alto Z-Index */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1.5 z-50 bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1 min-w-[200px] max-h-72 overflow-y-auto custom-scrollbar ${
+          className={`absolute top-full mt-1.5 z-[100] bg-app-surface border border-app-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1 min-w-[210px] max-h-72 overflow-y-auto custom-scrollbar ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${dropdownClassName}`}
           role="listbox"
@@ -214,7 +217,7 @@ export default function ModernSelect({
                           : 'bg-app-bg text-app-muted'
                       }`}
                     >
-                      {opt.count} {opt.badge || 'reg'}
+                      {opt.count} {opt.badge || 'compras'}
                     </span>
                   )}
                   {isSelected && <Check size={13} className="text-white shrink-0" />}

@@ -596,7 +596,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
           {/* ═══ MÓDULO: COMPROBANTES REGISTRADOS EN SIRE (AÑOS Y MESES) ═══ */}
           {showRecentSelector && (
-            <div className="card-elevated p-4 sm:p-5 flex flex-col gap-3.5 animate-fade-in bg-app-surface/80 border border-app-border rounded-2xl shadow-sm">
+            <div className="card-elevated p-4 sm:p-5 flex flex-col gap-3.5 animate-fade-in bg-app-surface/80 border border-app-border rounded-2xl shadow-sm relative z-20">
               
               {/* Cabecera del SIRE con Selector de Años con ModernSelect */}
               <div className="flex items-center justify-between flex-wrap gap-3 border-b border-app-border/60 pb-3">
@@ -854,7 +854,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
 
                 <div className="p-4 space-y-3.5">
                   {/* SELECTOR PERSONALIZADO DE TIPO DE DOCUMENTO */}
-                  <div className="relative" ref={tipoDocRef}>
+                  <div className={`relative ${isTipoDocOpen ? 'z-50' : 'z-10'}`} ref={tipoDocRef}>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-app-muted mb-1">
                       Tipo de Documento
                     </label>
@@ -874,7 +874,7 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
                     </div>
 
                     {isTipoDocOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-app-surface/95 backdrop-blur-md border border-app-border rounded-2xl shadow-xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-[100] bg-app-surface border border-app-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in p-1.5 flex flex-col gap-1">
                         {TIPO_DOC_OPTIONS.map((opt) => {
                           const isSelected = opt.value === formData.tipoDoc;
                           return (
