@@ -143,6 +143,17 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// --- Cronograma Tributario Oficial SUNAT 2026 ---
+const cronogramaSunatService = require('./services/cronogramaSunatService');
+app.get('/api/tributario/cronograma-2026', (req, res) => {
+    const { ruc, mesIndex, isBuenContribuyente } = req.query;
+    if (mesIndex !== undefined) {
+        const data = cronogramaSunatService.getVencimientoRuc(ruc, parseInt(mesIndex, 10), isBuenContribuyente === 'true');
+        return res.json({ success: true, data });
+    }
+    res.json({ success: true, data: cronogramaSunatService.CRONOGRAMA_SUNAT_2026 });
+});
+
 // --- Middleware de Autenticación ---
 const authMiddleware = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1];

@@ -13,12 +13,61 @@ import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
 import { evaluateRegime, type CompanyFinancials } from '../engine/regimeEngine';
+import { calcularVencimientoSunat, CRONOGRAMA_SUNAT_2026 } from '../constants/cronogramaSunat2026';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 
 const MONTH_NAMES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MONTH_NAMES_FULL = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+/**
+ * Generador reactivo de ondas SVG Catmull-Rom para sparklines reales
+ */
+function generateRealSparklinePath(values: number[], width = 200, height = 30): { strokePath: string; areaPath: string } {
+  if (!values || values.length === 0) {
+    const flat = `M 0,${height - 4} L ${width},${height - 4}`;
+    return { strokePath: flat, areaPath: `${flat} L ${width},${height} L 0,${height} Z` };
+  }
+
+  const maxVal = Math.max(...values, 0);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal;
+
+  const points: { x: number; y: number }[] = values.map((val, idx) => {
+    const x = values.length === 1 ? width / 2 : (idx / (values.length - 1)) * width;
+    let y = height - 4;
+    if (range > 0) {
+      y = 4 + (1 - (val - minVal) / range) * (height - 8);
+    }
+    return { x, y };
+  });
+
+  if (points.length === 1) {
+    const p = points[0];
+    const strokePath = `M 0,${height - 4} Q ${p.x},${p.y} ${width},${height - 4}`;
+    const areaPath = `${strokePath} L ${width},${height} L 0,${height} Z`;
+    return { strokePath, areaPath };
+  }
+
+  let strokePath = `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i > 0 ? i - 1 : i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    strokePath += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+
+  const areaPath = `${strokePath} L ${width},${height} L 0,${height} Z`;
+  return { strokePath, areaPath };
+}
 
 const EmpresaView: React.FC = () => {
   const {
@@ -45,6 +94,17 @@ const EmpresaView: React.FC = () => {
   const [localUIT, setLocalUIT] = useState<string>('');
   const [selectedCalendarMonthOffset, setSelectedCalendarMonthOffset] = useState<number>(0);
 
+  // Selector interactivo de año para el Resumen Mensual
+  const [selectedChartYear, setSelectedChartYear] = useState<string>(
+    currentCompany.period || new Date().getFullYear().toString()
+  );
+
+  useEffect(() => {
+    if (currentCompany.period) {
+      setSelectedChartYear(currentCompany.period);
+    }
+  }, [currentCompany.period]);
+
   // Estados para calculadoras tributarias en parámetros
   const [nrusIngresos, setNrusIngresos] = useState<number>(0);
   const [nrusCompras, setNrusCompras] = useState<number>(0);
@@ -63,6 +123,13 @@ const EmpresaView: React.FC = () => {
     return false;
   };
 
+  const isInChartYear = (dateStr: string) => {
+    if (!dateStr) return false;
+    if (dateStr.includes('/')) return dateStr.endsWith('/' + selectedChartYear);
+    if (dateStr.includes('-')) return dateStr.startsWith(selectedChartYear + '-');
+    return false;
+  };
+
   const getMonthFromDate = (dateStr: string): number => {
     if (!dateStr) return 0;
     if (dateStr.includes('/')) return parseInt(dateStr.split('/')[1]) || 0;
@@ -73,24 +140,41 @@ const EmpresaView: React.FC = () => {
   const periodSales = useMemo(() => localSales.filter(s => isInActivePeriod(s.fecha)), [localSales, activePeriodYear]);
   const periodPurchases = useMemo(() => localPurchases.filter(p => isInActivePeriod(p.fecha)), [localPurchases, activePeriodYear]);
 
-  // Monthly breakdown for bar chart
+  const chartSales = useMemo(() => localSales.filter(s => isInChartYear(s.fecha)), [localSales, selectedChartYear]);
+  const chartPurchases = useMemo(() => localPurchases.filter(p => isInChartYear(p.fecha)), [localPurchases, selectedChartYear]);
+
+  // Monthly breakdown for bar chart (Calculado dinámicamente con selectedChartYear)
   const monthlyData = useMemo(() => {
     const salesByMonth: number[] = new Array(12).fill(0);
     const purchasesByMonth: number[] = new Array(12).fill(0);
 
-    periodSales.forEach(s => {
+    chartSales.forEach(s => {
       const m = getMonthFromDate(s.fecha);
       if (m >= 1 && m <= 12) salesByMonth[m - 1] += (s.bi || s.total || 0);
     });
 
-    periodPurchases.forEach(p => {
+    chartPurchases.forEach(p => {
       const m = getMonthFromDate(p.fecha);
       if (m >= 1 && m <= 12) purchasesByMonth[m - 1] += (p.bi || p.total || 0);
     });
 
     const maxVal = Math.max(...salesByMonth, ...purchasesByMonth, 1000);
     return { salesByMonth, purchasesByMonth, maxVal: maxVal > 0 ? maxVal : 1000 };
-  }, [periodSales, periodPurchases]);
+  }, [chartSales, chartPurchases]);
+
+  // Sparklines en Ondas con Datos Reales de la Base de Datos
+  const salesSparklinePoints = useMemo(() => monthlyData.salesByMonth, [monthlyData]);
+  const purchasesSparklinePoints = useMemo(() => monthlyData.purchasesByMonth, [monthlyData]);
+  const igvSparklinePoints = useMemo(() => {
+    return monthlyData.salesByMonth.map((s, idx) => {
+      const p = monthlyData.purchasesByMonth[idx];
+      return Math.max(0, s * 0.18 - p * 0.18);
+    });
+  }, [monthlyData]);
+
+  const salesSparkline = useMemo(() => generateRealSparklinePath(salesSparklinePoints), [salesSparklinePoints]);
+  const purchasesSparkline = useMemo(() => generateRealSparklinePath(purchasesSparklinePoints), [purchasesSparklinePoints]);
+  const igvSparkline = useMemo(() => generateRealSparklinePath(igvSparklinePoints), [igvSparklinePoints]);
 
   // Estados para Firma Digital / Facturación Electrónica
   const [certPass, setCertPass] = useState('');
@@ -133,8 +217,63 @@ const EmpresaView: React.FC = () => {
     return ops.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 3);
   }, [localSales, localPurchases, honorarios, asientos]);
 
-  const clientsCount = useMemo(() => entities.filter(e => e.tipo === 'cliente' || e.tipo === 'ambos').length || 128, [entities]);
-  const providersCount = useMemo(() => entities.filter(e => e.tipo === 'proveedor' || e.tipo === 'ambos').length || 75, [entities]);
+  // ─── Métricas Reales Conectadas a la Base de Datos ───
+  const realClientsCount = useMemo(() => {
+    const clients = new Set<string>();
+    entities.forEach(e => {
+      if (e.tipo === 'cliente' || e.tipo === 'ambos') {
+        if (e.ruc) clients.add(e.ruc);
+        else if (e.descripcion) clients.add(e.descripcion);
+        else if (e.id) clients.add(String(e.id));
+      }
+    });
+    localSales.forEach(s => {
+      if (s.doc_num) clients.add(s.doc_num);
+      else if (s.nombre) clients.add(s.nombre);
+    });
+    return clients.size || (localSales.length > 0 ? 1 : 0);
+  }, [entities, localSales]);
+
+  const realProvidersCount = useMemo(() => {
+    const providers = new Set<string>();
+    entities.forEach(e => {
+      if (e.tipo === 'proveedor' || e.tipo === 'ambos') {
+        if (e.ruc) providers.add(e.ruc);
+        else if (e.descripcion) providers.add(e.descripcion);
+        else if (e.id) providers.add(String(e.id));
+      }
+    });
+    localPurchases.forEach(p => {
+      if (p.doc_num) providers.add(p.doc_num);
+      else if (p.nombre) providers.add(p.nombre);
+    });
+    return providers.size || (localPurchases.length > 0 ? 1 : 0);
+  }, [entities, localPurchases]);
+
+  const realRequiredBooksCount = useMemo(() => {
+    const r = currentCompany.regimenTributario || 'RG';
+    const s = currentCompany.businessType || 'COMERCIAL';
+    const i = Number(currentCompany.annualIncomeUIT || 0);
+    const valorUIT = 5500.00;
+    const ingresosSoles = i * valorUIT;
+    const obligaciones = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
+
+    let count = 0;
+    if (obligaciones.registroVentas) count++;
+    if (obligaciones.registroCompras) count++;
+    if (obligaciones.libroDiarioSimplificado || obligaciones.libroDiarioCompleto) count++;
+    if (obligaciones.libroMayor) count++;
+    if (obligaciones.libroCajaBancos) count++;
+    if (obligaciones.libroInventariosBalances) count++;
+    if (obligaciones.kardexFisico) count++;
+    if (obligaciones.kardexValorizado) count++;
+    if (obligaciones.registroCostos) count++;
+    return Math.max(count, r === 'NRUS' ? 0 : 2);
+  }, [currentCompany]);
+
+  const realIssuedVouchersCount = useMemo(() => {
+    return periodSales.length;
+  }, [periodSales]);
 
   const handleRucChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -154,16 +293,20 @@ const EmpresaView: React.FC = () => {
     }
   };
 
-  const calendarDate = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + selectedCalendarMonthOffset);
-    return {
-      monthNameShort: MONTH_NAMES_SHORT[d.getMonth()].toUpperCase(),
-      monthNameFull: MONTH_NAMES_FULL[d.getMonth()],
-      year: d.getFullYear(),
-      dueDay: 15
-    };
-  }, [selectedCalendarMonthOffset]);
+  // ─── Calendario Tributario SUNAT 2026 Oficial por Último Dígito de RUC ───
+  const baseMonthIndex = 7; // Agosto (índice 7) como base estándar
+  const activeTaxMonthIndex = useMemo(() => {
+    return ((baseMonthIndex + selectedCalendarMonthOffset) % 12 + 12) % 12;
+  }, [baseMonthIndex, selectedCalendarMonthOffset]);
+
+  const taxCalendarInfo = useMemo(() => {
+    return calcularVencimientoSunat(
+      currentCompany.ruc,
+      activeTaxMonthIndex,
+      !!currentCompany.agente_retencion, // o buen contribuyente
+      new Date()
+    );
+  }, [currentCompany.ruc, activeTaxMonthIndex, currentCompany.agente_retencion]);
 
   const evaluation = useMemo(() => {
     const rawRegime = currentCompany.regimenTributario || 'RG';
@@ -247,7 +390,7 @@ const EmpresaView: React.FC = () => {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
-              FILA 1: 4 TARJETAS KPI COMPACTAS CON SPARKLINES SVG
+              FILA 1: 4 TARJETAS KPI CON SPARKLINES EN ONDAS 100% REALES
              ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
 
@@ -271,17 +414,17 @@ const EmpresaView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG (Compact) */}
+              {/* Sparkline Wave SVG Reactivo con Datos Reales */}
               <div className="mt-2 relative h-7 w-full overflow-hidden">
-                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                <svg viewBox="0 0 200 30" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
-                    <linearGradient id="sparklineGreen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+                    <linearGradient id="sparklineGreenReal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
                       <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
-                  <path d="M0,35 C30,35 45,28 70,30 C95,32 120,15 150,22 C175,28 190,10 200,12 L200,40 L0,40 Z" fill="url(#sparklineGreen)" />
-                  <path d="M0,35 C30,35 45,28 70,30 C95,32 120,15 150,22 C175,28 190,10 200,12" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d={salesSparkline.areaPath} fill="url(#sparklineGreenReal)" />
+                  <path d={salesSparkline.strokePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
               </div>
 
@@ -312,17 +455,17 @@ const EmpresaView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG (Compact) */}
+              {/* Sparkline Wave SVG Reactivo con Datos Reales */}
               <div className="mt-2 relative h-7 w-full overflow-hidden">
-                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                <svg viewBox="0 0 200 30" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
-                    <linearGradient id="sparklinePurple" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
+                    <linearGradient id="sparklinePurpleReal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
                       <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
-                  <path d="M0,32 C40,32 50,18 85,25 C120,32 140,15 170,18 C185,20 195,12 200,10 L200,40 L0,40 Z" fill="url(#sparklinePurple)" />
-                  <path d="M0,32 C40,32 50,18 85,25 C120,32 140,15 170,18 C185,20 195,12 200,10" fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d={purchasesSparkline.areaPath} fill="url(#sparklinePurpleReal)" />
+                  <path d={purchasesSparkline.strokePath} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
               </div>
 
@@ -352,17 +495,17 @@ const EmpresaView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG (Compact) */}
+              {/* Sparkline Wave SVG Reactivo con Datos Reales */}
               <div className="mt-2 relative h-7 w-full overflow-hidden">
-                <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
+                <svg viewBox="0 0 200 30" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
-                    <linearGradient id="sparklineOrange" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.35" />
+                    <linearGradient id="sparklineOrangeReal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.4" />
                       <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
-                  <path d="M0,28 C35,28 60,35 90,30 C120,25 145,35 175,25 C190,20 195,15 200,16 L200,40 L0,40 Z" fill="url(#sparklineOrange)" />
-                  <path d="M0,28 C35,28 60,35 90,30 C120,25 145,35 175,25 C190,20 195,15 200,16" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d={igvSparkline.areaPath} fill="url(#sparklineOrangeReal)" />
+                  <path d={igvSparkline.strokePath} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
               </div>
 
@@ -470,7 +613,7 @@ const EmpresaView: React.FC = () => {
                 )}
               </div>
 
-              {/* 2. RESUMEN MENSUAL DE VENTAS Y COMPRAS (GRÁFICO DE BARRAS OPTIMIZADO) */}
+              {/* 2. RESUMEN MENSUAL DE VENTAS Y COMPRAS CON SELECTOR INTERACTIVO DE AÑO */}
               <div className="bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-app-border">
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
@@ -486,13 +629,23 @@ const EmpresaView: React.FC = () => {
                       </span>
                     </div>
 
-                    <span className="text-[9.5px] font-extrabold px-2 py-0.5 bg-app-bg border border-app-border rounded-md text-app-text flex items-center gap-1">
-                      {activePeriodYear} <ChevronDown size={10} className="text-app-muted" />
-                    </span>
+                    {/* SELECTOR INTERACTIVO DE AÑO */}
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={selectedChartYear}
+                        onChange={(e) => setSelectedChartYear(e.target.value)}
+                        className="appearance-none bg-app-bg border border-app-border text-app-text text-[10px] font-extrabold uppercase rounded-lg pl-2.5 pr-6 py-1 outline-none cursor-pointer hover:border-blue-500 transition-colors shadow-2xs"
+                      >
+                        {Array.from({ length: 16 }, (_, i) => 2020 + i).map(year => (
+                          <option key={year} value={year.toString()}>{year}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={11} className="absolute right-1.5 text-app-muted pointer-events-none" />
+                    </div>
                   </div>
                 </div>
 
-                {/* SVG Bar Chart (Compact Height) */}
+                {/* SVG Bar Chart (Calculado dinámicamente con selectedChartYear) */}
                 <div className="mt-4 w-full">
                   <div className="flex items-end gap-1.5 sm:gap-2 h-32 sm:h-36 pt-4 pb-1 border-b border-app-border/70 relative">
                     {/* Background Guideline Lines */}
@@ -579,7 +732,7 @@ const EmpresaView: React.FC = () => {
                 </div>
               </div>
 
-              {/* 2. CALENDARIO TRIBUTARIO */}
+              {/* 2. CALENDARIO TRIBUTARIO SUNAT 2026 OFICIAL POR ÚLTIMO DÍGITO DEL RUC */}
               <div className="bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-2.5 border-b border-app-border">
@@ -606,24 +759,34 @@ const EmpresaView: React.FC = () => {
                   </div>
 
                   <div className="mt-2.5">
-                    <p className="text-[9.5px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-                      {calendarDate.monthNameFull} {calendarDate.year}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9.5px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                        {taxCalendarInfo.mesNombre}
+                      </p>
+                      <span className="text-[8.5px] font-bold text-app-muted uppercase">
+                        RUC: {currentCompany.ruc ? `Termina en ${taxCalendarInfo.ultimoDigito}` : 'General (Dígito 0)'}
+                      </span>
+                    </div>
 
-                    <div className="mt-2.5 flex items-center gap-3 bg-app-bg/50 border border-app-border p-2.5 rounded-xl">
+                    <div className="mt-2 flex items-center gap-3 bg-app-bg/60 border border-app-border p-2.5 rounded-xl">
                       {/* Date Badge */}
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                        <span className="text-sm font-black leading-none">{calendarDate.dueDay}</span>
-                        <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">{calendarDate.monthNameShort}</span>
+                      <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <span className="text-base font-black leading-none">{taxCalendarInfo.diaVencimiento}</span>
+                        <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">{taxCalendarInfo.mesVencimientoNombre}</span>
                       </div>
 
                       {/* Info & Badges */}
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] font-black text-app-text uppercase truncate">IGV - OPERACIONES MENSUALES</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className="text-[8.5px] text-app-muted font-bold">Formulario 621</span>
-                          <span className="text-[8px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded-md">
-                            Por vencer
+                          <span className={`text-[8px] font-extrabold px-1.5 py-0.2 rounded-md border ${taxCalendarInfo.estadoBadge === 'vencido'
+                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                              : taxCalendarInfo.estadoBadge === 'vence_hoy' || taxCalendarInfo.estadoBadge === 'vence_pronto'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            }`}>
+                            {taxCalendarInfo.textoEstadoBadge}
                           </span>
                         </div>
                       </div>
@@ -631,9 +794,10 @@ const EmpresaView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2 border-t border-app-border flex justify-end">
-                  <span className="text-[9.5px] font-bold text-app-muted">
-                    Faltan 10 días
+                <div className="mt-3 pt-2 border-t border-app-border flex justify-between items-center text-[9.5px]">
+                  <span className="text-app-muted font-medium">Vencimiento: {taxCalendarInfo.fechaVencimientoCompleta}</span>
+                  <span className={`font-black ${taxCalendarInfo.estadoBadge === 'vencido' ? 'text-rose-500' : 'text-app-text'}`}>
+                    {taxCalendarInfo.textoDias}
                   </span>
                 </div>
               </div>
@@ -643,11 +807,11 @@ const EmpresaView: React.FC = () => {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
-              FILA 3: TARJETAS DE RESUMEN INFERIOR
+              FILA 3: TARJETAS DE RESUMEN INFERIOR (100% DATOS REALES DE BD)
              ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
 
-            {/* 1. Clientes Activos */}
+            {/* 1. Clientes Activos (Dato Real) */}
             <div
               onClick={() => setActiveTab('CLI_PRO')}
               className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
@@ -658,7 +822,7 @@ const EmpresaView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Clientes Activos</span>
-                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{clientsCount}</h4>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{realClientsCount}</h4>
                 </div>
               </div>
               <div className="flex justify-end pt-2">
@@ -668,7 +832,7 @@ const EmpresaView: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Proveedores */}
+            {/* 2. Proveedores (Dato Real) */}
             <div
               onClick={() => setActiveTab('CLI_PRO')}
               className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
@@ -679,7 +843,7 @@ const EmpresaView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Proveedores</span>
-                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{providersCount}</h4>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{realProvidersCount}</h4>
                 </div>
               </div>
               <div className="flex justify-end pt-2">
@@ -689,7 +853,7 @@ const EmpresaView: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. Libros Electrónicos */}
+            {/* 3. Libros Electrónicos (Dato Real según SUNAT) */}
             <div
               onClick={() => setActiveTab('SIRE')}
               className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
@@ -700,7 +864,7 @@ const EmpresaView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Libros Electrónicos</span>
-                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">12</h4>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{realRequiredBooksCount}</h4>
                 </div>
               </div>
               <div className="flex justify-end pt-2">
@@ -710,7 +874,7 @@ const EmpresaView: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Comprobantes Emitidos */}
+            {/* 4. Comprobantes Emitidos (Dato Real de Ventas de la BD) */}
             <div
               onClick={() => setActiveTab('VENTAS')}
               className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
@@ -722,7 +886,7 @@ const EmpresaView: React.FC = () => {
                 <div>
                   <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Comprobantes Emitidos</span>
                   <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">
-                    {localSales.length > 0 ? localSales.length.toLocaleString('es-PE') : '2,456'}
+                    {realIssuedVouchersCount}
                   </h4>
                 </div>
               </div>
