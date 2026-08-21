@@ -879,7 +879,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 custom-scrollbar flex flex-col gap-0.5 w-full px-2 bg-app-surface">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 custom-scrollbar flex flex-col gap-1 w-full px-2 bg-app-surface">
             {computedSidebarGroups.map((group) => {
               const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
               const isActiveGroup = groupHasActiveTab(group);
@@ -893,7 +893,7 @@ const App: React.FC = () => {
                     <button
                       onClick={() => setActiveTab(tab.id)}
                       title={isSidebarCollapsed ? tab.label : ''}
-                      className={`flex items-center w-full rounded-lg transition-all text-[11px] font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2 justify-center' : 'px-3.5 py-2 justify-between'
+                      className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
                         } ${isActive
                           ? isStudentMode()
                             ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
@@ -903,8 +903,8 @@ const App: React.FC = () => {
                             : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
                         }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-app-muted'} />
+                      <div className="flex items-center gap-3">
+                        <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-app-muted'} />
                         {!isSidebarCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
                       </div>
                     </button>
@@ -917,7 +917,7 @@ const App: React.FC = () => {
                   <button
                     onClick={() => toggleGroup(group.groupLabel)}
                     title={isSidebarCollapsed ? group.groupLabel : ''}
-                    className={`flex items-center w-full rounded-lg transition-all text-[11px] font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2 justify-center' : 'px-3.5 py-2 justify-between'
+                    className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
                       } ${isActiveGroup && !isExpanded
                         ? isStudentMode()
                           ? 'text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
@@ -927,25 +927,25 @@ const App: React.FC = () => {
                           : 'text-app-muted hover:bg-app-hover hover:text-blue-600'
                       }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <group.groupIcon size={16} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
+                    <div className="flex items-center gap-3">
+                      <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? (isStudentMode() ? 'text-indigo-600' : 'text-blue-600') : 'text-app-muted'} />
                       {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
                     </div>
                     {!isSidebarCollapsed && (
-                      <ChevronDown size={13} className={`text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                      <ChevronDown size={14} className={`text-app-muted transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     )}
                   </button>
 
-                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-0.5 mb-1.5' : 'max-h-0 opacity-0'
+                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'
                     }`}>
-                    <div className="flex flex-col gap-0.5 border-l-2 border-app-border ml-[18px] pl-2.5">
+                    <div className="flex flex-col gap-1 border-l-2 border-app-border ml-[20px] pl-3">
                       {group.items.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
                           <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg transition-all text-[10.5px] font-bold uppercase tracking-wider ${isActive
+                            className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${isActive
                                 ? isStudentMode()
                                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20'
                                   : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
@@ -954,7 +954,7 @@ const App: React.FC = () => {
                                   : 'text-app-muted hover:bg-app-hover hover:text-blue-700'
                               }`}
                           >
-                            <tab.icon size={15} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
+                            <tab.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-app-muted'}`} />
                             <span className="whitespace-nowrap">{tab.label === 'Honorarios' ? '+ HONORARIOS' : tab.label}</span>
                           </button>
                         );
@@ -967,48 +967,48 @@ const App: React.FC = () => {
           </nav>
 
           {/* Compact Bottom Sidebar (Expanded) */}
-          <div className={`p-2 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
-            <div className="flex items-center justify-between gap-1.5 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
+          <div className={`p-2.5 border-t border-app-border flex-col gap-2.5 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+            <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
               {/* User Avatar + Info */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className={`w-6.5 h-6.5 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[9px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
+                <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate`} translate="no">
                   {userInitial}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[9.5px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
-                  <p className={`text-[7.5px] ${isSuperAdmin ? 'text-indigo-600 dark:text-indigo-400' : isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>
+                  <p className="text-[10px] font-black uppercase text-app-text leading-tight truncate notranslate" translate="no">{userName}</p>
+                  <p className={`text-[8px] ${isSuperAdmin ? 'text-indigo-600 dark:text-indigo-400' : isStudentMode() ? 'text-indigo-500' : 'text-blue-500'} font-bold uppercase tracking-wider leading-none`}>
                     {isSuperAdmin ? 'SuperAdmin' : isAdmin ? 'Administrador' : isStudentMode() ? 'Estudiante' : 'Usuario'}
                   </p>
                 </div>
               </div>
 
               {/* Quick Actions: Password, Theme & Logout */}
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => setShowChangePasswordModal(true)}
-                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
                   title="Cambiar Contraseña"
                 >
-                  <KeyRound size={12} />
+                  <KeyRound size={13} />
                 </button>
                 <button
                   onClick={toggleTheme}
-                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-surface hover:bg-app-hover border border-app-border/60 text-app-muted transition-colors cursor-pointer"
                   title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
                 >
-                  {theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />}
+                  {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
                 </button>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="w-6 h-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all cursor-pointer"
                   title="Cerrar Sesión"
                 >
-                  <LogOut size={12} />
+                  <LogOut size={13} />
                 </button>
               </div>
             </div>
 
-            {/* ─── TARJETA SOFTPREMIUM IA EN BARRA LATERAL (COMPACTA Y ELEGANTE) ─── */}
+            {/* ─── TARJETA SOFTPREMIUM IA EN BARRA LATERAL (AMPLIA Y ELEGANTE) ─── */}
             <div
               onClick={() => {
                 setActiveTab('SOFTPREMIUM');
@@ -1016,37 +1016,37 @@ const App: React.FC = () => {
                   window.history.pushState({}, '', '/premium');
                 }
               }}
-              className="relative overflow-hidden rounded-xl p-2.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white shadow-md shadow-blue-600/20 border border-white/20 cursor-pointer group hover:scale-[1.01] transition-all select-none"
+              className="relative overflow-hidden rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white shadow-lg shadow-blue-600/25 border border-white/20 cursor-pointer group hover:scale-[1.01] transition-all select-none"
             >
               {/* Resplandores decorativos */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-400/20 rounded-full blur-xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/20 rounded-full blur-lg pointer-events-none" />
+              <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-500/20 rounded-full blur-xl pointer-events-none" />
 
               {/* Contenido izquierdo */}
-              <div className="relative z-10 flex flex-col items-start max-w-[130px]">
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-white drop-shadow-xs flex items-center gap-1">
+              <div className="relative z-10 flex flex-col items-start max-w-[135px]">
+                <h4 className="text-xs font-black uppercase tracking-wider text-white drop-shadow-xs flex items-center gap-1">
                   <span>SOFTPREMIUM IA</span>
                 </h4>
-                <p className="text-[9px] text-blue-100 font-semibold leading-tight mt-0.5 line-clamp-1">
-                  Inteligencia contable
+                <p className="text-[10px] text-blue-100 font-semibold leading-snug mt-1">
+                  Inteligencia que impulsa tu contabilidad
                 </p>
 
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2.5">
                   <button
                     type="button"
-                    className="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-black text-[9px] rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+                    className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-black text-[10px] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
                   >
                     Conocer más
                   </button>
 
-                  <div className="p-1 rounded-md bg-white/15 backdrop-blur-xs border border-white/20 text-white shadow-inner">
-                    <TrendingUp size={11} />
+                  <div className="p-1.5 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 text-white shadow-inner">
+                    <TrendingUp size={13} />
                   </div>
                 </div>
               </div>
 
               {/* Ilustración Robot en la derecha */}
-              <div className="absolute right-0 bottom-0 w-20 h-20 pointer-events-none z-10 flex items-end justify-end">
+              <div className="absolute right-0 bottom-0 w-24 h-24 pointer-events-none z-10 flex items-end justify-end">
                 <img
                   src="/assets/softpremium-robot.png"
                   alt="SoftPremium IA"
@@ -1058,8 +1058,8 @@ const App: React.FC = () => {
                     if (fallback) fallback.style.display = 'flex';
                   }}
                 />
-                <div className="hidden w-16 h-16 items-center justify-center text-cyan-200">
-                  <Sparkles size={28} className="animate-pulse text-amber-300" />
+                <div className="hidden w-20 h-20 items-center justify-center text-cyan-200">
+                  <Sparkles size={32} className="animate-pulse text-amber-300" />
                 </div>
               </div>
             </div>
@@ -1068,9 +1068,9 @@ const App: React.FC = () => {
             {deferredPrompt && (
               <button
                 onClick={handleInstallApp}
-                className="w-full flex items-center justify-center gap-1.5 py-1 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
               >
-                <CloudDownload size={11} className="animate-bounce" />
+                <CloudDownload size={12} className="animate-bounce" />
                 <span>Instalar Aplicación</span>
               </button>
             )}
