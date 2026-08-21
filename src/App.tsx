@@ -878,7 +878,9 @@ const App: React.FC = () => {
         {/* ═══ SIDEBAR ═══ */}
         <aside
           ref={sidebarRef}
-          className={`fixed md:relative flex flex-col bg-[#0b101d] border-r border-slate-800/80 shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}
+          className={`fixed md:relative flex flex-col bg-[#0b101d] border-r border-slate-800/80 shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out h-full md:h-auto ${
+            isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          } ${isSidebarCollapsed ? 'md:w-[72px] w-64' : 'w-64'} print:hidden`}
         >
           {/* Brand Header */}
           <div className="h-16 flex items-center justify-between px-4 bg-[#0b101d] shrink-0 border-b border-slate-800/80 overflow-hidden">
@@ -886,9 +888,11 @@ const App: React.FC = () => {
               <img
                 src="assets/logo.png"
                 alt="Logo"
-                className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-9 h-9 mx-auto' : 'w-8 h-8'} object-contain shrink-0`}
+                className={`transition-all duration-300 ${
+                  isSidebarCollapsed ? 'md:w-9 md:h-9 md:mx-auto w-8 h-8' : 'w-8 h-8'
+                } object-contain shrink-0`}
               />
-              {!isSidebarCollapsed && (
+              {(!isSidebarCollapsed || isMobileSidebarOpen) && (
                 <span className="font-black tracking-[0.12em] text-[15px] uppercase text-white leading-tight whitespace-nowrap animate-fade-in">
                   Softcontable
                 </span>
@@ -899,7 +903,8 @@ const App: React.FC = () => {
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 custom-scrollbar flex flex-col gap-1 w-full px-2.5 bg-[#0b101d]">
             {computedSidebarGroups.map((group) => {
-              const isExpanded = expandedGroups.has(group.groupLabel) && !isSidebarCollapsed;
+              const isCollapsed = isSidebarCollapsed && !isMobileSidebarOpen;
+              const isExpanded = expandedGroups.has(group.groupLabel) && !isCollapsed;
               const isActiveGroup = groupHasActiveTab(group);
               const isSingleItem = group.items.length === 1;
 
@@ -910,16 +915,18 @@ const App: React.FC = () => {
                   <div key={group.groupLabel} className="mb-0.5">
                     <button
                       onClick={() => setActiveTab(tab.id)}
-                      title={isSidebarCollapsed ? tab.label : ''}
-                      className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
-                        } ${isActive
+                      title={isCollapsed ? tab.label : ''}
+                      className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase ${
+                        isCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
+                      } ${
+                        isActive
                           ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/25 font-black'
                           : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-white' : 'text-slate-400'} />
-                        {!isSidebarCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
+                        {!isCollapsed && <span className="whitespace-nowrap">{tab.label}</span>}
                       </div>
                     </button>
                   </div>
@@ -930,24 +937,25 @@ const App: React.FC = () => {
                 <div key={group.groupLabel} className="mb-0.5">
                   <button
                     onClick={() => toggleGroup(group.groupLabel)}
-                    title={isSidebarCollapsed ? group.groupLabel : ''}
-                    className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase group ${isSidebarCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
-                      } ${isActiveGroup && !isExpanded
+                    title={isCollapsed ? group.groupLabel : ''}
+                    className={`flex items-center w-full rounded-xl transition-all text-xs font-bold tracking-wide uppercase group ${
+                      isCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3.5 py-2.5 justify-between'
+                    } ${
+                      isActiveGroup && !isExpanded
                         ? 'text-blue-400 bg-slate-800/80 font-black'
                         : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
-                      }`}
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <group.groupIcon size={18} strokeWidth={isActiveGroup ? 2.5 : 2} className={isActiveGroup ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'} />
-                      {!isSidebarCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
+                      {!isCollapsed && <span className="whitespace-nowrap">{group.groupLabel}</span>}
                     </div>
-                    {!isSidebarCollapsed && (
+                    {!isCollapsed && (
                       <ChevronRight size={14} className={`text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-slate-300' : ''}`} />
                     )}
                   </button>
 
-                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'
-                    }`}>
+                  <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 mt-1 mb-2' : 'max-h-0 opacity-0'}`}>
                     <div className="flex flex-col gap-1 border-l border-slate-800 ml-[20px] pl-3">
                       {group.items.map((tab) => {
                         const isActive = activeTab === tab.id;
@@ -955,10 +963,11 @@ const App: React.FC = () => {
                           <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${isActive
+                            className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider ${
+                              isActive
                                 ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-blue-500/25'
                                 : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                              }`}
+                            }`}
                           >
                             <tab.icon size={15} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap">{tab.label === 'Honorarios' ? '+ HONORARIOS' : tab.label}</span>
@@ -973,7 +982,7 @@ const App: React.FC = () => {
           </nav>
 
           {/* User Widget (Expanded Sidebar) */}
-          <div className={`p-3 border-t border-slate-800/80 flex-col gap-2.5 shrink-0 bg-[#0b101d] ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+          <div className={`p-3 border-t border-slate-800/80 flex-col gap-2.5 shrink-0 bg-[#0b101d] ${isSidebarCollapsed && !isMobileSidebarOpen ? 'hidden' : 'flex'}`}>
             <div className="flex items-center justify-between gap-2 bg-[#121829] p-2 rounded-2xl border border-slate-800/90 shadow-sm relative group">
               {/* User Avatar + Info */}
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1084,7 +1093,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Compact Bottom Sidebar (Collapsed Desktop) */}
-          <div className={`p-2 border-t border-slate-800/80 flex-col items-center justify-center shrink-0 bg-[#0b101d] relative ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`} ref={collapsedUserMenuRef}>
+          <div className={`p-2 border-t border-slate-800/80 flex-col items-center justify-center shrink-0 bg-[#0b101d] relative ${isSidebarCollapsed && !isMobileSidebarOpen ? 'hidden md:flex' : 'hidden'}`} ref={collapsedUserMenuRef}>
             <button
               onClick={() => setIsCollapsedUserMenuOpen(!isCollapsedUserMenuOpen)}
               className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate hover:scale-105 transition-all cursor-pointer relative group`}
