@@ -465,6 +465,8 @@ const App: React.FC = () => {
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isCollapsedUserMenuOpen, setIsCollapsedUserMenuOpen] = useState(false);
+  const collapsedUserMenuRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -475,6 +477,9 @@ const App: React.FC = () => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearchFocused(false);
+      }
+      if (collapsedUserMenuRef.current && !collapsedUserMenuRef.current.contains(event.target as Node)) {
+        setIsCollapsedUserMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -1071,51 +1076,96 @@ const App: React.FC = () => {
           </div>
 
           {/* Compact Bottom Sidebar (Collapsed Desktop) */}
-          <div className={`p-2 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface items-center justify-center ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`}>
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
+          <div className={`p-2 border-t border-app-border flex-col items-center justify-center shrink-0 bg-app-surface relative ${isSidebarCollapsed ? 'hidden md:flex' : 'hidden'}`} ref={collapsedUserMenuRef}>
+            <button
+              onClick={() => setIsCollapsedUserMenuOpen(!isCollapsedUserMenuOpen)}
+              className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-md notranslate hover:scale-105 transition-all cursor-pointer relative group`}
+              translate="no"
+              title={userName}
+            >
               {userInitial}
-            </div>
-            <button
-              onClick={() => {
-                setActiveTab('SOFTPREMIUM');
-                if (window.history && window.history.pushState) {
-                  window.history.pushState({}, '', '/premium');
-                }
-              }}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 transition-colors cursor-pointer"
-              title="SoftPremium IA"
-            >
-              <Sparkles size={13} className="animate-pulse text-amber-300" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-app-surface shadow-xs" />
             </button>
-            <button
-              onClick={() => setShowChangePasswordModal(true)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
-              title="Cambiar Contraseña"
-            >
-              <KeyRound size={13} />
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted transition-colors cursor-pointer"
-              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-            </button>
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="w-7 h-7 flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20 cursor-pointer"
-              title="Cerrar Sesión"
-            >
-              <LogOut size={13} />
-            </button>
-            {deferredPrompt && (
-              <button
-                onClick={handleInstallApp}
-                className="w-7 h-7 flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all border border-blue-500/20 cursor-pointer shadow-sm active:scale-95"
-                title="Instalar Aplicación"
-              >
-                <CloudDownload size={13} className="animate-bounce" />
-              </button>
+
+            {/* Menú Desplegable Flotante para Barra Colapsada */}
+            {isCollapsedUserMenuOpen && (
+              <div className="absolute bottom-2 left-full ml-3 w-60 bg-app-surface border border-app-border rounded-2xl shadow-2xl p-3 flex flex-col gap-2 z-[100] animate-scale-in">
+                {/* Cabecera del Usuario */}
+                <div className="flex items-center gap-2.5 pb-2 border-b border-app-border">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-xs`} translate="no">
+                    {userInitial}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black uppercase text-app-text truncate notranslate" translate="no">{userName}</p>
+                    <p className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">
+                      {isSuperAdmin ? 'SuperAdmin' : isAdmin ? 'Administrador' : isStudentMode() ? 'Estudiante' : 'Usuario'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Acciones */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      setActiveTab('SOFTPREMIUM');
+                      setIsCollapsedUserMenuOpen(false);
+                      if (window.history && window.history.pushState) window.history.pushState({}, '', '/premium');
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-left cursor-pointer"
+                  >
+                    <Sparkles size={14} className="text-amber-400 shrink-0" />
+                    <span>SoftPremium IA</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      toggleTheme();
+                      setIsCollapsedUserMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-app-text hover:bg-app-hover transition-all text-left cursor-pointer"
+                  >
+                    {theme === 'dark' ? <Sun size={14} className="text-amber-400 shrink-0" /> : <Moon size={14} className="text-blue-500 shrink-0" />}
+                    <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowChangePasswordModal(true);
+                      setIsCollapsedUserMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-app-text hover:bg-app-hover transition-all text-left cursor-pointer"
+                  >
+                    <KeyRound size={14} className="text-app-muted shrink-0" />
+                    <span>Cambiar Contraseña</span>
+                  </button>
+
+                  {deferredPrompt && (
+                    <button
+                      onClick={() => {
+                        handleInstallApp();
+                        setIsCollapsedUserMenuOpen(false);
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-500/10 transition-all text-left cursor-pointer"
+                    >
+                      <CloudDownload size={14} className="text-blue-500 shrink-0" />
+                      <span>Instalar Aplicación</span>
+                    </button>
+                  )}
+
+                  <div className="border-t border-app-border my-1" />
+
+                  <button
+                    onClick={() => {
+                      setShowLogoutConfirm(true);
+                      setIsCollapsedUserMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-all text-left cursor-pointer"
+                  >
+                    <LogOut size={14} className="shrink-0" />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </aside>
@@ -1138,10 +1188,10 @@ const App: React.FC = () => {
           )}
 
           {/* Top Header */}
-          <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
+          <header className="h-14 sm:h-16 flex items-center justify-between px-2.5 sm:px-4 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
 
-            {/* Left: Hamburger + Search Bar */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Left: Hamburger + Search Bar + Company Config */}
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
               <button
                 onClick={() => {
                   if (window.innerWidth <= 768) {
@@ -1150,22 +1200,22 @@ const App: React.FC = () => {
                     setIsSidebarCollapsed(!isSidebarCollapsed);
                   }
                 }}
-                className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all shrink-0"
+                className="p-1.5 sm:p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all shrink-0"
                 title="Alternar panel lateral"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
               </button>
 
-              <div ref={searchRef} className="relative w-[120px] sm:w-[240px] md:w-[280px] lg:w-[340px] group shrink-0">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none transition-transform group-focus-within:scale-110">
-                  <Search size={16} className="text-app-muted/60" strokeWidth={2.5} />
+              <div ref={searchRef} className="relative w-28 xs:w-36 sm:w-[220px] md:w-[260px] lg:w-[320px] group shrink-0">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none transition-transform group-focus-within:scale-110">
+                  <Search size={15} className="text-app-muted/60" strokeWidth={2.5} />
                 </div>
                 <input
                   type="text"
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
+                  className="w-full pl-8 pr-2.5 py-1.5 sm:py-2 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
                   placeholder="Buscar..."
                 />
 
@@ -1201,10 +1251,10 @@ const App: React.FC = () => {
 
               <button
                 onClick={handleOpenCompanyConfig}
-                className="group h-9 flex items-center justify-start gap-2 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-9 sm:hover:w-[240px] sm:hover:px-3 relative shrink-0"
+                className="group h-8.5 w-8.5 sm:h-9 sm:w-9 sm:hover:w-[240px] flex items-center justify-start gap-2 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap sm:hover:px-3 relative shrink-0"
                 title="Configuración de la Empresa"
               >
-                <div className="w-9 shrink-0 flex items-center justify-center absolute left-0">
+                <div className="w-8.5 sm:w-9 shrink-0 flex items-center justify-center absolute left-0">
                   <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-8 hidden sm:inline">Configuración de la Empresa</span>
@@ -1212,23 +1262,23 @@ const App: React.FC = () => {
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2.5 md:gap-3 shrink-0">
               {/* Sync Status Badge (H-01) */}
               {syncStatus !== 'idle' && (
                 <div className="flex items-center text-[10px] font-black uppercase tracking-wider transition-all duration-300">
                   {syncStatus === 'saving' && (
-                    <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg animate-pulse">
-                      <Loader2 size={12} className="animate-spin" /> Guardando...
+                    <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-lg animate-pulse">
+                      <Loader2 size={12} className="animate-spin" /> <span className="hidden sm:inline">Guardando...</span>
                     </span>
                   )}
                   {syncStatus === 'saved' && (
-                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                      <CheckCircle2 size={12} /> Guardado
+                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
+                      <CheckCircle2 size={12} /> <span className="hidden sm:inline">Guardado</span>
                     </span>
                   )}
                   {syncStatus === 'error' && (
-                    <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg">
-                      <AlertCircle size={12} /> Error al guardar
+                    <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-lg">
+                      <AlertCircle size={12} /> <span className="hidden sm:inline">Error</span>
                     </span>
                   )}
                 </div>
@@ -1239,36 +1289,36 @@ const App: React.FC = () => {
                   {/* Notifications */}
                   <button
                     onClick={() => setActiveTab('BUZON')}
-                    className="relative p-2 text-app-muted hover:text-blue-600 transition-colors"
+                    className="relative p-1.5 sm:p-2 text-app-muted hover:text-blue-600 transition-colors shrink-0"
                     title="Buzón Electrónico"
                   >
-                    <Bell size={20} strokeWidth={1.5} />
+                    <Bell size={18} strokeWidth={1.5} />
                     {unreadBuzon > 0 && (
-                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
+                      <span className="absolute top-1 right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-rose-500 rounded-full border-2 border-app-surface shadow-sm" />
                     )}
                   </button>
 
                   {/* SIRE Button */}
                   <button
                     onClick={() => setActiveTab('SIRE')}
-                    className={`p-2 transition-colors ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
+                    className={`p-1.5 sm:p-2 transition-colors shrink-0 ${activeTab === 'SIRE' ? 'text-blue-600 bg-blue-50 dark:bg-blue-600/10 rounded-lg' : 'text-app-muted hover:text-blue-600'}`}
                     title="Módulo SIRE (Descargas API)"
                   >
-                    <CloudDownload size={20} strokeWidth={1.5} />
+                    <CloudDownload size={18} strokeWidth={1.5} />
                   </button>
 
-                  {/* Backup Button */}
+                  {/* Backup Button (Desktop/Tablet) */}
                   {isAdmin && (
                     <button
                       onClick={handleBackup}
                       disabled={isBackingUp}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${isBackingUp
+                      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all border shrink-0 ${isBackingUp
                           ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed'
                           : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'
                         }`}
                       title="Crear copia de seguridad"
                     >
-                      {isBackingUp ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
+                      {isBackingUp ? <Loader2 size={14} className="animate-spin" /> : <Database size={14} />}
                       <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
                         {isBackingUp ? 'Procesando...' : 'Backup'}
                       </span>
@@ -1277,17 +1327,17 @@ const App: React.FC = () => {
                 </>
               )}
 
-              {/* Massive Excel Download */}
+              {/* Massive Excel Download (Desktop/Tablet) */}
               <button
                 onClick={handleMassiveExport}
                 disabled={isExportingMassive}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border ${isExportingMassive
+                className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all border shrink-0 ${isExportingMassive
                     ? 'bg-app-bg text-app-muted border-app-border cursor-not-allowed'
                     : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20'
                   }`}
                 title="Descargar libro contable completo en Excel"
               >
-                {isExportingMassive ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />}
+                {isExportingMassive ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
                 <span className="text-[10px] font-bold uppercase tracking-wider hidden md:block">
                   {isExportingMassive ? 'Generando...' : 'Excel Masivo'}
                 </span>
