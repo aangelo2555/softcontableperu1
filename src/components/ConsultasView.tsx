@@ -518,11 +518,6 @@ export default function ConsultasView({ currentWorkspace }: ConsultasViewProps) 
       <PageHeader
         icon={<FileSearch size={18} />}
         title="Consultas y Descarga CPE"
-        badge={
-          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
-            SUNAT CLAVE SOL
-          </span>
-        }
         subtitle={
           activeCompany ? (
             <span className="flex items-center gap-2 flex-wrap text-xs">

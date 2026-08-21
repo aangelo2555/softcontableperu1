@@ -691,11 +691,8 @@ export default function ConsultasMasivasSheet({ activeCompany, onRefreshWorkspac
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm font-black uppercase tracking-wider text-app-text flex items-center gap-2">
                 <span>CONSULTAS MASIVAS DE CPE</span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-black tracking-widest uppercase font-mono">
-                  HTTP DIRECTO • MICROSERVICIOS SUNAT
-                </span>
               </h2>
               <p className="text-[11px] text-app-muted">
                 Valida decenas de comprobantes directamente contra los microservicios de SUNAT SOL.

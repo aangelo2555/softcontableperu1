@@ -1074,7 +1074,7 @@ const App: React.FC = () => {
           <header className="h-16 flex items-center justify-between px-3 md:px-6 bg-app-surface border-b border-app-border shrink-0 z-10 shadow-sm relative print:hidden">
 
             {/* Left: Hamburger + Search Bar */}
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => {
                   if (window.innerWidth <= 768) {
@@ -1083,23 +1083,22 @@ const App: React.FC = () => {
                     setIsSidebarCollapsed(!isSidebarCollapsed);
                   }
                 }}
-                className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all"
+                className="p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all shrink-0"
                 title="Alternar panel lateral"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
               </button>
 
-              <div ref={searchRef} className="relative w-[120px] sm:w-[280px] lg:w-[360px] group">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110">
-                  <Search size={18} className="text-app-muted/60" strokeWidth={2.5} />
+              <div ref={searchRef} className="relative w-[110px] sm:w-[240px] md:w-[280px] lg:w-[340px] group shrink-0">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none transition-transform group-focus-within:scale-110">
+                  <Search size={16} className="text-app-muted/60" strokeWidth={2.5} />
                 </div>
                 <input
                   type="text"
                   value={searchQuery}
                   onFocus={() => setIsSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-2.5 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
-                  style={{ paddingLeft: '3.25rem' }}
+                  className="w-full pl-9 pr-3 py-2 bg-app-bg border border-app-border text-xs font-semibold rounded-xl text-app-text outline-none focus:bg-app-surface focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner placeholder:text-app-muted/60"
                   placeholder="Buscar..."
                 />
 
@@ -1134,18 +1133,18 @@ const App: React.FC = () => {
               </div>
               <button
                 onClick={handleOpenCompanyConfig}
-                className="group h-9 flex items-center justify-start gap-2 px-0 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-[36px] hover:w-[240px] hover:px-3 relative"
+                className="group h-9 flex items-center justify-start gap-2 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-9 sm:hover:w-[240px] sm:hover:px-3 relative shrink-0"
                 title="Configuración de la Empresa"
               >
-                <div className="w-[34px] shrink-0 flex items-center justify-center absolute left-0">
+                <div className="w-9 shrink-0 flex items-center justify-center absolute left-0">
                   <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-[34px]">Configuración de la Empresa</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-[10px] uppercase tracking-widest pl-8 hidden sm:inline">Configuración de la Empresa</span>
               </button>
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
+            <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 shrink-0">
               {/* Sync Status Badge (H-01) */}
               {syncStatus !== 'idle' && (
                 <div className="flex items-center text-[10px] font-black uppercase tracking-wider transition-all duration-300">
