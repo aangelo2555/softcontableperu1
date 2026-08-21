@@ -239,7 +239,8 @@ export const CRONOGRAMA_SUNAT_2026: PeriodoVencimiento[] = [
 
 export interface InfoVencimientoCalculado {
   periodoDeclarado: string; // 'Jul-2026'
-  mesNombre: string; // 'AGOSTO 2026'
+  mesNombre: string; // 'AGOSTO 2026' (Mes en que vence)
+  periodoFiscalTexto: string; // 'JULIO 2026' (Periodo tributario al que corresponde)
   ultimoDigito: string;
   diaVencimiento: number;
   mesVencimientoNombre: string; // 'AGO'
@@ -252,11 +253,42 @@ export interface InfoVencimientoCalculado {
 }
 
 /**
- * Calcula la fecha exacta y días restantes para un RUC y mes offset en el ejercicio 2026
+ * Encuentra el periodo tributario activo cuyo vencimiento es el próximo en el tiempo actual
+ * (ej. si hoy es 20/08/2026, el próximo vencimiento es Julio-2026 que vence el 25/08/2026).
+ */
+export function getProximoPeriodoIndex(
+  ruc: string | undefined,
+  isBuenContribuyente: boolean = false,
+  fechaReferencia: Date = new Date()
+): number {
+  const safeRuc = (ruc || '').trim();
+  const lastDigit = isBuenContribuyente
+    ? 'buenos_contribuyentes'
+    : (safeRuc.length > 0 ? safeRuc.slice(-1) : '0');
+
+  const hoy = new Date(fechaReferencia);
+  hoy.setHours(0, 0, 0, 0);
+
+  // Buscar el primer periodo cuya fecha de vencimiento sea hoy o posterior
+  for (let i = 0; i < CRONOGRAMA_SUNAT_2026.length; i++) {
+    const p = CRONOGRAMA_SUNAT_2026[i];
+    const v = p.vencimientos[lastDigit] || p.vencimientos['0'];
+    const fechaVenc = new Date(`${v.fecha}T23:59:59`);
+    if (fechaVenc.getTime() >= hoy.getTime()) {
+      return i;
+    }
+  }
+
+  // Si ya pasaron todos los del año, retornar el último (Diciembre que vence en Enero 2027)
+  return CRONOGRAMA_SUNAT_2026.length - 1;
+}
+
+/**
+ * Calcula la fecha exacta y días restantes para un periodo específico del ejercicio 2026
  */
 export function calcularVencimientoSunat(
   ruc: string | undefined,
-  mesIndex: number = 7, // Default: Agosto (índice 7)
+  periodoIndex: number = 6, // 0: Ene-2026 (vence Feb), 6: Jul-2026 (vence Ago), 7: Ago-2026 (vence Set)
   isBuenContribuyente: boolean = false,
   fechaReferencia: Date = new Date()
 ): InfoVencimientoCalculado {
@@ -265,7 +297,7 @@ export function calcularVencimientoSunat(
     ? 'buenos_contribuyentes'
     : (safeRuc.length > 0 ? safeRuc.slice(-1) : '0');
 
-  const safeIndex = ((mesIndex % 12) + 12) % 12;
+  const safeIndex = ((periodoIndex % 12) + 12) % 12;
   const periodoInfo = CRONOGRAMA_SUNAT_2026[safeIndex];
   const vencimiento = periodoInfo.vencimientos[lastDigit] || periodoInfo.vencimientos['0'];
 
@@ -288,7 +320,7 @@ export function calcularVencimientoSunat(
     estadoBadge = 'vence_hoy';
     textoEstadoBadge = 'Vence hoy';
     textoDias = 'Vence hoy';
-  } else if (diffDays <= 3) {
+  } else if (diffDays <= 4) {
     estadoBadge = 'vence_pronto';
     textoEstadoBadge = 'Vence pronto';
     textoDias = `Faltan ${diffDays} días`;
@@ -298,9 +330,18 @@ export function calcularVencimientoSunat(
     textoDias = `Faltan ${diffDays} días`;
   }
 
+  const mesVencimientoNombresFull: Record<string, string> = {
+    'Ene': 'ENERO', 'Feb': 'FEBRERO', 'Mar': 'MARZO', 'Abr': 'ABRIL',
+    'May': 'MAYO', 'Jun': 'JUNIO', 'Jul': 'JULIO', 'Ago': 'AGOSTO',
+    'Set': 'SETIEMBRE', 'Oct': 'OCTUBRE', 'Nov': 'NOVIEMBRE', 'Dic': 'DICIEMBRE'
+  };
+
+  const nombreMesVencimiento = `${mesVencimientoNombresFull[vencimiento.mes] || vencimiento.mes} ${vencimiento.anio}`;
+
   return {
     periodoDeclarado: periodoInfo.periodo,
-    mesNombre: periodoInfo.mesNombre,
+    mesNombre: nombreMesVencimiento, // Mes en que vence (ej. 'AGOSTO 2026')
+    periodoFiscalTexto: periodoInfo.mesNombre, // Periodo tributario (ej. 'JULIO 2026')
     ultimoDigito: lastDigit === 'buenos_contribuyentes' ? 'Buenos Contribuyentes' : lastDigit,
     diaVencimiento: vencimiento.dia,
     mesVencimientoNombre: vencimiento.mes.toUpperCase(),

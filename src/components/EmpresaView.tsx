@@ -13,7 +13,7 @@ import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
 import { evaluateRegime, type CompanyFinancials } from '../engine/regimeEngine';
-import { calcularVencimientoSunat, CRONOGRAMA_SUNAT_2026 } from '../constants/cronogramaSunat2026';
+import { calcularVencimientoSunat, getProximoPeriodoIndex, CRONOGRAMA_SUNAT_2026 } from '../constants/cronogramaSunat2026';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -294,19 +294,26 @@ const EmpresaView: React.FC = () => {
   };
 
   // ─── Calendario Tributario SUNAT 2026 Oficial por Último Dígito de RUC ───
-  const baseMonthIndex = 7; // Agosto (índice 7) como base estándar
-  const activeTaxMonthIndex = useMemo(() => {
-    return ((baseMonthIndex + selectedCalendarMonthOffset) % 12 + 12) % 12;
-  }, [baseMonthIndex, selectedCalendarMonthOffset]);
+  const baseProximoIndex = useMemo(() => {
+    return getProximoPeriodoIndex(
+      currentCompany.ruc,
+      !!currentCompany.agente_retencion,
+      new Date()
+    );
+  }, [currentCompany.ruc, currentCompany.agente_retencion]);
+
+  const activeTaxPeriodIndex = useMemo(() => {
+    return ((baseProximoIndex + selectedCalendarMonthOffset) % 12 + 12) % 12;
+  }, [baseProximoIndex, selectedCalendarMonthOffset]);
 
   const taxCalendarInfo = useMemo(() => {
     return calcularVencimientoSunat(
       currentCompany.ruc,
-      activeTaxMonthIndex,
-      !!currentCompany.agente_retencion, // o buen contribuyente
+      activeTaxPeriodIndex,
+      !!currentCompany.agente_retencion,
       new Date()
     );
-  }, [currentCompany.ruc, activeTaxMonthIndex, currentCompany.agente_retencion]);
+  }, [currentCompany.ruc, activeTaxPeriodIndex, currentCompany.agente_retencion]);
 
   const evaluation = useMemo(() => {
     const rawRegime = currentCompany.regimenTributario || 'RG';
@@ -780,6 +787,8 @@ const EmpresaView: React.FC = () => {
                         <p className="text-[10px] font-black text-app-text uppercase truncate">IGV - OPERACIONES MENSUALES</p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className="text-[8.5px] text-app-muted font-bold">Formulario 621</span>
+                          <span className="text-[8px] text-app-muted/60">•</span>
+                          <span className="text-[8.5px] text-blue-600 dark:text-blue-400 font-bold uppercase">Periodo {taxCalendarInfo.periodoDeclarado}</span>
                           <span className={`text-[8px] font-extrabold px-1.5 py-0.2 rounded-md border ${taxCalendarInfo.estadoBadge === 'vencido'
                               ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                               : taxCalendarInfo.estadoBadge === 'vence_hoy' || taxCalendarInfo.estadoBadge === 'vence_pronto'

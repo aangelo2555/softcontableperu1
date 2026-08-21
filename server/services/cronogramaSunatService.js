@@ -222,8 +222,25 @@ const CRONOGRAMA_SUNAT_2026 = [
   }
 ];
 
+function getProximoPeriodoIndex(ruc, isBuenContribuyente = false, fechaReferencia = new Date()) {
+  const safeRuc = (ruc || '').trim();
+  const lastDigit = isBuenContribuyente ? 'buenos_contribuyentes' : (safeRuc.length > 0 ? safeRuc.slice(-1) : '0');
+  const hoy = new Date(fechaReferencia);
+  hoy.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < CRONOGRAMA_SUNAT_2026.length; i++) {
+    const p = CRONOGRAMA_SUNAT_2026[i];
+    const v = p.vencimientos[lastDigit] || p.vencimientos['0'];
+    const fechaVenc = new Date(`${v.fecha}T23:59:59`);
+    if (fechaVenc.getTime() >= hoy.getTime()) {
+      return i;
+    }
+  }
+  return CRONOGRAMA_SUNAT_2026.length - 1;
+}
+
 /**
- * Obtiene el vencimiento específico según RUC y mes del ejercicio
+ * Obtiene el vencimiento específico según RUC y periodo fiscal
  */
 function getVencimientoRuc(ruc, mesIndex = 0, isBuenContribuyente = false) {
   const lastDigit = isBuenContribuyente ? 'buenos_contribuyentes' : (ruc ? String(ruc).slice(-1) : '0');
@@ -242,5 +259,6 @@ function getVencimientoRuc(ruc, mesIndex = 0, isBuenContribuyente = false) {
 
 module.exports = {
   CRONOGRAMA_SUNAT_2026,
+  getProximoPeriodoIndex,
   getVencimientoRuc
 };
