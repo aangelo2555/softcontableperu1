@@ -560,12 +560,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Slot contenedor de imagen/ilustración para el usuario */}
-                  <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-gradient-to-br from-emerald-50/70 via-slate-50 to-blue-50/60 border border-slate-200/70 flex items-center justify-center p-2 relative shrink-0 shadow-inner overflow-hidden group">
+                  {/* Ilustración de Pilar 1 (Limpio sin borde ni fondo) */}
+                  <div className="w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center p-0 relative shrink-0">
                     <img
                       src="/assets/pilar1-illustration.png"
                       alt="Auditoría Tributaria"
-                      className="w-full h-full object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-contain drop-shadow-md transition-transform duration-300 hover:scale-105"
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.style.display = 'none';
@@ -825,12 +825,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                         </p>
                       </div>
 
-                      {/* Slot para ilustración de tarjetas/bancarización */}
-                      <div className="w-16 h-14 shrink-0 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-center justify-center p-1 relative overflow-hidden group">
+                      {/* Ilustración de Bancarización (Limpio sin borde ni fondo) */}
+                      <div className="w-16 h-14 shrink-0 flex items-center justify-center p-0">
                         <img
                           src="/assets/pilar1-bancarizacion.png"
                           alt="Bancarización"
-                          className="w-full h-full object-contain drop-shadow-2xs group-hover:scale-105 transition-transform"
+                          className="w-full h-full object-contain drop-shadow-sm hover:scale-105 transition-transform"
                           onError={(e) => {
                             const target = e.currentTarget;
                             target.style.display = 'none';
@@ -987,11 +987,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-slate-50 to-purple-50/60 border border-slate-200/70 flex items-center justify-center p-2 relative shrink-0 shadow-inner overflow-hidden group">
+                  {/* Ilustración de Pilar 2 (Limpio sin borde ni fondo) */}
+                  <div className="w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center p-0 relative shrink-0">
                     <img
                       src="/assets/pilar2-illustration.png"
                       alt="Auditoría Planillas"
-                      className="w-full h-full object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-contain drop-shadow-md transition-transform duration-300 hover:scale-105"
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.style.display = 'none';
@@ -1155,11 +1156,12 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-2xl bg-gradient-to-br from-purple-50/70 via-slate-50 to-blue-50/60 border border-slate-200/70 flex items-center justify-center p-2 relative shrink-0 shadow-inner overflow-hidden group">
+                  {/* Ilustración de Pilar 3 (Limpio sin borde ni fondo) */}
+                  <div className="w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center p-0 relative shrink-0">
                     <img
                       src="/assets/pilar3-illustration.png"
                       alt="Auditoría Financiera"
-                      className="w-full h-full object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-contain drop-shadow-md transition-transform duration-300 hover:scale-105"
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.style.display = 'none';
