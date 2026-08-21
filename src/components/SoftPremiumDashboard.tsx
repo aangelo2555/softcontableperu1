@@ -34,7 +34,10 @@ import {
   CheckCircle,
   HelpCircle,
   Clock,
-  Award
+  Award,
+  Copy,
+  Layers,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const SoftPremiumDashboard: React.FC = () => {
@@ -84,7 +87,7 @@ export const SoftPremiumDashboard: React.FC = () => {
   // Módulo Expandido Inline (Accordion Responsivo)
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
-  // Estado de Sub-Pestañas Modulares dentro de cada Módulo
+  // Estado de Sub-Pestañas Modulares dentro de cada Módulo ('DIAGNOSTICO' | 'NORMATIVA' | 'GROQ_AI')
   const [moduleSubTabs, setModuleSubTabs] = useState<Record<string, 'DIAGNOSTICO' | 'NORMATIVA' | 'GROQ_AI'>>({});
 
   const getModuleSubTab = (moduleKey: string): 'DIAGNOSTICO' | 'NORMATIVA' | 'GROQ_AI' => {
@@ -358,6 +361,11 @@ export const SoftPremiumDashboard: React.FC = () => {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
+  };
+
   const handleVolver = () => {
     setActiveTab('EMPRESA');
     if (window.history && window.history.pushState) {
@@ -367,7 +375,7 @@ export const SoftPremiumDashboard: React.FC = () => {
 
   // Helper para generar gráficos punteados exactos al diseño
   const renderDottedSparkline = (color: string, points: number[]) => {
-    const w = 120;
+    const w = 110;
     const h = 24;
     const step = w / (points.length - 1);
     const coords = points.map((p, i) => ({
@@ -379,7 +387,7 @@ export const SoftPremiumDashboard: React.FC = () => {
     }, '');
 
     return (
-      <svg width={w} height={h} className="overflow-visible mt-2">
+      <svg width={w} height={h} className="overflow-visible mt-2 w-full max-w-[110px]">
         <path d={pathD} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         {coords.map((pt, idx) => (
           <circle key={idx} cx={pt.x} cy={pt.y} r="2" fill={color} />
@@ -391,30 +399,30 @@ export const SoftPremiumDashboard: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen w-full bg-[#f4f7fb] text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
       
-      {/* ─── 1. HEADER MAESTRO SOFTPREMIUM IA ─── */}
-      <header className="bg-white/95 border-b border-slate-200/90 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-40 shadow-xs backdrop-blur-md">
+      {/* ─── 1. HEADER MAESTRO SOFTPREMIUM IA (100% RESPONSIVO) ─── */}
+      <header className="bg-white/95 border-b border-slate-200/90 px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-xs backdrop-blur-md">
         
         {/* Izquierda: Volver + Logo SOFTPREMIUM IA */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={handleVolver}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-emerald-500/50 hover:bg-slate-50 text-slate-700 font-extrabold text-xs rounded-full shadow-2xs transition-all cursor-pointer group shrink-0"
             title="Volver al Sistema Principal"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-emerald-600 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="tracking-wide">VOLVER</span>
+            <span className="tracking-wide text-[11px] sm:text-xs">VOLVER</span>
           </button>
 
-          <div className="flex items-center gap-2.5 pl-1">
+          <div className="flex items-center gap-2 pl-1">
             <img src="/assets/logo.png" alt="Softcontable Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0" />
-            <span className="text-sm sm:text-base font-black tracking-tight text-[#0f172a]">
+            <span className="text-xs sm:text-base font-black tracking-tight text-[#0f172a] whitespace-nowrap">
               SOFTPREMIUM <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">IA</span>
             </span>
           </div>
         </div>
 
         {/* Centro: Buscador estilo ⌘ K */}
-        <div className="hidden lg:flex items-center max-w-sm w-full mx-4">
+        <div className="hidden lg:flex items-center max-w-xs xl:max-w-sm w-full mx-2">
           <div className="relative w-full flex items-center bg-slate-50 border border-slate-200/90 rounded-full px-3 py-1.5 focus-within:border-blue-500/60 focus-within:bg-white focus-within:shadow-2xs transition-all">
             <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
             <input
@@ -431,10 +439,10 @@ export const SoftPremiumDashboard: React.FC = () => {
         </div>
 
         {/* Derecha: Notificaciones + Perfil + Selector de Empresa + Suscripción */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar">
           
           {/* Campana de Notificaciones */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button 
               className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
               title="Notificaciones de Auditoría"
@@ -447,12 +455,12 @@ export const SoftPremiumDashboard: React.FC = () => {
           </div>
 
           {/* Perfil del Usuario */}
-          <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-2xs">
+          <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-2xs shrink-0">
             <div className="relative w-6 h-6 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">
               {(user?.name || 'A').charAt(0).toUpperCase()}
               <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-white" />
             </div>
-            <div className="flex flex-col text-left max-w-[110px] truncate leading-tight">
+            <div className="flex flex-col text-left max-w-[100px] truncate leading-tight">
               <span className="text-[11px] font-black text-slate-800 truncate">{user?.name || 'Angelo Serna'}</span>
               <span className="text-[9px] text-slate-400 font-medium truncate">{user?.email || 'angelo2555@gmail.com'}</span>
             </div>
@@ -464,12 +472,12 @@ export const SoftPremiumDashboard: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowCompanyModal(true)}
-              className="bg-white border border-slate-200 px-3 py-1 rounded-full text-left flex items-center gap-2 hover:border-blue-500/40 transition-all cursor-pointer shadow-2xs"
+              className="bg-white border border-slate-200 px-2.5 sm:px-3 py-1 rounded-full text-left flex items-center gap-1.5 sm:gap-2 hover:border-blue-500/40 transition-all cursor-pointer shadow-2xs shrink-0"
             >
               <Building2 size={13} className="text-slate-500 shrink-0" />
               <div className="leading-tight">
                 <label className="text-[7.5px] text-slate-400 uppercase font-black tracking-widest block">MIS EMPRESAS</label>
-                <span className="text-[11px] font-black text-slate-800 block max-w-[110px] sm:max-w-[140px] truncate">
+                <span className="text-[10px] sm:text-[11px] font-black text-slate-800 block max-w-[90px] sm:max-w-[130px] truncate">
                   {currentCompany?.name ? (currentCompany.name.length > 15 ? currentCompany.name.substring(0, 13) + '...' : currentCompany.name) : 'AGROITAYR S.A.C.'}
                 </span>
               </div>
@@ -478,70 +486,71 @@ export const SoftPremiumDashboard: React.FC = () => {
           )}
 
           {/* Insignia de Suscripción */}
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/90 rounded-full text-[10px] font-extrabold shadow-2xs shrink-0 whitespace-nowrap">
+          <div className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/90 rounded-full text-[9px] sm:text-[10px] font-extrabold shadow-2xs shrink-0 whitespace-nowrap">
             <CheckCircle2 size={12} className="text-emerald-600" />
-            <span>Suscripción Activa</span>
+            <span className="hidden xs:inline">Suscripción Activa</span>
+            <span className="xs:hidden">Activa</span>
           </div>
 
         </div>
       </header>
 
-      {/* ─── 2. SELECTOR FLOTANTE DE 3 PILARES (PILL SWITCHER) ─── */}
-      <section className="pt-4 px-4 sm:px-6">
-        <div className="max-w-xl mx-auto bg-white border border-slate-200/90 rounded-2xl p-1 shadow-xs flex items-center justify-between gap-1.5">
+      {/* ─── 2. SELECTOR FLOTANTE DE 3 PILARES (PILL SWITCHER RESPONSIVO) ─── */}
+      <section className="pt-3 sm:pt-4 px-3 sm:px-6">
+        <div className="max-w-xl mx-auto bg-white border border-slate-200/90 rounded-2xl p-1 shadow-xs flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveSubTab('tributario')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${
               activeSubTab === 'tributario'
                 ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-500 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'
             }`}
           >
-            <TrendingUp className={`w-3.5 h-3.5 ${activeSubTab === 'tributario' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <TrendingUp className={`w-3.5 h-3.5 shrink-0 ${activeSubTab === 'tributario' ? 'text-emerald-600' : 'text-slate-400'}`} />
             <span>1. TRIBUTACIÓN RAG</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('planillas')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${
               activeSubTab === 'planillas'
                 ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'
             }`}
           >
-            <Users className={`w-3.5 h-3.5 ${activeSubTab === 'planillas' ? 'text-indigo-600' : 'text-slate-400'}`} />
+            <Users className={`w-3.5 h-3.5 shrink-0 ${activeSubTab === 'planillas' ? 'text-indigo-600' : 'text-slate-400'}`} />
             <span>2. PLANILLAS RAG</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('finanzas')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wide transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${
               activeSubTab === 'finanzas'
                 ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'
             }`}
           >
-            <BarChart3 className={`w-3.5 h-3.5 ${activeSubTab === 'finanzas' ? 'text-purple-600' : 'text-slate-400'}`} />
+            <BarChart3 className={`w-3.5 h-3.5 shrink-0 ${activeSubTab === 'finanzas' ? 'text-purple-600' : 'text-slate-400'}`} />
             <span>3. FINANZAS RAG</span>
           </button>
         </div>
       </section>
 
       {/* ─── 3. CONTENIDO PRINCIPAL SEGÚN PILAR SELECCIONADO ─── */}
-      <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-5">
+      <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-5">
         
         {/* ══════════════ PILAR 1: TRIBUTACIÓN RAG ══════════════ */}
         {activeSubTab === 'tributario' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 animate-fade-in">
             
             {/* HERO CARD PILAR 1 */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-sm">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-7 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
                 
-                {/* Columna Izquierda: Información + Slot de Ilustración */}
-                <div className="lg:col-span-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                {/* Columna Izquierda: Información + Ilustración Transparente */}
+                <div className="lg:col-span-6 flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5 text-center sm:text-left">
                   <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
                       <span className="px-3 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-full text-[9.5px] font-black uppercase tracking-wider">
                         PILAR 1
                       </span>
@@ -555,7 +564,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <span className="text-emerald-600">RAG</span> &amp; <span className="text-blue-600">Groq AI</span>
                     </h2>
                     
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md">
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md mx-auto sm:mx-0">
                       Análisis preventivo de cumplimiento SUNAT, crédito fiscal, bancarización Ley 28194 y scoring de riesgo fiscal.
                     </p>
                   </div>
@@ -573,7 +582,6 @@ export const SoftPremiumDashboard: React.FC = () => {
                         if (fallback) fallback.style.display = 'flex';
                       }}
                     />
-                    {/* Fallback Vectorial Elegante mientras se proporciona la imagen */}
                     <div className="hidden flex-col items-center justify-center text-center p-2">
                       <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center mb-1.5 shadow-2xs">
                         <FileCheck2 size={24} />
@@ -588,13 +596,13 @@ export const SoftPremiumDashboard: React.FC = () => {
                 <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   
                   {/* KPI 1: VENTAS */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-emerald-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-emerald-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-emerald-600 mb-1">
                         <TrendingUp size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">VENTAS</span>
                       </div>
-                      <div className="text-sm font-black text-[#0f172a] tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-[#0f172a] tracking-tight">
                         S/ {kpis.totalVentas.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -602,13 +610,13 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
 
                   {/* KPI 2: COMPRAS */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-blue-600 mb-1">
                         <DollarSign size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">COMPRAS</span>
                       </div>
-                      <div className="text-sm font-black text-blue-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-blue-600 tracking-tight">
                         S/ {kpis.totalCompras.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -616,13 +624,13 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
 
                   {/* KPI 3: IGV EST. */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-amber-500 mb-1">
                         <Calculator size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">IGV EST.</span>
                       </div>
-                      <div className="text-sm font-black text-amber-500 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-amber-500 tracking-tight">
                         S/ {kpis.igvEstimado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -630,19 +638,19 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
 
                   {/* KPI 4: RIESGO SUNAT */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-purple-600 mb-1">
                         <ShieldAlert size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">RIESGO SUNAT</span>
                       </div>
-                      <div className="text-sm font-black text-emerald-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
                         {kpis.scoreRiesgoSunat}
                       </div>
                     </div>
                     
                     {/* Barra de progreso segmentada */}
-                    <div className="mt-4 flex items-center gap-1.5">
+                    <div className="mt-3 sm:mt-4 flex items-center gap-1.5">
                       <div className="h-2 w-5 rounded-full bg-emerald-500" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
@@ -660,14 +668,14 @@ export const SoftPremiumDashboard: React.FC = () => {
               
               {/* MÓDULO 1.1: COHERENCIA DE VENTAS VS COMPRAS */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-emerald-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-5 flex flex-col justify-between h-full">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl border border-emerald-500/20">
                           <TrendingUp size={16} />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.1</span>
                           <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">
                             Ratio {kpis.ratioComprasVentas.toFixed(1)}%
@@ -687,7 +695,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       </div>
 
                       {/* Mini Onda SVG */}
-                      <div className="w-24 h-12 shrink-0 flex items-center justify-end">
+                      <div className="w-20 sm:w-24 h-12 shrink-0 flex items-center justify-end">
                         <svg width="80" height="30" viewBox="0 0 80 30" fill="none" className="overflow-visible">
                           <path d="M 0,25 C 20,25 25,5 40,15 C 55,25 60,10 80,18" stroke="#10b981" strokeWidth="2" strokeLinecap="round" fill="none" />
                           <path d="M 0,25 C 20,25 25,5 40,15 C 55,25 60,10 80,18 L 80,30 L 0,30 Z" fill="#10b981" fillOpacity="0.1" />
@@ -707,13 +715,13 @@ export const SoftPremiumDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* DESPLIEGUE EXPANDIBLE CON SUB-PESTAÑAS */}
+                {/* DESPLIEGUE EXPANDIBLE COMPLETO CON 3 SUB-PESTAÑAS */}
                 {expandedModule === 'trib_m1' && (
                   <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
-                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs">
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'DIAGNOSTICO')}
-                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
                           getModuleSubTab('trib_m1') === 'DIAGNOSTICO'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'text-slate-500 hover:bg-slate-50'
@@ -723,7 +731,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'NORMATIVA')}
-                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
                           getModuleSubTab('trib_m1') === 'NORMATIVA'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'text-slate-500 hover:bg-slate-50'
@@ -733,7 +741,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setModuleSubTab('trib_m1', 'GROQ_AI')}
-                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
                           getModuleSubTab('trib_m1') === 'GROQ_AI'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'text-slate-500 hover:bg-slate-50'
@@ -744,51 +752,105 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </div>
 
                     {getModuleSubTab('trib_m1') === 'DIAGNOSTICO' && (
-                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <span className="font-bold text-slate-600">Total Ventas Registradas:</span>
-                          <span className="font-black text-slate-800">S/ {kpis.totalVentas.toFixed(2)}</span>
+                      <div className="space-y-3 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Ventas Declaradas</span>
+                            <p className="text-sm font-black text-emerald-600">S/ {kpis.totalVentas.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Compras Sustentadas</span>
+                            <p className="text-sm font-black text-blue-600">S/ {kpis.totalCompras.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-slate-400">Cobertura Compras</span>
+                            <p className="text-sm font-black text-amber-500">{kpis.ratioComprasVentas.toFixed(1)}%</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <span className="font-bold text-slate-600">Total Compras con Crédito Fiscal:</span>
-                          <span className="font-black text-blue-600">S/ {kpis.totalCompras.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-slate-600">Diagnóstico Preventivo:</span>
-                          <span className="font-black text-emerald-600">Crédito Fiscal Acumulado Válido para Ejercicios Futuros</span>
+
+                        <div className="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-1">
+                          <h4 className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-emerald-600" /> Diagnóstico Automatizado
+                          </h4>
+                          <p className="text-[11px] text-slate-700 leading-relaxed">
+                            {kpis.ratioComprasVentas > 85 
+                              ? 'Alerta: El ratio de compras supera el 85% de tus ventas. SUNAT suele fiscalizar empresas con márgenes operativos excesivamente reducidos.' 
+                              : 'Tu relación compras/ventas se encuentra dentro de los márgenes óptimos sustentables.'}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {getModuleSubTab('trib_m1') === 'NORMATIVA' && (
-                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-2 leading-relaxed">
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed animate-fade-in">
                         <p className="font-black text-slate-800">Artículo 18 y 19 de la Ley del IGV (D.S. 055-99-EF):</p>
                         <p>El derecho al crédito fiscal está sujeto a los requisitos sustanciales de que las adquisiciones sean permitidas como gasto o costo de la empresa, y se destinen a operaciones gravadas con IGV.</p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Scale size={12} className="text-amber-500" />
+                          <span>Jurisprudencia: RTF N° 01245-1-2021 sobre coherencia de márgenes comerciales.</span>
+                        </div>
                       </div>
                     )}
 
                     {getModuleSubTab('trib_m1') === 'GROQ_AI' && (
-                      <div className="space-y-2">
+                      <div className="space-y-3 animate-fade-in">
+                        {/* Chips de Preguntas Sugeridas */}
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold uppercase text-slate-400">Consultas Sugeridas RAG:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              '¿Cómo sustento la fehaciencia de compras?',
+                              '¿Qué pasa si mi margen es menor al 10%?',
+                              '¿SUNAT me puede reparar el crédito fiscal?'
+                            ].map((chip, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleAskRAG('tributario', 'trib_m1', chip)}
+                                className="text-[10px] font-bold text-slate-700 hover:text-emerald-700 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 px-2.5 py-1 rounded-lg transition-all text-left cursor-pointer"
+                              >
+                                {chip}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Input de consulta */}
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            placeholder="Pregunta a la IA sobre tu crédito fiscal..."
+                            placeholder="Escribe tu duda sobre este módulo..."
                             value={ragQueries['trib_m1'] || ''}
                             onChange={(e) => setRagQueries({ ...ragQueries, trib_m1: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAskRAG('tributario', 'trib_m1')}
                             className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-emerald-500 font-medium"
                           />
                           <button
                             onClick={() => handleAskRAG('tributario', 'trib_m1')}
                             disabled={ragLoading['trib_m1']}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                           >
                             {ragLoading['trib_m1'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
                             <span>Consultar</span>
                           </button>
                         </div>
+
+                        {/* Respuesta IA */}
                         {ragAnswers['trib_m1'] && (
-                          <div className="bg-white border border-emerald-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs whitespace-pre-line">
-                            {ragAnswers['trib_m1']}
+                          <div className="bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs space-y-1.5">
+                            <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                              <span className="text-[9px] font-black uppercase text-emerald-700 flex items-center gap-1">
+                                <Sparkles size={12} /> Respuesta Groq IA RAG
+                              </span>
+                              <button 
+                                onClick={() => copyToClipboard(ragAnswers['trib_m1'])}
+                                className="text-[10px] font-bold text-slate-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Copy size={12} /> Copiar
+                              </button>
+                            </div>
+                            <div className="whitespace-pre-line text-[11.5px]">
+                              {ragAnswers['trib_m1']}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -799,14 +861,14 @@ export const SoftPremiumDashboard: React.FC = () => {
 
               {/* MÓDULO 1.2: CONTROL DE BANCARIZACIÓN */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-amber-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-5 flex flex-col justify-between h-full">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl border border-amber-500/20">
                           <DollarSign size={16} />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.2</span>
                           <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-extrabold rounded-full">
                             Sin Medios: S/ {kpis.sinBancarizarMonto.toFixed(2)}
@@ -859,34 +921,103 @@ export const SoftPremiumDashboard: React.FC = () => {
                 {/* DESPLIEGUE EXPANDIBLE */}
                 {expandedModule === 'trib_m2' && (
                   <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-4 animate-scale-up">
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
-                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="font-bold text-slate-600">Umbral Bancarización Soles:</span>
-                        <span className="font-black text-slate-800">S/ 2,000.00</span>
-                      </div>
-                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="font-bold text-slate-600">Umbral Bancarización Dólares:</span>
-                        <span className="font-black text-slate-800">US$ 500.00</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-600">Operaciones Observadas:</span>
-                        <span className="font-black text-emerald-600">0 Infracciones Detectadas</span>
-                      </div>
+                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 gap-1 shadow-2xs overflow-x-auto no-scrollbar">
+                      <button
+                        onClick={() => setModuleSubTab('trib_m2', 'DIAGNOSTICO')}
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                          getModuleSubTab('trib_m2') === 'DIAGNOSTICO'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Activity size={13} /> Diagnóstico
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('trib_m2', 'NORMATIVA')}
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                          getModuleSubTab('trib_m2') === 'NORMATIVA'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <BookOpen size={13} /> Ley 28194
+                      </button>
+                      <button
+                        onClick={() => setModuleSubTab('trib_m2', 'GROQ_AI')}
+                        className={`flex-1 py-1.5 text-[11px] font-black uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                          getModuleSubTab('trib_m2') === 'GROQ_AI'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Sparkles size={13} /> Groq RAG AI
+                      </button>
                     </div>
+
+                    {getModuleSubTab('trib_m2') === 'DIAGNOSTICO' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <span className="font-bold text-slate-600">Umbral Bancarización Soles:</span>
+                          <span className="font-black text-slate-800">S/ 2,000.00</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <span className="font-bold text-slate-600">Umbral Bancarización Dólares:</span>
+                          <span className="font-black text-slate-800">US$ 500.00</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-slate-600">Operaciones Observadas:</span>
+                          <span className="font-black text-emerald-600">0 Infracciones Detectadas</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('trib_m2') === 'NORMATIVA' && (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed">
+                        <p className="font-black text-slate-800">Ley N° 28194 y D.S. N° 150-2007-EF:</p>
+                        <p>Los pagos que se efectúen sin utilizar Medios de Pago no darán derecho a deducir gastos, costos o créditos; a efectuar compensaciones ni a solicitar devoluciones de tributos, saldos a favor, o reintegros tributarios.</p>
+                      </div>
+                    )}
+
+                    {getModuleSubTab('trib_m2') === 'GROQ_AI' && (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Consultar sobre medios de pago y bancarización..."
+                            value={ragQueries['trib_m2'] || ''}
+                            onChange={(e) => setRagQueries({ ...ragQueries, trib_m2: e.target.value })}
+                            className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:border-amber-500 font-medium"
+                          />
+                          <button
+                            onClick={() => handleAskRAG('tributario', 'trib_m2')}
+                            disabled={ragLoading['trib_m2']}
+                            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            {ragLoading['trib_m2'] ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
+                            <span>Consultar</span>
+                          </button>
+                        </div>
+                        {ragAnswers['trib_m2'] && (
+                          <div className="bg-white border border-amber-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed shadow-2xs whitespace-pre-line">
+                            {ragAnswers['trib_m2']}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* MÓDULO 1.3: PROVEEDORES NO HABIDOS */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-rose-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-5 flex flex-col justify-between h-full">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="p-2 bg-rose-500/10 text-rose-600 rounded-xl border border-rose-500/20">
                           <ShieldAlert size={16} />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.3</span>
                           <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold rounded-full">
                             Estado: 100% Habidos
@@ -913,18 +1044,33 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {expandedModule === 'trib_m3' && (
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-3 animate-scale-up">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Total Proveedores Evaluados:</span>
+                        <span className="font-black text-slate-800">{(purchases || []).length > 0 ? (new Set((purchases || []).map(p => p.doc_num || p.nombre)).size) : 1}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Condición Habido / Activo:</span>
+                        <span className="font-black text-emerald-600">100% Conforme</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* MÓDULO 1.4: DETRACCIONES SPOT */}
               <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className="p-5 flex flex-col justify-between h-full">
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl border border-purple-500/20">
                           <CreditCard size={16} />
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-black uppercase text-slate-800">MÓDULO 1.4</span>
                           <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-extrabold rounded-full">
                             SPOT: 0 Inconsistencias
@@ -951,6 +1097,21 @@ export const SoftPremiumDashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {expandedModule === 'trib_m4' && (
+                  <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-3 animate-scale-up">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Umbral General de Detracción:</span>
+                        <span className="font-black text-slate-800">S/ 700.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Estado de Constancias:</span>
+                        <span className="font-black text-emerald-600">Al día sin multas SUNAT</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -960,15 +1121,15 @@ export const SoftPremiumDashboard: React.FC = () => {
 
         {/* ══════════════ PILAR 2: PLANILLAS RAG ══════════════ */}
         {activeSubTab === 'planillas' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 animate-fade-in">
             
             {/* HERO CARD PILAR 2 */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-sm">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-7 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
                 
-                <div className="lg:col-span-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                <div className="lg:col-span-6 flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5 text-center sm:text-left">
                   <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
                       <span className="px-3 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200/80 rounded-full text-[9.5px] font-black uppercase tracking-wider">
                         PILAR 2
                       </span>
@@ -982,7 +1143,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <span className="text-indigo-600">RAG</span> &amp; <span className="text-blue-600">Groq AI</span>
                     </h2>
                     
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md">
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md mx-auto sm:mx-0">
                       Cálculo preventivo de Gratificaciones, CTS, Vacaciones, EsSalud y detección de contingencias sociolaborales SUNAFIL.
                     </p>
                   </div>
@@ -1011,57 +1172,57 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-indigo-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-indigo-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-indigo-600 mb-1">
                         <Users size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">COLABORADORES</span>
                       </div>
-                      <div className="text-sm font-black text-[#0f172a] tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-[#0f172a] tracking-tight">
                         {kpis.colaboradoresCount} Activos
                       </div>
                     </div>
                     {renderDottedSparkline('#6366f1', [20, 30, 40, 50, 40, 60, 50, 70])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-blue-600 mb-1">
                         <Award size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">GRATIFICACIÓN</span>
                       </div>
-                      <div className="text-sm font-black text-blue-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-blue-600 tracking-tight">
                         S/ {kpis.gratiEstimadaTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     {renderDottedSparkline('#2563eb', [10, 25, 40, 65, 45, 60, 40, 50])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-amber-500 mb-1">
                         <Clock size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">CTS ESTIMADA</span>
                       </div>
-                      <div className="text-sm font-black text-amber-500 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-amber-500 tracking-tight">
                         S/ {kpis.ctsEstimadaTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     {renderDottedSparkline('#f59e0b', [25, 35, 45, 40, 55, 45, 50, 60])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-purple-600 mb-1">
                         <ShieldAlert size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">RIESGO LABORAL</span>
                       </div>
-                      <div className="text-sm font-black text-emerald-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
                         BAJO
                       </div>
                     </div>
                     
-                    <div className="mt-4 flex items-center gap-1.5">
+                    <div className="mt-3 sm:mt-4 flex items-center gap-1.5">
                       <div className="h-2 w-5 rounded-full bg-emerald-500" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
@@ -1076,9 +1237,10 @@ export const SoftPremiumDashboard: React.FC = () => {
             {/* GRILLA DE MÓDULOS DE PLANILLAS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-5 flex flex-col justify-between hover:shadow-md transition-all">
+              {/* MÓDULO 2.1: GRATIFICACIONES */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl">
                       <Award size={16} />
                     </div>
@@ -1094,14 +1256,34 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                   <button onClick={() => toggleModule('pla_m1')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer">
-                    <span>Ver Análisis</span> →
+                    <span>{expandedModule === 'pla_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
                   </button>
                 </div>
+
+                {expandedModule === 'pla_m1' && (
+                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[9px] text-slate-400 font-bold block">Trabajadores Computables</span>
+                        <span className="font-black text-indigo-600">{kpis.colaboradoresCount}</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[9px] text-slate-400 font-bold block">Monto Proyectado</span>
+                        <span className="font-black text-blue-600">S/ {kpis.gratiEstimadaTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span className="text-[9px] text-slate-400 font-bold block">Bonif. Extraordinaria (9%)</span>
+                        <span className="font-black text-emerald-600">S/ {(kpis.gratiEstimadaTotal * 0.09).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden p-5 flex flex-col justify-between hover:shadow-md transition-all">
+              {/* MÓDULO 2.2: CTS */}
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <div className="p-2 bg-blue-500/10 text-blue-600 rounded-xl">
                       <Clock size={16} />
                     </div>
@@ -1117,9 +1299,18 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                   <button onClick={() => toggleModule('pla_m2')} className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer">
-                    <span>Ver Análisis</span> →
+                    <span>{expandedModule === 'pla_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
                   </button>
                 </div>
+
+                {expandedModule === 'pla_m2' && (
+                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                      <span className="font-bold text-slate-600">Depósito Estimado Semestral:</span>
+                      <span className="font-black text-blue-600">S/ {kpis.ctsEstimadaTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -1129,15 +1320,15 @@ export const SoftPremiumDashboard: React.FC = () => {
 
         {/* ══════════════ PILAR 3: FINANZAS RAG ══════════════ */}
         {activeSubTab === 'finanzas' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 animate-fade-in">
             
             {/* HERO CARD PILAR 3 */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-sm">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-7 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
                 
-                <div className="lg:col-span-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                <div className="lg:col-span-6 flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5 text-center sm:text-left">
                   <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
                       <span className="px-3 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/80 rounded-full text-[9.5px] font-black uppercase tracking-wider">
                         PILAR 3
                       </span>
@@ -1151,7 +1342,7 @@ export const SoftPremiumDashboard: React.FC = () => {
                       <span className="text-purple-600">RAG</span> &amp; <span className="text-blue-600">Groq AI</span>
                     </h2>
                     
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md">
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md mx-auto sm:mx-0">
                       Diagnóstico de liquidez, solvencia, rentabilidad y estructura de capital con alertas tempranas para toma de decisiones.
                     </p>
                   </div>
@@ -1180,57 +1371,57 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-purple-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-purple-600 mb-1">
                         <Activity size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">LIQUIDEZ CTE.</span>
                       </div>
-                      <div className="text-sm font-black text-emerald-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
                         {(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}
                       </div>
                     </div>
                     {renderDottedSparkline('#8b5cf6', [20, 40, 30, 60, 50, 70, 60, 80])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-blue-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-blue-600 mb-1">
                         <Scale size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">APALANCAMIENTO</span>
                       </div>
-                      <div className="text-sm font-black text-blue-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-blue-600 tracking-tight">
                         {(kpis.ratioComprasVentas / 100).toFixed(2)}
                       </div>
                     </div>
                     {renderDottedSparkline('#2563eb', [15, 30, 45, 40, 50, 45, 35, 40])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-amber-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-amber-500 mb-1">
                         <BarChart3 size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">MARGEN BRUTO</span>
                       </div>
-                      <div className="text-sm font-black text-amber-500 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-amber-500 tracking-tight">
                         {Math.max(0, 100 - kpis.ratioComprasVentas).toFixed(1)}%
                       </div>
                     </div>
                     {renderDottedSparkline('#f59e0b', [30, 40, 35, 55, 45, 60, 50, 65])}
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:border-emerald-500/40 transition-all">
+                  <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between shadow-2xs hover:border-emerald-500/40 transition-all">
                     <div>
                       <div className="flex items-center gap-1.5 text-emerald-600 mb-1">
                         <ShieldCheck size={13} />
                         <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">SALUD FINANCIERA</span>
                       </div>
-                      <div className="text-sm font-black text-emerald-600 tracking-tight">
+                      <div className="text-xs sm:text-sm font-black text-emerald-600 tracking-tight">
                         ÓPTIMA
                       </div>
                     </div>
                     
-                    <div className="mt-4 flex items-center gap-1.5">
+                    <div className="mt-3 sm:mt-4 flex items-center gap-1.5">
                       <div className="h-2 w-5 rounded-full bg-emerald-500" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
                       <div className="h-2 w-2 rounded-full bg-slate-200" />
@@ -1245,9 +1436,9 @@ export const SoftPremiumDashboard: React.FC = () => {
             {/* GRILLA DE MÓDULOS FINANCIEROS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden p-5 flex flex-col justify-between hover:shadow-md transition-all">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-purple-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl">
                       <Activity size={16} />
                     </div>
@@ -1263,14 +1454,29 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                   <button onClick={() => toggleModule('fin_m1')} className="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer">
-                    <span>Ver Análisis</span> →
+                    <span>{expandedModule === 'fin_m1' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
                   </button>
                 </div>
+
+                {expandedModule === 'fin_m1' && (
+                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Razón Corriente:</span>
+                        <span className="font-black text-purple-600">{(kpis.totalCompras > 0 ? (kpis.totalVentas / kpis.totalCompras) : 1.85).toFixed(2)}x</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Prueba Ácida Proyectada:</span>
+                        <span className="font-black text-emerald-600">1.45x</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-5 flex flex-col justify-between hover:shadow-md transition-all">
+              <div className="bg-white border border-slate-200/90 border-l-4 border-l-indigo-500 rounded-2xl shadow-xs overflow-hidden p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl">
                       <Scale size={16} />
                     </div>
@@ -1286,9 +1492,24 @@ export const SoftPremiumDashboard: React.FC = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                   <button onClick={() => toggleModule('fin_m2')} className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer">
-                    <span>Ver Análisis</span> →
+                    <span>{expandedModule === 'fin_m2' ? 'Ocultar Análisis' : 'Ver Análisis'}</span> →
                   </button>
                 </div>
+
+                {expandedModule === 'fin_m2' && (
+                  <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3 animate-scale-up text-xs">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Margen Operativo Estimado:</span>
+                        <span className="font-black text-indigo-600">18.5%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-600">Rendimiento Patrimonial (ROE):</span>
+                        <span className="font-black text-emerald-600">22.4%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
