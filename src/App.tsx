@@ -469,6 +469,8 @@ const App: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCollapsedUserMenuOpen, setIsCollapsedUserMenuOpen] = useState(false);
   const collapsedUserMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const hamburgerBtnRef = useRef<HTMLButtonElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -477,11 +479,22 @@ const App: React.FC = () => {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (searchRef.current && !searchRef.current.contains(target)) {
         setIsSearchFocused(false);
       }
-      if (collapsedUserMenuRef.current && !collapsedUserMenuRef.current.contains(event.target as Node)) {
+      if (collapsedUserMenuRef.current && !collapsedUserMenuRef.current.contains(target)) {
         setIsCollapsedUserMenuOpen(false);
+      }
+      // Auto-colapsar la barra lateral al hacer clic en cualquier parte del frontend (fuera del sidebar)
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(target) &&
+        hamburgerBtnRef.current &&
+        !hamburgerBtnRef.current.contains(target)
+      ) {
+        setIsSidebarCollapsed(true);
+        setIsMobileSidebarOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -863,7 +876,10 @@ const App: React.FC = () => {
         )}
 
         {/* ═══ SIDEBAR ═══ */}
-        <aside className={`fixed md:relative flex flex-col bg-[#0b101d] border-r border-slate-800/80 shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}>
+        <aside
+          ref={sidebarRef}
+          className={`fixed md:relative flex flex-col bg-[#0b101d] border-r border-slate-800/80 shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out h-full md:h-auto ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'} w-64 print:hidden`}
+        >
           {/* Brand Header */}
           <div className="h-16 flex items-center justify-between px-4 bg-[#0b101d] shrink-0 border-b border-slate-800/80 overflow-hidden">
             <div className="flex items-center gap-3 min-w-0">
@@ -878,21 +894,6 @@ const App: React.FC = () => {
                 </span>
               )}
             </div>
-            {!isSidebarCollapsed && (
-              <button
-                onClick={() => {
-                  if (window.innerWidth <= 768) {
-                    setIsMobileSidebarOpen(false);
-                  } else {
-                    setIsSidebarCollapsed(true);
-                  }
-                }}
-                className="hidden md:flex p-1.5 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer"
-                title="Colapsar menú lateral"
-              >
-                <ChevronsLeft size={16} />
-              </button>
-            )}
           </div>
 
           {/* Navigation */}
@@ -1200,6 +1201,7 @@ const App: React.FC = () => {
             {/* Left: Hamburger + Search Bar + Company Config */}
             <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
               <button
+                ref={hamburgerBtnRef}
                 onClick={() => {
                   if (window.innerWidth <= 768) {
                     setIsMobileSidebarOpen(!isMobileSidebarOpen);
@@ -1207,7 +1209,7 @@ const App: React.FC = () => {
                     setIsSidebarCollapsed(!isSidebarCollapsed);
                   }
                 }}
-                className="p-1.5 sm:p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all shrink-0"
+                className="p-1.5 sm:p-2 text-app-muted hover:text-blue-600 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-600 rounded-lg transition-all shrink-0 cursor-pointer"
                 title="Alternar panel lateral"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -1354,7 +1356,13 @@ const App: React.FC = () => {
           </header>
 
           {/* View Content */}
-          <main className="flex-1 overflow-hidden relative bg-app-bg">
+          <main
+            onClick={() => {
+              if (!isSidebarCollapsed) setIsSidebarCollapsed(true);
+              if (isMobileSidebarOpen) setIsMobileSidebarOpen(false);
+            }}
+            className="flex-1 overflow-hidden relative bg-app-bg"
+          >
             <div key={activeTab} className="absolute inset-0 animate-fade-in">
               <Suspense fallback={null}>
                 {renderView()}

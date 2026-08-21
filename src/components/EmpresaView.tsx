@@ -12,7 +12,7 @@ import { useStore, type CompanyData, type RegimenCode } from '../store';
 import { REGIMENES_TRIBUTARIOS, getUIT } from '../constants/tributario';
 import * as apiService from '../services/apiService';
 import { calcularObligacionesContables } from '../utils/tributarioRules';
-import { evaluateRegime } from '../engine/regimeEngine';
+import { evaluateRegime, type CompanyFinancials } from '../engine/regimeEngine';
 
 // ─── Helpers ───
 const formatCurrency = (n: number) => `S/ ${Math.abs(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -44,6 +44,10 @@ const EmpresaView: React.FC = () => {
 
   const [localUIT, setLocalUIT] = useState<string>('');
   const [selectedCalendarMonthOffset, setSelectedCalendarMonthOffset] = useState<number>(0);
+
+  // Estados para calculadoras tributarias en parámetros
+  const [nrusIngresos, setNrusIngresos] = useState<number>(0);
+  const [nrusCompras, setNrusCompras] = useState<number>(0);
 
   // ─── Computed Metrics (Excluyendo Propuestas SIRE) ───
   const localSales = useMemo(() => sales.filter(s => s.estado_sire !== 'Propuesta'), [sales]);
@@ -116,17 +120,17 @@ const EmpresaView: React.FC = () => {
   }, 0), [localPurchases]);
   const estimatedIgv = igvSales - igvPurchases;
 
-  // Recent activity (last 6 operations)
+  // Recent activity (Compact: Exactly top 3 items)
   const recentOps = useMemo(() => {
     const ops: { type: string; label: string; amount: number; date: string; icon: any }[] = [];
-    localSales.slice(-4).forEach(s => ops.push({ type: 'venta', label: s.glosa || `Venta ${s.serie}-${s.numero}`, amount: s.total, date: s.fecha, icon: Tag }));
-    localPurchases.slice(-4).forEach(p => ops.push({ type: 'compra', label: p.glosa || `Compra ${p.serie}-${p.numero}`, amount: p.total, date: p.fecha, icon: ShoppingCart }));
+    localSales.slice(-3).forEach(s => ops.push({ type: 'venta', label: s.glosa || `Venta ${s.serie}-${s.numero}`, amount: s.total, date: s.fecha, icon: Tag }));
+    localPurchases.slice(-3).forEach(p => ops.push({ type: 'compra', label: p.glosa || `Compra ${p.serie}-${p.numero}`, amount: p.total, date: p.fecha, icon: ShoppingCart }));
     honorarios.slice(-2).forEach(h => ops.push({ type: 'honorario', label: h.nombre || `Honorario ${h.serie}-${h.numero}`, amount: h.total, date: h.fecha, icon: ReceiptText }));
-    asientos.slice(-4).forEach(a => {
+    asientos.slice(-3).forEach(a => {
       const amount = a.lines?.reduce((sum, line) => sum + (line.debe || 0), 0) || 0;
       ops.push({ type: 'asiento', label: a.header?.glosa || 'Asiento Manual', amount, date: a.header?.fecEmi || '', icon: BookText });
     });
-    return ops.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
+    return ops.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 3);
   }, [localSales, localPurchases, honorarios, asientos]);
 
   const clientsCount = useMemo(() => entities.filter(e => e.tipo === 'cliente' || e.tipo === 'ambos').length || 128, [entities]);
@@ -161,13 +165,51 @@ const EmpresaView: React.FC = () => {
     };
   }, [selectedCalendarMonthOffset]);
 
+  const evaluation = useMemo(() => {
+    const rawRegime = currentCompany.regimenTributario || 'RG';
+    const regimeCode = (rawRegime === 'MYPE' ? 'RMT' : rawRegime) as any;
+    const uitVal = getUIT(currentCompany.period || '2026');
+    const annualRev = (Number(currentCompany.annualIncomeUIT) || 0) * uitVal || totalSales;
+    const monthlyRev = periodSales.reduce((acc, s) => acc + (s.bi || s.total || 0), 0);
+    const annualPurch = totalPurchases;
+    const monthlyPurch = periodPurchases.reduce((acc, p) => acc + (p.bi || p.total || 0), 0);
+
+    const financials: CompanyFinancials = {
+      annualRevenue: annualRev,
+      monthlyRevenue: monthlyRev,
+      annualPurchases: annualPurch,
+      monthlyPurchases: monthlyPurch,
+      fixedAssetsValue: currentCompany.fixedAssetsValue || 0,
+      employeeCount: currentCompany.employeeCount || 0,
+      ciiuCode: currentCompany.ciiuCode || '',
+    };
+
+    return evaluateRegime(regimeCode, financials);
+  }, [currentCompany, totalSales, totalPurchases, periodSales, periodPurchases]);
+
+  const nrusCalculo = useMemo(() => {
+    const mayor = Math.max(nrusIngresos || 0, nrusCompras || 0);
+    if (mayor <= 5000) return { cuota: 20.0, categoria: 1, mensaje: 'Categoría 1 (Hasta S/ 5,000)' };
+    if (mayor <= 8000) return { cuota: 50.0, categoria: 2, mensaje: 'Categoría 2 (Hasta S/ 8,000)' };
+    return { cuota: 0, categoria: 0, mensaje: 'Excede el límite del NRUS (S/ 8,000 / mes)' };
+  }, [nrusIngresos, nrusCompras]);
+
+  const rerCalculo = useMemo(() => {
+    const biVentas = periodSales.reduce((acc, s) => acc + (s.bi || s.total || 0), 0);
+    const igvV = periodSales.reduce((acc, s) => acc + s.igv, 0);
+    const igvC = periodPurchases.reduce((acc, p) => acc + p.igv, 0);
+    const renta = biVentas * 0.015;
+    const igvPagar = Math.max(0, igvV - igvC);
+    return { renta, igv: igvPagar, total: renta + igvPagar };
+  }, [periodSales, periodPurchases]);
+
   return (
     <div className="flex flex-col h-full bg-app-bg text-app-text animate-fade-in relative">
-      <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 flex flex-col gap-6">
+      <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-5 flex flex-col gap-4 sm:gap-5">
 
           {/* ═══ HEADER ROW: TÍTULO Y ACCIONES RÁPIDAS ═══ */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-app-text">
                 PANEL DE CONTROL
@@ -179,62 +221,62 @@ const EmpresaView: React.FC = () => {
             </div>
 
             {/* Quick Action Pill Buttons */}
-            <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setActiveTab('COMPRAS')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-2xs cursor-pointer active:scale-95"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-2xs cursor-pointer active:scale-95"
               >
-                <ShoppingCart size={15} />
+                <ShoppingCart size={14} />
                 <span>+ COMPRA</span>
               </button>
               <button
                 onClick={() => setActiveTab('VENTAS')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-2xs cursor-pointer active:scale-95"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-2xs cursor-pointer active:scale-95"
               >
-                <Tag size={15} />
+                <Tag size={14} />
                 <span>+ VENTA</span>
               </button>
               <button
                 onClick={() => setActiveTab('ASIENTOS')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-2xs cursor-pointer active:scale-95"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-2xs cursor-pointer active:scale-95"
               >
-                <BookText size={15} />
+                <BookText size={14} />
                 <span>+ ASIENTO</span>
               </button>
             </div>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
-              FILA 1: TARJETAS KPI CON ONDAS SPARKLINES SVG
+              FILA 1: 4 TARJETAS KPI COMPACTAS CON SPARKLINES SVG
              ═══════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
 
             {/* 1. Ventas Card */}
             <div
               onClick={() => setActiveTab('VENTAS')}
-              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="flex justify-between items-start mb-2.5">
-                  <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                    <TrendingUp size={20} strokeWidth={2.5} />
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                    <TrendingUp size={16} strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Ventas</span>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase">Ventas</span>
                 </div>
-                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(totalSales)}</h3>
-                <div className="mt-2">
-                  <span className="text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-app-text">{formatCurrency(totalSales)}</h3>
+                <div className="mt-1">
+                  <span className="text-[9px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                     {localSales.length} registros
                   </span>
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG */}
-              <div className="mt-3 relative h-10 w-full overflow-hidden">
+              {/* Sparkline Wave SVG (Compact) */}
+              <div className="mt-2 relative h-7 w-full overflow-hidden">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
                     <linearGradient id="sparklineGreen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
                       <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
@@ -244,8 +286,8 @@ const EmpresaView: React.FC = () => {
               </div>
 
               <div className="flex justify-end pt-1">
-                <span className="text-[10px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={11} />
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={10} />
                 </span>
               </div>
             </div>
@@ -253,29 +295,29 @@ const EmpresaView: React.FC = () => {
             {/* 2. Compras Card */}
             <div
               onClick={() => setActiveTab('COMPRAS')}
-              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all group cursor-pointer relative overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="flex justify-between items-start mb-2.5">
-                  <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
-                    <ShoppingBag size={20} strokeWidth={2.5} />
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="p-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg">
+                    <ShoppingBag size={16} strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Compras</span>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase">Compras</span>
                 </div>
-                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(totalPurchases)}</h3>
-                <div className="mt-2">
-                  <span className="text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2.5 py-0.5 rounded-full">
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-app-text">{formatCurrency(totalPurchases)}</h3>
+                <div className="mt-1">
+                  <span className="text-[9px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
                     {localPurchases.length} registros
                   </span>
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG */}
-              <div className="mt-3 relative h-10 w-full overflow-hidden">
+              {/* Sparkline Wave SVG (Compact) */}
+              <div className="mt-2 relative h-7 w-full overflow-hidden">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
                     <linearGradient id="sparklinePurple" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
                       <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
@@ -285,37 +327,37 @@ const EmpresaView: React.FC = () => {
               </div>
 
               <div className="flex justify-end pt-1">
-                <span className="text-[10px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={11} />
+                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={10} />
                 </span>
               </div>
             </div>
 
             {/* 3. IGV Estimado Card */}
             <div
-              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="flex justify-between items-start mb-2.5">
-                  <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
-                    <Wallet size={20} strokeWidth={2.5} />
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg">
+                    <Wallet size={16} strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">IGV Estimado</span>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase">IGV Estimado</span>
                 </div>
-                <h3 className="text-2xl sm:text-[26px] font-black tracking-tight text-app-text">{formatCurrency(estimatedIgv)}</h3>
-                <div className="mt-2">
-                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${estimatedIgv > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-app-text">{formatCurrency(estimatedIgv)}</h3>
+                <div className="mt-1">
+                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${estimatedIgv > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
                     {estimatedIgv > 0 ? 'Por Pagar' : 'Saldo a Favor'}
                   </span>
                 </div>
               </div>
 
-              {/* Sparkline Wave SVG */}
-              <div className="mt-3 relative h-10 w-full overflow-hidden">
+              {/* Sparkline Wave SVG (Compact) */}
+              <div className="mt-2 relative h-7 w-full overflow-hidden">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full h-full">
                   <defs>
                     <linearGradient id="sparklineOrange" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.35" />
                       <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
@@ -325,72 +367,71 @@ const EmpresaView: React.FC = () => {
               </div>
 
               <div className="flex justify-end pt-1">
-                <span className="text-[10px] font-bold text-app-muted hover:text-amber-500 transition-colors flex items-center gap-1 cursor-pointer" onClick={() => setActiveTab('TRIBUTARIO')}>
-                  Ver detalle <ChevronRight size={11} />
+                <span className="text-[9.5px] font-bold text-app-muted hover:text-amber-500 transition-colors flex items-center gap-0.5 cursor-pointer" onClick={() => setActiveTab('TRIBUTARIO')}>
+                  Ver detalle <ChevronRight size={10} />
                 </span>
               </div>
             </div>
 
             {/* 4. Resumen Card */}
             <div
-              className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all relative overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="flex justify-between items-start mb-2.5">
-                  <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
-                    <Activity size={20} strokeWidth={2.5} />
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
+                    <Activity size={16} strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black tracking-widest text-app-muted uppercase">Resumen</span>
+                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase">Resumen</span>
                 </div>
 
-                <div className="space-y-1.5 mt-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-app-muted font-medium">Asientos</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{asientos.length}</span>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-app-muted font-medium text-[10px]">Asientos</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-[11px]">{asientos.length}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-app-muted font-medium">Honorarios</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{honorarios.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-app-muted font-medium text-[10px]">Honorarios</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-[11px]">{honorarios.length}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-app-muted font-medium">Mov. Diario</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{journal.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-app-muted font-medium text-[10px]">Mov. Diario</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-[11px]">{journal.length}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-app-muted font-medium">Directorio</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{entities.length}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-app-muted font-medium text-[10px]">Directorio</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-[11px]">{entities.length}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-3">
-                <span className="text-[10px] font-bold text-app-muted hover:text-blue-500 transition-colors flex items-center gap-1 cursor-pointer" onClick={() => setActiveTab('ASIENTOS')}>
-                  Ver detalle <ChevronRight size={11} />
+              <div className="flex justify-end pt-2">
+                <span className="text-[9.5px] font-bold text-app-muted hover:text-blue-500 transition-colors flex items-center gap-0.5 cursor-pointer" onClick={() => setActiveTab('ASIENTOS')}>
+                  Ver detalle <ChevronRight size={10} />
                 </span>
               </div>
             </div>
 
           </div>
 
-
           {/* ═══════════════════════════════════════════════════════════════
               FILA 2: SECCIÓN CENTRAL (IZQ: ACTIVIDAD Y BARRAS, DER: ACCESOS Y CALENDARIO)
              ═══════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
 
             {/* ─── COLUMNA IZQUIERDA (2 COLS EN LG) ─── */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5">
 
-              {/* 1. ÚLTIMAS OPERACIONES */}
+              {/* 1. ÚLTIMAS OPERACIONES (COMPACTO - 3 ITEMS) */}
               <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-3.5 border-b border-app-border flex items-center justify-between">
+                <div className="px-4 py-2.5 border-b border-app-border flex items-center justify-between">
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
-                    <Clock size={15} className="text-blue-600 dark:text-blue-400" />
+                    <Clock size={14} className="text-blue-600 dark:text-blue-400" />
                     <span>Últimas Operaciones</span>
                   </h3>
                   <button
                     onClick={() => setActiveTab('COMPRAS')}
-                    className="px-2.5 py-1 text-[10px] font-bold text-app-muted hover:text-app-text bg-app-bg hover:bg-app-hover border border-app-border rounded-lg transition-colors uppercase cursor-pointer"
+                    className="px-2 py-0.5 text-[9.5px] font-bold text-app-muted hover:text-app-text bg-app-bg hover:bg-app-hover border border-app-border rounded-lg transition-colors uppercase cursor-pointer"
                   >
                     Ver todas
                   </button>
@@ -399,94 +440,89 @@ const EmpresaView: React.FC = () => {
                 {recentOps.length > 0 ? (
                   <div className="divide-y divide-app-border/40">
                     {recentOps.map((op, i) => (
-                      <div key={i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-app-hover transition-colors">
-                        <div className={`p-2.5 rounded-xl shrink-0 ${op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                      <div key={i} className="flex items-center gap-3 px-4 py-2 hover:bg-app-hover transition-colors">
+                        <div className={`p-1.5 rounded-lg shrink-0 ${op.type === 'venta' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                             op.type === 'compra' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
                               op.type === 'honorario' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                                 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                           }`}>
-                          <op.icon size={16} />
+                          <op.icon size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-app-text uppercase truncate">{op.type}: {op.label}</p>
-                          <p className="text-[10px] text-app-muted font-mono mt-0.5">{op.date || '—'}</p>
+                          <p className="text-[9.5px] text-app-muted font-mono">{op.date || '—'}</p>
                         </div>
-                        <span className="text-xs sm:text-sm font-mono font-bold text-app-text shrink-0">{formatCurrency(op.amount)}</span>
+                        <span className="text-xs font-mono font-bold text-app-text shrink-0">{formatCurrency(op.amount)}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4 px-5 py-3.5">
-                    <div className="p-2.5 bg-purple-500/10 text-purple-600 rounded-xl">
-                      <ShoppingCart size={16} />
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <div className="p-1.5 bg-purple-500/10 text-purple-600 rounded-lg">
+                      <ShoppingCart size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-app-text uppercase truncate">COMPRA: POR LA COMPRA DE MERCADERIA</p>
-                      <p className="text-[10px] text-app-muted font-mono mt-0.5">2026-08-13</p>
+                      <p className="text-[9.5px] text-app-muted font-mono">2026-08-13</p>
                     </div>
-                    <span className="text-xs sm:text-sm font-mono font-bold text-app-text shrink-0">S/ 1,000.00</span>
+                    <span className="text-xs font-mono font-bold text-app-text shrink-0">S/ 1,000.00</span>
                   </div>
                 )}
               </div>
 
-              {/* 2. RESUMEN MENSUAL DE VENTAS Y COMPRAS (GRÁFICO DE BARRAS) */}
-              <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-app-border">
+              {/* 2. RESUMEN MENSUAL DE VENTAS Y COMPRAS (GRÁFICO DE BARRAS OPTIMIZADO) */}
+              <div className="bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-app-border">
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
                     <span>Resumen Mensual de Ventas y Compras</span>
                   </h3>
-                  <div className="flex items-center gap-4">
-                    {/* Legend */}
-                    <div className="flex items-center gap-3 text-[10px] font-bold">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-[9.5px] font-bold">
                       <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                        <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" /> Ventas (S/)
+                        <span className="w-2 h-2 rounded-xs bg-emerald-500 inline-block" /> Ventas (S/)
                       </span>
                       <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
-                        <span className="w-2.5 h-2.5 rounded-xs bg-purple-600 inline-block" /> Compras (S/)
+                        <span className="w-2 h-2 rounded-xs bg-purple-600 inline-block" /> Compras (S/)
                       </span>
                     </div>
 
-                    {/* Period Badge */}
-                    <span className="text-[10px] font-extrabold px-2.5 py-1 bg-app-bg border border-app-border rounded-lg text-app-text flex items-center gap-1">
-                      {activePeriodYear} <ChevronDown size={11} className="text-app-muted" />
+                    <span className="text-[9.5px] font-extrabold px-2 py-0.5 bg-app-bg border border-app-border rounded-md text-app-text flex items-center gap-1">
+                      {activePeriodYear} <ChevronDown size={10} className="text-app-muted" />
                     </span>
                   </div>
                 </div>
 
-                {/* SVG Bar Chart */}
-                <div className="mt-6 w-full">
-                  <div className="flex items-end gap-1.5 sm:gap-2.5 h-48 sm:h-56 pt-6 pb-2 border-b border-app-border/70 relative">
+                {/* SVG Bar Chart (Compact Height) */}
+                <div className="mt-4 w-full">
+                  <div className="flex items-end gap-1.5 sm:gap-2 h-32 sm:h-36 pt-4 pb-1 border-b border-app-border/70 relative">
                     {/* Background Guideline Lines */}
-                    <div className="absolute inset-x-0 top-0 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">1.5M</div>
-                    <div className="absolute inset-x-0 top-1/3 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">1M</div>
-                    <div className="absolute inset-x-0 top-2/3 border-b border-dashed border-app-border/40 text-[9px] text-app-muted font-mono pl-1">500K</div>
+                    <div className="absolute inset-x-0 top-0 border-b border-dashed border-app-border/40 text-[8.5px] text-app-muted font-mono pl-1">1.5M</div>
+                    <div className="absolute inset-x-0 top-1/3 border-b border-dashed border-app-border/40 text-[8.5px] text-app-muted font-mono pl-1">1M</div>
+                    <div className="absolute inset-x-0 top-2/3 border-b border-dashed border-app-border/40 text-[8.5px] text-app-muted font-mono pl-1">500K</div>
 
                     {MONTH_NAMES_SHORT.map((monthName, idx) => {
                       const salesVal = monthlyData.salesByMonth[idx];
                       const purchasesVal = monthlyData.purchasesByMonth[idx];
 
-                      // Normalize height percentage (max 85% for visual headroom)
                       const salesHeight = salesVal > 0 ? Math.max(8, Math.min(85, (salesVal / monthlyData.maxVal) * 85)) : 2;
                       const purchasesHeight = purchasesVal > 0 ? Math.max(8, Math.min(85, (purchasesVal / monthlyData.maxVal) * 85)) : 2;
 
                       return (
                         <div key={monthName} className="flex-1 flex flex-col items-center justify-end h-full group relative">
                           {/* Tooltip on Hover */}
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-mono py-1 px-2 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                          <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8.5px] font-mono py-1 px-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
                             V: {formatCurrency(salesVal)} | C: {formatCurrency(purchasesVal)}
                           </div>
 
                           {/* Dual Bar Container */}
-                          <div className="w-full flex items-end justify-center gap-1 h-full">
-                            {/* Ventas Bar */}
+                          <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-full">
                             <div
                               style={{ height: `${salesHeight}%` }}
-                              className={`w-2 sm:w-3.5 rounded-t-xs transition-all duration-500 ${salesVal > 0 ? 'bg-emerald-500 group-hover:brightness-110 shadow-2xs' : 'bg-emerald-500/20'}`}
+                              className={`w-1.5 sm:w-2.5 rounded-t-xs transition-all duration-500 ${salesVal > 0 ? 'bg-emerald-500 group-hover:brightness-110' : 'bg-emerald-500/20'}`}
                             />
-                            {/* Compras Bar */}
                             <div
                               style={{ height: `${purchasesHeight}%` }}
-                              className={`w-2 sm:w-3.5 rounded-t-xs transition-all duration-500 ${purchasesVal > 0 ? 'bg-purple-600 group-hover:brightness-110 shadow-2xs' : 'bg-purple-600/20'}`}
+                              className={`w-1.5 sm:w-2.5 rounded-t-xs transition-all duration-500 ${purchasesVal > 0 ? 'bg-purple-600 group-hover:brightness-110' : 'bg-purple-600/20'}`}
                             />
                           </div>
                         </div>
@@ -495,9 +531,9 @@ const EmpresaView: React.FC = () => {
                   </div>
 
                   {/* X Axis Month Labels */}
-                  <div className="flex justify-between items-center pt-2">
+                  <div className="flex justify-between items-center pt-1.5">
                     {MONTH_NAMES_SHORT.map((monthName) => (
-                      <span key={monthName} className="flex-1 text-center text-[9px] sm:text-[10px] font-bold text-app-muted uppercase">
+                      <span key={monthName} className="flex-1 text-center text-[8.5px] sm:text-[9.5px] font-bold text-app-muted uppercase">
                         {monthName}
                       </span>
                     ))}
@@ -507,19 +543,18 @@ const EmpresaView: React.FC = () => {
 
             </div>
 
-
             {/* ─── COLUMNA DERECHA (1 COL EN LG) ─── */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:gap-5">
 
               {/* 1. ACCESO RÁPIDO */}
               <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-3.5 border-b border-app-border">
+                <div className="px-4 py-2.5 border-b border-app-border">
                   <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
-                    <Zap size={15} className="text-blue-600 dark:text-blue-400" />
+                    <Zap size={14} className="text-blue-600 dark:text-blue-400" />
                     <span>Acceso Rápido</span>
                   </h3>
                 </div>
-                <div className="p-3 space-y-1.5">
+                <div className="p-2 space-y-1">
                   {[
                     { label: 'Registro de Compras', icon: ShoppingCart, tab: 'COMPRAS', desc: 'Ingresar nueva compra' },
                     { label: 'Registro de Ventas', icon: Tag, tab: 'VENTAS', desc: 'Ingresar nueva venta' },
@@ -529,27 +564,27 @@ const EmpresaView: React.FC = () => {
                     <button
                       key={item.tab}
                       onClick={() => setActiveTab(item.tab)}
-                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left hover:bg-app-hover transition-all group cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-app-hover transition-all group cursor-pointer"
                     >
-                      <div className="p-2 bg-app-bg rounded-xl text-app-muted group-hover:text-blue-600 dark:group-hover:text-blue-400 border border-app-border/60 transition-colors shrink-0">
-                        <item.icon size={16} />
+                      <div className="p-1.5 bg-app-bg rounded-lg text-app-muted group-hover:text-blue-600 dark:group-hover:text-blue-400 border border-app-border/60 transition-colors shrink-0">
+                        <item.icon size={14} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-app-text group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</p>
-                        <p className="text-[10px] text-app-muted truncate mt-0.5">{item.desc}</p>
+                        <p className="text-[9.5px] text-app-muted truncate">{item.desc}</p>
                       </div>
-                      <ChevronRight size={14} className="text-app-border group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+                      <ChevronRight size={12} className="text-app-border group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* 2. CALENDARIO TRIBUTARIO */}
-              <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div className="bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-3 border-b border-app-border">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-app-border">
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-text flex items-center gap-2">
-                      <Calendar size={15} className="text-blue-600 dark:text-blue-400" />
+                      <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
                       <span>Calendario Tributario</span>
                     </h3>
                     <div className="flex items-center gap-1">
@@ -558,36 +593,36 @@ const EmpresaView: React.FC = () => {
                         className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-colors cursor-pointer"
                         title="Mes anterior"
                       >
-                        <ChevronLeft size={14} />
+                        <ChevronLeft size={12} />
                       </button>
                       <button
                         onClick={() => setSelectedCalendarMonthOffset(selectedCalendarMonthOffset + 1)}
                         className="p-1 rounded-lg hover:bg-app-hover text-app-muted hover:text-app-text transition-colors cursor-pointer"
                         title="Mes siguiente"
                       >
-                        <ChevronRight size={14} />
+                        <ChevronRight size={12} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="mt-3">
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                  <div className="mt-2.5">
+                    <p className="text-[9.5px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
                       {calendarDate.monthNameFull} {calendarDate.year}
                     </p>
 
-                    <div className="mt-3 flex items-center gap-3.5 bg-app-bg/50 border border-app-border p-3 rounded-xl">
+                    <div className="mt-2.5 flex items-center gap-3 bg-app-bg/50 border border-app-border p-2.5 rounded-xl">
                       {/* Date Badge */}
-                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                        <span className="text-base font-black leading-none">{calendarDate.dueDay}</span>
-                        <span className="text-[9px] font-black tracking-wider uppercase mt-0.5">{calendarDate.monthNameShort}</span>
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <span className="text-sm font-black leading-none">{calendarDate.dueDay}</span>
+                        <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">{calendarDate.monthNameShort}</span>
                       </div>
 
                       {/* Info & Badges */}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-black text-app-text uppercase truncate">IGV - OPERACIONES MENSUALES</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] text-app-muted font-bold">Formulario 621</span>
-                          <span className="text-[8.5px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                        <p className="text-[10px] font-black text-app-text uppercase truncate">IGV - OPERACIONES MENSUALES</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[8.5px] text-app-muted font-bold">Formulario 621</span>
+                          <span className="text-[8px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1 py-0.2 rounded-md">
                             Por vencer
                           </span>
                         </div>
@@ -596,8 +631,8 @@ const EmpresaView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-app-border flex justify-end">
-                  <span className="text-[10px] font-bold text-app-muted">
+                <div className="mt-3 pt-2 border-t border-app-border flex justify-end">
+                  <span className="text-[9.5px] font-bold text-app-muted">
                     Faltan 10 días
                   </span>
                 </div>
@@ -607,29 +642,28 @@ const EmpresaView: React.FC = () => {
 
           </div>
 
-
           {/* ═══════════════════════════════════════════════════════════════
-              FILA 3: TARJETAS DE RESUMEN INFERIOR (CLIENTES, PROVEEDORES, LIBROS, COMPROBANTES)
+              FILA 3: TARJETAS DE RESUMEN INFERIOR
              ═══════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
 
             {/* 1. Clientes Activos */}
             <div
               onClick={() => setActiveTab('CLI_PRO')}
-              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
-                  <Users size={22} strokeWidth={2} />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+                  <Users size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Clientes Activos</span>
-                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">{clientsCount}</h4>
+                  <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Clientes Activos</span>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{clientsCount}</h4>
                 </div>
               </div>
-              <div className="flex justify-end pt-3">
-                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-blue-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={10} />
+              <div className="flex justify-end pt-2">
+                <span className="text-[9px] font-bold text-app-muted group-hover:text-blue-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={9} />
                 </span>
               </div>
             </div>
@@ -637,20 +671,20 @@ const EmpresaView: React.FC = () => {
             {/* 2. Proveedores */}
             <div
               onClick={() => setActiveTab('CLI_PRO')}
-              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
-                  <Briefcase size={22} strokeWidth={2} />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                  <Briefcase size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Proveedores</span>
-                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">{providersCount}</h4>
+                  <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Proveedores</span>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">{providersCount}</h4>
                 </div>
               </div>
-              <div className="flex justify-end pt-3">
-                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={10} />
+              <div className="flex justify-end pt-2">
+                <span className="text-[9px] font-bold text-app-muted group-hover:text-emerald-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={9} />
                 </span>
               </div>
             </div>
@@ -658,20 +692,20 @@ const EmpresaView: React.FC = () => {
             {/* 3. Libros Electrónicos */}
             <div
               onClick={() => setActiveTab('SIRE')}
-              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl shrink-0">
-                  <FileText size={22} strokeWidth={2} />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">
+                  <FileText size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Libros Electrónicos</span>
-                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">12</h4>
+                  <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Libros Electrónicos</span>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">12</h4>
                 </div>
               </div>
-              <div className="flex justify-end pt-3">
-                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={10} />
+              <div className="flex justify-end pt-2">
+                <span className="text-[9px] font-bold text-app-muted group-hover:text-purple-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={9} />
                 </span>
               </div>
             </div>
@@ -679,157 +713,443 @@ const EmpresaView: React.FC = () => {
             {/* 4. Comprobantes Emitidos */}
             <div
               onClick={() => setActiveTab('VENTAS')}
-              className="bg-app-surface border border-app-border rounded-2xl p-4.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+              className="bg-app-surface border border-app-border rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
-                  <ReceiptText size={22} strokeWidth={2} />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                  <ReceiptText size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black tracking-widest text-app-muted uppercase block">Comprobantes Emitidos</span>
-                  <h4 className="text-xl sm:text-2xl font-black text-app-text mt-0.5">
+                  <span className="text-[9.5px] font-black tracking-widest text-app-muted uppercase block">Comprobantes Emitidos</span>
+                  <h4 className="text-lg sm:text-xl font-black text-app-text mt-0.5">
                     {localSales.length > 0 ? localSales.length.toLocaleString('es-PE') : '2,456'}
                   </h4>
                 </div>
               </div>
-              <div className="flex justify-end pt-3">
-                <span className="text-[9.5px] font-bold text-app-muted group-hover:text-amber-500 transition-colors flex items-center gap-1">
-                  Ver detalle <ChevronRight size={10} />
+              <div className="flex justify-end pt-2">
+                <span className="text-[9px] font-bold text-app-muted group-hover:text-amber-500 transition-colors flex items-center gap-0.5">
+                  Ver detalle <ChevronRight size={9} />
                 </span>
               </div>
             </div>
 
           </div>
 
-
           {/* ═══════════════════════════════════════════════════════════════
-              PARÁMETROS DE LA ENTIDAD (COLLAPSIBLE)
+              PARÁMETROS DE LA ENTIDAD Y CONFIGURACIÓN (RESTAURADO COMPLETO)
              ═══════════════════════════════════════════════════════════════ */}
-          <div id="company-config-section" className="scroll-mt-6 pt-2">
+          <div id="company-config-section" className="scroll-mt-4 pt-1">
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-app-muted hover:text-blue-600 transition-colors mb-3 cursor-pointer"
+              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-app-muted hover:text-blue-600 transition-colors mb-2 cursor-pointer"
             >
-              <Settings size={15} />
+              <Settings size={14} />
               <span>Parámetros de la Entidad y Configuración</span>
-              <ChevronRight size={14} className={`transition-transform duration-200 ${showConfig ? 'rotate-90' : ''}`} />
+              <ChevronRight size={13} className={`transition-transform duration-200 ${showConfig ? 'rotate-90' : ''}`} />
             </button>
 
             {showConfig && (
-              <div className="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm animate-slide-up">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm animate-slide-up space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                  {/* Formulario (Left 8 cols) */}
-                  <div className="lg:col-span-8 space-y-6">
+                  {/* Formulario Principal (Left 8 cols) */}
+                  <div className="lg:col-span-8 space-y-5">
 
                     {/* Fila 1: RUC & Name */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col space-y-2 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1.5 relative">
                         <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
                           <Hash size={12} className="text-blue-600" /> RUC
                         </label>
                         <div className="relative">
                           <input id="empresa-ruc-input" type="text" value={currentCompany.ruc} onChange={handleRucChange}
                             placeholder="Ingrese RUC..." maxLength={11}
-                            className="w-full text-sm font-mono tracking-wider pr-10 p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
-                          {isSearchingRuc && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 animate-spin" />}
-                          {fetchSuccess && !isSearchingRuc && <CheckCircle2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />}
+                            className="w-full text-xs font-mono tracking-wider pr-10 p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                          {isSearchingRuc && <Loader2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 animate-spin" />}
+                          {fetchSuccess && !isSearchingRuc && <CheckCircle2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />}
                         </div>
                       </div>
-                      <div className="flex flex-col space-y-2">
+                      <div className="flex flex-col space-y-1.5">
                         <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
                           <Building2 size={12} className="text-blue-600" /> Razón Social
                         </label>
                         <input type="text" value={currentCompany.name}
                           onChange={(e) => updateCompany({ name: e.target.value })}
-                          className="w-full text-sm font-bold p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
                       </div>
                     </div>
 
                     {/* Fila 2: Dirección y Ubicación */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col space-y-1.5">
                         <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
                           <MapPinHouse size={12} className="text-blue-600" /> Domicilio Fiscal
                         </label>
                         <input type="text" value={currentCompany.address}
                           onChange={(e) => updateCompany({ address: e.target.value })}
-                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                          className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
                       </div>
-                      <div className="flex flex-col space-y-2">
+                      <div className="flex flex-col space-y-1.5">
                         <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
                           <MapPin size={12} className="text-blue-600" /> Ubicación (Dep - Prov - Dist)
                         </label>
                         <input type="text" value={currentCompany.location}
                           onChange={(e) => updateCompany({ location: e.target.value })}
-                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
+                          className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500" />
                       </div>
                     </div>
 
-                    {/* Fila 3: Régimen y Periodo */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                          <Shield size={12} className="text-blue-600" /> Régimen Tributario
+                    {/* Fila 3: Periodo, Régimen, Rubro & Ingresos UIT */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <CalendarDays size={12} className="text-blue-600" /> Periodo Contable
                         </label>
-                        <select
-                          value={currentCompany.regimenTributario || 'RG'}
-                          onChange={(e) => updateCompany({ regimenTributario: e.target.value as RegimenCode })}
-                          className="w-full text-sm p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500 cursor-pointer font-bold"
-                        >
-                          <option value="RG">Régimen General (RG)</option>
-                          <option value="MYPE">Régimen MYPE Tributario (RMT)</option>
-                          <option value="RER">Régimen Especial de Renta (RER)</option>
-                          <option value="NRUS">Nuevo RUS (NRUS)</option>
+                        <select value={currentCompany.period || '2026'}
+                          onChange={(e) => updateCompany({ period: e.target.value })}
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none">
+                          {Array.from({ length: 16 }, (_, i) => 2020 + i).map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
                         </select>
                       </div>
-                      <div className="flex flex-col space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                          <CalendarDays size={12} className="text-blue-600" /> Periodo Activo
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Shield size={12} className="text-blue-600" /> Régimen Tributario
+                        </label>
+                        <select value={currentCompany.regimenTributario || 'RG'}
+                          onChange={(e) => updateCompany({ regimenTributario: e.target.value as RegimenCode })}
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none">
+                          {REGIMENES_TRIBUTARIOS.map(r => (
+                            <option key={r.code} value={r.code}>{r.label}</option>
+                          ))}
+                        </select>
+                        <label className="flex items-center gap-1.5 mt-1 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!currentCompany.agente_retencion}
+                            onChange={(e) => updateCompany({ agente_retencion: e.target.checked })}
+                            className="rounded border-app-border text-blue-600 focus:ring-blue-500 h-3 w-3"
+                          />
+                          <span className="text-[9px] font-black uppercase tracking-wider text-app-muted">Agente de Retención</span>
+                        </label>
+                      </div>
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Activity size={12} className="text-blue-600" /> Rubro / Sector
+                        </label>
+                        <select value={currentCompany.businessType || 'COMERCIAL'}
+                          onChange={(e) => updateCompany({ businessType: e.target.value as any })}
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none">
+                          <option value="COMERCIAL">COMERCIAL</option>
+                          <option value="MANUFACTURERA">MANUFACTURERA</option>
+                          <option value="SERVICIOS">SERVICIOS</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Calculator size={12} className="text-blue-600" /> Ingresos (UIT)
+                        </label>
+                        <div className="relative flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={localUIT}
+                            onChange={(e) => setLocalUIT(e.target.value)}
+                            onBlur={() => {
+                              const val = Math.max(0, parseFloat(localUIT) || 0);
+                              if (val !== currentCompany.annualIncomeUIT) updateCompany({ annualIncomeUIT: val });
+                            }}
+                            className="w-full text-xs font-bold pr-10 p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
+                          />
+                          <span className="absolute right-2.5 text-[9px] font-bold text-app-muted select-none">UIT</span>
+                        </div>
+                        <span className="text-[8.5px] text-app-muted">
+                          Equiv: S/ {((parseFloat(localUIT) || 0) * getUIT(currentCompany.period || '2026')).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Fila 4: CIIU, Activos Fijos & Trabajadores */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Hash size={12} className="text-blue-600" /> Código CIIU
                         </label>
                         <input
                           type="text"
-                          value={currentCompany.period || new Date().getFullYear().toString()}
-                          onChange={(e) => updateCompany({ period: e.target.value })}
-                          className="w-full text-sm font-mono p-2.5 bg-app-bg border border-app-border rounded-xl text-app-text outline-none focus:border-blue-500"
+                          maxLength={4}
+                          value={currentCompany.ciiuCode || ''}
+                          onChange={(e) => updateCompany({ ciiuCode: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                          placeholder="Ej: 6920"
+                          className="w-full text-xs font-mono p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Wallet size={12} className="text-blue-600" /> Activos Fijos (S/)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={currentCompany.fixedAssetsValue === undefined ? '' : currentCompany.fixedAssetsValue}
+                          onChange={(e) => updateCompany({ fixedAssetsValue: e.target.value === '' ? undefined : Math.max(0, parseFloat(e.target.value) || 0) })}
+                          placeholder="0.00"
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Users size={12} className="text-blue-600" /> Trabajadores
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={currentCompany.employeeCount === undefined ? '' : currentCompany.employeeCount}
+                          onChange={(e) => updateCompany({ employeeCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })}
+                          placeholder="0"
+                          className="w-full text-xs font-bold p-2 bg-app-bg border border-app-border rounded-xl text-app-text outline-none"
                         />
                       </div>
                     </div>
 
-                    {/* Credenciales SOL */}
-                    <div className="space-y-4 pt-2">
+                    {/* Régimen Info & Dynamic Obligations Engine */}
+                    {(() => {
+                      const r = currentCompany.regimenTributario || 'RG';
+                      const s = currentCompany.businessType || 'COMERCIAL';
+                      const i = Number(currentCompany.annualIncomeUIT || 0);
+
+                      const getObligationsList = () => {
+                        const valorUIT = 5500.00;
+                        const ingresosSoles = i * valorUIT;
+                        const tramosUit = i;
+                        const obligaciones = calcularObligacionesContables(r, s, ingresosSoles, valorUIT);
+
+                        let message = '';
+                        let isRed = false;
+
+                        if (r === 'NRUS') {
+                          message = "El Nuevo RUS no exige llevar libros contables. Solo conserva tus comprobantes de pago de compras y ventas.";
+                          isRed = true;
+                        } else if (r === 'RER') {
+                          message = "El Régimen Especial de Renta (RER) solo exige llevar 2 registros obligatorios (Ventas y Compras), sin distinción de ingresos.";
+                        } else if (r === 'MYPE') {
+                          if (tramosUit <= 300) message = "Régimen MYPE (≤ 300 UIT - Tramo 1): Pago a cuenta del Impuesto a la Renta de 1.0% sobre Ingresos Netos. Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
+                          else if (tramosUit <= 500) message = "Régimen MYPE (> 300 a ≤ 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Obligado a llevar Libro Diario Completo y Libro Mayor.";
+                          else message = "Régimen MYPE (> 500 UIT - Tramo 2): Pago a cuenta del Impuesto a la Renta de 1.5% o coeficiente. Contabilidad Completa (hasta 1,700 UIT).";
+                        } else if (r === 'RG') {
+                          if (tramosUit <= 300) message = "Régimen General (≤ 300 UIT): Obligación simplificada (Ventas, Compras y Libro Diario Simplificado).";
+                          else if (tramosUit <= 500) message = "Régimen General (> 300 a ≤ 500 UIT): Obligado a llevar Libro Diario Completo y Libro Mayor.";
+                          else if (tramosUit <= 1700) message = "Régimen General (> 500 a ≤ 1,700 UIT): Contabilidad Completa Básica.";
+                          else message = "Régimen General (> 1,700 UIT): Contabilidad Completa Integral (Incluye Caja y Bancos).";
+                        }
+
+                        return {
+                          message,
+                          isRed,
+                          books: [
+                            { name: 'Registro de Ventas e Ingresos', required: obligaciones.registroVentas },
+                            { name: 'Registro de Compras', required: obligaciones.registroCompras },
+                            { name: 'Libro Diario (Simplificado)', required: obligaciones.libroDiarioSimplificado, note: 'Hasta 300 UIT' },
+                            { name: 'Libro Diario (Completo)', required: obligaciones.libroDiarioCompleto },
+                            { name: 'Libro Mayor', required: obligaciones.libroMayor },
+                            { name: 'Libro Caja y Bancos', required: obligaciones.libroCajaBancos, note: 'Exclusivo > 1,700 UIT' },
+                            { name: 'Libro de Inventarios y Balances', required: obligaciones.libroInventariosBalances },
+                            { name: 'Registro de Activos Fijos', required: obligaciones.libroInventariosBalances, note: 'Anexo de Balances' },
+                            { name: 'Balance de Comprobación', required: obligaciones.libroInventariosBalances, note: 'Inventarios y Balances' },
+                            { name: 'Estado de Situación Financiera', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                            { name: 'Estado de Resultados', required: obligaciones.libroInventariosBalances, note: 'Estados Financieros' },
+                            { name: 'Inventario Permanente Unidades', required: obligaciones.kardexFisico, note: 'Comercio/Manuf > 500 UIT' },
+                            { name: 'Inventario Permanente Valorizado', required: obligaciones.kardexValorizado, note: 'Comercio/Manuf > 1500 UIT' },
+                            { name: 'Registro de Costos', required: obligaciones.registroCostos, note: 'Solo Manuf > 1500 UIT' }
+                          ]
+                        };
+                      };
+
+                      const currentRules = getObligationsList();
+
+                      return (
+                        <div className="flex flex-col gap-3.5 pt-2">
+                          {/* Banner de Mensaje de Obligación */}
+                          <div className={`flex items-start gap-2.5 p-3 rounded-xl border ${currentRules.isRed
+                            ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
+                            : 'bg-blue-500/5 border-blue-500/15 text-app-text'
+                            }`}>
+                            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                            <p className="text-xs font-semibold leading-relaxed">{currentRules.message}</p>
+                          </div>
+
+                          {/* Alerts from Regime Evaluation Engine */}
+                          {evaluation.alerts.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {evaluation.alerts.map((alert, idx) => (
+                                <div key={idx} className={`flex items-start gap-2.5 p-3 rounded-xl border ${alert.level === 'CRITICAL'
+                                  ? 'bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-400'
+                                  : alert.level === 'WARNING'
+                                    ? 'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400'
+                                    : 'bg-blue-500/10 border-blue-500/25 text-blue-700 dark:text-blue-400'
+                                  }`}>
+                                  <AlertCircle size={16} className="shrink-0 mt-0.5 text-current" />
+                                  <div>
+                                    <p className="text-xs font-bold leading-relaxed">{alert.message}</p>
+                                    {alert.recommendation && (
+                                      <p className="text-[10px] font-medium opacity-85 mt-0.5">Recomendación: {alert.recommendation}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Lista Detallada de Libros y Estados */}
+                          <div className="bg-app-bg border border-app-border rounded-xl p-3.5">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted mb-2.5">
+                              Estado de Obligación de Libros y Registros
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                              {currentRules.books.map((b, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-app-border/40 last:border-0">
+                                  <span className="font-medium text-app-text text-[11px]">{b.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    {b.note && (
+                                      <span className="text-[8px] uppercase tracking-wider font-bold text-app-muted bg-app-hover px-1.5 py-0.5 rounded border border-app-border">
+                                        {b.note}
+                                      </span>
+                                    )}
+                                    {b.required ? (
+                                      <span className="px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-bold uppercase">
+                                        ✓ Activo
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.2 bg-rose-500/10 text-rose-600 rounded-full text-[9px] font-bold uppercase">
+                                        ✗ Omitido
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Panel Interactivo NRUS */}
+                          {r === 'NRUS' && (
+                            <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-3 animate-fade-in">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1.5">
+                                <Calculator size={13} /> Calculadora de Cuota Fija NRUS
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="flex flex-col space-y-1">
+                                  <label className="text-[9.5px] uppercase font-bold text-app-muted">Ingresos Brutos del Mes (S/)</label>
+                                  <input
+                                    type="number"
+                                    className="w-full text-xs font-mono font-bold bg-app-surface border border-app-border rounded-xl px-2.5 py-1.5 outline-none"
+                                    value={nrusIngresos || ''}
+                                    onChange={e => setNrusIngresos(Math.max(0, parseFloat(e.target.value) || 0))}
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                                <div className="flex flex-col space-y-1">
+                                  <label className="text-[9.5px] uppercase font-bold text-app-muted">Compras del Mes (S/)</label>
+                                  <input
+                                    type="number"
+                                    className="w-full text-xs font-mono font-bold bg-app-surface border border-app-border rounded-xl px-2.5 py-1.5 outline-none"
+                                    value={nrusCompras || ''}
+                                    onChange={e => setNrusCompras(Math.max(0, parseFloat(e.target.value) || 0))}
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center bg-blue-500/10 border border-blue-500/20 p-2.5 rounded-lg">
+                                <div>
+                                  <p className="text-[9px] text-app-muted uppercase font-bold">Cuota a Pagar</p>
+                                  <p className="text-xs font-black text-app-text">{nrusCalculo.mensaje}</p>
+                                </div>
+                                <span className="text-lg font-mono font-black text-blue-600">S/ {nrusCalculo.cuota.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Panel Interactivo RER */}
+                          {r === 'RER' && (
+                            <div className="bg-app-bg border border-app-border rounded-xl p-3.5 space-y-3 animate-fade-in">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1.5">
+                                <Calculator size={13} /> Panel de Obligaciones RER (Simplificado)
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center">
+                                <div className="bg-app-surface border border-app-border p-2.5 rounded-lg">
+                                  <p className="text-[8.5px] text-app-muted uppercase font-bold">Renta RER (1.5%)</p>
+                                  <p className="text-sm font-mono font-black text-blue-600">S/ {rerCalculo.renta.toFixed(2)}</p>
+                                </div>
+                                <div className="bg-app-surface border border-app-border p-2.5 rounded-lg">
+                                  <p className="text-[8.5px] text-app-muted uppercase font-bold">IGV a Pagar</p>
+                                  <p className="text-sm font-mono font-black text-purple-600">S/ {rerCalculo.igv.toFixed(2)}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2.5 rounded-lg text-white">
+                                  <p className="text-[8.5px] uppercase font-bold opacity-80">Total Tributo</p>
+                                  <p className="text-sm font-mono font-black">S/ {rerCalculo.total.toFixed(2)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Credenciales SOL & SIRE */}
+                    <div className="space-y-3 pt-1">
                       <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                        Credenciales SUNAT Clave SOL & SIRE
+                        Integración API (SUNAT SOL & SIRE)
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
-                        <div className="flex flex-col space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Usuario SOL</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-app-bg/50 p-3.5 rounded-xl border border-app-border">
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-1.5">
+                            Usuario SOL
+                            <span className="text-[8.5px] bg-blue-500/10 text-blue-600 px-1.5 py-0.2 rounded-full border border-blue-500/20">Auto Buzón</span>
+                          </label>
                           <input type="text" value={currentCompany.sol_user || ''}
                             onChange={(e) => updateCompany({ sol_user: e.target.value })} placeholder="Ej: MODDATOS"
                             className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
                         </div>
-                        <div className="flex flex-col space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest">Clave SOL</label>
                           <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sol_pass || ''}
                             onChange={(e) => updateCompany({ sol_pass: e.target.value })} placeholder="••••••••••••"
+                            className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-app-bg/50 p-3.5 rounded-xl border border-app-border">
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest flex items-center gap-1.5">
+                            Client ID (SIRE)
+                            <span className="text-[8.5px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.2 rounded-full border border-emerald-500/20">Auto SIRE</span>
+                          </label>
+                          <input type="text" value={currentCompany.sunatClientId || ''}
+                            onChange={(e) => updateCompany({ sunatClientId: e.target.value })} placeholder="Ingrese Client ID..."
+                            className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest">Client Secret (SIRE)</label>
+                          <input type="text" style={{ WebkitTextSecurity: 'disc' } as any} autoComplete="new-password" value={currentCompany.sunatClientSecret || ''}
+                            onChange={(e) => updateCompany({ sunatClientSecret: e.target.value })} placeholder="••••••••••••"
                             className="w-full text-xs p-2 bg-app-bg border border-app-border rounded-lg text-app-text outline-none" />
                         </div>
                       </div>
                     </div>
 
                     {/* Facturación Electrónica UBL 2.1 */}
-                    <div className="space-y-4 pt-2">
+                    <div className="space-y-3 pt-1">
                       <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
                         Facturación Electrónica (UBL 2.1)
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-app-bg/50 p-4 rounded-xl border border-app-border">
-                        <div className="flex flex-col space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Certificado Digital (.pfx)</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-app-bg/50 p-3.5 rounded-xl border border-app-border">
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest">Certificado Digital (.pfx)</label>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => document.getElementById('cert-upload-input')?.click()}
-                              className="px-3 py-2 bg-app-bg border border-app-border rounded-xl text-[10px] font-bold uppercase hover:border-blue-500/50 transition-colors cursor-pointer"
+                              className="px-3 py-1.5 bg-app-bg border border-app-border rounded-xl text-[9.5px] font-bold uppercase hover:border-blue-500/50 transition-colors cursor-pointer"
                             >
                               Seleccionar Certificado
                             </button>
@@ -851,11 +1171,11 @@ const EmpresaView: React.FC = () => {
                                 }
                               }}
                             />
-                            {certName && <span className="text-[10px] text-emerald-500 font-mono truncate max-w-[150px]">{certName}</span>}
+                            {certName && <span className="text-[9.5px] text-emerald-500 font-mono truncate max-w-[140px]">{certName}</span>}
                           </div>
                         </div>
-                        <div className="flex flex-col space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
+                        <div className="flex flex-col space-y-1">
+                          <label className="text-[9.5px] uppercase font-bold text-app-muted tracking-widest">Contraseña del Certificado</label>
                           <div className="flex gap-2">
                             <input
                               type="text"
@@ -864,13 +1184,13 @@ const EmpresaView: React.FC = () => {
                               value={certPass}
                               onChange={(e) => setCertPass(e.target.value)}
                               placeholder="Contraseña del PFX..."
-                              className="flex-1 text-xs bg-app-bg border border-app-border rounded-xl px-3 outline-none"
+                              className="flex-1 text-xs bg-app-bg border border-app-border rounded-xl px-2.5 outline-none"
                             />
                             <button
                               type="button"
                               disabled={!certBase64 || !certPass || isSavingCert}
                               onClick={handleConfigurarCertificado}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-blue-700 transition-colors cursor-pointer"
+                              className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[9.5px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-blue-700 transition-colors cursor-pointer"
                             >
                               {isSavingCert ? 'Guardando...' : 'Cargar'}
                             </button>
@@ -882,10 +1202,10 @@ const EmpresaView: React.FC = () => {
                   </div>
 
                   {/* Logo Upload & Soporte (Right 4 cols) */}
-                  <div className="lg:col-span-4 flex flex-col gap-5">
+                  <div className="lg:col-span-4 flex flex-col gap-4">
                     {/* Logo Upload */}
                     <div
-                      className="flex flex-col items-center justify-center p-6 bg-app-bg rounded-2xl border border-dashed border-app-border hover:border-blue-500/40 transition-colors relative group cursor-pointer overflow-hidden min-h-[200px]"
+                      className="flex flex-col items-center justify-center p-5 bg-app-bg rounded-2xl border border-dashed border-app-border hover:border-blue-500/40 transition-colors relative group cursor-pointer overflow-hidden min-h-[180px]"
                       onClick={() => document.getElementById('logo-upload')?.click()}
                     >
                       <input id="logo-upload" type="file" accept="image/png, image/jpeg" className="hidden"
@@ -899,40 +1219,40 @@ const EmpresaView: React.FC = () => {
                         }} />
                       {currentCompany.logoBase64 ? (
                         <div className="relative w-full h-full flex flex-col items-center justify-center p-2">
-                          <img src={currentCompany.logoBase64} alt="Logo" className="max-w-full max-h-[140px] object-contain" />
+                          <img src={currentCompany.logoBase64} alt="Logo" className="max-w-full max-h-[120px] object-contain" />
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                            <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2"><Upload size={14} /> Cambiar</span>
+                            <span className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-1.5"><Upload size={13} /> Cambiar</span>
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); updateCompany({ logoBase64: undefined }); }}
-                            className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-lg z-10 cursor-pointer">
-                            <Trash2 size={12} />
+                            className="absolute top-2 right-2 p-1 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-lg z-10 cursor-pointer">
+                            <Trash2 size={11} />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-2 text-app-muted group-hover:text-blue-600 transition-colors">
-                          <Building2 size={40} strokeWidth={1} />
+                        <div className="flex flex-col items-center gap-1.5 text-app-muted group-hover:text-blue-600 transition-colors">
+                          <Building2 size={36} strokeWidth={1} />
                           <p className="text-xs font-bold uppercase tracking-widest">Subir Logotipo</p>
-                          <p className="text-[10px] opacity-60">PNG o JPG</p>
+                          <p className="text-[9.5px] opacity-60">PNG o JPG</p>
                         </div>
                       )}
                     </div>
 
                     {/* Soporte */}
-                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                      <div className="relative z-10 flex flex-col gap-2.5">
-                        <div className="flex items-center gap-2">
-                          <MessageCircleMore size={18} />
-                          <h3 className="font-bold tracking-widest text-[10px] uppercase">Soporte Técnico</h3>
+                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-2xl p-4.5 text-white shadow-lg relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <MessageCircleMore size={16} />
+                          <h3 className="font-bold tracking-widest text-[9.5px] uppercase">Soporte Técnico</h3>
                         </div>
-                        <p className="text-[10px] opacity-90 leading-tight">Enlace directo a atención y soporte contable.</p>
+                        <p className="text-[9.5px] opacity-90 leading-tight">Enlace directo a atención y soporte contable.</p>
                         {isSupportSaved && currentCompany.support ? (
                           <div className="flex items-center gap-2 mt-1">
                             <a href={currentCompany.support} target="_blank" rel="noopener noreferrer"
-                              className="flex-1 text-center py-2 bg-white text-blue-600 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-white/90 transition-colors shadow-sm">
+                              className="flex-1 text-center py-1.5 bg-white text-blue-600 text-[9.5px] font-black uppercase tracking-wider rounded-xl hover:bg-white/90 transition-colors shadow-sm">
                               Abrir Portal
                             </a>
                             <button onClick={() => { setSupportLinkDraft(currentCompany.support || ''); setIsSupportSaved(false); }}
-                              className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors cursor-pointer"><Settings size={14} /></button>
+                              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-xl transition-colors cursor-pointer"><Settings size={13} /></button>
                           </div>
                         ) : (
                           <div className="flex flex-col gap-2 mt-1">
@@ -941,13 +1261,13 @@ const EmpresaView: React.FC = () => {
                               onChange={(e) => { setSupportLinkDraft(e.target.value); setIsSupportSaved(false); }} />
                             <button disabled={!supportLinkDraft.trim()}
                               onClick={() => { if (supportLinkDraft.trim()) { updateCompany({ support: supportLinkDraft.trim() }); setIsSupportSaved(true); } }}
-                              className="py-2 bg-white text-blue-700 text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-40 cursor-pointer shadow-sm">
+                              className="py-1.5 bg-white text-blue-700 text-[9.5px] font-black uppercase tracking-widest rounded-xl disabled:opacity-40 cursor-pointer shadow-sm">
                               Guardar
                             </button>
                           </div>
                         )}
                       </div>
-                      <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/10 blur-2xl rounded-full" />
+                      <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-white/10 blur-2xl rounded-full" />
                     </div>
                   </div>
 
