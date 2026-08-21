@@ -224,6 +224,10 @@ app.use('/api/premium/planillas', premiumAiLimiter, premiumPlanillasRoutes);
 app.use('/api/premium/finanzas', premiumAiLimiter, premiumFinanzasRoutes);
 app.use('/api/premium/admin', premiumAdminRoutes);
 
+// --- Rutas de STAR AI Agent Engine (Hermes Agent para SoftContable) ---
+const starAgentRoutes = require('./routes/starAgentRoutes');
+app.use('/api/star', starAgentRoutes);
+
 // --- Rutas SaaS de Facturación, Planes y SuperAdmin ---
 const billingRouter = require('./routes/billingRouter');
 const superadminRouter = require('./routes/superadminRouter');

@@ -743,6 +743,66 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // ═════════════════════════════════════════════════════════════════════
+    // 🌟 STAR AI AGENT ENGINE METHODS (Hermes Agent & Auto-Learning)
+    // ═════════════════════════════════════════════════════════════════════
+    starChat: async (data: {
+        query: string;
+        conversationId?: string;
+        workspaceId?: string;
+        activeTab?: string;
+        period?: string;
+        currentCompany?: any;
+        history?: any[];
+    }) => {
+        const res = await api.post('/api/star/chat', data);
+        return res.data;
+    },
+
+    starAuditSheet: async (data: {
+        workspaceId?: string;
+        activeTab?: string;
+        period?: string;
+        currentCompany?: any;
+    }) => {
+        const res = await api.post('/api/star/audit-sheet', data);
+        return res.data;
+    },
+
+    starGetConversations: async (workspaceId: string) => {
+        const res = await api.get(`/api/star/conversations/${workspaceId}`);
+        return res.data;
+    },
+
+    starGetMessages: async (conversationId: string) => {
+        const res = await api.get(`/api/star/messages/${conversationId}`);
+        return res.data;
+    },
+
+    starGetLearnings: async (workspaceId: string, category?: string) => {
+        const url = category 
+            ? `/api/star/learnings/${workspaceId}?category=${encodeURIComponent(category)}`
+            : `/api/star/learnings/${workspaceId}`;
+        const res = await api.get(url);
+        return res.data;
+    },
+
+    starReinforceLearning: async (data: {
+        workspaceId: string;
+        category: string;
+        entityKey: string;
+        ruleData: any;
+        wasCorrect: boolean;
+    }) => {
+        const res = await api.post('/api/star/reinforce', data);
+        return res.data;
+    },
+
+    starDeleteLearning: async (id: string, workspaceId: string) => {
+        const res = await api.delete(`/api/star/learnings/${id}?workspaceId=${encodeURIComponent(workspaceId)}`);
+        return res.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

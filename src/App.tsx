@@ -52,6 +52,7 @@ import { CookieBanner } from './components/CookieBanner';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { SubscriptionView } from './components/SubscriptionView';
 import { SuperAdminView } from './components/SuperAdminView';
+import { StarCopilotGlobal } from './components/StarCopilotGlobal';
 import { isStudentMode } from './store';
 import { ShieldCheck, AlertTriangle, GraduationCap, Sparkles, KeyRound, CreditCard } from 'lucide-react';
 
@@ -1399,6 +1400,7 @@ const App: React.FC = () => {
         </div>
         <div className="print:hidden">
           <SuggestionBox />
+          <StarCopilotGlobal activeTab={activeTab} />
         </div>
 
         {/* ═══ Modal Legal ═══ */}

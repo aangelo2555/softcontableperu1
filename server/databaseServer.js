@@ -466,6 +466,57 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_ai_chat_user_ws ON ai_chat_sessions(user_id, workspace_id);
 
+    CREATE TABLE IF NOT EXISTS star_conversations (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        active_tab TEXT DEFAULT 'EMPRESA',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_star_conv_ws ON star_conversations(workspace_id, user_id);
+
+    CREATE TABLE IF NOT EXISTS star_messages (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT,
+        tool_calls TEXT,
+        tool_results TEXT,
+        tokens_used INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(conversation_id) REFERENCES star_conversations(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_star_msg_conv ON star_messages(conversation_id);
+
+    CREATE TABLE IF NOT EXISTS star_learnings (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        entity_key TEXT NOT NULL,
+        learned_rule TEXT NOT NULL,
+        confidence_score REAL DEFAULT 0.85,
+        occurrences_count INTEGER DEFAULT 1,
+        successful_predictions INTEGER DEFAULT 0,
+        last_validated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_star_learn_ws ON star_learnings(workspace_id, category);
+    CREATE INDEX IF NOT EXISTS idx_star_learn_key ON star_learnings(workspace_id, entity_key);
+
+    CREATE TABLE IF NOT EXISTS star_audit_logs (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        periodo TEXT NOT NULL,
+        module_audited TEXT NOT NULL,
+        findings_count INTEGER DEFAULT 0,
+        risk_score TEXT DEFAULT 'BAJO',
+        report_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_star_audit_ws ON star_audit_logs(workspace_id, periodo);
+
     CREATE TABLE IF NOT EXISTS cpe_consultas_masivas (
         id TEXT PRIMARY KEY,
         workspace_id TEXT NOT NULL,
@@ -2092,6 +2143,172 @@ const dbManager = {
         } catch (error) {
             console.error('[SQLITE] Error en deleteAIChatHistory:', error.message);
             return { success: false, error: error.message };
+        }
+    },
+
+    // ═════════════════════════════════════════════════════════════════════
+    // 🌟 STAR AI AGENT ENGINE METHODS (Hermes Agent & Auto-Learning)
+    // ═════════════════════════════════════════════════════════════════════
+
+    getStarConversations: (workspaceId, userId) => {
+        try {
+            return db.prepare(
+                `SELECT * FROM star_conversations 
+                 WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                   AND (? IS NULL OR ? = '' OR ? = 'CLIENTE_SISTEMA' OR user_id = ?)
+                 ORDER BY updated_at DESC LIMIT 50`
+            ).all(workspaceId, workspaceId, workspaceId, userId, userId, userId, userId) || [];
+        } catch (error) {
+            console.error('[SQLITE] Error en getStarConversations:', error.message);
+            return [];
+        }
+    },
+
+    createStarConversation: ({ id, workspaceId, userId, title, activeTab }) => {
+        try {
+            db.prepare(
+                `INSERT INTO star_conversations (id, workspace_id, user_id, title, active_tab, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+            ).run(id, workspaceId, userId, title || 'Nueva Consulta STAR', activeTab || 'EMPRESA');
+            return db.prepare(`SELECT * FROM star_conversations WHERE id = ?`).get(id);
+        } catch (error) {
+            console.error('[SQLITE] Error en createStarConversation:', error.message);
+            throw error;
+        }
+    },
+
+    updateStarConversationTimestamp: (conversationId, activeTab) => {
+        try {
+            db.prepare(
+                `UPDATE star_conversations 
+                 SET updated_at = CURRENT_TIMESTAMP, active_tab = COALESCE(?, active_tab)
+                 WHERE id = ?`
+            ).run(activeTab || null, conversationId);
+        } catch (error) {
+            console.error('[SQLITE] Error en updateStarConversationTimestamp:', error.message);
+        }
+    },
+
+    getStarMessages: (conversationId) => {
+        try {
+            return db.prepare(`SELECT * FROM star_messages WHERE conversation_id = ? ORDER BY created_at ASC`).all(conversationId) || [];
+        } catch (error) {
+            console.error('[SQLITE] Error en getStarMessages:', error.message);
+            return [];
+        }
+    },
+
+    saveStarMessage: ({ id, conversationId, role, content, toolCalls, toolResults, tokensUsed }) => {
+        try {
+            db.prepare(
+                `INSERT INTO star_messages (id, conversation_id, role, content, tool_calls, tool_results, tokens_used, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+            ).run(
+                id, 
+                conversationId, 
+                role, 
+                content || '', 
+                toolCalls ? JSON.stringify(toolCalls) : null, 
+                toolResults ? JSON.stringify(toolResults) : null, 
+                tokensUsed || 0
+            );
+            return db.prepare(`SELECT * FROM star_messages WHERE id = ?`).get(id);
+        } catch (error) {
+            console.error('[SQLITE] Error en saveStarMessage:', error.message);
+            throw error;
+        }
+    },
+
+    getStarLearnings: (workspaceId, category) => {
+        try {
+            if (category) {
+                return db.prepare(
+                    `SELECT * FROM star_learnings 
+                     WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                       AND category = ?
+                     ORDER BY confidence_score DESC, occurrences_count DESC`
+                ).all(workspaceId, workspaceId, workspaceId, category) || [];
+            }
+            return db.prepare(
+                `SELECT * FROM star_learnings 
+                 WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                 ORDER BY confidence_score DESC, occurrences_count DESC`
+            ).all(workspaceId, workspaceId, workspaceId) || [];
+        } catch (error) {
+            console.error('[SQLITE] Error en getStarLearnings:', error.message);
+            return [];
+        }
+    },
+
+    saveStarLearning: ({ id, workspaceId, category, entityKey, learnedRule, confidenceScore }) => {
+        try {
+            const score = typeof confidenceScore === 'number' ? confidenceScore : 0.85;
+            const existing = db.prepare(`SELECT * FROM star_learnings WHERE id = ?`).get(id);
+            if (existing) {
+                db.prepare(
+                    `UPDATE star_learnings 
+                     SET learned_rule = ?, 
+                         confidence_score = MIN(1.00, confidence_score + 0.05),
+                         occurrences_count = occurrences_count + 1,
+                         last_validated_at = CURRENT_TIMESTAMP
+                     WHERE id = ?`
+                ).run(JSON.stringify(learnedRule), id);
+            } else {
+                db.prepare(
+                    `INSERT INTO star_learnings (id, workspace_id, category, entity_key, learned_rule, confidence_score, occurrences_count, last_validated_at, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+                ).run(id, workspaceId, category, entityKey, JSON.stringify(learnedRule), score);
+            }
+            return db.prepare(`SELECT * FROM star_learnings WHERE id = ?`).get(id);
+        } catch (error) {
+            console.error('[SQLITE] Error en saveStarLearning:', error.message);
+            return null;
+        }
+    },
+
+    deleteStarLearning: (id, workspaceId) => {
+        try {
+            db.prepare(
+                `DELETE FROM star_learnings WHERE id = ? AND (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))`
+            ).run(id, workspaceId, workspaceId, workspaceId);
+            return { success: true };
+        } catch (error) {
+            console.error('[SQLITE] Error en deleteStarLearning:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    saveStarAuditLog: ({ id, workspaceId, periodo, moduleAudited, findingsCount, riskScore, reportJson }) => {
+        try {
+            db.prepare(
+                `INSERT INTO star_audit_logs (id, workspace_id, periodo, module_audited, findings_count, risk_score, report_json, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+            ).run(id, workspaceId, periodo, moduleAudited, findingsCount || 0, riskScore || 'BAJO', JSON.stringify(reportJson || {}));
+            return db.prepare(`SELECT * FROM star_audit_logs WHERE id = ?`).get(id);
+        } catch (error) {
+            console.error('[SQLITE] Error en saveStarAuditLog:', error.message);
+            return null;
+        }
+    },
+
+    getStarAuditLogs: (workspaceId, periodo) => {
+        try {
+            if (periodo) {
+                return db.prepare(
+                    `SELECT * FROM star_audit_logs 
+                     WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                       AND periodo = ?
+                     ORDER BY created_at DESC LIMIT 30`
+                ).all(workspaceId, workspaceId, workspaceId, periodo) || [];
+            }
+            return db.prepare(
+                `SELECT * FROM star_audit_logs 
+                 WHERE (workspace_id = ? OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = ? OR id = ? LIMIT 1))
+                 ORDER BY created_at DESC LIMIT 30`
+            ).all(workspaceId, workspaceId, workspaceId) || [];
+        } catch (error) {
+            console.error('[SQLITE] Error en getStarAuditLogs:', error.message);
+            return [];
         }
     },
 

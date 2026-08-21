@@ -1353,6 +1353,174 @@ const db = {
             console.error('[POSTGRES] Error en deleteAIChatHistory:', error.message);
             return { success: false, error: error.message };
         }
+    },
+
+    // ═════════════════════════════════════════════════════════════════════
+    // 🌟 STAR AI AGENT ENGINE METHODS (Hermes Agent & Auto-Learning)
+    // ═════════════════════════════════════════════════════════════════════
+
+    getStarConversations: async (workspaceId, userId) => {
+        try {
+            const res = await query(
+                `SELECT * FROM star_conversations 
+                 WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))
+                   AND ($2::text IS NULL OR $2::text = '' OR $2::text = 'CLIENTE_SISTEMA' OR user_id = $2)
+                 ORDER BY updated_at DESC LIMIT 50`,
+                [workspaceId, userId || null]
+            );
+            return res.rows || [];
+        } catch (error) {
+            console.error('[POSTGRES] Error en getStarConversations:', error.message);
+            return [];
+        }
+    },
+
+    createStarConversation: async ({ id, workspaceId, userId, title, activeTab }) => {
+        try {
+            const res = await query(
+                `INSERT INTO star_conversations (id, workspace_id, user_id, title, active_tab, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                 RETURNING *`,
+                [id, workspaceId, userId, title || 'Nueva Consulta STAR', activeTab || 'EMPRESA']
+            );
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en createStarConversation:', error.message);
+            throw error;
+        }
+    },
+
+    updateStarConversationTimestamp: async (conversationId, activeTab) => {
+        try {
+            await query(
+                `UPDATE star_conversations 
+                 SET updated_at = NOW(), active_tab = COALESCE($2, active_tab)
+                 WHERE id = $1`,
+                [conversationId, activeTab || null]
+            );
+        } catch (error) {
+            console.error('[POSTGRES] Error en updateStarConversationTimestamp:', error.message);
+        }
+    },
+
+    getStarMessages: async (conversationId) => {
+        try {
+            const res = await query(
+                `SELECT * FROM star_messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
+                [conversationId]
+            );
+            return res.rows || [];
+        } catch (error) {
+            console.error('[POSTGRES] Error en getStarMessages:', error.message);
+            return [];
+        }
+    },
+
+    saveStarMessage: async ({ id, conversationId, role, content, toolCalls, toolResults, tokensUsed }) => {
+        try {
+            const res = await query(
+                `INSERT INTO star_messages (id, conversation_id, role, content, tool_calls, tool_results, tokens_used, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                 RETURNING *`,
+                [
+                    id, 
+                    conversationId, 
+                    role, 
+                    content || '', 
+                    toolCalls ? JSON.stringify(toolCalls) : null, 
+                    toolResults ? JSON.stringify(toolResults) : null, 
+                    tokensUsed || 0
+                ]
+            );
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveStarMessage:', error.message);
+            throw error;
+        }
+    },
+
+    getStarLearnings: async (workspaceId, category) => {
+        try {
+            let sql = `SELECT * FROM star_learnings 
+                       WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))`;
+            const params = [workspaceId];
+            if (category) {
+                sql += ` AND category = $2`;
+                params.push(category);
+            }
+            sql += ` ORDER BY confidence_score DESC, occurrences_count DESC`;
+            const res = await query(sql, params);
+            return res.rows || [];
+        } catch (error) {
+            console.error('[POSTGRES] Error en getStarLearnings:', error.message);
+            return [];
+        }
+    },
+
+    saveStarLearning: async ({ id, workspaceId, category, entityKey, learnedRule, confidenceScore }) => {
+        try {
+            const score = typeof confidenceScore === 'number' ? confidenceScore : 0.85;
+            const res = await query(
+                `INSERT INTO star_learnings (id, workspace_id, category, entity_key, learned_rule, confidence_score, occurrences_count, last_validated_at, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, 1, NOW(), NOW())
+                 ON CONFLICT (id) DO UPDATE SET
+                    learned_rule = EXCLUDED.learned_rule,
+                    confidence_score = LEAST(1.00, star_learnings.confidence_score + 0.05),
+                    occurrences_count = star_learnings.occurrences_count + 1,
+                    last_validated_at = NOW()
+                 RETURNING *`,
+                [id, workspaceId, category, entityKey, JSON.stringify(learnedRule), score]
+            );
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveStarLearning:', error.message);
+            return null;
+        }
+    },
+
+    deleteStarLearning: async (id, workspaceId) => {
+        try {
+            await query(
+                `DELETE FROM star_learnings WHERE id = $1 AND (workspace_id = $2 OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = $2 OR id = $2 LIMIT 1))`,
+                [id, workspaceId]
+            );
+            return { success: true };
+        } catch (error) {
+            console.error('[POSTGRES] Error en deleteStarLearning:', error.message);
+            return { success: false, error: error.message };
+        }
+    },
+
+    saveStarAuditLog: async ({ id, workspaceId, periodo, moduleAudited, findingsCount, riskScore, reportJson }) => {
+        try {
+            const res = await query(
+                `INSERT INTO star_audit_logs (id, workspace_id, periodo, module_audited, findings_count, risk_score, report_json, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                 RETURNING *`,
+                [id, workspaceId, periodo, moduleAudited, findingsCount || 0, riskScore || 'BAJO', JSON.stringify(reportJson || {})]
+            );
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveStarAuditLog:', error.message);
+            return null;
+        }
+    },
+
+    getStarAuditLogs: async (workspaceId, periodo) => {
+        try {
+            let sql = `SELECT * FROM star_audit_logs WHERE (workspace_id = $1 OR workspace_id = (SELECT ruc FROM workspaces WHERE ruc = $1 OR id = $1 LIMIT 1))`;
+            const params = [workspaceId];
+            if (periodo) {
+                sql += ` AND periodo = $2`;
+                params.push(periodo);
+            }
+            sql += ` ORDER BY created_at DESC LIMIT 30`;
+            const res = await query(sql, params);
+            return res.rows || [];
+        } catch (error) {
+            console.error('[POSTGRES] Error en getStarAuditLogs:', error.message);
+            return [];
+        }
     }
 };
 
@@ -2467,6 +2635,72 @@ async function ensureSchemaConstraints() {
                         uploaded_at TIMESTAMPTZ DEFAULT NOW()
                     );
                     CREATE INDEX IF NOT EXISTS idx_att_composite ON attachments(workspace_id, entity_type, entity_id);
+                `
+            },
+            {
+                name: 'star_conversations',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS star_conversations (
+                        id VARCHAR(64) PRIMARY KEY,
+                        workspace_id VARCHAR(64) NOT NULL,
+                        user_id VARCHAR(64) NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        active_tab VARCHAR(64) DEFAULT 'EMPRESA',
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_star_conv_ws ON star_conversations(workspace_id, user_id);
+                `
+            },
+            {
+                name: 'star_messages',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS star_messages (
+                        id VARCHAR(64) PRIMARY KEY,
+                        conversation_id VARCHAR(64) NOT NULL REFERENCES star_conversations(id) ON DELETE CASCADE,
+                        role VARCHAR(20) NOT NULL,
+                        content TEXT,
+                        tool_calls JSONB,
+                        tool_results JSONB,
+                        tokens_used INTEGER DEFAULT 0,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_star_msg_conv ON star_messages(conversation_id);
+                `
+            },
+            {
+                name: 'star_learnings',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS star_learnings (
+                        id VARCHAR(64) PRIMARY KEY,
+                        workspace_id VARCHAR(64) NOT NULL,
+                        category VARCHAR(64) NOT NULL,
+                        entity_key VARCHAR(128) NOT NULL,
+                        learned_rule JSONB NOT NULL,
+                        confidence_score NUMERIC(3,2) DEFAULT 0.85,
+                        occurrences_count INTEGER DEFAULT 1,
+                        successful_predictions INTEGER DEFAULT 0,
+                        last_validated_at TIMESTAMPTZ DEFAULT NOW(),
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_star_learn_ws ON star_learnings(workspace_id, category);
+                    CREATE INDEX IF NOT EXISTS idx_star_learn_key ON star_learnings(workspace_id, entity_key);
+                `
+            },
+            {
+                name: 'star_audit_logs',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS star_audit_logs (
+                        id VARCHAR(64) PRIMARY KEY,
+                        workspace_id VARCHAR(64) NOT NULL,
+                        periodo VARCHAR(16) NOT NULL,
+                        module_audited VARCHAR(64) NOT NULL,
+                        findings_count INTEGER DEFAULT 0,
+                        risk_score VARCHAR(16) DEFAULT 'BAJO',
+                        report_json JSONB,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_star_audit_ws ON star_audit_logs(workspace_id, periodo);
                 `
             }
         ];
