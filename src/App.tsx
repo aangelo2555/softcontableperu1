@@ -962,7 +962,7 @@ const App: React.FC = () => {
           </nav>
 
           {/* Compact Bottom Sidebar (Expanded) */}
-          <div className={`p-2.5 border-t border-app-border flex-col gap-2 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
+          <div className={`p-2.5 border-t border-app-border flex-col gap-2.5 shrink-0 bg-app-surface ${isSidebarCollapsed ? 'flex md:hidden' : 'flex'}`}>
             <div className="flex items-center justify-between gap-2 bg-app-bg/50 p-1.5 rounded-xl border border-app-border/40">
               {/* User Avatar + Info */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1003,6 +1003,61 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            {/* ─── TARJETA SOFTPREMIUM IA EN BARRA LATERAL (AISLADA) ─── */}
+            <div
+              onClick={() => {
+                setActiveTab('SOFTPREMIUM');
+                if (window.history && window.history.pushState) {
+                  window.history.pushState({}, '', '/premium');
+                }
+              }}
+              className="relative overflow-hidden rounded-2xl p-3.5 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white shadow-lg shadow-blue-600/25 border border-white/20 cursor-pointer group hover:scale-[1.01] transition-all select-none"
+            >
+              {/* Resplandores decorativos */}
+              <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-500/20 rounded-full blur-xl pointer-events-none" />
+
+              {/* Contenido izquierdo */}
+              <div className="relative z-10 flex flex-col items-start max-w-[130px]">
+                <h4 className="text-xs font-black uppercase tracking-wider text-white drop-shadow-xs flex items-center gap-1">
+                  <span>SOFTPREMIUM IA</span>
+                </h4>
+                <p className="text-[10px] text-blue-100 font-semibold leading-snug mt-1">
+                  Inteligencia que impulsa tu contabilidad
+                </p>
+
+                <button
+                  type="button"
+                  className="mt-2.5 px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-black text-[10px] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+                >
+                  Conocer más
+                </button>
+
+                {/* Gráfico / Icono de Analítica */}
+                <div className="mt-2.5 p-1.5 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 text-white shadow-inner">
+                  <TrendingUp size={14} />
+                </div>
+              </div>
+
+              {/* Ilustración Robot en la derecha */}
+              <div className="absolute right-0 bottom-0 w-28 h-28 pointer-events-none z-10 flex items-end justify-end">
+                <img
+                  src="/assets/softpremium-robot.png"
+                  alt="SoftPremium IA"
+                  className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="hidden w-24 h-24 items-center justify-center text-cyan-200">
+                  <Sparkles size={36} className="animate-pulse text-amber-300" />
+                </div>
+              </div>
+            </div>
+
             {/* PWA Install Button */}
             {deferredPrompt && (
               <button
@@ -1020,6 +1075,18 @@ const App: React.FC = () => {
             <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${isStudentMode() ? 'from-indigo-600 to-purple-600' : 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-[10px] uppercase shrink-0 shadow-sm notranslate animate-fade-in`} translate="no" title={userName}>
               {userInitial}
             </div>
+            <button
+              onClick={() => {
+                setActiveTab('SOFTPREMIUM');
+                if (window.history && window.history.pushState) {
+                  window.history.pushState({}, '', '/premium');
+                }
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 transition-colors cursor-pointer"
+              title="SoftPremium IA"
+            >
+              <Sparkles size={13} className="animate-pulse text-amber-300" />
+            </button>
             <button
               onClick={() => setShowChangePasswordModal(true)}
               className="w-7 h-7 flex items-center justify-center rounded-lg bg-app-bg hover:bg-app-hover border border-app-border text-app-muted hover:text-blue-600 transition-colors cursor-pointer"
@@ -1089,7 +1156,7 @@ const App: React.FC = () => {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
               </button>
 
-              <div ref={searchRef} className="relative w-[110px] sm:w-[240px] md:w-[280px] lg:w-[340px] group shrink-0">
+              <div ref={searchRef} className="relative w-[120px] sm:w-[240px] md:w-[280px] lg:w-[340px] group shrink-0">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none transition-transform group-focus-within:scale-110">
                   <Search size={16} className="text-app-muted/60" strokeWidth={2.5} />
                 </div>
@@ -1131,6 +1198,7 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
+
               <button
                 onClick={handleOpenCompanyConfig}
                 className="group h-9 flex items-center justify-start gap-2 bg-app-bg hover:bg-blue-50 dark:hover:bg-blue-600/10 border border-app-border rounded-xl text-app-text hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-all duration-300 shadow-sm overflow-hidden whitespace-nowrap w-9 sm:hover:w-[240px] sm:hover:px-3 relative shrink-0"
@@ -1165,28 +1233,6 @@ const App: React.FC = () => {
                   )}
                 </div>
               )}
-              {/* Botón Responsivo SoftPremium (IA) en Header */}
-              <button
-                onClick={() => {
-                  setActiveTab('SOFTPREMIUM');
-                  if (window.history && window.history.pushState) {
-                    window.history.pushState({}, '', '/premium');
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-blue-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs shadow-sm cursor-pointer group"
-                title="Abrir Portal SoftPremium IA a Pantalla Completa"
-              >
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
-                <span className="font-black uppercase tracking-wider hidden sm:inline font-sans">
-                  SoftPremium <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-1 font-mono">IA</span>
-                </span>
-
-                {(!currentCompany?.premium_enabled && !isGlobalPremium && !isAdmin) && (
-                  <span className="flex items-center text-[9px] bg-indigo-600/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ml-1">
-                    ¿Activar IA?
-                  </span>
-                )}
-              </button>
 
               {!isStudentMode() && (
                 <>
