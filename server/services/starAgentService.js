@@ -8,21 +8,14 @@
  * 4. Genera diagnóstico, explicaciones NIIF/SUNAT y asientos estructurados.
  */
 
-const axios = require('axios');
 const { STAR_TOOLS_DEFINITIONS, executeStarTool } = require('./starToolRegistry');
 const { getStarMemoryContext } = require('./starMemoryService');
-
-function getGroqConfig() {
-    const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '';
-    const url = 'https://api.groq.com/openai/v1/chat/completions';
-    return { key, url };
-}
+const { callFreeAiWithCascade } = require('./aiRouterService');
 
 /**
- * Orquesta una sesión de razonamiento con STAR
+ * Orquesta una sesión de razonamiento con STAR utilizando el pool de IAs gratuitas
  */
 async function processStarChat({ query, conversationHistory = [], context = {} }) {
-    const { key, url } = getGroqConfig();
     const workspaceId = context.workspaceId || context.currentCompany?.ruc || '';
     const userId = context.userId || '';
     const activeTab = context.activeTab || 'EMPRESA';
@@ -77,32 +70,26 @@ INSTRUCCIONES DE OPERACIÓN REACT:
     const maxIterations = 5;
     let finalContent = '';
     let suggestedEntry = null;
+    let lastProviderUsed = null;
+    let lastModelUsed = null;
 
-    // 4. Bucle ReAct Multi-Turno
+    // 4. Bucle ReAct Multi-Turno Multi-IA
     while (iterations < maxIterations) {
         iterations++;
 
         try {
-            const response = await axios.post(
-                url,
-                {
-                    model: 'llama-3.3-70b-versatile',
-                    messages,
-                    tools: STAR_TOOLS_DEFINITIONS,
-                    tool_choice: 'auto',
-                    temperature: 0.2,
-                    max_tokens: 3000
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${key}`
-                    },
-                    timeout: 25000
-                }
-            );
+            const aiResponse = await callFreeAiWithCascade({
+                messages,
+                tools: STAR_TOOLS_DEFINITIONS,
+                tool_choice: 'auto',
+                temperature: 0.2,
+                max_tokens: 3000
+            });
 
-            const message = response.data?.choices?.[0]?.message;
+            lastProviderUsed = aiResponse.providerName;
+            lastModelUsed = aiResponse.model;
+
+            const message = aiResponse.message;
             if (!message) break;
 
             // Si el modelo llama a herramientas (Tool Calling)
@@ -148,8 +135,7 @@ INSTRUCCIONES DE OPERACIÓN REACT:
                 break;
             }
         } catch (error) {
-            console.error(`[STAR AGENT REPO ERROR Iteration ${iterations}]`, error.response?.data || error.message);
-            // Fallback en caso de error de llamada de tools
+            console.error(`[STAR AGENT REPO ERROR Iteration ${iterations}]`, error.message);
             if (iterations === 1) {
                 finalContent = `Hola, soy STAR. He revisado la información de tu empresa (${workspaceId}). ¿En qué puedo asistirte específicamente respecto a la hoja de ${activeTab}?`;
             }
@@ -176,6 +162,8 @@ INSTRUCCIONES DE OPERACIÓN REACT:
         answer: finalContent || 'No se pudo generar una respuesta completa. Por favor intenta de nuevo.',
         steps: executionSteps,
         suggestedEntry,
+        provider: lastProviderUsed,
+        model: lastModelUsed,
         activeContext: {
             workspaceId,
             activeTab,

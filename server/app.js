@@ -228,6 +228,10 @@ app.use('/api/premium/admin', premiumAdminRoutes);
 const starAgentRoutes = require('./routes/starAgentRoutes');
 app.use('/api/star', starAgentRoutes);
 
+// --- Rutas del Motor Multi-IA y Pool Gratuito ---
+const aiRouterRoutes = require('./routes/aiRouterRoutes');
+app.use('/api/ai', aiRouterRoutes);
+
 // --- Rutas SaaS de Facturación, Planes y SuperAdmin ---
 const billingRouter = require('./routes/billingRouter');
 const superadminRouter = require('./routes/superadminRouter');

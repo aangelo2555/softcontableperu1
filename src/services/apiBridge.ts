@@ -803,6 +803,17 @@ export const webApiBridge = {
         return res.data;
     },
 
+    // --- AI Multi-Engine Status & Diagnostic ---
+    aiGetStatus: async () => {
+        const res = await api.get('/api/ai/status');
+        return res.data;
+    },
+
+    aiTestConnection: async () => {
+        const res = await api.post('/api/ai/test');
+        return res.data;
+    },
+
     // --- Window Control (No-ops en Web) ---
     winMinimize: () => {},
     winMaximize: () => {},

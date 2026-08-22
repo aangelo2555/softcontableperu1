@@ -104,6 +104,8 @@ router.post('/chat', async (req, res) => {
             answer: starResult.answer,
             steps: starResult.steps,
             suggestedEntry: starResult.suggestedEntry,
+            provider: starResult.provider,
+            model: starResult.model,
             activeContext: starResult.activeContext
         });
     } catch (error) {

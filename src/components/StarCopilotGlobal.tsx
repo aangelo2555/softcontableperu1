@@ -34,6 +34,8 @@ interface StarMessage {
   content: string;
   steps?: StepExecution[];
   suggestedEntry?: SuggestedEntry;
+  provider?: string;
+  model?: string;
   timestamp: Date;
 }
 
@@ -153,6 +155,8 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
           content: res.answer,
           steps: res.steps,
           suggestedEntry: res.suggestedEntry,
+          provider: res.provider,
+          model: res.model,
           timestamp: new Date()
         };
 
@@ -429,7 +433,14 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
 
                       {/* Footer del mensaje */}
                       <div className="mt-2 flex justify-between items-center text-[9px] text-slate-400">
-                        <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {m.role === 'assistant' && (m.model || m.provider) && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold">
+                              <Sparkles size={9} /> {m.model || m.provider}
+                            </span>
+                          )}
+                        </div>
                         {m.role === 'assistant' && (
                           <button
                             onClick={() => copyToClipboard(m.content, m.id)}
