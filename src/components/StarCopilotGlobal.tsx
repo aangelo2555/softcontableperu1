@@ -72,6 +72,7 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
   const [learnings, setLearnings] = useState<StarLearning[]>([]);
   const [loadingLearnings, setLoadingLearnings] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [quotaInfo, setQuotaInfo] = useState<{ dailyUsed: number; dailyLimit: number; planName?: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const companyRuc = currentCompany?.ruc || 'default';
@@ -148,6 +149,7 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
 
       if (res.success) {
         if (res.conversationId) setConversationId(res.conversationId);
+        if (res.quota) setQuotaInfo(res.quota);
 
         const assistantMsg: StarMessage = {
           id: `ast_${Date.now()}`,
@@ -162,10 +164,11 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
 
         setMessages(prev => [...prev, assistantMsg]);
       } else {
-        toast.error(res.error || 'Error procesando consulta con STAR.');
+        toast.error(res.error || 'Error procesando consulta con STAR.', { duration: 5000 });
       }
     } catch (e: any) {
-      toast.error('Error de conexión con STAR: ' + e.message);
+      const quotaErrMsg = e.response?.data?.error || e.message;
+      toast.error(quotaErrMsg, { duration: 6000 });
     } finally {
       setLoading(false);
     }
@@ -324,11 +327,19 @@ Tengo acceso en tiempo real a todas las hojas del sistema (**Compras, Ventas, Di
 
             {/* Context Banner Dinámico */}
             <div className="bg-indigo-50/90 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/40 px-4 py-2 flex items-center justify-between text-xs text-indigo-950 dark:text-indigo-200">
-              <div className="flex items-center gap-1.5 truncate">
-                <span className="text-indigo-600 dark:text-indigo-400 font-black">📍 Hoja Activa:</span>
-                <span className="font-bold bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
-                  {activeTab}
-                </span>
+              <div className="flex items-center gap-2 truncate">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="text-indigo-600 dark:text-indigo-400 font-black">📍 Hoja:</span>
+                  <span className="font-bold bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
+                    {activeTab}
+                  </span>
+                </div>
+                {quotaInfo && (
+                  <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
+                    <Zap size={10} className="text-amber-500" />
+                    <span>{quotaInfo.dailyUsed}/{quotaInfo.dailyLimit} consultas hoy</span>
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleQuickAudit}

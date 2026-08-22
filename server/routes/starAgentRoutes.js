@@ -34,11 +34,15 @@ function optionalAuth(req, res, next) {
 
 router.use(optionalAuth);
 
+const { validateAiQuota } = require('../middleware/aiQuotaMiddleware');
+const { getCachedQuery, saveCachedQuery } = require('../services/aiCacheService');
+
 /**
  * POST /api/star/chat
- * Procesa una consulta conversacional con ejecución autónoma de herramientas
+ * Procesa una consulta conversacional con ejecución autónoma de herramientas,
+ * soporte de caché inteligente y control de cuotas por plan SaaS.
  */
-router.post('/chat', async (req, res) => {
+router.post('/chat', validateAiQuota, async (req, res) => {
     try {
         const { query, conversationId, workspaceId, activeTab, period, currentCompany, history } = req.body;
         const userId = req.user?.id || req.body.userId || 'CLIENTE_SISTEMA';
@@ -71,7 +75,45 @@ router.post('/chat', async (req, res) => {
             content: query
         });
 
-        // Procesar razonamiento con STAR ReAct Engine
+        // 1. Verificar Caché Inteligente (Ahorro de tokens en preguntas frecuentes)
+        const cached = await getCachedQuery(query, effectiveWorkspaceId);
+        if (cached && cached.answer) {
+            // Guardar respuesta de caché en BD
+            const assistantMsgId = `msg_${Date.now()}_a`;
+            await db.saveStarMessage({
+                id: assistantMsgId,
+                conversationId: effectiveConvId,
+                role: 'assistant',
+                content: cached.answer,
+                toolCalls: cached.steps || null,
+                toolResults: cached.suggestedEntry || null,
+                tokensUsed: 0
+            });
+            await db.updateStarConversationTimestamp(effectiveConvId, activeTab);
+
+            return res.json({
+                success: true,
+                conversationId: effectiveConvId,
+                answer: cached.answer,
+                steps: cached.steps || [],
+                suggestedEntry: cached.suggestedEntry || null,
+                provider: cached.provider || 'Caché Inteligente (0 Tokens)',
+                model: cached.model || 'Memoria Flash',
+                fromCache: true,
+                quota: req.aiQuotaInfo ? {
+                    dailyUsed: req.aiQuotaInfo.dailyUsed,
+                    dailyLimit: req.aiQuotaInfo.dailyLimit,
+                    planName: req.aiQuotaInfo.policy?.planName
+                } : null,
+                activeContext: {
+                    workspaceId: effectiveWorkspaceId,
+                    activeTab,
+                    period: period || new Date().toISOString().slice(0, 7)
+                }
+            });
+        }
+
+        // 2. Procesar razonamiento con STAR ReAct Engine
         const starResult = await processStarChat({
             query,
             conversationHistory: history || [],
@@ -80,9 +122,26 @@ router.post('/chat', async (req, res) => {
                 userId,
                 activeTab,
                 period,
-                currentCompany
+                currentCompany,
+                planTier: req.aiQuotaInfo?.policy?.tier || 'PRO'
             }
         });
+
+        // 3. Guardar en Caché Inteligente para futuras consultas
+        if (starResult.success && starResult.answer) {
+            saveCachedQuery(
+                query,
+                { answer: starResult.answer, steps: starResult.steps, suggestedEntry: starResult.suggestedEntry },
+                starResult.provider,
+                starResult.model,
+                effectiveWorkspaceId
+            );
+        }
+
+        // 4. Incrementar contador de uso diario en BD
+        if (userId && userId !== 'CLIENTE_SISTEMA') {
+            await db.incrementAiUsage(userId, 1);
+        }
 
         // Guardar respuesta de STAR en BD
         const assistantMsgId = `msg_${Date.now()}_a`;
@@ -106,6 +165,12 @@ router.post('/chat', async (req, res) => {
             suggestedEntry: starResult.suggestedEntry,
             provider: starResult.provider,
             model: starResult.model,
+            fromCache: false,
+            quota: req.aiQuotaInfo ? {
+                dailyUsed: req.aiQuotaInfo.dailyUsed + 1,
+                dailyLimit: req.aiQuotaInfo.dailyLimit,
+                planName: req.aiQuotaInfo.policy?.planName
+            } : null,
             activeContext: starResult.activeContext
         });
     } catch (error) {

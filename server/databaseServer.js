@@ -517,6 +517,29 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_star_audit_ws ON star_audit_logs(workspace_id, periodo);
 
+    CREATE TABLE IF NOT EXISTS ai_daily_usage (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        usage_date TEXT NOT NULL,
+        requests_count INTEGER DEFAULT 0,
+        tokens_used INTEGER DEFAULT 0,
+        last_request_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, usage_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_daily_usage(user_id, usage_date);
+
+    CREATE TABLE IF NOT EXISTS ai_query_cache (
+        query_hash TEXT PRIMARY KEY,
+        query_text TEXT NOT NULL,
+        response_json TEXT NOT NULL,
+        provider_used TEXT,
+        model_used TEXT,
+        hit_count INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_cache_hash ON ai_query_cache(query_hash);
+
     CREATE TABLE IF NOT EXISTS cpe_consultas_masivas (
         id TEXT PRIMARY KEY,
         workspace_id TEXT NOT NULL,
@@ -2309,6 +2332,69 @@ const dbManager = {
         } catch (error) {
             console.error('[SQLITE] Error en getStarAuditLogs:', error.message);
             return [];
+        }
+    },
+
+    getAiDailyUsage: (userId, dateStr) => {
+        try {
+            const today = dateStr || new Date().toISOString().slice(0, 10);
+            return db.prepare(`SELECT * FROM ai_daily_usage WHERE user_id = ? AND usage_date = ?`).get(userId, today) || {
+                user_id: userId,
+                usage_date: today,
+                requests_count: 0,
+                tokens_used: 0
+            };
+        } catch (error) {
+            console.error('[SQLITE] Error en getAiDailyUsage:', error.message);
+            return { user_id: userId, usage_date: dateStr || '', requests_count: 0, tokens_used: 0 };
+        }
+    },
+
+    incrementAiUsage: (userId, tokens = 0) => {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const id = `usage_${userId}_${today}`;
+            db.prepare(`
+                INSERT INTO ai_daily_usage (id, user_id, usage_date, requests_count, tokens_used, last_request_at)
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id, usage_date) DO UPDATE SET
+                    requests_count = requests_count + 1,
+                    tokens_used = tokens_used + excluded.tokens_used,
+                    last_request_at = CURRENT_TIMESTAMP
+            `).run(id, userId, today, tokens || 0);
+            return db.prepare(`SELECT * FROM ai_daily_usage WHERE user_id = ? AND usage_date = ?`).get(userId, today);
+        } catch (error) {
+            console.error('[SQLITE] Error en incrementAiUsage:', error.message);
+            return null;
+        }
+    },
+
+    getCachedAiQuery: (queryHash) => {
+        try {
+            return db.prepare(`
+                SELECT * FROM ai_query_cache 
+                WHERE query_hash = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+            `).get(queryHash);
+        } catch (error) {
+            console.error('[SQLITE] Error en getCachedAiQuery:', error.message);
+            return null;
+        }
+    },
+
+    saveCachedAiQuery: ({ queryHash, queryText, responseJson, providerUsed, modelUsed, ttlHours = 24 }) => {
+        try {
+            db.prepare(`
+                INSERT INTO ai_query_cache (query_hash, query_text, response_json, provider_used, model_used, hit_count, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, datetime('now', '+' || ? || ' hours'))
+                ON CONFLICT(query_hash) DO UPDATE SET
+                    response_json = excluded.response_json,
+                    provider_used = excluded.provider_used,
+                    model_used = excluded.model_used,
+                    hit_count = hit_count + 1,
+                    expires_at = datetime('now', '+' || ? || ' hours')
+            `).run(queryHash, queryText, JSON.stringify(responseJson), providerUsed || '', modelUsed || '', ttlHours, ttlHours);
+        } catch (error) {
+            console.error('[SQLITE] Error en saveCachedAiQuery:', error.message);
         }
     },
 

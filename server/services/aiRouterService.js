@@ -7,11 +7,26 @@
  * 3. Groq Cloud Free Tier (llama-3.3-70b-versatile, llama-3.1-8b-instant) - Inferencia ultra-rápida.
  * 4. Ollama Local (opcional, sin costo ni límites).
  * 
- * Cuenta con Failover y Cascada Automática: si un proveedor alcanza su límite 429 por minuto,
- * salta en milisegundos al siguiente sin interrumpir la experiencia del usuario.
+ * Soporte Multi-Key: permite rotar múltiples claves separadas por coma para multiplicar la cuota gratuita.
+ * Soporte de Enrutamiento por Plan SaaS: ajusta prioridad de modelos según la jerarquía del cliente.
  */
 
 const axios = require('axios');
+
+// Estado para rotación de múltiples claves (Round-Robin)
+const keyIndices = { gemini: 0, groq: 0, openrouter: 0 };
+
+function getRotatedKey(rawKeyStr, providerId) {
+    if (!rawKeyStr) return '';
+    const keys = rawKeyStr.split(',').map(k => k.trim()).filter(Boolean);
+    if (keys.length === 0) return '';
+    if (keys.length === 1) return keys[0];
+    
+    keyIndices[providerId] = (keyIndices[providerId] || 0) % keys.length;
+    const selected = keys[keyIndices[providerId]];
+    keyIndices[providerId] = (keyIndices[providerId] + 1) % keys.length;
+    return selected;
+}
 
 // Definición de Proveedores Gratuitos y sus Modelos
 const FREE_PROVIDERS = {
@@ -19,7 +34,7 @@ const FREE_PROVIDERS = {
         name: 'Google Gemini (Free Tier)',
         id: 'gemini',
         models: ['gemini-2.5-flash', 'gemini-3.6-flash'],
-        getKey: () => process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || ''
+        getKey: () => getRotatedKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '', 'gemini')
     },
     OPENROUTER_FREE: {
         name: 'OpenRouter Free Models',
@@ -32,14 +47,14 @@ const FREE_PROVIDERS = {
             'stealth/ox-alpha',
             'z-ai/glm-5.2'
         ],
-        getKey: () => process.env.OPENROUTER_API_KEY || ''
+        getKey: () => getRotatedKey(process.env.OPENROUTER_API_KEY || '', 'openrouter')
     },
     GROQ: {
         name: 'Groq Cloud (Free Tier)',
         id: 'groq',
         baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
         models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-        getKey: () => process.env.GROQ_API_KEY || ''
+        getKey: () => getRotatedKey(process.env.GROQ_API_KEY || '', 'groq')
     },
     OLLAMA: {
         name: 'Ollama Local (100% Free)',
@@ -130,15 +145,22 @@ async function callGeminiRest({ key, model, messages, temperature = 0.2, maxToke
 }
 
 /**
- * Obtiene la lista ordenada de configuraciones de IA disponibles para la cascada
+ * Obtiene la lista ordenada de configuraciones de IA disponibles para la cascada según el plan
  */
-function getAvailableFreeProviders() {
+function getAvailableFreeProviders(planTier = 'PRO') {
     const candidates = [];
 
-    // 1. Google Gemini (Prioridad 1 por ventana de contexto de 1M y cuota generosa)
     const geminiKey = FREE_PROVIDERS.GEMINI.getKey();
+    const openrouterKey = FREE_PROVIDERS.OPENROUTER_FREE.getKey();
+    const groqKey = FREE_PROVIDERS.GROQ.getKey();
+
+    // 1. Google Gemini
     if (geminiKey) {
-        for (const model of FREE_PROVIDERS.GEMINI.models) {
+        const models = (planTier === 'VIP' || planTier === 'ULTRA_VIP') 
+            ? ['gemini-3.6-flash', 'gemini-2.5-flash']
+            : ['gemini-2.5-flash', 'gemini-3.6-flash'];
+
+        for (const model of models) {
             candidates.push({
                 providerId: 'gemini',
                 providerName: 'Google Gemini (Free Tier)',
@@ -149,8 +171,7 @@ function getAvailableFreeProviders() {
         }
     }
 
-    // 2. OpenRouter Free Tier (Prioridad 2 con el enrutador automático de modelos gratuitos)
-    const openrouterKey = FREE_PROVIDERS.OPENROUTER_FREE.getKey();
+    // 2. OpenRouter Free Auto-Router
     if (openrouterKey) {
         for (const model of FREE_PROVIDERS.OPENROUTER_FREE.models) {
             candidates.push({
@@ -169,10 +190,13 @@ function getAvailableFreeProviders() {
         }
     }
 
-    // 3. Groq Cloud (Prioridad 3 por velocidad instantánea)
-    const groqKey = FREE_PROVIDERS.GROQ.getKey();
+    // 3. Groq Cloud
     if (groqKey) {
-        for (const model of FREE_PROVIDERS.GROQ.models) {
+        const groqModels = (planTier === 'BASIC')
+            ? ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile']
+            : ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+
+        for (const model of groqModels) {
             candidates.push({
                 providerId: 'groq',
                 providerName: 'Groq Cloud (Free Tier)',
@@ -215,9 +239,10 @@ async function callFreeAiWithCascade({
     tool_choice = 'auto',
     temperature = 0.2,
     max_tokens = 3000,
-    timeoutMs = 25000
+    timeoutMs = 25000,
+    planTier = 'PRO'
 }) {
-    const candidates = getAvailableFreeProviders();
+    const candidates = getAvailableFreeProviders(planTier);
 
     if (candidates.length === 0) {
         throw new Error(
@@ -312,7 +337,7 @@ async function callFreeAiWithCascade({
 /**
  * Genera una respuesta de texto directo libre utilizando el pool gratuito
  */
-async function generateText({ prompt, systemPrompt = '', temperature = 0.2, maxTokens = 3000 }) {
+async function generateText({ prompt, systemPrompt = '', temperature = 0.2, maxTokens = 3000, planTier = 'PRO' }) {
     const messages = [];
     if (systemPrompt) {
         messages.push({ role: 'system', content: systemPrompt });
@@ -322,7 +347,8 @@ async function generateText({ prompt, systemPrompt = '', temperature = 0.2, maxT
     const result = await callFreeAiWithCascade({
         messages,
         temperature,
-        max_tokens: maxTokens
+        max_tokens: maxTokens,
+        planTier
     });
 
     return {

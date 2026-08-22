@@ -1521,6 +1521,75 @@ const db = {
             console.error('[POSTGRES] Error en getStarAuditLogs:', error.message);
             return [];
         }
+    },
+
+    getAiDailyUsage: async (userId, dateStr) => {
+        try {
+            const today = dateStr || new Date().toISOString().slice(0, 10);
+            const res = await query(
+                `SELECT * FROM ai_daily_usage WHERE user_id = $1 AND usage_date = $2`,
+                [userId, today]
+            );
+            return res.rows[0] || {
+                user_id: userId,
+                usage_date: today,
+                requests_count: 0,
+                tokens_used: 0
+            };
+        } catch (error) {
+            console.error('[POSTGRES] Error en getAiDailyUsage:', error.message);
+            return { user_id: userId, usage_date: dateStr || '', requests_count: 0, tokens_used: 0 };
+        }
+    },
+
+    incrementAiUsage: async (userId, tokens = 0) => {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const id = `usage_${userId}_${today}`;
+            const res = await query(`
+                INSERT INTO ai_daily_usage (id, user_id, usage_date, requests_count, tokens_used, last_request_at)
+                VALUES ($1, $2, $3, 1, $4, NOW())
+                ON CONFLICT (user_id, usage_date) DO UPDATE SET
+                    requests_count = ai_daily_usage.requests_count + 1,
+                    tokens_used = ai_daily_usage.tokens_used + EXCLUDED.tokens_used,
+                    last_request_at = NOW()
+                RETURNING *
+            `, [id, userId, today, tokens || 0]);
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en incrementAiUsage:', error.message);
+            return null;
+        }
+    },
+
+    getCachedAiQuery: async (queryHash) => {
+        try {
+            const res = await query(`
+                SELECT * FROM ai_query_cache 
+                WHERE query_hash = $1 AND (expires_at IS NULL OR expires_at > NOW())
+            `, [queryHash]);
+            return res.rows[0] || null;
+        } catch (error) {
+            console.error('[POSTGRES] Error en getCachedAiQuery:', error.message);
+            return null;
+        }
+    },
+
+    saveCachedAiQuery: async ({ queryHash, queryText, responseJson, providerUsed, modelUsed, ttlHours = 24 }) => {
+        try {
+            await query(`
+                INSERT INTO ai_query_cache (query_hash, query_text, response_json, provider_used, model_used, hit_count, created_at, expires_at)
+                VALUES ($1, $2, $3, $4, $5, 1, NOW(), NOW() + ($6 || ' hours')::INTERVAL)
+                ON CONFLICT (query_hash) DO UPDATE SET
+                    response_json = EXCLUDED.response_json,
+                    provider_used = EXCLUDED.provider_used,
+                    model_used = EXCLUDED.model_used,
+                    hit_count = ai_query_cache.hit_count + 1,
+                    expires_at = NOW() + ($6 || ' hours')::INTERVAL
+            `, [queryHash, queryText, JSON.stringify(responseJson), providerUsed || '', modelUsed || '', ttlHours.toString()]);
+        } catch (error) {
+            console.error('[POSTGRES] Error en saveCachedAiQuery:', error.message);
+        }
     }
 };
 
@@ -2701,6 +2770,37 @@ async function ensureSchemaConstraints() {
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     );
                     CREATE INDEX IF NOT EXISTS idx_star_audit_ws ON star_audit_logs(workspace_id, periodo);
+                `
+            },
+            {
+                name: 'ai_daily_usage',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS ai_daily_usage (
+                        id VARCHAR(128) PRIMARY KEY,
+                        user_id VARCHAR(64) NOT NULL,
+                        usage_date DATE NOT NULL,
+                        requests_count INTEGER DEFAULT 0,
+                        tokens_used INTEGER DEFAULT 0,
+                        last_request_at TIMESTAMPTZ DEFAULT NOW(),
+                        UNIQUE(user_id, usage_date)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_daily_usage(user_id, usage_date);
+                `
+            },
+            {
+                name: 'ai_query_cache',
+                schema: `
+                    CREATE TABLE IF NOT EXISTS ai_query_cache (
+                        query_hash VARCHAR(64) PRIMARY KEY,
+                        query_text TEXT NOT NULL,
+                        response_json JSONB NOT NULL,
+                        provider_used VARCHAR(64),
+                        model_used VARCHAR(64),
+                        hit_count INTEGER DEFAULT 1,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        expires_at TIMESTAMPTZ
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_cache_hash ON ai_query_cache(query_hash);
                 `
             }
         ];
